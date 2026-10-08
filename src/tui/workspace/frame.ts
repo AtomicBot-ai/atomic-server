@@ -15,7 +15,7 @@ export function workspaceFrame(
   width: number,
   height: number,
   seconds: number,
-  ornament: OrnamentStyle = 'crown'
+  ornament: OrnamentStyle = 'fangs'
 ): Canvas {
   const c = canvas(width, height),
     l = workspaceLayout(width, height)
@@ -51,6 +51,15 @@ export function workspaceFrame(
   if (s.page !== 'welcome') {
     fill(c, 0, l.gate + 2, width, 3, COLORS.header)
   }
+  text(
+    c,
+    l.inset,
+    l.gate + 2,
+    '─'.repeat(width - l.inset * 2),
+    COLORS.stone,
+    width - l.inset * 2,
+    s.page === 'welcome' ? COLORS.ground : COLORS.header
+  )
   if (s.page === 'setup')
     text(c, l.inset, l.gate + 3, 'PREPARE YOUR WORKSPACE', COLORS.gold, width - l.inset * 2, COLORS.header)
   if (s.page !== 'welcome' && s.page !== 'setup')

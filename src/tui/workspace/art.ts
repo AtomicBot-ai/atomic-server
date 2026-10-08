@@ -81,7 +81,7 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
 export const ORNAMENT_STYLES = ['crown', 'barbs', 'lattice', 'fangs'] as const
 export type OrnamentStyle = (typeof ORNAMENT_STYLES)[number]
 /** Complete, centred motifs; never crop a repeating tile at the terminal's edge. */
-export function gateRows(width: number, height: number, style: OrnamentStyle = 'crown'): string[] {
+export function gateRows(width: number, height: number, style: OrnamentStyle = 'fangs'): string[] {
   const rows = Array.from({ length: height }, () => Array<string>(width).fill(' '))
   const place = (motif: string[], center: number, bottom = height) => {
     const w = Math.max(...motif.map((r) => r.length))
@@ -155,9 +155,9 @@ export function gateRows(width: number, height: number, style: OrnamentStyle = '
         : height <= 2
           ? [' /\\  /\\ ', '/ /\\/\\ \\']
           : ['    /\\    ', ' /\\/  \\/\\ ', '/ / /\\ \\ \\', ' / /  \\ \\ ', '  /    \\  '].slice(0, height)
-    place(motif, Math.max(9, width * 0.16))
-    place(motif, Math.min(width - 9, width * 0.84))
-    place(height === 1 ? ['<>'] : [' /\\ ', ' \\/ '], center)
+    const step = Math.max(...motif.map((r) => r.length)) + 2
+    const count = Math.max(1, Math.floor((width - 2) / step))
+    for (let i = 0; i < count; i++) place(motif, center + (i - (count - 1) / 2) * step)
   }
   return rows.map((r) => r.join(''))
 }
