@@ -36,7 +36,7 @@
     "verify": "npm run lint && npm run typecheck && npm run format:check && npm test && npm run build && npm run build:ui && npm run build:bin && npm run test:e2e && npm run test:runtime-compat"
   },
   "dependencies": {
-    "@atomic-chat/core": "file:vendor/atomic-chat-core-0.11.2-terminal.2.tgz",
+    "@atomic-chat/core": "file:vendor/atomic-chat-core-0.11.2-terminal.3.tgz",
     "ink": "^7.1.1",
     "react": "^19.2.0"
   },
