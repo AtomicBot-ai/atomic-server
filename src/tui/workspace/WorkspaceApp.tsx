@@ -1,0 +1,235 @@
+import type { AgentLaunch } from '../../agent-launch/index.js'
+import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
+import type { Key } from 'ink'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { commandRows } from '../command-list.js'
+import type { CommandSpec } from '../../cli/index.js'
+import { reduce } from '../state.js'
+import type { TuiAction } from '../state.js'
+import { oneLine } from '../controller.js'
+import { WorkspaceController } from './controller.js'
+import type { WorkspaceDeps } from './controller.js'
+import { createWorkspace } from './state.js'
+import type { Page, WorkspaceState } from './state.js'
+import { workspaceFrame } from './frame.js'
+import { workspaceInput } from './input.js'
+import { activate } from './actions.js'
+import { COLORS } from './canvas.js'
+import type { Cell } from './canvas.js'
+export interface WorkspaceProps {
+  onLaunch?: (launch: AgentLaunch) => void
+  initialMessage?: string
+  root?: CommandSpec
+  deps: WorkspaceDeps
+  initialPage?: Page
+  color: boolean
+  trueColor?: boolean
+  write: (value: string) => void
+}
+function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueColor: boolean }) {
+  const runs: { text: string; color: string; background: string | undefined }[] = []
+  for (const c of cells) {
+    const last = runs.at(-1)
+    if (last && last.color === c.color && last.background === c.background) last.text += c.char
+    else runs.push({ text: c.char, color: c.color, background: c.background })
+  }
+  return (
+    <Text {...(color && trueColor ? { backgroundColor: COLORS.ground } : {})}>
+      {runs.map((r, i) => (
+        <Text
+          key={i}
+          {...(color
+            ? {
+                color: trueColor
+                  ? r.color
+                  : r.color === COLORS.gold
+                    ? 'yellow'
+                    : r.color === COLORS.text
+                      ? 'white'
+                      : r.color === COLORS.green
+                        ? 'green'
+                        : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
+                          ? 'gray'
+                          : 'red',
+              }
+            : {})}
+          {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}
+          inverse={!color && Boolean(r.background)}
+        >
+          {r.text}
+        </Text>
+      ))}
+    </Text>
+  )
+}
+export function WorkspaceApp(props: WorkspaceProps) {
+  const [state, setState] = useState(() => ({
+      ...createWorkspace(props.initialPage),
+      message: props.initialMessage ?? '',
+      commands: props.root ? commandRows(props.root) : [],
+    })),
+    [seconds, setSeconds] = useState(0)
+  const latest = useRef(state),
+    controller = useRef<WorkspaceController | undefined>(undefined),
+    epoch = useRef(0),
+    leader = useRef(false)
+  const { columns, rows } = useWindowSize(),
+    { exit } = useApp()
+  const update = useCallback((fn: (s: WorkspaceState) => WorkspaceState) => {
+    latest.current = fn(latest.current)
+    setState(latest.current)
+  }, [])
+  const patch = useCallback((p: Partial<WorkspaceState>) => update((s) => ({ ...s, ...p })), [update])
+  const { deps, initialPage, write } = props
+  useEffect(() => {
+    let live = true
+    const activeEpoch = epoch
+    const c = new WorkspaceController(
+      deps,
+      (a: TuiAction) => {
+        if (live) update((s) => ({ ...s, base: reduce(s.base, a) }))
+      },
+      (row) => {
+        if (live)
+          update((s) => ({
+            ...s,
+            requests: [row, ...s.requests.filter((r) => r.id !== row.id)].slice(0, 200),
+          }))
+      },
+      (message) => {
+        if (live) patch({ message })
+      }
+    )
+    controller.current = c
+    c.start()
+    void c
+      .config()
+      .then((config) => {
+        if (!live) return
+        const ui = config.values.tui
+        patch({
+          page:
+            initialPage ?? (ui.mode === 'personal' ? 'chat' : ui.mode === 'server' ? 'server' : 'welcome'),
+          endpoint: ui.endpoint,
+          model: ui.model,
+          motion: ui.motion,
+          mouse: ui.mouse,
+          focus: ui.mode === 'personal' || initialPage === 'chat' ? 'composer' : 'personal',
+          ready: true,
+        })
+      })
+      .catch((e) => {
+        if (live) patch({ message: oneLine(e), ready: true })
+      })
+    return () => {
+      live = false
+      activeEpoch.current++
+      c.dispose()
+    }
+  }, [deps, initialPage, patch, update])
+  const instance = state.base.daemon.kind === 'up' ? state.base.daemon.snapshot.instance_id : ''
+  useEffect(() => {
+    void controller.current?.observe(instance)
+  }, [instance])
+  useEffect(() => {
+    if (!state.motion || state.page !== 'chat' || state.messages.length || state.overlay) return
+    const start = Date.now()
+    const timer = setInterval(() => setSeconds((Date.now() - start) / 1000), 180)
+    return () => clearInterval(timer)
+  }, [state.motion, state.page, state.messages.length, state.overlay])
+  useEffect(() => {
+    write(state.mouse ? '\u001b[?1000h\u001b[?1003h\u001b[?1006h' : '\u001b[?1000l\u001b[?1003l\u001b[?1006l')
+  }, [state.mouse, write])
+  const frame = workspaceFrame(state, columns, rows, seconds)
+  function cancel() {
+    epoch.current++
+    controller.current?.cancel()
+    patch({ generating: false, message: latest.current.generating ? 'Response stopped.' : '' })
+  }
+  function send() {
+    const s = latest.current,
+      c = controller.current
+    if (!c || s.generating || !s.draft.trim()) return
+    if (!s.model) {
+      patch({ message: 'Choose a model before sending your message.' })
+      return
+    }
+    const messages = [...s.messages, { role: 'user' as const, content: s.draft.trim() }],
+      id = ++epoch.current
+    patch({
+      messages: [...messages, { role: 'assistant', content: '' }],
+      draft: '',
+      cursor: 0,
+      generating: true,
+      message: '',
+      scroll: 0,
+    })
+    void c
+      .chat(s.endpoint, s.model, messages, (token) => {
+        if (epoch.current === id)
+          update((v) => ({
+            ...v,
+            messages: v.messages.map((m, i) =>
+              i === v.messages.length - 1 ? { ...m, content: m.content + token } : m
+            ),
+          }))
+      })
+      .then(() => {
+        if (epoch.current === id) patch({ generating: false })
+      })
+      .catch((e) => {
+        if (epoch.current === id) patch({ generating: false, message: oneLine(e) })
+      })
+  }
+  const context = () => ({
+    handoff: (launch: AgentLaunch) => {
+      props.onLaunch?.(launch)
+      exit()
+    },
+    get: () => latest.current,
+    update,
+    controller: controller.current!,
+    send,
+    cancel,
+    copy: (value: string) => write(`\u001b]52;c;${Buffer.from(value).toString('base64')}\u0007`),
+  })
+  const run = (id: string) => {
+    if (
+      !controller.current ||
+      (latest.current.busy && ['api-toggle', 'stop-confirm', 'refresh-models'].includes(id))
+    )
+      return
+    void activate(id, context()).catch((e) => patch({ message: oneLine(e), busy: false }))
+  }
+  useInput((input, key: Key) => {
+    if (!latest.current.ready) return
+    const result = workspaceInput(
+      input,
+      key,
+      latest.current,
+      workspaceFrame(latest.current, columns, rows, seconds),
+      leader.current
+    )
+    if (result.leader !== undefined) leader.current = result.leader
+    else if (leader.current) leader.current = false
+    if (result.patch) patch(result.patch)
+    if (result.quit) {
+      exit()
+      return
+    }
+    if (result.action) run(result.action)
+  })
+  if (!state.ready)
+    return (
+      <Box>
+        <Text>Opening Atomic Chat...</Text>
+      </Box>
+    )
+  return (
+    <Box flexDirection="column" width={columns} height={rows}>
+      {frame.cells.map((row, i) => (
+        <Row key={i} cells={row} color={props.color} trueColor={props.trueColor ?? false} />
+      ))}
+    </Box>
+  )
+}

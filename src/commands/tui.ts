@@ -3,6 +3,7 @@
  * The UI itself is loaded only here, so no other command pays for React and Ink at start-up.
  */
 
+import { join } from 'node:path'
 import { adminLoginUrl, ensureAdminToken } from '../admin/index.js'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { readTextFile, resolveConfig } from '../config/index.js'
@@ -10,27 +11,40 @@ import { CHECKS, runChecks } from '../doctor/index.js'
 import { HostStepJournal } from '../host/index.js'
 import { colorEnabled } from '../output/index.js'
 
-const SCREENS = ['overview', 'logs', 'config', 'doctor', 'commands'] as const
+const SCREENS = [
+  'chat',
+  'server',
+  'models',
+  'welcome',
+  'settings',
+  'requests',
+  'access',
+  'checks',
+  'overview',
+  'logs',
+  'config',
+  'doctor',
+  'commands',
+] as const
 type Screen = (typeof SCREENS)[number]
 
 export const tuiCommand = defineCommand({
   name: 'tui',
   summary: 'Full-screen terminal UI over the server (what bare `atc` opens on a terminal)',
   description:
-    'A live screen for people at a keyboard: the server, the core, the API and running models, the server log, the config, doctor and every command with its help, with keys to start, stop and restart the server and change settings. Bare `atc` opens it on an interactive terminal. It needs a terminal; in scripts use `atc status --json`, in a browser `atc admin`. Every action it offers is also a plain command, and leaving it never stops the server.',
+    'A keyboard-first workspace for chat and API hosting, with mouse navigation, model selection, request activity, settings, logs, and system checks. Choose Personal terminal or Server console on first launch. Ctrl+G opens navigation; Ctrl+K shows shortcuts; Ctrl+Q leaves the console without stopping the server. Bare `atc` opens it on an interactive terminal.',
   group: 'access',
   options: {
     screen: {
       type: 'string',
-      description: 'Open on a screen: overview, logs, config, doctor, commands',
+      description: 'Open on chat, server, models, welcome, logs, config, doctor, or commands',
       placeholder: 'name',
-      default: 'overview',
     },
   },
   examples: ['atc', 'atc tui --screen logs'],
   run: async (inv, ctx) => {
-    const screen = inv.values['screen'] as string
-    if (!SCREENS.includes(screen as Screen))
+    const screen = inv.values['screen'] as string | undefined
+    if (screen && !SCREENS.includes(screen as Screen))
       throw new AtcError('ATC_USAGE', `Unknown screen '${screen}'.`, { hint: `one of ${SCREENS.join(', ')}` })
     const terminal = ctx.io.terminal
     if (!terminal || ctx.flags.json)
@@ -43,7 +57,18 @@ export const tuiCommand = defineCommand({
     const { runTui } = await import('../tui/index.js')
     return runTui({
       terminal,
-      screen: screen as Screen,
+      agentHost: {
+        env: io.env,
+        cwd: io.cwd,
+        folder: join(paths.dataFolder, 'atc', 'agents'),
+        find: ctx.host.findOnPath,
+        exec: ctx.host.exec,
+      },
+      screen: screen as Screen | undefined,
+      request: io.fetch,
+      apiKey: io.env['ATC_API_KEY'] ?? '',
+      chatKey: io.env['ATC_CHAT_API_KEY'] ?? io.env['ATC_API_KEY'] ?? '',
+      trueColor: /truecolor|24bit/i.test(io.env['COLORTERM'] ?? ''),
       color: colorEnabled({ isTTY: io.isTTY.stdout, env: io.env, noColor: ctx.flags.noColor }),
       dataFolder: paths.dataFolder,
       waitForShutdown: io.waitForShutdown,

@@ -1,0 +1,282 @@
+import type { AgentId, AgentLaunch } from '../../agent-launch/index.js'
+import { endpointUrl } from '../../terminal-service/index.js'
+import type { WorkspaceController } from './controller.js'
+import type { WorkspaceState, Page } from './state.js'
+export interface ActionContext {
+  handoff?: (launch: AgentLaunch) => void
+  get: () => WorkspaceState
+  update: (fn: (s: WorkspaceState) => WorkspaceState) => void
+  controller: WorkspaceController
+  send: () => void
+  copy: (text: string) => void
+  cancel: () => void
+}
+export function serverEndpoint(s: WorkspaceState): string {
+  const api = s.base.daemon.kind === 'up' ? s.base.daemon.snapshot.server : undefined
+  const value = (key: string, fallback: string) =>
+    s.base.config.rows.find((r) => r.path === key)?.value ?? fallback
+  let host = api?.host ?? value('api.host', '127.0.0.1')
+  if (host === '0.0.0.0' || host === '::') host = '127.0.0.1'
+  return `http://${host.includes(':') ? '[' + host + ']' : host}:${api?.port ?? value('api.port', '1337')}${api?.prefix ?? value('api.prefix', '/v1')}`
+}
+export function example(s: WorkspaceState): string {
+  // Shell placeholders intentionally contain no model IDs or credentials from the server.
+  return `curl '${serverEndpoint(s).replaceAll("'", "'\\''")}'/chat/completions -H 'Content-Type: application/json' -H "Authorization: Bearer $ATC_API_KEY" -d '{"model":"MODEL_ID","messages":[{"role":"user","content":"Hello"}]}'`
+}
+export async function activate(id: string, ctx: ActionContext): Promise<void> {
+  const { update, controller, get } = ctx,
+    s = get()
+  const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
+  if (id.startsWith('agent:')) {
+    if (s.base.daemon.kind !== 'up' || !s.base.daemon.snapshot.server.running) {
+      patch({ message: 'Start the API, then open an agent.' })
+      return
+    }
+    patch({ busy: true, message: 'Finding a model for this agent...' })
+    try {
+      const models = await controller.models(serverEndpoint(s), true)
+      if (!models.length) throw new Error('Load a model in Atomic Chat before opening an agent.')
+      patch({
+        agent: id.slice(6) as AgentId,
+        agentModel: models.includes(s.model) ? s.model : models[0]!,
+        models,
+        overlay: 'agent',
+        focus: 'launch-agent',
+        message: '',
+      })
+    } finally {
+      patch({ busy: false })
+    }
+    return
+  }
+  if (id === 'agent-model') {
+    const i = s.models.indexOf(s.agentModel)
+    patch({ agentModel: s.models[(i + 1) % s.models.length] ?? '' })
+    return
+  }
+  if (id === 'launch-agent') {
+    if (!ctx.handoff) throw new Error('Agent handoff is unavailable in this terminal.')
+    patch({ busy: true, message: 'Preparing the agent...' })
+    try {
+      const launch = await controller.prepareAgent(s.agent, serverEndpoint(s), s.agentModel)
+      ctx.handoff(launch)
+    } finally {
+      patch({ busy: false })
+    }
+    return
+  }
+  if (id.startsWith('page:')) {
+    const page = id.slice(5) as Page
+    patch({
+      page,
+      overlay: null,
+      selected: 0,
+      scroll: 0,
+      focus: page === 'chat' ? 'composer' : '',
+      hover: '',
+      message: '',
+    })
+    if (page === 'models') return activate('refresh-models', ctx)
+    if (page === 'checks' && !s.base.doctor.results) await controller.run({ name: 'doctor' })
+    return
+  }
+  if (id === 'close') {
+    patch({ overlay: null, focus: s.page === 'chat' ? 'composer' : '', message: '' })
+    return
+  }
+  if (id === 'composer') {
+    patch({ focus: id })
+    return
+  }
+  if (id === 'personal' || id === 'hosting') {
+    await controller.save('tui.mode', id === 'personal' ? 'personal' : 'server')
+    patch({
+      page: id === 'personal' ? 'chat' : 'server',
+      focus: id === 'personal' ? 'composer' : '',
+      overlay: null,
+      message: '',
+    })
+    return
+  }
+  if (id === 'switch-mode') {
+    patch({ page: 'welcome', focus: 'personal', overlay: null })
+    return
+  }
+  if (id === 'new') {
+    ctx.cancel()
+    patch({
+      page: 'chat',
+      messages: [],
+      draft: '',
+      cursor: 0,
+      focus: 'composer',
+      overlay: null,
+      scroll: 0,
+      message: '',
+    })
+    return
+  }
+  if (id === 'motion' || id === 'mouse') {
+    const value = !s[id]
+    await controller.save(`tui.${id}`, String(value))
+    patch({ [id]: value })
+    return
+  }
+  if (id === 'choose-model') return activate('page:models', ctx)
+  if (id === 'endpoint') {
+    patch({ overlay: 'endpoint', edit: 'endpoint', editValue: s.endpoint, focus: 'save-edit', message: '' })
+    return
+  }
+  if (id.startsWith('setting:')) {
+    const row = s.base.config.rows.find((r) => r.path === id.slice(8))
+    if (!row) return
+    if (row.type === 'boolean') {
+      await controller.save(row.path, row.value === 'true' ? 'false' : 'true')
+      await controller.run({ name: 'refresh' })
+      return
+    }
+    patch({ overlay: 'endpoint', edit: id, editValue: row.value, focus: 'save-edit' })
+    return
+  }
+  if (id === 'save-edit') {
+    const isEndpoint = s.edit === 'endpoint',
+      value = isEndpoint ? endpointUrl(s.editValue.trim()) : s.editValue
+    await controller.save(isEndpoint ? 'tui.endpoint' : s.edit.slice(8), value)
+    patch({
+      overlay: null,
+      ...(isEndpoint ? { endpoint: value, model: '', models: [] } : {}),
+      message: isEndpoint
+        ? 'Connection saved. Choose a model to begin.'
+        : 'Setting saved. Restart the API to apply it.',
+    })
+    if (isEndpoint) {
+      await controller.save('tui.model', '')
+      if (get().page === 'models') await activate('refresh-models', ctx)
+    }
+    await controller.run({ name: 'refresh' })
+    return
+  }
+  if (id === 'refresh-models') {
+    patch({ busy: true, message: 'Reading available models...' })
+    try {
+      const models = await controller.models(s.endpoint)
+      if (get().endpoint === s.endpoint)
+        patch({
+          models,
+          message: models.length
+            ? `${models.length} models available.`
+            : 'No models are available from this endpoint.',
+        })
+    } finally {
+      patch({ busy: false })
+    }
+    return
+  }
+  if (id.startsWith('model:')) {
+    const model = s.models[Number(id.slice(6))]
+    if (!model) return
+    await controller.save('tui.model', model)
+    patch({ model, page: 'chat', focus: 'composer', message: '', selected: 0 })
+    return
+  }
+  if (id === 'send') {
+    ctx.send()
+    return
+  }
+  if (id === 'cancel') {
+    ctx.cancel()
+    return
+  }
+  if (id === 'api-toggle') {
+    if (s.base.daemon.kind === 'up' && s.base.daemon.snapshot.server.running) {
+      patch({ overlay: 'stop', focus: 'close' })
+      return
+    }
+    patch({ busy: true, message: 'Starting the API...' })
+    try {
+      await controller.api(true)
+      patch({ message: 'API started.' })
+    } finally {
+      patch({ busy: false })
+    }
+    return
+  }
+  if (id === 'stop-confirm') {
+    patch({ busy: true, message: 'Stopping the API...', overlay: null })
+    try {
+      await controller.api(false)
+      patch({ message: 'API stopped. The background server remains available.' })
+    } finally {
+      patch({ busy: false })
+    }
+    return
+  }
+  if (id === 'test-request' || id === 'copy-endpoint') {
+    const api = s.base.daemon.kind === 'up' ? s.base.daemon.snapshot.server : undefined
+    const endpoint = serverEndpoint(s)
+    if (id === 'copy-endpoint') {
+      ctx.copy(endpoint)
+      patch({ message: 'URL sent to the terminal clipboard.' })
+      return
+    }
+    if (!api?.running) {
+      patch({ message: 'Start the API before sending a test request.' })
+      return
+    }
+    patch({ endpoint, page: 'models', focus: '', message: '' })
+    return activate('refresh-models', ctx)
+  }
+  if (id === 'examples') {
+    patch({ overlay: 'examples', focus: 'copy-example' })
+    return
+  }
+  if (id === 'copy-example') {
+    ctx.copy(example(s))
+    patch({ message: 'Example sent to the terminal clipboard.' })
+    return
+  }
+  if (id.startsWith('command:')) {
+    patch({ selected: Number(id.slice(8)), overlay: 'command', focus: 'close', scroll: 0 })
+    return
+  }
+  if (id.startsWith('request:')) {
+    patch({ selected: Number(id.slice(8)), overlay: 'detail', focus: 'close' })
+    return
+  }
+  if (id === 'refresh') {
+    await controller.run({ name: 'refresh' })
+    patch({ message: 'Status refreshed.' })
+    return
+  }
+  if (id === 'checks') {
+    await controller.run({ name: 'doctor' })
+    return
+  }
+  if (id === 'log-filter') {
+    update((v) => ({ ...v, base: { ...v.base, logs: { ...v.base.logs, filtering: true } } }))
+    return
+  }
+  if (id === 'log-follow') {
+    update((v) => ({
+      ...v,
+      base: { ...v.base, logs: { ...v.base.logs, follow: !v.base.logs.follow, scroll: 0 } },
+    }))
+    return
+  }
+  if (id === 'scroll-up' || id === 'scroll-down')
+    update((v) => ({
+      ...v,
+      scroll: Math.max(0, v.scroll + (id === 'scroll-up' ? 3 : -3)),
+      base: {
+        ...v.base,
+        logs: {
+          ...v.base.logs,
+          follow: false,
+          scroll: Math.max(
+            0,
+            Math.min(v.base.logs.lines.length - 1, v.base.logs.scroll + (id === 'scroll-up' ? 3 : -3))
+          ),
+        },
+      },
+    }))
+}

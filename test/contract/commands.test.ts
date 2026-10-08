@@ -96,13 +96,13 @@ describe('the terminal UI', () => {
     expect(await t.run(['tui'])).toBe(2)
     expect(t.io.err.join('')).toContain('The terminal UI needs an interactive terminal.')
     expect(t.io.err.join('')).toContain('atc status --json')
-    expect(await t.run(['tui', '--screen', 'models'])).toBe(2)
-    expect(t.io.err.join('')).toContain("Unknown screen 'models'")
+    expect(await t.run(['tui', '--screen', 'missing'])).toBe(2)
+    expect(t.io.err.join('')).toContain("Unknown screen 'missing'")
     expect(await t.run([])).toBe(2)
     expect(t.io.out.join('')).toContain('Usage: atc <command>')
   })
 
-  it('opens on bare `atc` in a terminal, shows the daemon, and leaves on q without stopping it', async () => {
+  it('opens on bare `atc` in a terminal, shows the daemon, and leaves on Ctrl+Q without stopping it', async () => {
     const terminal = fakeTerminal(100, 30)
     t = testRun({
       io: {
@@ -112,11 +112,13 @@ describe('the terminal UI', () => {
       },
     })
     const exit = t.run([])
-    await eventually(() => terminal.stdout.text().includes('instance fake-ins'), 'the overview')
-    expect(terminal.stdout.text()).toContain('1 Overview')
-    terminal.stdin.press('2')
-    await eventually(() => terminal.stdout.text().includes('daemon.log'), 'the logs screen')
-    terminal.stdin.press('q')
+    await eventually(() => terminal.stdout.text().includes('How will you use Atomic Chat?'), 'welcome')
+    terminal.stdin.press('1')
+    await eventually(() => terminal.stdout.text().includes('Your next idea starts here.'), 'chat')
+    terminal.stdin.press('\u0007')
+    terminal.stdin.press('s')
+    await eventually(() => terminal.stdout.text().includes('Bring your API online'), 'server')
+    terminal.stdin.press('\u0011')
     expect(await exit).toBe(0)
     expect(t.link.shutdowns).toBe(0)
     // Back from the alternate screen: the shell's scrollback is as it was.

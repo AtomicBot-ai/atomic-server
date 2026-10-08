@@ -47,8 +47,12 @@ def pump(until=None, seconds=20.0):
             out += data
     return until is None
 ok = True
+failed = []
 for step in steps:
-    if 'wait' in step: ok = pump(step['wait']) and ok
+    if 'wait' in step:
+        seen = pump(step['wait'])
+        if not seen: failed.append(step['wait'])
+        ok = seen and ok
     else:
         try: os.write(fd, step['type'].encode())
         except OSError: ok = False
@@ -62,7 +66,7 @@ while time.time() < end:
         code = os.waitstatus_to_exitcode(status); break
     pump(seconds=0.1)
 if code is None: os.kill(pid, 9)
-print(json.dumps({'ok': ok, 'code': code, 'out': out.decode('utf8', 'replace')}))
+print(json.dumps({'ok': ok, 'failed':failed, 'code': code, 'out': out.decode('utf8', 'replace')}))
 `
 
 function hasPython(): boolean {
@@ -91,14 +95,16 @@ describe(`atc tui (${command.join(' ')})`, () => {
     'opens on bare atc in a pseudo-terminal, switches screens, and gives the terminal back',
     () => {
       const steps = [
-        { wait: 'Overview' },
-        { wait: 'not running' },
-        { type: '\u001b[C' },
-        { wait: 'daemon.log' },
-        { type: '?' },
-        { wait: 'Every action here is also a plain command' },
+        { wait: 'How will you use Atomic Chat?' },
+        { type: '1' },
+        { wait: 'Your next idea starts here.' },
+        { type: '\u0007' },
+        { type: 's' },
+        { wait: 'Bring your API online' },
+        { type: '\u000b' },
+        { wait: 'A few keys, anywhere' },
         { type: '\u001b' },
-        { type: 'q' },
+        { type: '\u0011' },
       ]
       const res = spawnSync(
         'python3',
@@ -112,14 +118,16 @@ describe(`atc tui (${command.join(' ')})`, () => {
       )
       expect(res.status, res.stderr).toBe(0)
       const result = JSON.parse(res.stdout.trim().split('\n').at(-1) as string) as {
+        failed: string[]
         ok: boolean
         code: number | null
         out: string
       }
       const screen = strip(result.out)
-      expect(result.ok, screen.slice(-2000)).toBe(true)
+      expect(result.ok, result.failed.join(', ') + '\n' + screen.slice(-2000)).toBe(true)
       expect(result.code, screen.slice(-2000)).toBe(0)
-      expect(screen).toContain('1 Overview')
+      expect(screen).toContain('ATOMIC CHAT')
+      expect(result.out).toContain('\u001b[?1006l')
       expect(result.out).toContain('\u001b[?1049h')
       expect(result.out).toContain('\u001b[?1049l')
     }

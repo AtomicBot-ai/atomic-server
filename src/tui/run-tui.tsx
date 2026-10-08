@@ -1,59 +1,94 @@
-/**
- * Put the terminal UI on a terminal and wait for it to close. Ink owns the terminal meanwhile:
- * raw mode, the alternate screen (the shell's scrollback comes back untouched on exit), resize.
- * Leaving — `q`, Esc, Ctrl+C or a SIGTERM — never stops the daemon.
- */
-
+/** The console owns the terminal only while visible. Agent handoff happens after cleanup. */
 import { render } from 'ink'
 import type { CommandSpec } from '../cli/index.js'
 import { EXIT } from '../errors/index.js'
 import type { AtcIo, TerminalStreams } from '../io.js'
-import { App } from './app.js'
+import type { AgentHost, AgentLaunch } from '../agent-launch/index.js'
+import { runAgent } from '../agent-launch/index.js'
+import { WorkspaceApp } from './workspace/index.js'
+import type { Page } from './workspace/index.js'
+import { oneLine } from './controller.js'
 import type { TuiDeps } from './controller.js'
-import { TuiController } from './controller.js'
 import type { TabId } from './state.js'
-
 export interface RunTuiOptions {
   terminal: TerminalStreams
   deps: TuiDeps
-  screen: TabId
+  screen: TabId | Page | undefined
+  request?: typeof fetch
+  apiKey?: string
+  chatKey?: string
+  trueColor?: boolean
   color: boolean
   dataFolder: string
   waitForShutdown: AtcIo['waitForShutdown']
-  /** The command tree the Commands screen lists. */
   root: CommandSpec
+  agentHost?: AgentHost
+  launchAgent?: (launch: AgentLaunch) => Promise<void>
 }
-
 export async function runTui(options: RunTuiOptions): Promise<number> {
   const { terminal, deps } = options
-  const createController = (dispatch: ConstructorParameters<typeof TuiController>[1]) =>
-    new TuiController(deps, dispatch)
-  const instance = render(
-    <App
-      initialTab={options.screen}
-      theme={{ color: options.color }}
-      createController={createController}
-      now={deps.now}
-      dataFolder={options.dataFolder}
-      logPath={deps.paths.daemonLog}
-      root={options.root}
-    />,
-    {
-      stdin: terminal.stdin,
-      stdout: terminal.stdout,
-      stderr: terminal.stderr,
-      exitOnCtrlC: true,
-      alternateScreen: true,
-      // A terminal was checked for by the caller; `CI=1` in its environment must not turn the
-      // live screen into a single frame written at exit.
-      interactive: true,
-    }
-  )
-  let signalled = false
+  const workspaceDeps = {
+    base: deps,
+    request: options.request ?? fetch,
+    apiKey: options.apiKey ?? '',
+    chatKey: options.chatKey ?? options.apiKey ?? '',
+    ...(options.agentHost ? { agentHost: options.agentHost } : {}),
+  }
+  let page =
+    options.screen === 'overview'
+      ? 'server'
+      : options.screen === 'config'
+        ? 'settings'
+        : options.screen === 'doctor'
+          ? 'checks'
+          : options.screen
+  let instance: ReturnType<typeof render> | undefined,
+    signalled = false,
+    message = ''
   void options.waitForShutdown(async () => {
     signalled = true
-    instance.unmount()
+    instance?.unmount()
   })
-  await instance.waitUntilExit()
+  while (!signalled) {
+    let handoff: AgentLaunch | undefined
+    const write = (value: string) => {
+      terminal.stdout.write(value)
+    }
+    instance = render(
+      <WorkspaceApp
+        deps={workspaceDeps}
+        root={options.root}
+        {...(page ? { initialPage: page as Page } : {})}
+        initialMessage={message}
+        color={options.color}
+        trueColor={options.trueColor ?? false}
+        write={write}
+        onLaunch={(launch) => {
+          handoff = launch
+        }}
+      />,
+      {
+        stdin: terminal.stdin,
+        stdout: terminal.stdout,
+        stderr: terminal.stderr,
+        exitOnCtrlC: false,
+        alternateScreen: true,
+        interactive: true,
+      }
+    )
+    try {
+      await instance.waitUntilExit()
+    } finally {
+      terminal.stdout.write('\u001b[?1000l\u001b[?1003l\u001b[?1006l')
+    }
+    if (!handoff || signalled) break
+    try {
+      await (options.launchAgent ?? runAgent)(handoff)
+      message = 'Back in Server. The API is still running.'
+    } catch (error) {
+      message = oneLine(error)
+    }
+    page = 'server'
+  }
   return signalled ? EXIT.INTERRUPTED : EXIT.OK
 }
