@@ -97,6 +97,7 @@ export class TerminalSetup {
       mode,
       startedAt: Date.now(),
       complete: false,
+      onboarded: previous?.onboarded === true || previous?.complete === true,
       engine: { provider, version, backend: backend.join('|'), taskId: `terminal-engine-${randomUUID()}` },
       selections,
     }
@@ -210,7 +211,7 @@ export class TerminalSetup {
       first.provider === 'atomic-prism' ? first.provider : manifest.engine.provider,
       first.model_id
     )
-    const completed = { ...manifest, complete: true }
+    const completed = { ...manifest, complete: true, onboarded: true }
     await writeDocument(this.path, completed)
     return completed
   }

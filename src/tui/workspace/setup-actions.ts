@@ -12,6 +12,11 @@ export async function setupAction(
     update((s) => ({ ...s, setup: s.setup ? { ...s.setup, ...p } : null }))
   const focus = (value: string) =>
     update((s) => ({ ...s, focus: value, selected: 0, hover: '', overlay: null }))
+  if (id === 'library-close') {
+    operations.get(c)?.abort()
+    update((s) => ({ ...s, page: 'models', setup: null, overlay: null, focus: 'install-models', hover: '' }))
+    return true
+  }
   if (id === 'personal' || id === 'hosting' || id === 'install-models') {
     operations.get(c)?.abort()
     const mode =
@@ -19,32 +24,48 @@ export async function setupAction(
         ? 'personal'
         : id === 'hosting'
           ? 'server'
-          : (await c.config()).values.tui.mode === 'personal'
-            ? 'personal'
-            : 'server'
+          : (await c.config()).values.tui.mode === 'server'
+            ? 'server'
+            : 'personal'
     await c.save('tui.mode', mode)
     if (get().setupComplete && id !== 'install-models') {
       update((s) => ({
         ...s,
         page: mode === 'personal' ? 'chat' : 'server',
         focus: mode === 'personal' ? 'composer' : 'api-toggle',
+        overlay: null,
+        hover: '',
       }))
       return true
     }
     update((s) => ({
       ...s,
-      page: 'setup',
-      setup: newSetup(mode),
+      page: s.setupComplete ? 'models' : 'setup',
+      setup: { ...newSetup(mode), engine: s.engine },
       overlay: null,
       focus: 'setup-refresh',
       message: '',
     }))
     id = 'setup-refresh'
+    if (get().setupComplete) {
+      const manifest = await c.setup.read()
+      if (manifest && !manifest.complete) {
+        change({
+          stage: 'download',
+          startedAt: manifest.startedAt,
+          selections: manifest.selections,
+          engine: `${manifest.engine.provider}|${manifest.engine.version}|${manifest.engine.backend}`,
+        })
+        focus('setup-retry')
+        return true
+      }
+    }
   }
   if (!id.startsWith('setup-')) return false
   const view = get().setup
   if (!view) return true
   if (id === 'setup-intro') {
+    if (get().setupComplete) return setupAction('library-close', ctx)
     operations.get(c)?.abort()
     update((s) => ({ ...s, page: 'welcome', setup: null, focus: 'personal', overlay: null, message: '' }))
     return true
@@ -98,6 +119,10 @@ export async function setupAction(
       patch({ catalogs, engine: view.engine || `${first.provider}|${build.version}|${build.backend}` })
       if (!operation.signal.aborted)
         focus(`setup-engine:${view.engine || `${first.provider}|${build.version}|${build.backend}`}`)
+      if (get().setupComplete && !operation.signal.aborted) {
+        patch({ busy: false })
+        return setupAction('setup-models', ctx)
+      }
     } else if (id.startsWith('setup-engine:')) {
       patch({ engine: id.slice(13), busy: false })
       return setupAction('setup-models', ctx)
@@ -193,20 +218,38 @@ export async function setupAction(
       patch({ progress: await wait(c.setup.resume()) })
     } else if (id === 'setup-finish') {
       const manifest = await wait(c.setup.finish(), 180000)
+      const engine = manifest.engine
+      const engineId = `${engine.provider}|${engine.version}|${engine.backend}`
+      await c.engineSelection.remember(engineId)
       if (manifest.mode === 'personal') await wait(c.api(true, false))
       const model = manifest.selections[0]!.plan.model_id
       const endpoint = await c.localEndpoint()
       await c.save('tui.endpoint', endpoint)
       await c.save('tui.model', model)
+      const current = get()
+      const page =
+        current.setupComplete && !['models', 'setup'].includes(current.page)
+          ? current.page
+          : manifest.mode === 'personal'
+            ? 'chat'
+            : 'server'
       update((s) => ({
         ...s,
         setupComplete: true,
         setup: null,
         model,
+        engine: engineId,
         endpoint,
-        page: manifest.mode === 'personal' ? 'chat' : 'server',
-        focus: manifest.mode === 'personal' ? 'composer' : 'api-toggle',
-        message: 'Everything is installed. Your workspace is ready.',
+        page,
+        focus:
+          page === current.page && current.setupComplete
+            ? s.focus
+            : page === 'chat'
+              ? 'composer'
+              : 'api-toggle',
+        message: get().setupComplete
+          ? 'Model installed. Ready to use.'
+          : 'Everything is installed. Your workspace is ready.',
       }))
     }
   } catch (e) {

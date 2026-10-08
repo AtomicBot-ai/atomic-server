@@ -66,11 +66,22 @@ describe('workspace actions', () => {
     expect(models).not.toHaveBeenCalled()
     expect(ctx.get().message).toContain('Start the API')
   })
-  it('opens live engine setup from the composer while preserving the draft', async () => {
+  it('opens a live engine popover without leaving chat or changing the draft', async () => {
     const { ctx } = context()
     Object.assign(ctx.controller, {
       config: async () => ({ values: { tui: { mode: 'personal' } } }),
       initializeKeys: async () => undefined,
+      engineSelection: {
+        list: async () => [
+          {
+            id: 'llamacpp-upstream|v1|metal',
+            provider: 'llamacpp-upstream',
+            version: 'v1',
+            backend: 'metal',
+            installed: true,
+          },
+        ],
+      },
       setup: {
         catalogs: async () => [
           {
@@ -84,9 +95,11 @@ describe('workspace actions', () => {
     ctx.update((s) => ({ ...s, draft: 'Keep this draft' }))
     await activate('choose-engine', ctx)
     expect(ctx.get()).toMatchObject({
-      page: 'setup',
+      page: 'chat',
+      overlay: 'engine-picker',
       draft: 'Keep this draft',
-      setup: { stage: 'engine', engine: 'llamacpp-upstream|v1|metal' },
+      setup: null,
+      focus: 'pick-engine:0',
     })
   })
   it('returns from a local model selection to the composer after the real load succeeds', async () => {

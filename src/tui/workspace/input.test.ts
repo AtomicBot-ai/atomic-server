@@ -26,6 +26,8 @@ describe('keyboard and mouse controls', () => {
     s.cursor = 2
     expect(workspaceInput('', key({ backspace: true }), s, f).patch).toEqual({ draft: 'ab', cursor: 1 })
     expect(workspaceInput('', key({ return: true, meta: true }), s, f).patch?.draft).toBe('a👁\nb')
+    expect(workspaceInput('', key({ return: true, shift: true }), s, f).patch?.draft).toBe('a👁\nb')
+    expect(workspaceInput('[27;2;13~', key(), s, f).patch?.draft).toBe('a👁\nb')
   })
   it('scrolls model focus past a screenful and exposes the new mouse target', () => {
     const s = createWorkspace('models')

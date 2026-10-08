@@ -97,8 +97,6 @@ describe(`atc tui (${command.join(' ')})`, () => {
     () => {
       readyWorkspace(dataFolder)
       const steps = [
-        { wait: 'Choose your workspace' },
-        { type: '1' },
         { wait: 'Your next idea starts here.' },
         { type: '\u0007' },
         { type: 's' },

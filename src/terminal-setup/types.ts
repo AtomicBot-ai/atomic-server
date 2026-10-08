@@ -15,6 +15,8 @@ export interface SetupManifest {
   mode: 'personal' | 'server'
   startedAt: number
   complete: boolean
+  /** Once true, later installations never gate entry into the workspace. */
+  onboarded?: boolean
   engine: { provider: string; version: string; backend: string; taskId: string }
   selections: SetupSelection[]
 }

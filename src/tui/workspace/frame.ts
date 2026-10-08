@@ -12,6 +12,8 @@ import { drawPanels } from './panels.js'
 import { drawOverlay } from './overlay.js'
 import { tooltip } from './tooltip.js'
 import { drawComposer } from './composer.js'
+import { newChatButton } from './chat-navigation.js'
+import { drawPicker, isPicker } from './picker.js'
 export function workspaceFrame(
   s: WorkspaceState,
   width: number,
@@ -69,9 +71,8 @@ export function workspaceFrame(
     y = l.top + 2,
     bodyWidth = width - x - l.inset
   if (s.page === 'chat' && l.sidebar) {
-    text(c, l.inset, y, 'CONVERSATIONS', COLORS.muted)
-    button(c, 'new', l.inset, y + 2, '+ New chat', 'Start an empty conversation. Ctrl+N', focus)
-    button(c, 'page:history', l.inset, y + 4, 'History  Ctrl+P', 'Search and resume conversations.', focus)
+    newChatButton(c, l.inset, y + 1, l.sidebar - 3, true, focus)
+    text(c, l.inset, y + 5, 'Recents', COLORS.muted)
     s.history
       .slice(0, Math.max(0, l.bottom - y - 8))
       .forEach((h, i) =>
@@ -79,7 +80,7 @@ export function workspaceFrame(
           c,
           `history:${h.id}`,
           l.inset,
-          y + 6 + i,
+          y + 7 + i,
           h.title.slice(0, l.sidebar - 5),
           'Resume this conversation.',
           focus,
@@ -92,14 +93,13 @@ export function workspaceFrame(
   }
   if (s.page === 'welcome') {
     drawWelcome(c, focus, seconds, s.motion, l.gate + 3, l.bottom)
-  } else if (s.page === 'setup') {
+  } else if (s.page === 'setup' || (s.page === 'models' && s.setup)) {
     drawSetup(c, s, x, y, bodyWidth, l.bottom, focus, seconds)
   } else if (drawDataPanel(c, s, x, y, bodyWidth, l.bottom, focus)) {
     // History and key management share the same responsive content bounds.
   } else if (s.page === 'chat') {
     if (!l.sidebar) {
-      button(c, 'new', x, y, '+ New', 'New chat. Ctrl+N', focus)
-      button(c, 'page:history', x + 9, y, 'History', 'Resume a conversation. Ctrl+P', focus)
+      newChatButton(c, x, y, 16, false, focus)
       y += 2
     }
     const composerY = l.bottom - 4
@@ -136,7 +136,8 @@ export function workspaceFrame(
     }
     drawComposer(c, s, x, composerY, bodyWidth, focus)
   } else drawPanels(c, s, { x, y, width: bodyWidth, bottom: l.bottom }, focus)
-  if (s.overlay) drawOverlay(c, s, focus)
+  if (isPicker(s.overlay)) drawPicker(c, s, focus)
+  else if (s.overlay) drawOverlay(c, s, focus)
   const active = c.targets.find((t) => t.id === focus)
   if (!s.overlay && (s.message || s.base.busy))
     text(

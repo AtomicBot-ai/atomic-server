@@ -35,6 +35,7 @@ export interface Target {
   hint: string
 }
 export interface Canvas {
+  popover?: { x: number; y: number; width: number; height: number }
   cells: Cell[][]
   targets: Target[]
   width: number

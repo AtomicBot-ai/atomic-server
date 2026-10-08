@@ -3,6 +3,7 @@ import type { Canvas } from './canvas.js'
 import { graphemes, hit } from './canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
+import { isPicker, pickerRows } from './picker.js'
 export interface InputResult {
   patch?: Partial<WorkspaceState>
   action?: string | undefined
@@ -26,10 +27,28 @@ export function workspaceInput(
   frame: Canvas,
   leader = false
 ): InputResult {
+  // Legacy xterm modified-Enter encodings complement Ink's CSI-u/Kitty parser.
+  // eslint-disable-next-line no-control-regex
+  if (/^(?:\u001b)?\[(?:27;2;13~|13;2~)$/.test(input)) {
+    key = { ...key, return: true, shift: true }
+    input = ''
+  }
   const mouse = mouseReport(input)
   if (mouse) {
     if (!s.mouse) return {}
-    if (mouse.code & 64) return { action: mouse.code & 1 ? 'scroll-down' : 'scroll-up' }
+    if (mouse.code & 64) {
+      if (isPicker(s.overlay)) {
+        const rows = pickerRows(s),
+          at = rows.findIndex((r) => r.id === s.focus)
+        return {
+          patch: {
+            focus: rows[Math.max(0, Math.min(rows.length - 1, at + (mouse.code & 1 ? 1 : -1)))]?.id ?? '',
+            hover: '',
+          },
+        }
+      }
+      return { action: mouse.code & 1 ? 'scroll-down' : 'scroll-up' }
+    }
     if (mouse.released) return {}
     const target = hit(frame, mouse.x, mouse.y)
     if (mouse.code & 32)
@@ -40,7 +59,14 @@ export function workspaceInput(
           ...(target?.id.startsWith('setup-repo:') ? { selected: Number(target.id.slice(11)) } : {}),
         },
       }
-    if ((mouse.code & 3) !== 0 || !target) return {}
+    if ((mouse.code & 3) !== 0) return {}
+    if (!target) {
+      const p = frame.popover
+      return isPicker(s.overlay) &&
+        (!p || mouse.x < p.x || mouse.x >= p.x + p.width || mouse.y < p.y || mouse.y >= p.y + p.height)
+        ? { action: 'close' }
+        : {}
+    }
     return { patch: { focus: target.id, hover: '', message: '' }, action: target.id }
   }
   const focused = () => {
@@ -57,6 +83,12 @@ export function workspaceInput(
   if (leader) {
     const p = PAGES.find((p) => p.key === input.toLowerCase())
     return p ? { action: `page:${p.id}`, leader: false } : { leader: false }
+  }
+  if (isPicker(s.overlay) && (key.tab || key.upArrow || key.downArrow || key.pageUp || key.pageDown)) {
+    const rows = pickerRows(s),
+      at = rows.findIndex((r) => r.id === s.focus)
+    const delta = key.upArrow || key.pageUp || (key.tab && key.shift) ? -1 : 1
+    return { patch: { focus: rows[(at + delta + rows.length) % rows.length]?.id ?? '', hover: '' } }
   }
   if (key.tab) {
     const i = frame.targets.findIndex((t) => t.id === s.focus),
@@ -80,18 +112,22 @@ export function workspaceInput(
       : s.base.logs.filter + (!key.ctrl ? input : '')
     return { patch: { base: { ...s.base, logs: { ...s.base.logs, filter } } } }
   }
-  if (key.escape && !s.overlay && s.page === 'setup') {
+  if (key.escape && !s.overlay && (s.page === 'setup' || (s.page === 'models' && s.setup))) {
     const stage = s.setup?.stage
     return {
       action: s.setup?.preparing
         ? 'setup-cancel'
         : stage === 'engine'
-          ? 'setup-intro'
+          ? s.setupComplete
+            ? 'library-close'
+            : 'setup-intro'
           : stage === 'download' || stage === 'ready'
             ? 'setup-pause'
             : s.setup?.repository
               ? 'setup-back'
-              : 'setup-engine-back',
+              : s.setupComplete
+                ? 'library-close'
+                : 'setup-engine-back',
     }
   }
   if (key.escape) return s.overlay ? { action: 'close' } : { patch: { overlay: 'menu', focus: 'page:chat' } }

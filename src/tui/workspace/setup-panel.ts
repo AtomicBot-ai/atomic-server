@@ -30,10 +30,23 @@ export function drawSetup(
   }
   const b = (id: string, dy: number, label: string, hint: string, selected = false) =>
     button(c, id, x, y + dy, label.slice(0, width - 2), hint, focus, selected)
-  put(0, `SET UP YOUR ${v.mode === 'server' ? 'SERVER' : 'PERSONAL TERMINAL'}`, COLORS.gold)
+  put(
+    0,
+    s.setupComplete
+      ? v.stage === 'engine'
+        ? 'Inference engines'
+        : v.stage === 'models'
+          ? 'Discover models'
+          : 'Downloads'
+      : `SET UP YOUR ${v.mode === 'server' ? 'SERVER' : 'PERSONAL TERMINAL'}`,
+    COLORS.gold
+  )
   const active = v.stage === 'engine' ? 0 : v.stage === 'models' ? 1 : v.stage === 'ready' ? 3 : 2
   let stepX = x
-  for (const [i, label] of ['01 Engine', '02 Models', '03 Install', '04 Ready'].entries()) {
+  for (const [i, label] of (s.setupComplete
+    ? []
+    : ['01 Engine', '02 Models', '03 Install', '04 Ready']
+  ).entries()) {
     text(
       c,
       stepX,
@@ -50,6 +63,16 @@ export function drawSetup(
       stepX += 3
     }
   }
+  if (s.setupComplete)
+    button(
+      c,
+      'library-close',
+      x,
+      y + 1,
+      '‹ Your library',
+      'Return to your model library | Downloads continue in background',
+      focus
+    )
   if (v.stage === 'engine' || v.stage === 'models') {
     drawSetupBrowser(c, s, x, y, width, bottom, focus)
   } else {
@@ -70,7 +93,9 @@ export function drawSetup(
         ? v.error
           ? 'MODEL NEEDS ATTENTION.'
           : 'STARTING YOUR MODEL.'
-        : 'BUILDING YOUR LOCAL WORKSPACE.',
+        : s.setupComplete
+          ? 'DOWNLOADING YOUR MODEL.'
+          : 'BUILDING YOUR LOCAL WORKSPACE.',
       COLORS.gold
     )
     put(
@@ -163,7 +188,7 @@ export function drawSetup(
         x,
         bottom,
         v.busy ? 'Loading model...' : 'Retry model load',
-        'Load your first model, then open the workspace.',
+        'Load the selected model, then open the workspace.',
         focus
       )
     else if (v.preparing) {

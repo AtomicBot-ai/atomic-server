@@ -1,6 +1,13 @@
 import { dirname } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
-import { TerminalSetup, installedModels, ModelCatalog, modelFiles } from '../../terminal-setup/index.js'
+import {
+  TerminalSetup,
+  installedModels,
+  ModelCatalog,
+  modelFiles,
+  EngineSelection,
+  modelProvider,
+} from '../../terminal-setup/index.js'
 import type { HubRepository } from '../../terminal-setup/index.js'
 import { prepareAgent } from '../../agent-launch/index.js'
 import type { AgentHost, AgentId } from '../../agent-launch/index.js'
@@ -24,6 +31,7 @@ export class WorkspaceController {
   readonly keys: ClientKeys
   readonly history: ChatHistory
   readonly setup: TerminalSetup
+  readonly engineSelection: EngineSelection
   private catalog: ModelCatalog
   private legacy: TuiController
   private abort = new AbortController()
@@ -42,6 +50,9 @@ export class WorkspaceController {
     this.keys = new ClientKeys(directory)
     this.history = new ChatHistory(directory)
     this.setup = new TerminalSetup(directory, (launch) => deps.base.attach({ launch, log: this.log }))
+    this.engineSelection = new EngineSelection(directory, () =>
+      deps.base.attach({ launch: true, log: this.log })
+    )
     this.catalog = new ModelCatalog(directory, deps.request)
   }
   start(): void {
@@ -164,10 +175,10 @@ export class WorkspaceController {
           const selected = (await this.installed()).find((m) => m.id === config.tui.model)
           if (selected && !(await link.models.sessions()).some((s) => s.model_id === selected.id)) {
             const manifest = await this.setup.read()
-            const provider =
-              selected.provider === 'llamacpp-upstream' && manifest?.engine.provider === 'llamacpp'
-                ? 'llamacpp'
-                : selected.provider
+            const provider = modelProvider(
+              (await this.engineSelection.read()) || manifest?.engine.provider || '',
+              selected.provider
+            )
             await link.models.load(provider, selected.id)
           }
         }

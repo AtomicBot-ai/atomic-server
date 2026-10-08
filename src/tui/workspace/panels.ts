@@ -116,7 +116,7 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
         `Mouse navigation: ${s.mouse ? 'On' : 'Off'}`,
         'Toggle mouse capture. Ctrl+X also switches text-selection mode.',
       ],
-      ['switch-mode', 'Starting workspace', 'Choose Personal terminal or Server console again.'],
+      ['switch-mode', 'Starting workspace', 'Choose where Atomic Chat opens next time.'],
       ['page:access', 'API settings', 'Bind address, port, and access policy.'],
       ['page:logs', 'Server logs', 'Follow the server log.'],
       ['page:checks', 'System checks', 'Check installation and configuration.'],

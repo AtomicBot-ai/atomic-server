@@ -1,5 +1,6 @@
 import { persistConversation } from './data-actions.js'
-import { newSetup } from '../../terminal-setup/index.js'
+import { startup } from './startup.js'
+import { isPicker } from './picker.js'
 import { useWorkspaceData } from './data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
@@ -12,14 +13,20 @@ import type { TuiAction } from '../state.js'
 import { oneLine } from '../controller.js'
 import { WorkspaceController } from './controller.js'
 import type { WorkspaceDeps } from './controller.js'
-import { createWorkspace, PAGE_FOCUS } from './state.js'
+import { createWorkspace } from './state.js'
 import type { Page, WorkspaceState } from './state.js'
 import { workspaceFrame } from './frame.js'
 import { workspaceInput } from './input.js'
 import { activate } from './actions.js'
 import { COLORS } from './canvas.js'
 import type { Cell } from './canvas.js'
-const lightSurfaces = new Set([COLORS.text, COLORS.composer, COLORS.modelButton, COLORS.sendButton])
+const lightSurfaces = new Set([
+  COLORS.text,
+  COLORS.composer,
+  COLORS.composerFrame,
+  COLORS.modelButton,
+  COLORS.sendButton,
+])
 export interface WorkspaceProps {
   onLaunch?: (launch: AgentLaunch) => void
   initialMessage?: string
@@ -115,50 +122,11 @@ export function WorkspaceApp(props: WorkspaceProps) {
     )
     controller.current = c
     c.start()
-    void c
-      .config()
-      .then(async (config) => {
+    void startup(c, initialPage)
+      .then((saved) => {
         if (!live) return
-        const ui = config.values.tui
-        const manifest = await c.setup.read()
-        const history = await c.history.list()
-        if (!live) return
-        const complete = manifest?.complete === true
-        const onboarding =
-          manifest && !complete
-            ? {
-                ...newSetup(manifest.mode),
-                stage: 'download' as const,
-                startedAt: manifest.startedAt,
-                selections: manifest.selections,
-                engine: `${manifest.engine.provider}|${manifest.engine.version}|${manifest.engine.backend}`,
-              }
-            : null
-        patch({
-          setupComplete: complete,
-          setup: onboarding,
-          history,
-          page: onboarding
-            ? 'setup'
-            : !complete
-              ? 'welcome'
-              : (initialPage ??
-                (ui.mode === 'personal' ? 'chat' : ui.mode === 'server' ? 'server' : 'welcome')),
-          endpoint: ui.endpoint,
-          model: ui.model,
-          motion: ui.motion,
-          mouse: ui.mouse,
-          focus: onboarding
-            ? 'setup-pause'
-            : !complete
-              ? 'personal'
-              : PAGE_FOCUS[
-                  initialPage ??
-                    (ui.mode === 'personal' ? 'chat' : ui.mode === 'server' ? 'server' : 'welcome')
-                ],
-          ready: true,
-        })
-        if (onboarding)
+        patch(saved)
+        if (saved.setup)
           void c.setup.resume().catch((e) => {
             if (live) patch({ message: oneLine(e) })
           })
@@ -255,7 +223,13 @@ export function WorkspaceApp(props: WorkspaceProps) {
       (latest.current.busy && ['api-toggle', 'stop-confirm', 'refresh-models'].includes(id))
     )
       return
-    void activate(id, context()).catch((e) => patch({ message: oneLine(e), busy: false }))
+    void activate(id, context()).catch((e) =>
+      patch({
+        message: oneLine(e),
+        busy: false,
+        ...(isPicker(latest.current.overlay) ? { pickerError: oneLine(e) } : {}),
+      })
+    )
   }
   useInput((input, key: Key) => {
     if (!latest.current.ready) return

@@ -5,6 +5,8 @@ import { endpointUrl } from '../../terminal-service/index.js'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState, Page } from './state.js'
 import { PAGE_FOCUS } from './state.js'
+import { pickerAction } from './picker-actions.js'
+import { isPicker } from './picker.js'
 export interface ActionContext {
   handoff?: (launch: AgentLaunch) => void
   get: () => WorkspaceState
@@ -33,6 +35,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   const { update, controller, get } = ctx,
     s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
+  if (await pickerAction(id, ctx)) return
   if (await setupAction(id, ctx)) return
   if (!s.setupComplete && (id.startsWith('page:') || ['new', 'send', 'api-toggle'].includes(id))) return
   if (await dataAction(id, ctx)) return
@@ -90,7 +93,13 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'close') {
-    patch({ overlay: null, secret: '', focus: PAGE_FOCUS[s.page], message: '' })
+    patch({
+      overlay: null,
+      secret: '',
+      focus: isPicker(s.overlay) ? 'composer' : PAGE_FOCUS[s.page],
+      hover: '',
+      message: '',
+    })
     return
   }
   if (id === 'composer') {
@@ -98,7 +107,8 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'switch-mode') {
-    patch({ page: 'welcome', focus: 'personal', overlay: null })
+    const mode = (await controller.config()).values.tui.mode
+    patch({ overlay: 'workspace', focus: mode === 'server' ? 'hosting' : 'personal' })
     return
   }
   if (id === 'new') {
@@ -123,8 +133,6 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     patch({ [id]: value })
     return
   }
-  if (id === 'choose-model') return activate('page:models', ctx)
-  if (id === 'choose-engine') return activate('install-models', ctx)
   if (id === 'endpoint') {
     patch({ overlay: 'endpoint', edit: 'endpoint', editValue: s.endpoint, focus: 'save-edit', message: '' })
     return
@@ -151,6 +159,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     patch({
       overlay: null,
       ...(isEndpoint ? { endpoint: value, model: '', models: [] } : {}),
+      focus: isEndpoint && s.page === 'chat' ? 'composer' : PAGE_FOCUS[s.page],
       message: isEndpoint
         ? 'Connection saved. Choose a model to begin.'
         : 'Setting saved. Restart the API to apply it.',
@@ -184,7 +193,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     const model = s.models[Number(id.slice(6))]
     if (!model) return
     await controller.save('tui.model', model)
-    patch({ model, page: 'chat', focus: 'composer', message: '', selected: 0 })
+    patch({ model, page: 'chat', focus: 'composer', overlay: null, hover: '', message: '', selected: 0 })
     return
   }
   if (id === 'send') {

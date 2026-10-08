@@ -31,3 +31,4 @@ add a new one that says which record it supersedes.
 - **2026-10-08** — [Emphasize the composer and unify terminal hints](2026-10-08-emphasize-composer-and-unify-hints.md).
 - **2026-10-08** — [Frame the composer and bound the eye](2026-10-08-frame-the-composer-and-bound-the-eye.md).
 - **2026-10-08** — [Simplify the header and animate the eye](2026-10-08-simplify-header-and-animate-eye.md).
+- **2026-10-08** — [Keep model selection in chat and make onboarding one-time](2026-10-08-keep-model-selection-in-chat.md).

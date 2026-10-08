@@ -23,7 +23,12 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     text(c, x + 2, y + row, v, color, w - 4, COLORS.header)
   const b = (id: string, row: number, label: string, hint: string) =>
     button(c, id, x + 2, y + row, label, hint, focus)
-  if (s.overlay === 'credential') {
+  if (s.overlay === 'workspace') {
+    put(2, 'Starting workspace', COLORS.gold)
+    put(4, 'Choose where Atomic Chat opens next time.', COLORS.muted)
+    b('personal', 6, 'Personal terminal', 'Open directly into chat.')
+    b('hosting', 8, 'Server console', 'Open directly into API controls.')
+  } else if (s.overlay === 'credential') {
     put(2, 'Your API key', COLORS.gold)
     wrap(s.secret || 'Key hidden.', w - 4).forEach((line, i) => put(5 + i, line))
     put(9, 'Shown for one minute. You can reveal it again from API keys.', COLORS.muted)
@@ -91,7 +96,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
       'Ctrl+X | Mouse / text selection',
       'Ctrl+C | Stop a response',
       'Ctrl+Q | Close terminal; server stays running',
-      'Alt+Enter | New line in composer',
+      'Shift+Enter / Alt+Enter | New line in composer',
       'PageUp / PageDown | Scroll current view',
     ]
       .slice(0, h - 6)

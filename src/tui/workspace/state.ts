@@ -1,5 +1,5 @@
 import type { Conversation, ConversationSummary, ClientKeyView } from '../../terminal-data/index.js'
-import type { SetupView } from '../../terminal-setup/index.js'
+import type { SetupView, EngineChoice } from '../../terminal-setup/index.js'
 import type { AgentId } from '../../agent-launch/index.js'
 import type { ChatMessage, RequestRow } from '../../terminal-service/index.js'
 import type { CommandRow } from '../command-list.js'
@@ -45,12 +45,19 @@ export interface WorkspaceState {
   installed: { id: string; provider: string; name: string }[]
   modelsUpdated: number
   modelsError: string
+  engine: string
+  engines: EngineChoice[]
+  pickerBusy: boolean
+  pickerError: string
   agent: AgentId
   agentModel: string
   commands: CommandRow[]
   base: TuiState
   page: Page
   overlay:
+    | 'engine-picker'
+    | 'model-picker'
+    | 'workspace'
     | 'help'
     | 'endpoint'
     | 'stop'
@@ -95,6 +102,10 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     installed: [],
     modelsUpdated: 0,
     modelsError: '',
+    engine: '',
+    engines: [],
+    pickerBusy: false,
+    pickerError: '',
     agent: 'atomic-agent',
     agentModel: '',
     commands: [],

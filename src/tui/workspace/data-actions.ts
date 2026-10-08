@@ -1,5 +1,6 @@
 import type { ActionContext } from './actions.js'
 import type { WorkspaceState } from './state.js'
+import { modelProvider } from '../../terminal-setup/index.js'
 export async function persistConversation(ctx: Pick<ActionContext, 'get' | 'controller'>): Promise<void> {
   const s = ctx.get()
   if (s.conversation && s.messages.length)
@@ -116,7 +117,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     if (!model) return true
     patch({ busy: true, message: `Loading ${model.name}...` })
     try {
-      await c.loadModel(model.provider, model.id)
+      await c.loadModel(modelProvider(s.engine, model.provider), model.id)
       const endpoint = await c.localEndpoint()
       await c.save('tui.model', model.id)
       await c.save('tui.endpoint', endpoint)
@@ -125,6 +126,8 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
         endpoint,
         page: 'chat',
         focus: 'composer',
+        overlay: null,
+        hover: '',
         message: 'Model loaded. Ready for chat and API requests.',
       })
     } finally {

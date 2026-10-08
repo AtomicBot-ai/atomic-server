@@ -74,6 +74,7 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
         exitOnCtrlC: false,
         alternateScreen: true,
         interactive: true,
+        kittyKeyboard: { mode: 'auto', flags: ['disambiguateEscapeCodes'] },
       }
     )
     try {

@@ -12,14 +12,8 @@ export function drawComposer(
   width: number,
   focus: string
 ) {
-  const inside = width - 2
-  fill(c, x + 1, y + 1, inside, 3, COLORS.composer)
-  text(c, x, y, '╭' + '─'.repeat(inside) + '╮', COLORS.composerFrame, width, COLORS.ground)
-  text(c, x, y + 4, '╰' + '─'.repeat(inside) + '╯', COLORS.composerFrame, width, COLORS.ground)
-  for (let row = 1; row < 4; row++) {
-    text(c, x, y + row, '│', COLORS.composerFrame, 1, COLORS.ground)
-    text(c, x + width - 1, y + row, '│', COLORS.composerFrame, 1, COLORS.ground)
-  }
+  fill(c, x, y, width, 5, COLORS.composerFrame)
+  fill(c, x + 1, y + 1, width - 2, 3, COLORS.composer)
   const control = (
     id: string,
     left: number,
@@ -65,7 +59,7 @@ export function drawComposer(
     y: y + 1,
     width: editorWidth + 2,
     height: 2,
-    hint: 'Enter Send | Alt+Enter New line | Esc Menu | Ctrl+N New chat',
+    hint: 'Enter Send | Shift+Enter New line | Esc Menu | Ctrl+N New chat',
   })
   control(
     s.generating ? 'cancel' : 'send',
@@ -84,7 +78,7 @@ export function drawComposer(
     y + 3,
     engineWidth,
     'Engine ▾',
-    'Choose or install an inference engine | Opens engine setup',
+    'Choose an inference engine | Enter Open picker',
     COLORS.engineButton,
     COLORS.composer
   )

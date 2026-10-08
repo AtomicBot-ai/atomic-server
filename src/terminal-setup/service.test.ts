@@ -67,6 +67,11 @@ it.each(['llamacpp-upstream', 'llamacpp'])(
         expect.objectContaining({ path: `/models/${provider}/owner/model/load` })
       )
       expect(link.calls).not.toContainEqual(expect.objectContaining({ path: '/server/start' }))
+      await reopened.begin('server', `${provider}|b1|cpu`, [{ ...selected, requestId: 'additional-install' }])
+      expect(await new TerminalSetup(folder, async () => link).read()).toMatchObject({
+        complete: false,
+        onboarded: true,
+      })
     } finally {
       await rm(folder, { recursive: true, force: true })
     }

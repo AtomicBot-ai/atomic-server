@@ -15,8 +15,7 @@ export function useWorkspaceData(
   const polling = useRef(false)
   const opened = useRef<number | null>(null)
   useEffect(() => {
-    if (s.page !== 'setup' || s.setup?.stage !== 'ready' || s.setup.busy || s.setup.error || !c.current)
-      return
+    if (s.setup?.stage !== 'ready' || s.setup.busy || s.setup.error || !c.current) return
     if (opened.current === s.setup.startedAt) return
     opened.current = s.setup.startedAt
     void setupAction('setup-finish', { controller: c.current, get: () => latest.current, update })
@@ -51,7 +50,7 @@ export function useWorkspaceData(
     }
   }, [s.ready, s.setupComplete, s.endpoint, c, latest, update])
   useEffect(() => {
-    if (s.page !== 'setup' || s.setup?.stage !== 'download' || s.setup.preparing) return
+    if (s.setup?.stage !== 'download' || s.setup.preparing) return
     const abort = new AbortController()
     let live = true,
       running = false
