@@ -19,8 +19,8 @@ it.each([
   )
   const bottom = height - 4
   for (const t of controls) {
-    expect(t.y).toBeGreaterThan(bottom - 4)
-    expect(t.y + t.height).toBeLessThanOrEqual(bottom)
+    expect(t.y).toBeGreaterThan(bottom - 5)
+    expect(t.y + t.height).toBeLessThanOrEqual(bottom - 1)
     expect(workspaceInput(`[<0;${t.x + 1};${t.y + 1}M`, {} as Key, s, frame).action).toBe(t.id)
     if (t.id !== 'composer') {
       s.focus = t.id

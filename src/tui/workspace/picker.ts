@@ -1,6 +1,7 @@
 import { engineName } from '../../terminal-setup/index.js'
 import { COLORS, text, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
+import { COMPOSER_HEIGHT } from './composer.js'
 import { fill } from './fortress.js'
 import { workspaceLayout } from './layout.js'
 import type { WorkspaceState } from './state.js'
@@ -47,7 +48,7 @@ export function drawPicker(c: Canvas, s: WorkspaceState, focus: string) {
   if (!anchor) return
   const width = Math.min(62, c.width - l.inset * 2)
   const x = Math.min(anchor.x - 1, c.width - l.inset - width)
-  const bottom = l.bottom - 5
+  const bottom = l.bottom - COMPOSER_HEIGHT
   const height = Math.min(22, bottom - l.gate - 4, Math.max(8, rows.length * 2 + 4))
   const y = bottom - height + 1,
     count = Math.max(1, Math.floor((height - 4) / 2))
@@ -109,7 +110,7 @@ export function drawPicker(c: Canvas, s: WorkspaceState, focus: string) {
     c,
     x + 2,
     y + height - 1,
-    `${start + 1}–${Math.min(rows.length, start + count)} of ${rows.length} | ↑↓ Choose | Esc Close`,
+    '↑↓ Browse | Enter Choose | Esc Close',
     COLORS.stone,
     width - 4,
     COLORS.header

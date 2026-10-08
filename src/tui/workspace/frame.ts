@@ -11,7 +11,7 @@ import { PAGES } from './state.js'
 import { drawPanels } from './panels.js'
 import { drawOverlay } from './overlay.js'
 import { tooltip } from './tooltip.js'
-import { drawComposer } from './composer.js'
+import { COMPOSER_HEIGHT, drawComposer } from './composer.js'
 import { newChatButton } from './chat-navigation.js'
 import { drawPicker, isPicker } from './picker.js'
 export function workspaceFrame(
@@ -102,7 +102,7 @@ export function workspaceFrame(
       newChatButton(c, x, y, 16, false, focus)
       y += 2
     }
-    const composerY = l.bottom - 4
+    const composerY = l.bottom - COMPOSER_HEIGHT + 1
     if (!s.messages.length) {
       const eye = eyeArtwork(c, x, y, bodyWidth, Math.max(3, composerY - y - 2), seconds, s.motion)
       const line = s.model ? 'What would you like to explore?' : 'Your next idea starts here.'

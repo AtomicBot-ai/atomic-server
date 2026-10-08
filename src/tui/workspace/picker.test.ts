@@ -25,7 +25,7 @@ it.each([
   expect(frame.targets.some((t) => t.id === s.focus)).toBe(true)
   const row = frame.targets.find((t) => t.id === s.focus)!
   expect(workspaceInput(`[<0;${row.x + 1};${row.y + 1}M`, {} as Key, s, frame).action).toBe('model:25')
-  expect(frame.popover!.y + frame.popover!.height).toBeLessThanOrEqual(height - 8)
+  expect(frame.popover!.y + frame.popover!.height).toBeLessThanOrEqual(height - 10)
   expect(frame.cells.flat().some((c) => c.background === COLORS.composerFrame && c.char === ' ')).toBe(true)
   expect(frame.cells.map((r) => r.map((c) => c.char).join('')).join('\n')).toContain('Keep this draft')
   expect(frame.targets.some((t) => t.id === 'send' || t.id === 'new')).toBe(false)
