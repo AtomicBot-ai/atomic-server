@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ChatMessage } from '../terminal-service/index.js'
-import { readDocument, writeDocument } from './store.js'
+import { readDocument, mutateDocument } from './store.js'
 export interface Conversation {
   id: string
   title: string
@@ -35,7 +35,13 @@ export class ChatHistory {
     }
   }
   async save(chat: Conversation): Promise<void> {
-    await writeDocument(this.path(chat.id), { ...chat, updatedAt: Date.now() })
+    await mutateDocument<Conversation | null>(this.path(chat.id), null, (previous) => ({
+      ...chat,
+      updatedAt:
+        previous && JSON.stringify(previous.messages) === JSON.stringify(chat.messages)
+          ? previous.updatedAt
+          : Date.now(),
+    }))
   }
   async load(id: string): Promise<Conversation | null> {
     return readDocument(this.path(id), null)

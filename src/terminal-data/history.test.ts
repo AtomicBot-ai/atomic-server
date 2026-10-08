@@ -1,7 +1,7 @@
 import { mkdtemp, stat, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { ChatHistory } from './history.js'
 it('restores conversation context across launches, renames, and deletes just the selected chat', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'atc-history-'))
@@ -27,6 +27,45 @@ it('restores conversation context across launches, renames, and deletes just the
     expect(await reopened.list()).toEqual([])
     await expect(reopened.load('../../outside')).rejects.toThrow('Invalid conversation ID')
   } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})
+
+it('orders chats by message activity across selection, rename, streaming and restart', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-history-order-'))
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1000)
+  try {
+    const store = new ChatHistory(folder)
+    const older = store.create('http://localhost:1337/v1', 'local', '/project')
+    older.messages = [{ role: 'user', content: 'Earlier question' }]
+    await store.save(older)
+    clock.mockReturnValue(2000)
+    const recent = store.create(older.endpoint, older.model, older.workingDirectory)
+    recent.messages = [{ role: 'user', content: 'Latest question' }]
+    await store.save(recent)
+    clock.mockReturnValue(3000)
+    const reopened = new ChatHistory(folder)
+    const selected = (await reopened.load(older.id))!
+    await reopened.save(selected)
+    await reopened.save({ ...selected, title: 'Renamed', interrupted: true, model: 'other' })
+    expect((await reopened.list()).map((c) => [c.id, c.updatedAt])).toEqual([
+      [recent.id, 2000],
+      [older.id, 1000],
+    ])
+    selected.messages.push({ role: 'assistant', content: 'New response' })
+    await reopened.save(selected)
+    clock.mockReturnValue(4000)
+    selected.messages[1]!.content += ' continues'
+    await reopened.save(selected)
+    clock.mockReturnValue(5000)
+    // The UI can still hold the timestamp from when this conversation was opened.
+    await reopened.save(selected)
+    expect((await new ChatHistory(folder).list()).map((c) => [c.id, c.updatedAt])).toEqual([
+      [older.id, 4000],
+      [recent.id, 2000],
+    ])
+  } finally {
+    clock.mockRestore()
     await rm(folder, { recursive: true, force: true })
   }
 })

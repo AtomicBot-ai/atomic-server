@@ -48,7 +48,7 @@ export function gazeAt(seconds: number, motion: boolean): { x: number; y: number
     ease = t * t * (3 - 2 * t)
   return { x: a[0]! + (b[0]! - a[0]!) * ease, y: a[1]! + (b[1]! - a[1]!) * ease }
 }
-/** Pointed lids, a vertical void, radial fibres and uneven tongues of fire. */
+/** Pointed lids, an oval pupil, radial fibres and uneven tongues of fire. */
 export function drawEye(width: number, height: number, seconds = 0, motion = true): Drawing {
   const gaze = gazeAt(seconds, motion)
   const time = motion ? seconds : 0
@@ -71,14 +71,14 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29 - time * 0.6) * 5))
       const dist = Math.abs(y) - lid
       if (Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
-      const slit = Math.max(
+      const pupil = Math.max(
         compact ? 1.05 / width : 0,
-        (compact ? 0.065 : 0.05) * (1 + breath * 0.1) * Math.max(0, 1 - (dy / 0.98) ** 2)
+        0.24 * (1 + breath * 0.1) * Math.sqrt(Math.max(0, 1 - (dy / 0.78) ** 2))
       )
-      if (Math.abs(dx) < slit && Math.abs(dy) < 0.96) return EMPTY()
+      if (Math.abs(dx) < pupil && Math.abs(dy) < 0.78) return EMPTY()
       const rim = Math.exp(-Math.abs(dist) * 26)
       const core =
-        Math.exp(-Math.abs(Math.abs(dx) - slit - 0.055) * 8) * (0.5 + 0.5 * Math.max(0, 1 - Math.abs(dy)))
+        Math.exp(-Math.abs(Math.abs(dx) - pupil - 0.055) * 8) * (0.5 + 0.5 * Math.max(0, 1 - Math.abs(dy)))
       const heat = clamp(
         0.24 + core * (0.7 + breath * 0.025) + rim * 0.24 + grain * 0.17 - Math.max(0, dist) * 4
       )

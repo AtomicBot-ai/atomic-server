@@ -71,16 +71,16 @@ export function workspaceFrame(
     y = l.top + 2,
     bodyWidth = width - x - l.inset
   if (s.page === 'chat' && l.sidebar) {
-    newChatButton(c, l.inset, y + 1, l.sidebar - 3, true, focus)
-    text(c, l.inset, y + 5, 'Recents', COLORS.muted)
+    newChatButton(c, l.inset, y + 1, l.sidebar - 3, focus)
+    text(c, l.inset, y + 3, 'Recents', COLORS.muted)
     s.history
-      .slice(0, Math.max(0, l.bottom - y - 8))
+      .slice(0, Math.max(0, l.bottom - y - 6))
       .forEach((h, i) =>
         button(
           c,
           `history:${h.id}`,
           l.inset,
-          y + 7 + i,
+          y + 5 + i,
           h.title.slice(0, l.sidebar - 5),
           'Resume this conversation.',
           focus,
@@ -99,7 +99,7 @@ export function workspaceFrame(
     // History and key management share the same responsive content bounds.
   } else if (s.page === 'chat') {
     if (!l.sidebar) {
-      newChatButton(c, x, y, 16, false, focus)
+      newChatButton(c, x, y, 16, focus)
       y += 2
     }
     const composerY = l.bottom - COMPOSER_HEIGHT + 1

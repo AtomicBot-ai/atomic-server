@@ -1,4 +1,6 @@
 import { readyWorkspace } from '../../../test/helpers/ready-workspace.js'
+import { dirname } from 'node:path'
+import { ChatHistory } from '../../terminal-data/index.js'
 import { render } from 'ink'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
@@ -62,6 +64,45 @@ function mount() {
   }
 }
 describe('working terminal workspace', () => {
+  it('keeps recent chats in message order when an older chat is clicked and saved', async () => {
+    const t = mount()
+    await t.sees('Your next idea starts here.')
+    const history = new ChatHistory(dirname(t.paths.configFile))
+    const older = history.create('http://localhost:1337/v1', 'local-model', '/project')
+    older.title = 'Older chat'
+    older.messages = [{ role: 'assistant', content: 'The earlier response' }]
+    const recent = { ...history.create(older.endpoint, older.model, '/project'), title: 'Latest chat' }
+    recent.messages = [{ role: 'assistant', content: 'The latest response' }]
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(1000)
+    try {
+      await history.save(older)
+      clock.mockReturnValue(2000)
+      await history.save(recent)
+    } finally {
+      clock.mockRestore()
+    }
+    t.press('\u0010')
+    await t.sees('Latest chat')
+    t.terminal.stdout.resize(120, 36)
+    t.press('\u0007')
+    t.press('c')
+    await t.sees('Recents')
+    // The older conversation is the second sidebar row, at x=2,y=14.
+    t.press('\u001b[<0;4;15M')
+    await t.sees('The earlier response')
+    t.press('\u000e')
+    await t.sees('What would you like to explore?')
+    const frame = t.terminal.stdout.lastFrame()
+    expect(frame.indexOf('Latest chat')).toBeLessThan(frame.indexOf('Older chat'))
+    t.press('\u0010')
+    await t.sees('Your conversations')
+    expect((await history.list()).map((c) => [c.id, c.updatedAt])).toEqual([
+      [recent.id, 2000],
+      [older.id, 1000],
+    ])
+    t.press('\u0011')
+    await t.ui.waitUntilExit()
+  })
   it('chooses personal mode, selects a discovered model, edits and sends a message, then resizes', async () => {
     const t = mount()
     await t.sees('Your next idea starts here.')
