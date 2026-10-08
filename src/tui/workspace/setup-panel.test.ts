@@ -33,7 +33,12 @@ it.each([
   s.setup = { ...newSetup('server'), stage: stage as SetupView['stage'] }
   const frame = workspaceFrame(s, 80, 24, 0)
   const bold = frame.cells
-    .flat()
+    .find((row) =>
+      row
+        .map((c) => c.char)
+        .join('')
+        .includes('01 Engine')
+    )!
     .filter((c) => c.bold)
     .map((c) => c.char)
     .join('')

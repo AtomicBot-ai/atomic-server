@@ -107,7 +107,8 @@ export function drawSetupBrowser(
   if (items.length)
     put(
       bottom - y - 2,
-      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length}  /  ↑↓ Browse · Enter ${v.repository ? 'download' : 'install'}`
+      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length} | ↑↓ Browse | Enter ${v.repository ? 'Download' : 'Install'}`,
+      COLORS.stone
     )
   if (v.repository) {
     button(c, 'setup-back', x, bottom, '< Models', 'Return to the model list. Esc returns to Engines.', focus)

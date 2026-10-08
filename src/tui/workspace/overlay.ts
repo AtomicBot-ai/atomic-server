@@ -5,8 +5,14 @@ import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { helpLines } from '../command-list.js'
 import { example } from './actions.js'
+import { tooltip } from './tooltip.js'
 const ms = (v: number | null) => (v === null ? 'Not available' : `${Math.round(v)} ms`)
 export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
+  for (const row of c.cells)
+    for (const cell of row) {
+      cell.background = COLORS.ground
+      cell.color = COLORS.stone
+    }
   const x = 3,
     y = 3,
     w = c.width - 6,
@@ -44,7 +50,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
   } else if (s.overlay === 'menu' && !s.setupComplete) {
     put(2, 'Prepare your workspace first', COLORS.gold)
     put(4, 'Choose an engine and models, then let installation finish.', COLORS.muted)
-    put(6, 'Ctrl+Q closes this terminal. Background downloads keep running.', COLORS.muted)
+    tooltip(c, x + 2, y + 6, 'Ctrl+Q Close | Downloads continue in background', w - 4, COLORS.header)
   } else if (s.overlay === 'menu') {
     put(2, 'Go to', COLORS.gold)
     PAGES.forEach((p, i) => b(`page:${p.id}`, 4 + i, `${p.name}  [${p.key}]`, p.hint))
@@ -76,20 +82,20 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
   } else if (s.overlay === 'help') {
     put(2, 'A few keys, anywhere', COLORS.gold)
     ;[
-      'Tab / Shift+Tab   Focus next / previous control',
-      'Enter             Open or activate',
-      'Esc               Close this layer or open the menu',
-      'Ctrl+G, C/S/M/,   Chat / Server / Models / Settings',
-      'Ctrl+K            Keyboard shortcuts',
-      'Ctrl+N / Ctrl+P   New chat / history',
-      'Ctrl+X            Mouse / text selection',
-      'Ctrl+C            Stop a response',
-      'Ctrl+Q            Leave the console; server stays running',
-      'Alt+Enter         New line in the composer',
-      'PageUp / PageDown  Scroll the current view',
+      'Tab / Shift+Tab | Next / previous control',
+      'Enter | Open or activate',
+      'Esc | Close dialog or open menu',
+      'Ctrl+G then C/S/M/, | Chat / Server / Models / Settings',
+      'Ctrl+K | Keyboard shortcuts',
+      'Ctrl+N / Ctrl+P | New chat / history',
+      'Ctrl+X | Mouse / text selection',
+      'Ctrl+C | Stop a response',
+      'Ctrl+Q | Close terminal; server stays running',
+      'Alt+Enter | New line in composer',
+      'PageUp / PageDown | Scroll current view',
     ]
       .slice(0, h - 6)
-      .forEach((r, i) => put(i + 4, r))
+      .forEach((r, i) => tooltip(c, x + 2, y + i + 4, r, w - 4, COLORS.header))
   } else if (s.overlay === 'endpoint') {
     const titles: Record<string, string> = {
       'setup-query': 'Find a model',
@@ -114,7 +120,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
       COLORS.muted
     )
     put(6, (s.editValue + '_').slice(-(w - 4)), COLORS.text)
-    put(8, 'Enter confirms. Esc cancels. Ctrl+U clears the field.', COLORS.muted)
+    tooltip(c, x + 2, y + 8, 'Enter Confirm | Esc Cancel | Ctrl+U Clear', w - 4, COLORS.header)
     b('save-edit', h - 3, 'Save', 'Validate and save this setting.')
     button(c, 'close', x + 12, y + h - 3, 'Cancel', 'Discard this edit.', focus)
     return

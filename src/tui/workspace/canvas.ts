@@ -1,5 +1,6 @@
 import type { Drawing } from './art.js'
 export const COLORS = {
+  black: '#000000',
   text: '#f2f4f4',
   muted: '#a3aaac',
   stone: '#596164',
@@ -84,7 +85,7 @@ export function text(
     if (at + n > x + max || at + n > c.width) break
     if (y >= 0 && y < c.height && at >= 0) {
       c.cells[y]![at] = { char, color, ...(background ? { background } : {}), ...(bold ? { bold } : {}) }
-      if (n === 2) c.cells[y]![at + 1] = { char: '', color }
+      if (n === 2) c.cells[y]![at + 1] = { ...c.cells[y]![at]!, char: '' }
     }
     at += n
   }
@@ -127,7 +128,8 @@ export function button(
   label: string,
   hint: string,
   focused?: string,
-  selected = false
+  selected = false,
+  bold = false
 ): number {
   const shown = ` ${label} `,
     width = textWidth(shown)
@@ -138,7 +140,8 @@ export function button(
     shown,
     selected || focused === id ? COLORS.gold : COLORS.text,
     width,
-    selected || focused === id ? COLORS.focus : COLORS.surface
+    selected || focused === id ? COLORS.focus : COLORS.surface,
+    bold
   )
   c.targets.push({ id, x, y, width: Math.min(width, c.width - x), height: 1, hint })
   return width

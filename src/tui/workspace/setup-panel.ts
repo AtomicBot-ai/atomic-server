@@ -59,8 +59,8 @@ export function drawSetup(
     const roomy = bottom - y >= 26
     let row = 3
     if (roomy) {
-      const h = Math.min(12, bottom - y - 20),
-        w = Math.min(width - 4, h * 6 + 20)
+      const h = Math.min(16, bottom - y - 20),
+        w = Math.min(width - 4, h * 4 + 20, 92)
       eyeArtwork(c, x + Math.floor((width - w) / 2), y + row, w, h, seconds, s.motion)
       row += h + 1
     }
@@ -106,7 +106,7 @@ export function drawSetup(
         Math.abs(i - (Math.floor(seconds * 4) % Math.min(30, width - 4))) < 2 ? '=' : '.'
       ).join('')
       put(row++, `[${track}] Preparing`, COLORS.gold)
-      put(row++, 'Cancel or Esc returns to model selection.', COLORS.muted)
+      put(row++, 'Esc Cancel | Return to model selection', COLORS.stone)
     }
     const jobsWindow = computeRowWindow(
       v.selections.length,
@@ -200,10 +200,8 @@ export function drawSetup(
       c,
       x,
       bottom - 1,
-      v.preparing
-        ? 'Checking model... Cancel or Esc to go back.'
-        : 'Working... Tab to navigate. Ctrl+Q to close.',
-      COLORS.muted,
+      v.preparing ? 'Checking model... | Esc Cancel' : 'Working... | Tab Navigate | Ctrl+Q Close',
+      COLORS.stone,
       width
     )
 }

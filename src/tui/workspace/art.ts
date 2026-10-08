@@ -55,9 +55,9 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
   const density = '.:;=+*xX#%@'
   return Array.from({ length: height }, (_, row) =>
     Array.from({ length: width }, (_, col) => {
-      const x = (col + 0.5 - width / 2) / (width * 0.45)
+      const x = (col + 0.5 - width / 2) / (width * 0.37)
       const y = (row + 0.5 - height / 2) / (height / 2)
-      const lid = 0.86 * Math.pow(Math.max(0, 1 - Math.abs(x) ** 1.45), 0.72)
+      const lid = 0.97 * Math.pow(Math.max(0, 1 - Math.abs(x) ** 1.45), 0.72)
       const dx = x - gaze.x * 0.14,
         dy = y - gaze.y * 0.12
       const theta = Math.atan2(dy * 0.68, dx)
@@ -66,8 +66,8 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29) * 5))
       const dist = Math.abs(y) - lid
       if (Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
-      const slit = (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.92) ** 2)
-      if (Math.abs(dx) < slit && Math.abs(dy) < 0.9) return EMPTY()
+      const slit = (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.98) ** 2)
+      if (Math.abs(dx) < slit && Math.abs(dy) < 0.96) return EMPTY()
       const rim = Math.exp(-Math.abs(dist) * 26)
       const core =
         Math.exp(-Math.abs(Math.abs(dx) - slit - 0.055) * 8) * (0.5 + 0.5 * Math.max(0, 1 - Math.abs(dy)))

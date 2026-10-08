@@ -18,8 +18,8 @@ export function workspaceLayout(columns: number, rows: number): WorkspaceLayout 
   const sidebar = tier === 'wide' ? 22 : 0
   const width = Math.max(12, columns - inset * 2 - sidebar)
   const eyeHeight = Math.max(
-    3,
-    Math.min(tier === 'wide' ? 24 : tier === 'standard' ? 13 : 7, bottom - top - 9)
+    5,
+    Math.min(tier === 'wide' ? 30 : tier === 'standard' ? 17 : 9, bottom - top - 7)
   )
   return {
     tier,

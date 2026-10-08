@@ -29,7 +29,7 @@ export function stonePlate(
   wrap(tagline, width - 4)
     .slice(0, height - 3)
     .forEach((line, i) => text(c, x + 2, y + 2 + i, line, ink, width - 4, background))
-  c.targets.push({ id, x, y, width, height, hint: `${title}. ${tagline} Enter to choose.` })
+  c.targets.push({ id, x, y, width, height, hint: 'Enter Choose | Tab Switch workspace' })
 }
 /** Keep the same detailed eye at every scale, with no flanking architecture. */
 export function eyeArtwork(
@@ -54,11 +54,11 @@ export function drawWelcome(
   const narrow = c.width < 78,
     slabHeight = narrow ? 5 : c.height >= 35 ? 7 : 5
   const blockHeight = narrow ? slabHeight * 2 + 1 : slabHeight
-  const artHeight = Math.max(3, Math.min(28, bottom - top - blockHeight - 4))
+  const artHeight = Math.max(5, Math.min(34, bottom - top - blockHeight - 2))
   const artWidth = Math.min(c.width - 8, Math.max(46, artHeight * 5 + 16), 160)
   eyeArtwork(c, Math.floor((c.width - artWidth) / 2), top, artWidth, artHeight, seconds, motion)
   const title = 'Choose your workspace',
-    ty = top + artHeight + 1
+    ty = top + artHeight
   text(c, Math.floor((c.width - title.length) / 2), ty, title, COLORS.gold)
   const w = narrow ? c.width - 8 : Math.min(48, Math.floor((c.width - 10) / 2)),
     sx = narrow ? 4 : Math.floor((c.width - w * 2 - 3) / 2)
@@ -66,7 +66,7 @@ export function drawWelcome(
     c,
     'personal',
     sx,
-    ty + 2,
+    ty + 1,
     w,
     slabHeight,
     '[1] PERSONAL TERMINAL',
@@ -77,7 +77,7 @@ export function drawWelcome(
     c,
     'hosting',
     narrow ? sx : sx + w + 3,
-    ty + 2 + (narrow ? slabHeight + 1 : 0),
+    ty + 1 + (narrow ? slabHeight + 1 : 0),
     w,
     slabHeight,
     '[2] SERVER CONSOLE',

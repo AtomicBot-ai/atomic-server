@@ -48,17 +48,19 @@ function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueC
             ? {
                 color: trueColor
                   ? r.color
-                  : r.color === COLORS.gold
-                    ? 'cyan'
-                    : r.color === COLORS.ground
-                      ? 'black'
-                      : r.color === COLORS.text
-                        ? 'white'
-                        : r.color === COLORS.green
-                          ? 'cyan'
-                          : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
-                            ? 'gray'
-                            : 'cyan',
+                  : r.background === COLORS.text
+                    ? 'white'
+                    : r.color === COLORS.gold
+                      ? 'cyan'
+                      : r.color === COLORS.ground
+                        ? 'black'
+                        : r.color === COLORS.text
+                          ? 'white'
+                          : r.color === COLORS.green
+                            ? 'cyan'
+                            : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
+                              ? 'gray'
+                              : 'cyan',
               }
             : {})}
           {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}

@@ -10,6 +10,7 @@ import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { drawPanels } from './panels.js'
 import { drawOverlay } from './overlay.js'
+import { tooltip } from './tooltip.js'
 export function workspaceFrame(
   s: WorkspaceState,
   width: number,
@@ -21,7 +22,7 @@ export function workspaceFrame(
     l = workspaceLayout(width, height)
   const focus = s.hover || s.focus
   if (width < 54 || height < 24) {
-    text(c, 1, 1, 'ATOMIC CHAT', COLORS.gold)
+    text(c, 1, 1, 'ATOMIC CHAT', COLORS.gold, width - 2, undefined, true)
     wrap('Expand to at least 54 columns and 24 rows. Ctrl+Q closes the console.', width - 2).forEach((r, i) =>
       text(c, 1, 3 + i, r)
     )
@@ -31,7 +32,7 @@ export function workspaceFrame(
     text(c, 0, y, r, y === l.gate - 1 ? COLORS.muted : COLORS.stone)
   )
   text(c, l.inset, l.gate + 1, '<|>', COLORS.red)
-  text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text)
+  text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text, width - l.inset - 5, undefined, true)
   const state =
     s.page === 'chat'
       ? ''
@@ -49,19 +50,20 @@ export function workspaceFrame(
   )
   let nx = l.inset
   if (s.page !== 'welcome') {
-    fill(c, 0, l.gate + 2, width, 3, COLORS.header)
+    fill(c, 0, l.gate + 3, width, 2, COLORS.header)
   }
-  text(
-    c,
-    l.inset,
-    l.gate + 2,
-    '─'.repeat(width - l.inset * 2),
-    COLORS.stone,
-    width - l.inset * 2,
-    s.page === 'welcome' ? COLORS.ground : COLORS.header
-  )
+  fill(c, 0, l.gate + 2, width, 1, COLORS.black)
   if (s.page === 'setup')
-    text(c, l.inset, l.gate + 3, 'PREPARE YOUR WORKSPACE', COLORS.gold, width - l.inset * 2, COLORS.header)
+    text(
+      c,
+      l.inset,
+      l.gate + 3,
+      'PREPARE YOUR WORKSPACE',
+      COLORS.gold,
+      width - l.inset * 2,
+      COLORS.header,
+      true
+    )
   if (s.page !== 'welcome' && s.page !== 'setup')
     PAGES.forEach((p) => {
       nx +=
@@ -73,7 +75,8 @@ export function workspaceFrame(
           p.name,
           p.hint,
           focus,
-          s.page === p.id || (p.id === 'server' && ['requests', 'access'].includes(s.page))
+          s.page === p.id || (p.id === 'server' && ['requests', 'access'].includes(s.page)),
+          true
         ) + 2
     })
   let x = l.inset + l.sidebar,
@@ -115,7 +118,7 @@ export function workspaceFrame(
     }
     const composerY = l.bottom - 4
     if (!s.messages.length) {
-      const eh = Math.max(3, Math.min(l.eyeHeight, composerY - y - 3)),
+      const eh = Math.max(5, Math.min(l.eyeHeight, composerY - y - 1)),
         ew = Math.min(bodyWidth - 4, Math.max(56, eh * 5), 122)
       const ey = y + Math.max(0, Math.floor((composerY - y - eh - 2) / 2))
       eyeArtwork(c, x + Math.floor((bodyWidth - ew) / 2), ey, ew, eh, seconds, s.motion)
@@ -148,6 +151,7 @@ export function workspaceFrame(
           )
         )
     }
+    fill(c, x, composerY + 1, bodyWidth, 2, COLORS.text)
     const chars = graphemes(s.draft)
     if (s.focus === 'composer' && !s.overlay) chars.splice(s.cursor, 0, '▏')
     const draftRows = wrap(
@@ -157,7 +161,15 @@ export function workspaceFrame(
     draftRows
       .slice(-2)
       .forEach((r, i) =>
-        text(c, x + 2, composerY + 1 + i, r, s.draft ? COLORS.text : COLORS.muted, bodyWidth - 4)
+        text(
+          c,
+          x + 2,
+          composerY + 1 + i,
+          r,
+          s.draft ? COLORS.ground : COLORS.stone,
+          bodyWidth - 4,
+          COLORS.text
+        )
       )
     c.targets.push({
       id: 'composer',
@@ -165,9 +177,9 @@ export function workspaceFrame(
       y: composerY + 1,
       width: bodyWidth,
       height: 2,
-      hint: 'Enter sends. Alt+Enter adds a line. Escape leaves the editor. Ctrl+N starts a new chat.',
+      hint: 'Enter Send | Alt+Enter New line | Esc Menu | Ctrl+N New chat',
     })
-    if (s.focus === 'composer' && !s.hover) text(c, x, composerY + 1, '>', COLORS.gold)
+    if (s.focus === 'composer' && !s.hover) text(c, x, composerY + 1, '>', COLORS.ground, 1, COLORS.text)
     let cx = x
     cx +=
       button(
@@ -190,28 +202,34 @@ export function workspaceFrame(
       focus
     )
   } else drawPanels(c, s, { x, y, width: bodyWidth, bottom: l.bottom }, focus)
+  if (s.overlay) drawOverlay(c, s, focus)
   const active = c.targets.find((t) => t.id === focus)
-  text(
-    c,
-    l.inset,
-    height - 2,
-    s.message ||
-      s.base.busy ||
-      active?.hint ||
-      'Tab focuses controls. Enter opens. Esc returns. Ctrl+G opens the menu.',
-    s.message ? COLORS.gold : COLORS.muted,
-    width - l.inset * 2
-  )
+  if (!s.overlay && (s.message || s.base.busy))
+    text(
+      c,
+      l.inset,
+      height - 2,
+      s.message || s.base.busy!,
+      s.message ? COLORS.gold : COLORS.muted,
+      width - l.inset * 2
+    )
+  else
+    tooltip(
+      c,
+      l.inset,
+      height - 2,
+      active?.hint || 'Tab Focus | Enter Open | Esc Back | Ctrl+G Menu',
+      width - l.inset * 2
+    )
   const footer =
     s.page === 'welcome'
-      ? '1 Personal  /  2 Server  /  Enter Select  /  Ctrl+Q Quit'
+      ? '1 Personal | 2 Server | Enter Choose | Ctrl+Q Quit'
       : width < 80
-        ? 'Ctrl+K Help  Ctrl+G Menu  Ctrl+X Mouse  Ctrl+Q Quit'
+        ? 'Ctrl+K Help | Ctrl+G Menu | Ctrl+Q Quit'
         : s.mouse
-          ? 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Select text  |  Ctrl+Q Quit'
-          : 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Enable mouse  |  Ctrl+Q Quit'
-  text(c, l.inset, height - 1, footer, COLORS.stone, width - l.inset * 2)
-  if (s.overlay) drawOverlay(c, s, focus)
+          ? 'Ctrl+K Help | Ctrl+G Menu | Ctrl+X Select text | Ctrl+Q Quit'
+          : 'Ctrl+K Help | Ctrl+G Menu | Ctrl+X Enable mouse | Ctrl+Q Quit'
+  tooltip(c, l.inset, height - 1, footer, width - l.inset * 2)
   // Never register invisible controls on an unusually narrow viewport.
   c.targets = c.targets.filter((t) => t.width > 0 && t.y >= 0 && t.y < height && t.x < width)
   return c
