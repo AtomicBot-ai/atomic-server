@@ -20,10 +20,17 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 2
+export const CONFIG_VERSION = 3
 
 export interface AtcConfig {
   version: number
+  tui: {
+    mode: 'ask' | 'personal' | 'server'
+    endpoint: string
+    model: string
+    motion: boolean
+    mouse: boolean
+  }
   api: {
     host: string
     port: number
@@ -46,6 +53,27 @@ export interface AtcConfig {
 const PROVIDERS = ['llamacpp-upstream', 'llamacpp', 'mlx'] as const
 
 export const FIELDS: readonly FieldSpec[] = [
+  {
+    path: 'tui.mode',
+    type: 'enum',
+    default: 'ask',
+    values: ['ask', 'personal', 'server'],
+    description: 'Choose a landing workspace: ask, personal chat, or server',
+  },
+  {
+    path: 'tui.endpoint',
+    type: 'string',
+    default: 'http://127.0.0.1:1337/v1',
+    description: 'OpenAI-compatible endpoint for terminal chat',
+  },
+  { path: 'tui.model', type: 'string', default: '', description: 'Last selected chat model' },
+  { path: 'tui.motion', type: 'boolean', default: true, description: 'Animate the eye on an empty chat' },
+  {
+    path: 'tui.mouse',
+    type: 'boolean',
+    default: true,
+    description: 'Mouse navigation; Ctrl+X releases capture for text selection',
+  },
   {
     path: 'api.host',
     type: 'string',

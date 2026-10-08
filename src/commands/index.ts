@@ -18,6 +18,7 @@ import {
   serviceCommand,
   unloadCommand,
 } from './stubs.js'
+import { chatCommand } from './terminal.js'
 import { tuiCommand } from './tui.js'
 import { updateCommand } from './update.js'
 import { versionCommand } from './version.js'
@@ -41,6 +42,7 @@ export const ROOT = defineCommand({
     apiCommand,
     adminCommand,
     tuiCommand,
+    chatCommand,
     configCommand,
     doctorCommand,
     serviceCommand,

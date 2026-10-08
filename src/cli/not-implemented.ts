@@ -19,9 +19,6 @@ export type Iteration = keyof typeof ITERATIONS
 export const PLANNED: Record<string, Iteration> = {
   'run': 'I2',
   'unload': 'I2',
-  'api start': 'I2',
-  'api stop': 'I2',
-  'api status': 'I2',
   'api key show': 'I3',
   'api key set': 'I3',
   'api key rotate': 'I3',

@@ -19,7 +19,7 @@ describe('config files', () => {
     expect(doc['api']!['extra']).toBe(1)
     expect(doc['custom']).toEqual({ keep: true })
     expect(await readTextFile(join(dir, 'missing'))).toBeUndefined()
-    expect(configDocument(config, {})['version']).toBe(2)
+    expect(configDocument(config, {})['version']).toBe(3)
   })
 
   it('keeps secrets private', async () => {

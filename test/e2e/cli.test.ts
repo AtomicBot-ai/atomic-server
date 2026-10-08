@@ -50,7 +50,7 @@ describe(`atc (${command.join(' ')})`, () => {
     expect(JSON.parse(stub.err)).toMatchObject({ error: { code: 'ATC_NOT_IMPLEMENTED' } })
   })
 
-  it('starts a daemon, reports it, serves the admin, and stops it', () => {
+  it('starts a daemon, serves and stops its public API, then stops the owner', async () => {
     const start = atc('start', '--admin-port', '0', '--json')
     expect(start.code, start.err).toBe(0)
     expect(JSON.parse(start.out)).toMatchObject({ started: true, running: true })
@@ -63,6 +63,17 @@ describe(`atc (${command.join(' ')})`, () => {
     expect(JSON.parse(admin.out)).toMatchObject({ running: true, admin_url: body.admin_url })
     const again = atc('start', '--json')
     expect(JSON.parse(again.out)).toMatchObject({ started: false })
+    expect(atc('config', 'set', 'api.port', '0').code).toBe(0)
+    expect(atc('config', 'set', 'api.requireKey', 'false').code).toBe(0)
+    const api = atc('api', 'start', '--json')
+    expect(api.code, api.err).toBe(0)
+    const endpoint = JSON.parse(api.out) as { port: number; prefix: string; running: boolean }
+    expect(endpoint.running).toBe(true)
+    const models = await fetch(`http://127.0.0.1:${endpoint.port}${endpoint.prefix}/models`)
+    expect(models.status).toBe(200)
+    expect(atc('api', 'stop', '--json').code).toBe(0)
+    expect(JSON.parse(atc('api', 'status', '--json').out).running).toBe(false)
+    expect(JSON.parse(atc('status', '--json').out).running).toBe(true)
     const stop = atc('stop', '--json')
     expect(stop.code, stop.err).toBe(0)
     expect(JSON.parse(atc('status', '--json').out)).toMatchObject({ running: false })

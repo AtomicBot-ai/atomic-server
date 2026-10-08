@@ -66,11 +66,11 @@ describe('the daemon owns the folder', () => {
     })
   })
 
-  it('serves the placeholder page and refuses the API without a session', async () => {
+  it('serves the embedded admin page and refuses the API without a session', async () => {
     const page = await fetch(`${adminUrl}/`)
     expect(page.status).toBe(200)
     expect(page.headers.get('content-type')).toContain('text/html')
-    expect(await page.text()).toContain('atc admin')
+    expect(await page.text()).toMatch(/<html[ >]/i)
     const status = await fetch(`${adminUrl}/api/status`)
     expect(status.status).toBe(401)
     expect((await status.json()) as { error: { code: string } }).toMatchObject({

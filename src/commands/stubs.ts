@@ -4,14 +4,14 @@
  */
 
 import { defineCommand, notImplemented } from '../cli/index.js'
+import { apiStart, apiStop, apiStatus } from './terminal.js'
 
 const apiOptions = {
-  'port': { type: 'string', description: 'API port', placeholder: 'port', default: '1337' },
+  'port': { type: 'string', description: 'API port', placeholder: 'port' },
   'host': {
     type: 'string',
     description: 'API bind address (0.0.0.0 to expose)',
     placeholder: 'host',
-    default: '127.0.0.1',
   },
   'api-key': { type: 'string', description: 'Require this key on the API', placeholder: 'key' },
   'api-key-file': {
@@ -174,12 +174,13 @@ export const apiCommand = defineCommand({
   summary: 'The OpenAI-compatible API and its key',
   group: 'access',
   subcommands: [
-    notImplemented({
+    defineCommand({
       name: 'start',
-      summary: 'Start the API on the running server',
+      summary: 'Start the API, starting the daemon if needed',
+      run: apiStart,
       options: {
         ...apiOptions,
-        'prefix': { type: 'string', description: 'Path prefix', placeholder: '/v1', default: '/v1' },
+        'prefix': { type: 'string', description: 'Path prefix', placeholder: '/v1' },
         'cors': { type: 'boolean', description: 'Send CORS headers', default: true },
         'trusted-host': {
           type: 'string',
@@ -189,8 +190,12 @@ export const apiCommand = defineCommand({
         },
       },
     }),
-    notImplemented({ name: 'stop', summary: 'Stop the API' }),
-    notImplemented({ name: 'status', summary: 'Where the API listens and whether a key is required' }),
+    defineCommand({ name: 'stop', summary: 'Stop the API', run: apiStop }),
+    defineCommand({
+      name: 'status',
+      summary: 'Where the API listens and whether a key is required',
+      run: apiStatus,
+    }),
     defineCommand({
       name: 'key',
       summary: 'The API key (stored in the core settings)',

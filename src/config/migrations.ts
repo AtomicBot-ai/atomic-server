@@ -13,6 +13,7 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 /** Key N migrates a version-N document to N+1. */
 export const MIGRATIONS: Record<number, Migration> = {
+  2: (raw) => ({ ...raw }),
   /**
    * 1 → 2: `atc serve` is gone (ADR "Name the product Atomic Server and align the commands with
    * the app"). Its engine and the duplicate `engines.provider` become `engines.default`; its model,
