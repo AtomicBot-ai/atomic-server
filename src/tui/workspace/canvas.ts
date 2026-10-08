@@ -14,6 +14,7 @@ export interface Cell {
   char: string
   color: string
   background?: string
+  bold?: boolean
 }
 export interface Target {
   id: string
@@ -71,14 +72,15 @@ export function text(
   value: string,
   color: string = COLORS.text,
   max = c.width - x,
-  background?: string
+  background?: string,
+  bold?: boolean
 ): void {
   let at = x
   for (const char of graphemes(cleanText(value).replace(/\n/g, ' '))) {
     const n = cellWidth(char)
     if (at + n > x + max || at + n > c.width) break
     if (y >= 0 && y < c.height && at >= 0) {
-      c.cells[y]![at] = { char, color, ...(background ? { background } : {}) }
+      c.cells[y]![at] = { char, color, ...(background ? { background } : {}), ...(bold ? { bold } : {}) }
       if (n === 2) c.cells[y]![at + 1] = { char: '', color }
     }
     at += n

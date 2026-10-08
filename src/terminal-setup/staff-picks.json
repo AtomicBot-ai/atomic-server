@@ -1,0 +1,276 @@
+{
+  "source": "https://raw.githubusercontent.com/AtomicBot-ai/atomic-chat-conf/main/models/staff-picks.json",
+  "updated_at": "2026-08-19T18:55:00Z",
+  "picks": [
+    {
+      "model_name": "AtomicChat/Qwen3.8-27B-GGUF",
+      "title": "Qwen3.8 27B",
+      "summary": "Hybrid attention with a built-in draft head for faster replies.",
+      "order": 0
+    },
+    {
+      "model_name": "AtomicChat/Muse-Glimmer-30B-GGUF",
+      "title": "Muse Glimmer 30B",
+      "summary": "Meta's multimodal Muse Glimmer with adjustable reasoning depth.",
+      "order": 1
+    },
+    {
+      "model_name": "AtomicChat/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF",
+      "title": "Nemotron 3.5 Lightning",
+      "summary": "Sparse Mamba2 Nemotron: 30B total parameters, 3B active per token.",
+      "order": 2
+    },
+    {
+      "model_name": "LiquidAI/LFM2.5-2.6B-GGUF",
+      "title": "LFM2.5 2.6B",
+      "summary": "On-device agent that always thinks before it answers.",
+      "order": 4
+    },
+    {
+      "model_name": "AtomicChat/Ling-3.0-flash-GGUF",
+      "title": "Ling 3.0 flash",
+      "summary": "Sparse 124B with linear attention: 5.1B active per token.",
+      "order": 5
+    },
+    {
+      "model_name": "AtomicChat/Ornith-1.5-9B-GGUF",
+      "title": "Ornith 1.5 9B",
+      "summary": "Ornith's agentic coding model with vision input.",
+      "order": 6
+    },
+    {
+      "model_name": "AtomicChat/Ornith-1.5-35B-A3B-GGUF",
+      "title": "Ornith 1.5 35B A3B",
+      "summary": "Sparse Ornith 1.5: 35B total parameters, 3B active per token.",
+      "order": 7
+    },
+    {
+      "model_name": "AtomicChat/Qwen3.6-27B-GGUF",
+      "title": "Qwen3.6 27B",
+      "summary": "Prioritizes stability and real-world coding quality.",
+      "order": 10
+    },
+    {
+      "model_name": "AtomicChat/Qwen3.6-35B-A3B-GGUF",
+      "title": "Qwen3.6 35B A3B",
+      "summary": "Sparse Qwen3.6: 35B total parameters, 3B active per token.",
+      "order": 20
+    },
+    {
+      "model_name": "AtomicChat/Qwen3.5-9B-GGUF",
+      "title": "Qwen3.5 9B",
+      "summary": "Stronger reasoning while still fitting a 16 GB machine.",
+      "order": 30
+    },
+    {
+      "model_name": "unsloth/Qwen3.5-35B-A3B-GGUF",
+      "title": "Qwen3.5 35B A3B",
+      "summary": "Sparse Qwen3.5: 35B total parameters, 3B active per token.",
+      "order": 40
+    },
+    {
+      "model_name": "Qwen/Qwen3-Coder-Next-GGUF",
+      "title": "Qwen3 Coder Next",
+      "summary": "Qwen's coding specialist, published by the Qwen team.",
+      "order": 50
+    },
+    {
+      "model_name": "AtomicChat/gemma-4-12B-it-GGUF",
+      "title": "Gemma 4 12B",
+      "summary": "Mid-size Gemma 4 with vision and long-context support.",
+      "order": 60
+    },
+    {
+      "model_name": "AtomicChat/gemma-4-26B-A4B-it-GGUF",
+      "title": "Gemma 4 26B A4B",
+      "summary": "Sparse Gemma 4: 26B total parameters, 4B active per token.",
+      "order": 70
+    },
+    {
+      "model_name": "AtomicChat/gemma-4-31B-it-GGUF",
+      "title": "Gemma 4 31B",
+      "summary": "Largest Gemma 4 variant, for machines with memory to spare.",
+      "order": 80
+    },
+    {
+      "model_name": "AtomicChat/gemma-4-E4B-it-GGUF",
+      "title": "Gemma 4 E4B",
+      "summary": "Google's efficient multimodal model with vision input.",
+      "order": 90
+    },
+    {
+      "model_name": "AtomicChat/gemma-4-E2B-it-GGUF",
+      "title": "Gemma 4 E2B",
+      "summary": "The smallest Gemma 4, for laptops with little memory.",
+      "order": 100
+    },
+    {
+      "model_name": "LiquidAI/LFM2-24B-A2B-GGUF",
+      "title": "LFM2 24B A2B",
+      "summary": "Liquid's sparse 24B: only 2B parameters active per token.",
+      "order": 110
+    },
+    {
+      "model_name": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+      "title": "LFM2.5 1.2B",
+      "summary": "Runs on almost anything, including phones.",
+      "order": 120
+    },
+    {
+      "model_name": "LiquidAI/LFM2-1.2B-GGUF",
+      "title": "LFM2 1.2B",
+      "summary": "Tiny Liquid Foundation Model for edge devices.",
+      "order": 130
+    },
+    {
+      "model_name": "unsloth/DeepSeek-V4-Flash-GGUF",
+      "title": "DeepSeek V4 Flash",
+      "summary": "The fast variant of the DeepSeek V4 family.",
+      "order": 140
+    },
+    {
+      "model_name": "AtomicChat/Laguna-S-2.1-GGUF",
+      "title": "Laguna S 2.1",
+      "summary": "Poolside's Laguna S, built around software engineering work.",
+      "order": 150
+    },
+    {
+      "model_name": "prism-ml/Bonsai-27B-gguf",
+      "title": "Bonsai 27B",
+      "summary": "Prism ML packs a 27B model into extreme low-bit quantizations.",
+      "order": 160
+    },
+    {
+      "model_name": "owao/Nanbeige4.2-3B-GGUF",
+      "title": "Nanbeige4.2 3B",
+      "summary": "Compact agentic 3B built for tool use and multi-step tasks.",
+      "order": 167
+    },
+    {
+      "model_name": "unsloth/NVIDIA-Nemotron-3-Nano-Omni-30B-A3B-Reasoning-GGUF",
+      "title": "Nemotron 3 Nano Omni",
+      "summary": "NVIDIA's omni-modal Nemotron Nano with reasoning traces.",
+      "order": 170
+    },
+    {
+      "model_name": "unsloth/MiniMax-M2.7-GGUF",
+      "title": "MiniMax M2.7",
+      "summary": "Agentic coding model from MiniMax.",
+      "order": 180
+    },
+    {
+      "model_name": "nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF",
+      "title": "Nemotron 3 Nano 4B",
+      "summary": "Compact Nemotron published by NVIDIA itself.",
+      "order": 190
+    },
+    {
+      "model_name": "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF",
+      "title": "Nemotron 3 Super",
+      "summary": "Sparse 120B Nemotron: 12B parameters active per token.",
+      "order": 200
+    },
+    {
+      "model_name": "unsloth/MiniMax-M2.5-GGUF",
+      "title": "MiniMax M2.5",
+      "summary": "The previous MiniMax generation, still strong at code.",
+      "order": 210
+    },
+    {
+      "model_name": "unsloth/GLM-4.7-Flash-GGUF",
+      "title": "GLM 4.7 Flash",
+      "summary": "The lightweight member of the GLM 4.7 family.",
+      "order": 220
+    },
+    {
+      "model_name": "unsloth/Nemotron-3-Nano-30B-A3B-GGUF",
+      "title": "Nemotron 3 Nano",
+      "summary": "Sparse 30B Nemotron with 3B parameters active per token.",
+      "order": 230
+    },
+    {
+      "model_name": "unsloth/Devstral-Small-2-24B-Instruct-2512-GGUF",
+      "title": "Devstral Small 2 2512",
+      "summary": "Mistral's agentic coding model for local IDE work.",
+      "order": 240
+    },
+    {
+      "model_name": "mistralai/Ministral-3-14B-Reasoning-2512-GGUF",
+      "title": "Ministral 3 14B Reasoning",
+      "summary": "Mistral reasoning model at a size that fits one GPU.",
+      "order": 260
+    },
+    {
+      "model_name": "mistralai/Ministral-3-3B-Instruct-2512-GGUF",
+      "title": "Ministral 3 3B",
+      "summary": "Small Mistral for quick local answers.",
+      "order": 270
+    },
+    {
+      "model_name": "unsloth/Olmo-3-32B-Think-GGUF",
+      "title": "Olmo 3 32B Think",
+      "summary": "Fully open reasoning model from Ai2, weights and data alike.",
+      "order": 280
+    },
+    {
+      "model_name": "lmstudio-community/olmOCR-2-7B-1025-GGUF",
+      "title": "olmOCR 2 7B",
+      "summary": "Turns scanned pages into structured text.",
+      "order": 290
+    },
+    {
+      "model_name": "unsloth/MiniMax-M2-GGUF",
+      "title": "MiniMax M2",
+      "summary": "The first MiniMax M2 release.",
+      "order": 300
+    },
+    {
+      "model_name": "ibm-granite/granite-4.0-h-tiny-GGUF",
+      "title": "Granite 4 H Tiny",
+      "summary": "IBM's small hybrid Granite, published by IBM itself.",
+      "order": 310
+    },
+    {
+      "model_name": "unsloth/Hermes-4-70B-GGUF",
+      "title": "Hermes 4 70B",
+      "summary": "Nous Research fine-tune known for steerable chat.",
+      "order": 320
+    },
+    {
+      "model_name": "unsloth/gpt-oss-20b-GGUF",
+      "title": "GPT-OSS 20B",
+      "summary": "OpenAI's smaller open-weights model, native MXFP4.",
+      "order": 330
+    },
+    {
+      "model_name": "unsloth/gpt-oss-120b-GGUF",
+      "title": "GPT-OSS 120B",
+      "summary": "OpenAI's large open-weights model for workstations.",
+      "order": 340
+    },
+    {
+      "model_name": "microsoft/phi-4-gguf",
+      "title": "Phi 4",
+      "summary": "Microsoft's 14B model, strong on maths for its size.",
+      "order": 350
+    },
+    {
+      "model_name": "ibm-granite/granite-3.3-8b-instruct-GGUF",
+      "title": "Granite 3.3 8B",
+      "summary": "Enterprise-oriented Granite with a permissive licence.",
+      "order": 360
+    },
+    {
+      "model_name": "unsloth/Llama-3.3-70B-Instruct-GGUF",
+      "title": "Llama 3.3 70B",
+      "summary": "The classic Llama 70B, still a solid multilingual chat model.",
+      "order": 370
+    },
+    {
+      "model_name": "unsloth/Seed-OSS-36B-Instruct-GGUF",
+      "title": "Seed-OSS 36B",
+      "summary": "ByteDance's open 36B with a very long context window.",
+      "order": 380
+    }
+  ]
+}

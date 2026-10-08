@@ -1,6 +1,7 @@
 import { dirname } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
-import { TerminalSetup, installedModels, searchHub, modelFiles } from '../../terminal-setup/index.js'
+import { TerminalSetup, installedModels, ModelCatalog, modelFiles } from '../../terminal-setup/index.js'
+import type { HubRepository } from '../../terminal-setup/index.js'
 import { prepareAgent } from '../../agent-launch/index.js'
 import type { AgentHost, AgentId } from '../../agent-launch/index.js'
 import type { TuiAction } from '../state.js'
@@ -23,6 +24,7 @@ export class WorkspaceController {
   readonly keys: ClientKeys
   readonly history: ChatHistory
   readonly setup: TerminalSetup
+  private catalog: ModelCatalog
   private legacy: TuiController
   private abort = new AbortController()
   private turn: AbortController | undefined
@@ -40,6 +42,7 @@ export class WorkspaceController {
     this.keys = new ClientKeys(directory)
     this.history = new ChatHistory(directory)
     this.setup = new TerminalSetup(directory, (launch) => deps.base.attach({ launch, log: this.log }))
+    this.catalog = new ModelCatalog(directory, deps.request)
   }
   start(): void {
     this.legacy.start()
@@ -77,15 +80,11 @@ export class WorkspaceController {
   installed() {
     return installedModels(this.deps.base.paths.layout)
   }
-  hub(query: string) {
-    return searchHub(
-      query,
-      this.deps.request,
-      AbortSignal.any([this.abort.signal, AbortSignal.timeout(20000)])
-    )
+  hub(query: string, signal: AbortSignal = this.abort.signal, onRefresh?: (rows: HubRepository[]) => void) {
+    return this.catalog.list(query, AbortSignal.any([signal, this.abort.signal]), onRefresh)
   }
-  files(repository: string) {
-    return modelFiles(repository, this.deps.request)
+  files(repository: string, signal?: AbortSignal) {
+    return modelFiles(repository, this.deps.request, signal)
   }
   async localKey() {
     return (await this.keys.get()) || this.deps.apiKey
@@ -163,8 +162,14 @@ export class WorkspaceController {
         const config = (await this.config()).values
         if (restoreModel && config.tui.model) {
           const selected = (await this.installed()).find((m) => m.id === config.tui.model)
-          if (selected && !(await link.models.sessions()).some((s) => s.model_id === selected.id))
-            await link.models.load(selected.provider, selected.id)
+          if (selected && !(await link.models.sessions()).some((s) => s.model_id === selected.id)) {
+            const manifest = await this.setup.read()
+            const provider =
+              selected.provider === 'llamacpp-upstream' && manifest?.engine.provider === 'llamacpp'
+                ? 'llamacpp'
+                : selected.provider
+            await link.models.load(provider, selected.id)
+          }
         }
         await startApi(link, config, await this.localKey())
       }

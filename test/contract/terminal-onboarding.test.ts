@@ -32,7 +32,7 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     link.calls.push({ method, path, body })
     if (path.endsWith('/catalog'))
       return {
-        provider: 'llamacpp-upstream',
+        provider: path.split('/')[2],
         available: [{ version: 'b1', backend: 'cpu' }],
         recommended: 'b1/cpu',
         source: 'live',
@@ -62,9 +62,11 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     apiKey: '',
     chatKey: '',
     request: (async (url: unknown) =>
-      String(url).includes('/api/models?')
-        ? Response.json([{ id: 'fixture/repo', downloads: 1 }])
-        : Response.json({ siblings: [{ rfilename: 'model.Q4_K_M.gguf', size: 1000 }] })) as typeof fetch,
+      String(url).includes('staff-picks.json')
+        ? Response.json({ picks: [{ model_name: 'fixture/repo', title: 'Fixture', order: 0 }] })
+        : String(url).includes('/api/models?')
+          ? Response.json([{ id: 'fixture/repo', downloads: 1 }])
+          : Response.json({ siblings: [{ rfilename: 'model.Q4_K_M.gguf', size: 1000 }] })) as typeof fetch,
     base: {
       paths: temp.paths,
       attach: async () => link,
@@ -96,17 +98,9 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     await sees('Choose models >')
     terminal.stdin.press('\r')
     await sees('fixture/repo')
-    // Focus is Search; Tab selects the first live repository.
-    terminal.stdin.press('\t')
+    // The first curated model has focus; searching is optional.
     terminal.stdin.press('\r')
     await sees('model.Q4_K_M.gguf')
-    terminal.stdin.press('\r')
-    await sees('1 selected')
-    terminal.stdin.press('\t')
-    terminal.stdin.press('\t')
-    terminal.stdin.press('\t')
-    terminal.stdin.press('\r')
-    await sees('Download and install')
     terminal.stdin.press('\r')
     await sees('BUILDING YOUR LOCAL WORKSPACE')
     terminal.stdin.press('\u0007')

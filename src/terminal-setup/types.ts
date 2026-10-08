@@ -37,6 +37,8 @@ export interface SetupProgress {
 export interface HubRepository {
   id: string
   downloads: number
+  title?: string
+  summary?: string
 }
 export interface ModelFile {
   filename: string
@@ -56,6 +58,8 @@ export interface SetupView {
   busy: boolean
   error: string
   startedAt: number
+  pending: ModelSetupPlanRequest | null
+  preparing: boolean
 }
 export function newSetup(mode: 'personal' | 'server'): SetupView {
   return {
@@ -63,7 +67,7 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
     mode,
     catalogs: [],
     engine: '',
-    query: 'Qwen3',
+    query: '',
     repositories: [],
     repository: '',
     files: [],
@@ -72,5 +76,7 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
     busy: false,
     error: '',
     startedAt: 0,
+    pending: null,
+    preparing: false,
   }
 }

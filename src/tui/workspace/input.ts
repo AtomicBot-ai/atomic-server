@@ -39,7 +39,8 @@ export function workspaceInput(
   if (input.startsWith('[<') || input.startsWith('\u001b[<')) return {}
   if (key.ctrl && input === 'q') return { quit: true }
   if (key.ctrl && input === 'x') return { action: 'mouse' }
-  if (key.ctrl && input === 'c') return { action: 'cancel' }
+  if (key.ctrl && input === 'c')
+    return { action: s.page === 'setup' ? (s.setup?.preparing ? 'setup-cancel' : 'setup-pause') : 'cancel' }
   if (key.ctrl && input === 'g') return { patch: { overlay: 'menu', focus: 'page:chat' }, leader: true }
   if (key.ctrl && input === 'k') return { patch: { overlay: 'help', focus: 'close' } }
   if (leader) {
@@ -62,6 +63,20 @@ export function workspaceInput(
       ? graphemes(s.base.logs.filter).slice(0, -1).join('')
       : s.base.logs.filter + (!key.ctrl ? input : '')
     return { patch: { base: { ...s.base, logs: { ...s.base.logs, filter } } } }
+  }
+  if (key.escape && !s.overlay && s.page === 'setup') {
+    const stage = s.setup?.stage
+    return {
+      action: s.setup?.preparing
+        ? 'setup-cancel'
+        : stage === 'engine'
+          ? 'setup-intro'
+          : stage === 'download' || stage === 'ready'
+            ? 'setup-pause'
+            : s.setup?.repository
+              ? 'setup-back'
+              : 'setup-engine-back',
+    }
   }
   if (key.escape) return s.overlay ? { action: 'close' } : { patch: { overlay: 'menu', focus: 'page:chat' } }
   if (key.ctrl && input === 'p') return { action: 'page:history' }
@@ -87,6 +102,8 @@ export function workspaceInput(
     }
     return {}
   }
+  if (s.page === 'welcome' && !key.ctrl && !key.meta && (input === '1' || input === '2'))
+    return { action: input === '1' ? 'personal' : 'hosting' }
   if ((key.upArrow || key.downArrow) && s.focus.startsWith('history:')) {
     const list = s.history.filter((h) =>
       `${h.title} ${h.model} ${h.workingDirectory}`.toLowerCase().includes(s.historyFilter.toLowerCase())
@@ -156,8 +173,6 @@ export function workspaceInput(
   if (input === ' ' && s.focus.startsWith('setup-file:')) return { action: s.focus }
   if (key.return) return { action: frame.targets.find((t) => t.id === s.focus)?.id ?? frame.targets[0]?.id }
   if (input === '?') return { patch: { overlay: 'help', focus: 'close' } }
-  if (s.page === 'welcome' && (input === '1' || input === '2'))
-    return { action: input === '1' ? 'personal' : 'hosting' }
   if (key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) {
     const delta = key.upArrow || key.leftArrow ? -1 : 1,
       index = frame.targets.findIndex((t) => t.id === s.focus),

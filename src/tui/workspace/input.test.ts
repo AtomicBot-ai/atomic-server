@@ -71,3 +71,16 @@ describe('keyboard and mouse controls', () => {
     }
   })
 })
+
+it.each([
+  ['1', 'personal'],
+  ['2', 'hosting'],
+])('opens the intro choice with %s, regardless of focus', (input, action) => {
+  const s = createWorkspace('welcome')
+  for (const focus of ['personal', 'hosting', 'composer', '']) {
+    s.focus = focus
+    expect(workspaceInput(input!, key(), s, workspaceFrame(s, 80, 24, 0)).action).toBe(action)
+  }
+  s.overlay = 'endpoint'
+  expect(workspaceInput(input!, key(), s, workspaceFrame(s, 80, 24, 0)).patch?.editValue).toBe(input)
+})

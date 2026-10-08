@@ -1,11 +1,16 @@
-import { newSetup } from '../../terminal-setup/index.js'
+import { newSetup, setupWait } from '../../terminal-setup/index.js'
 import type { ActionContext } from './actions.js'
 import type { SetupView } from '../../terminal-setup/index.js'
+import type { WorkspaceController } from './controller.js'
+const operations = new WeakMap<WorkspaceController, AbortController>()
 export async function setupAction(id: string, ctx: ActionContext): Promise<boolean> {
   const { controller: c, get, update } = ctx
-  const patch = (p: Partial<SetupView>) =>
+  const change = (p: Partial<SetupView>) =>
     update((s) => ({ ...s, setup: s.setup ? { ...s.setup, ...p } : null }))
+  const focus = (value: string) =>
+    update((s) => ({ ...s, focus: value, selected: 0, hover: '', overlay: null }))
   if (id === 'personal' || id === 'hosting' || id === 'install-models') {
+    operations.get(c)?.abort()
     const mode =
       id === 'personal'
         ? 'personal'
@@ -34,27 +39,74 @@ export async function setupAction(id: string, ctx: ActionContext): Promise<boole
     id = 'setup-refresh'
   }
   if (!id.startsWith('setup-')) return false
+  const view = get().setup
+  if (!view) return true
+  if (id === 'setup-intro') {
+    operations.get(c)?.abort()
+    update((s) => ({ ...s, page: 'welcome', setup: null, focus: 'personal', overlay: null, message: '' }))
+    return true
+  }
   if (id.startsWith('setup-job:')) {
     update((s) => ({ ...s, selected: Number(id.slice(10)) }))
     return true
   }
-  const view = get().setup
-  if (!view || view.busy) return true
+  if (id === 'setup-engine-info') {
+    update((s) => ({
+      ...s,
+      message:
+        'MLX and Apple Intelligence require desktop-supplied runtimes; this terminal installer supports GGUF engines.',
+    }))
+    return true
+  }
+  if (['setup-cancel', 'setup-back', 'setup-engine-back'].includes(id)) {
+    operations.get(c)?.abort()
+    change({
+      busy: false,
+      preparing: false,
+      error: '',
+      stage: id === 'setup-engine-back' ? 'engine' : 'models',
+      ...(id === 'setup-back' ? { repository: '', files: [] } : {}),
+    })
+    focus(
+      id === 'setup-engine-back'
+        ? 'setup-models'
+        : view.files.length && id === 'setup-cancel'
+          ? 'setup-file:0'
+          : 'setup-repo:0'
+    )
+    return true
+  }
+  if (view.busy && !['setup-pause', 'setup-refresh'].includes(id)) return true
+  operations.get(c)?.abort()
+  const operation = new AbortController()
+  operations.set(c, operation)
+  const patch = (p: Partial<SetupView>) => {
+    if (!operation.signal.aborted) change(p)
+  }
+  const wait = <T>(work: Promise<T>, ms = 45000) => setupWait(work, operation.signal, ms)
   patch({ busy: true, error: '' })
   try {
     if (id === 'setup-refresh') {
-      await c.initializeKeys()
-      const catalogs = await c.setup.catalogs()
+      await wait(c.initializeKeys())
+      const catalogs = await wait(c.setup.catalogs(), 20000)
       const first = catalogs.find((cat) => cat.provider === 'llamacpp-upstream') ?? catalogs[0]!
       const build =
         first.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first.available[0]!
       patch({ catalogs, engine: view.engine || `${first.provider}|${build.version}|${build.backend}` })
-      update((s) => ({ ...s, focus: 'setup-models' }))
+      if (!operation.signal.aborted) focus('setup-models')
     } else if (id.startsWith('setup-engine:')) {
       patch({ engine: id.slice(13) })
-    } else if (id === 'setup-models' || id === 'setup-search') {
-      patch({ stage: 'models', repository: '', files: [], repositories: await c.hub(view.query) })
-      update((s) => ({ ...s, selected: 0, focus: 'setup-query', overlay: null }))
+    } else if (['setup-models', 'setup-search', 'setup-catalog'].includes(id)) {
+      const query = id === 'setup-catalog' ? '' : view.query
+      patch({ stage: 'models', repository: '', files: [], query })
+      const repositories = await wait(
+        c.hub(query, operation.signal, (rows) => {
+          if (!get().setup?.repository && get().setup?.query === query) patch({ repositories: rows })
+        }),
+        22000
+      )
+      patch({ repositories })
+      if (!operation.signal.aborted) focus(repositories.length ? 'setup-repo:0' : 'setup-query')
     } else if (id === 'setup-query') {
       update((s) => ({
         ...s,
@@ -66,50 +118,60 @@ export async function setupAction(id: string, ctx: ActionContext): Promise<boole
     } else if (id.startsWith('setup-repo:')) {
       const repository = view.repositories[Number(id.slice(11))]?.id
       if (repository) {
-        patch({ repository, files: await c.files(repository) })
-        update((s) => ({ ...s, selected: 0, focus: 'setup-file:0' }))
+        patch({ repository, files: [] })
+        const files = await wait(c.files(repository, operation.signal), 22000)
+        patch({
+          files,
+          error: files.length ? '' : 'No single-file GGUF downloads found. Choose another model.',
+        })
+        if (!operation.signal.aborted) focus(files.length ? 'setup-file:0' : 'setup-back')
       }
-    } else if (id.startsWith('setup-file:')) {
+    } else if (id.startsWith('setup-file:') || (id === 'setup-retry' && view.pending && !view.progress)) {
       const file = view.files[Number(id.slice(11))]
-      if (file) {
-        const existing = view.selections.find(
-          (p) => p.request.repo === view.repository && p.request.file === file.filename
-        )
-        if (existing) patch({ selections: view.selections.filter((p) => p !== existing) })
-        else {
-          if (view.selections.length >= 4)
-            throw new Error('Select up to four models for this installation. You can add more later.')
-          const selection = await c.setup.plan({
-            repo: view.repository,
-            file: file.filename,
-            include_projector: true,
-          })
-          if (
-            selection.plan.provider === 'llamacpp-upstream' &&
-            !view.engine.startsWith('llamacpp-upstream|')
-          )
-            throw new Error('This GGUF uses llama.cpp. Choose the llama.cpp engine on the previous step.')
-          patch({ selections: [...view.selections, selection] })
+      const pending =
+        id === 'setup-retry'
+          ? view.pending
+          : file
+            ? {
+                repo: view.repository,
+                file: file.filename,
+                include_projector: true,
+              }
+            : null
+      if (pending) {
+        patch({
+          stage: 'download',
+          pending,
+          preparing: true,
+          progress: null,
+          selections: [],
+          startedAt: Date.now(),
+        })
+        focus('setup-cancel')
+        const selection = await wait(c.setup.plan(pending))
+        let engine = view.engine
+        if (selection.plan.engine) {
+          const e = selection.plan.engine
+          engine = `${e.provider}|${e.version}|${e.backend}`
+        } else if (engine.startsWith('atomic-prism|')) {
+          throw new Error('This model needs llama.cpp or TurboQuant. Go back to Engines and choose one.')
         }
+        if (operation.signal.aborted) return true
+        patch({ selections: [selection], engine })
+        // Preflight is cancellable; Core owns durable transfers from this point onward.
+        patch({ preparing: false })
+        focus('setup-pause')
+        const progress = await wait(c.setup.begin(view.mode, engine, [selection]))
+        patch({ progress, pending: null, startedAt: progress.manifest.startedAt })
       }
-    } else if (id === 'setup-review') {
-      if (!view.selections.length) throw new Error('Choose at least one model to continue.')
-      patch({ stage: 'review' })
-      update((s) => ({ ...s, focus: 'setup-begin', selected: 0 }))
-    } else if (id === 'setup-engine-back') patch({ stage: 'engine' })
-    else if (id === 'setup-back') patch({ stage: 'models', repository: '', files: [] })
-    else if (id === 'setup-begin') {
-      patch({ stage: 'download', startedAt: Date.now() })
-      update((s) => ({ ...s, focus: 'setup-retry', selected: 0 }))
-      const progress = await c.setup.begin(view.mode, view.engine, view.selections)
-      patch({ progress, startedAt: progress.manifest.startedAt })
     } else if (id === 'setup-pause') {
-      await c.setup.pause()
+      await wait(c.setup.pause())
       patch({ error: 'Downloads paused. Resume whenever you are ready.' })
-    } else if (id === 'setup-retry') patch({ progress: await c.setup.resume() })
-    else if (id === 'setup-finish') {
-      const manifest = await c.setup.finish()
-      if (manifest.mode === 'personal') await c.api(true, false)
+    } else if (id === 'setup-retry') {
+      patch({ progress: await wait(c.setup.resume()) })
+    } else if (id === 'setup-finish') {
+      const manifest = await wait(c.setup.finish(), 180000)
+      if (manifest.mode === 'personal') await wait(c.api(true, false))
       const model = manifest.selections[0]!.plan.model_id
       const endpoint = await c.localEndpoint()
       await c.save('tui.endpoint', endpoint)

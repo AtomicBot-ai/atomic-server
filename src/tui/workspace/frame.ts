@@ -188,11 +188,13 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     width - l.inset * 2
   )
   const footer =
-    width < 80
-      ? 'Ctrl+K Help  Ctrl+G Menu  Ctrl+X Mouse  Ctrl+Q Quit'
-      : s.mouse
-        ? 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Select text  |  Ctrl+Q Quit'
-        : 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Enable mouse  |  Ctrl+Q Quit'
+    s.page === 'welcome'
+      ? '1 Personal  /  2 Server  /  Enter Select  /  Ctrl+Q Quit'
+      : width < 80
+        ? 'Ctrl+K Help  Ctrl+G Menu  Ctrl+X Mouse  Ctrl+Q Quit'
+        : s.mouse
+          ? 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Select text  |  Ctrl+Q Quit'
+          : 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Enable mouse  |  Ctrl+Q Quit'
   text(c, l.inset, height - 1, footer, COLORS.stone, width - l.inset * 2)
   if (s.overlay) drawOverlay(c, s, focus)
   // Never register invisible controls on an unusually narrow viewport.

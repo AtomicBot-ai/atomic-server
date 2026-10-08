@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
+import { setupWait } from './wait.js'
 import type {
   BackendCatalogResponse,
   ModelSetup,
@@ -30,8 +31,12 @@ export class TerminalSetup {
   async catalogs(): Promise<BackendCatalogResponse[]> {
     const link = await this.attach(true)
     const outcomes = await Promise.allSettled(
-      ['llamacpp-upstream', 'atomic-prism'].map((p) =>
-        link.request<BackendCatalogResponse>('POST', `/backends/${p}/catalog`, {})
+      ['llamacpp-upstream', 'llamacpp', 'atomic-prism'].map((p) =>
+        setupWait(
+          link.request<BackendCatalogResponse>('POST', `/backends/${p}/catalog`, {}),
+          new AbortController().signal,
+          15000
+        )
       )
     )
     const catalogs = outcomes.flatMap((r) =>
@@ -73,6 +78,18 @@ export class TerminalSetup {
     selections: SetupSelection[]
   ): Promise<SetupProgress> {
     if (!selections.length) throw new Error('Choose at least one model.')
+    const previous = await this.read()
+    if (
+      previous &&
+      !previous.complete &&
+      `${previous.engine.provider}|${previous.engine.version}|${previous.engine.backend}` === engine &&
+      previous.selections.length === selections.length &&
+      previous.selections.every(
+        (s, i) =>
+          s.request.repo === selections[i]?.request.repo && s.request.file === selections[i]?.request.file
+      )
+    )
+      return this.resume()
     const [provider, version, ...backend] = engine.split('|')
     if (!provider || !version || !backend.length) throw new Error('Choose an engine build.')
     const manifest: SetupManifest = {
@@ -185,12 +202,14 @@ export class TerminalSetup {
     if (!progress.ready) throw new Error('Finish installing every selected component before continuing.')
     const link = await this.attach(false),
       manifest = progress.manifest
-    if (manifest.engine.provider === 'llamacpp-upstream')
-      await link.request('PATCH', '/settings/llamacpp-upstream', {
-        values: { version_backend: `${manifest.engine.version}/${manifest.engine.backend}` },
-      })
+    await link.request('PATCH', `/settings/${manifest.engine.provider}`, {
+      values: { version_backend: `${manifest.engine.version}/${manifest.engine.backend}` },
+    })
     const first = manifest.selections[0]!.plan
-    await link.models.load(first.provider, first.model_id)
+    await link.models.load(
+      first.provider === 'atomic-prism' ? first.provider : manifest.engine.provider,
+      first.model_id
+    )
     const completed = { ...manifest, complete: true }
     await writeDocument(this.path, completed)
     return completed

@@ -117,7 +117,7 @@ export function drawWelcome(
     ty + 2,
     w,
     slabHeight,
-    '1  PERSONAL TERMINAL',
+    '[1] PERSONAL TERMINAL',
     'Think, write and build.\nYour models. Your workspace.',
     focus
   )
@@ -128,7 +128,7 @@ export function drawWelcome(
     ty + 2 + (narrow ? slabHeight + 1 : 0),
     w,
     slabHeight,
-    '2  SERVER CONSOLE',
+    '[2] SERVER CONSOLE',
     'Serve models. Connect apps.\nYour API, under your control.',
     focus
   )

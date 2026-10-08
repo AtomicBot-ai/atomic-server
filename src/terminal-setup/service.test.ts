@@ -17,56 +17,61 @@ const plan: ModelSetupPlan = {
   free_bytes: 10000000000,
   blockers: [],
 }
-it('gates the workspace until every job and the engine are ready, then loads the first model', async () => {
-  const folder = await mkdtemp(join(tmpdir(), 'atc-setup-')),
-    link = fakeCoreLink()
-  const jobs: ModelSetup[] = [],
-    packs: { version: string; backend: string }[] = []
-  link.request = async <T>(method: string, path: string, body?: unknown) => {
-    link.calls.push({ method, path, body })
-    if (path === '/models/setup-plan') return plan as T
-    if (path === '/backends/llamacpp-upstream') return { backends: packs } as T
-    if (path.endsWith('/install')) {
-      packs.push({ version: 'b1', backend: 'cpu' })
+it.each(['llamacpp-upstream', 'llamacpp'])(
+  'gates entry, resumes idempotently and loads the selected %s engine',
+  async (provider) => {
+    const folder = await mkdtemp(join(tmpdir(), 'atc-setup-')),
+      link = fakeCoreLink()
+    const jobs: ModelSetup[] = [],
+      packs: { version: string; backend: string }[] = []
+    link.request = async <T>(method: string, path: string, body?: unknown) => {
+      link.calls.push({ method, path, body })
+      if (path === '/models/setup-plan') return plan as T
+      if (path === `/backends/${provider}`) return { backends: packs } as T
+      if (path.endsWith('/install')) {
+        packs.push({ version: 'b1', backend: 'cpu' })
+        return {} as T
+      }
+      if (path === '/model-setups' && method === 'POST') {
+        const input = body as { request_id: string }
+        const record = {
+          setup_id: 'one',
+          request_id: input.request_id,
+          stage: 'downloading_model',
+          plan,
+          task_ids: { model: 'model-transfer' },
+        } as ModelSetup
+        jobs.push(record)
+        return record as T
+      }
+      if (path === '/model-setups') return { setups: jobs } as T
       return {} as T
     }
-    if (path === '/model-setups' && method === 'POST') {
-      const input = body as { request_id: string }
-      const record = {
-        setup_id: 'one',
-        request_id: input.request_id,
-        stage: 'downloading_model',
-        plan,
-        task_ids: { model: 'model-transfer' },
-      } as ModelSetup
-      jobs.push(record)
-      return record as T
+    try {
+      const service = new TerminalSetup(folder, async () => link)
+      const selected = await service.plan({ repo: 'owner/repo', file: 'model.gguf' })
+      await service.begin('server', `${provider}|b1|cpu`, [selected])
+      await expect(service.finish()).rejects.toThrow('every selected')
+      const reopened = new TerminalSetup(folder, async () => link)
+      await reopened.begin('server', `${provider}|b1|cpu`, [{ ...selected, requestId: 'retry-with-new-id' }])
+      expect(jobs).toHaveLength(1)
+      link.snapshotValue.downloads = [
+        { taskId: 'model-transfer', transferred: 500, total: 1000, percent: 50 },
+      ]
+      expect((await reopened.progress()).transfers[0]?.percent).toBe(50)
+      jobs[0]!.stage = 'ready'
+      expect((await reopened.progress()).ready).toBe(true)
+      await reopened.finish()
+      expect((await reopened.read())?.complete).toBe(true)
+      expect(link.calls).toContainEqual(
+        expect.objectContaining({ path: `/models/${provider}/owner/model/load` })
+      )
+      expect(link.calls).not.toContainEqual(expect.objectContaining({ path: '/server/start' }))
+    } finally {
+      await rm(folder, { recursive: true, force: true })
     }
-    if (path === '/model-setups') return { setups: jobs } as T
-    return {} as T
   }
-  try {
-    const service = new TerminalSetup(folder, async () => link)
-    const selected = await service.plan({ repo: 'owner/repo', file: 'model.gguf' })
-    await service.begin('server', 'llamacpp-upstream|b1|cpu', [selected])
-    await expect(service.finish()).rejects.toThrow('every selected')
-    const reopened = new TerminalSetup(folder, async () => link)
-    await reopened.resume()
-    expect(jobs).toHaveLength(1)
-    link.snapshotValue.downloads = [{ taskId: 'model-transfer', transferred: 500, total: 1000, percent: 50 }]
-    expect((await reopened.progress()).transfers[0]?.percent).toBe(50)
-    jobs[0]!.stage = 'ready'
-    expect((await reopened.progress()).ready).toBe(true)
-    await reopened.finish()
-    expect((await reopened.read())?.complete).toBe(true)
-    expect(link.calls).toContainEqual(
-      expect.objectContaining({ path: '/models/llamacpp-upstream/owner/model/load' })
-    )
-    expect(link.calls).not.toContainEqual(expect.objectContaining({ path: '/server/start' }))
-  } finally {
-    await rm(folder, { recursive: true, force: true })
-  }
-})
+)
 it('refuses insufficient space before starting transfers', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'atc-setup-disk-')),
     link = fakeCoreLink()
@@ -80,6 +85,25 @@ it('refuses insufficient space before starting transfers', async () => {
     ).rejects.toThrow('disk space')
     expect(link.calls).toEqual([])
     expect(await service.read()).toBeNull()
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})
+
+it('requests every installable GGUF engine from the shared live advisor', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-engines-')),
+    link = fakeCoreLink()
+  link.request = async <T>(_method: string, path: string) => {
+    link.calls.push({ method: 'POST', path })
+    return { provider: path.split('/')[2], available: [{ version: 'v1', backend: 'cpu' }] } as T
+  }
+  try {
+    const service = new TerminalSetup(folder, async () => link)
+    expect((await service.catalogs()).map((c) => c.provider)).toEqual([
+      'llamacpp-upstream',
+      'llamacpp',
+      'atomic-prism',
+    ])
   } finally {
     await rm(folder, { recursive: true, force: true })
   }

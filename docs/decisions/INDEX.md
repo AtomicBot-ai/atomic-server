@@ -24,3 +24,4 @@ add a new one that says which record it supersedes.
 - **2026-10-08** — [Responsive terminal workspaces](2026-10-08-responsive-terminal-workspaces.md) — four primary destinations, shared keyboard/mouse geometry, and adaptive character art.
 
 - [Gate terminal entry on real model setup](2026-10-08-gate-terminal-entry-on-real-model-setup.md)
+- **2026-10-08** — [Browse Atomic Chat models and bound setup waits](2026-10-08-browse-models-and-bound-setup-waits.md) — curated discovery, Atomic quant priority, TurboQuant, immediate progress, and cancellable preparation.

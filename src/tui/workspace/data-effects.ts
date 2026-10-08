@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { persistConversation } from './data-actions.js'
+import { setupWait } from '../../terminal-setup/index.js'
 type Update = (fn: (s: WorkspaceState) => WorkspaceState) => void
 export function useWorkspaceData(
   s: WorkspaceState,
@@ -41,26 +42,44 @@ export function useWorkspaceData(
     }
   }, [s.ready, s.setupComplete, s.endpoint, c, latest, update])
   useEffect(() => {
-    if (s.page !== 'setup' || s.setup?.stage !== 'download') return
+    if (s.page !== 'setup' || s.setup?.stage !== 'download' || s.setup.preparing) return
+    const abort = new AbortController()
     let live = true,
       running = false
     const poll = async () => {
       if (running || !c.current) return
       running = true
       try {
-        const progress = await c.current.setup.progress()
+        const progress = await setupWait(c.current.setup.progress(), abort.signal, 15000)
         if (live)
-          update((v) => ({
-            ...v,
-            ...(progress.ready ? { focus: 'setup-finish', hover: '' } : {}),
-            setup: v.setup ? { ...v.setup, progress, stage: progress.ready ? 'ready' : 'download' } : null,
-          }))
+          update((v) =>
+            !v.setup || (progress.manifest.complete && progress.manifest.startedAt < v.setup.startedAt)
+              ? v
+              : {
+                  ...v,
+                  ...(progress.ready ? { focus: 'setup-finish', hover: '' } : {}),
+                  setup: v.setup
+                    ? {
+                        ...v.setup,
+                        progress,
+                        error: v.setup.error.startsWith('Connection:') ? '' : v.setup.error,
+                        stage: progress.ready ? 'ready' : 'download',
+                      }
+                    : null,
+                }
+          )
       } catch (e) {
         if (live)
           update((v) => ({
             ...v,
             setup: v.setup
-              ? { ...v.setup, error: e instanceof Error ? e.message : 'Waiting for the background service.' }
+              ? {
+                  ...v.setup,
+                  error:
+                    e instanceof Error && e.message === 'No installation is in progress.'
+                      ? v.setup.error
+                      : `Connection: ${e instanceof Error ? e.message : 'Waiting for the background service.'}`,
+                }
               : null,
           }))
       } finally {
@@ -70,9 +89,10 @@ export function useWorkspaceData(
     const timer = setInterval(() => void poll(), 800)
     return () => {
       live = false
+      abort.abort()
       clearInterval(timer)
     }
-  }, [s.page, s.setup?.stage, c, update])
+  }, [s.page, s.setup?.stage, s.setup?.preparing, c, update])
   useEffect(() => {
     if (!latest.current.conversation || !latest.current.messages.length) return
     const controller = c.current
