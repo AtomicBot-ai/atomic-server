@@ -1,5 +1,5 @@
 import { AGENTS } from '../../agent-launch/index.js'
-import { button, COLORS, rule, text, wrap } from './canvas.js'
+import { button, COLORS, text, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
@@ -11,12 +11,10 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     y = 3,
     w = c.width - 6,
     h = c.height - 6
-  for (let r = y; r < y + h; r++) text(c, x, r, ' '.repeat(w), COLORS.text, w, COLORS.ground)
+  for (let r = y; r < y + h; r++) text(c, x, r, ' '.repeat(w), COLORS.text, w, COLORS.header)
   c.targets = []
-  rule(c, x, y, w)
-  rule(c, x, y + h - 1, w)
   const put = (row: number, v: string, color: string = COLORS.text) =>
-    text(c, x + 2, y + row, v, color, w - 4)
+    text(c, x + 2, y + row, v, color, w - 4, COLORS.header)
   const b = (id: string, row: number, label: string, hint: string) =>
     button(c, id, x + 2, y + row, label, hint, focus)
   if (s.overlay === 'credential') {

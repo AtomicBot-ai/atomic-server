@@ -2,14 +2,21 @@ import { fill, drawWelcome, eyeArtwork } from './fortress.js'
 import { drawSetup } from './setup-panel.js'
 import { drawDataPanel } from './data-panels.js'
 import { gateRows } from './art.js'
-import { button, canvas, COLORS, rule, text, graphemes, wrap } from './canvas.js'
+import type { OrnamentStyle } from './art.js'
+import { button, canvas, COLORS, text, graphemes, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 import { workspaceLayout } from './layout.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { drawPanels } from './panels.js'
 import { drawOverlay } from './overlay.js'
-export function workspaceFrame(s: WorkspaceState, width: number, height: number, seconds: number): Canvas {
+export function workspaceFrame(
+  s: WorkspaceState,
+  width: number,
+  height: number,
+  seconds: number,
+  ornament: OrnamentStyle = 'crown'
+): Canvas {
   const c = canvas(width, height),
     l = workspaceLayout(width, height)
   const focus = s.hover || s.focus
@@ -20,12 +27,14 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     )
     return c
   }
-  gateRows(width, l.gate).forEach((r, y) => text(c, 0, y, r, y === l.gate - 1 ? COLORS.muted : COLORS.stone))
+  gateRows(width, l.gate, ornament).forEach((r, y) =>
+    text(c, 0, y, r, y === l.gate - 1 ? COLORS.muted : COLORS.stone)
+  )
   text(c, l.inset, l.gate + 1, '<|>', COLORS.red)
   text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text)
   const state =
     s.page === 'chat'
-      ? 'Personal terminal'
+      ? ''
       : s.base.daemon.kind === 'up'
         ? s.base.daemon.snapshot.server.running
           ? 'API running'
@@ -79,7 +88,6 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
           h.id === s.conversation?.id
         )
       )
-    text(c, l.inset, l.bottom - 1, 'Personal workspace', COLORS.stone, l.sidebar - 1)
   } else {
     x = l.inset
     bodyWidth = width - x - l.inset
@@ -131,7 +139,6 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
           )
         )
     }
-    rule(c, x, composerY, bodyWidth)
     const chars = graphemes(s.draft)
     if (s.focus === 'composer' && !s.overlay) chars.splice(s.cursor, 0, '▏')
     const draftRows = wrap(
@@ -174,7 +181,6 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
       focus
     )
   } else drawPanels(c, s, { x, y, width: bodyWidth, bottom: l.bottom }, focus)
-  rule(c, l.inset, height - 3, width - l.inset * 2)
   const active = c.targets.find((t) => t.id === focus)
   text(
     c,

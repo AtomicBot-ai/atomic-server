@@ -55,9 +55,9 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
   const density = '.:;=+*xX#%@'
   return Array.from({ length: height }, (_, row) =>
     Array.from({ length: width }, (_, col) => {
-      const x = (col + 0.5 - width / 2) / (width / 2)
+      const x = (col + 0.5 - width / 2) / (width * 0.45)
       const y = (row + 0.5 - height / 2) / (height / 2)
-      const lid = 0.74 * Math.pow(Math.max(0, 1 - Math.abs(x) ** 1.45), 0.72)
+      const lid = 0.86 * Math.pow(Math.max(0, 1 - Math.abs(x) ** 1.45), 0.72)
       const dx = x - gaze.x * 0.14,
         dy = y - gaze.y * 0.12
       const theta = Math.atan2(dy * 0.68, dx)
@@ -66,8 +66,8 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29) * 5))
       const dist = Math.abs(y) - lid
       if (Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
-      const slit = (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.8) ** 2)
-      if (Math.abs(dx) < slit && Math.abs(dy) < 0.78) return EMPTY()
+      const slit = (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.92) ** 2)
+      if (Math.abs(dx) < slit && Math.abs(dy) < 0.9) return EMPTY()
       const rim = Math.exp(-Math.abs(dist) * 26)
       const core =
         Math.exp(-Math.abs(Math.abs(dx) - slit - 0.055) * 8) * (0.5 + 0.5 * Math.max(0, 1 - Math.abs(dy)))
@@ -78,29 +78,86 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
     })
   )
 }
-/** Repeating iron spires grow in detail instead of stretching the same glyphs. */
-export function gateRows(width: number, height: number): string[] {
-  const small = ['/\\  ']
-  const medium = [
-    '    /\\        /\\    ',
-    ' /\\/||\\/\\  /\\/||\\/\\ ',
-    '/||\\||/||\\/||\\||/||\\',
-    '==++==++==++==++==++==',
-  ]
-  const large = [
-    '          /\\          ',
-    '         /||\\         ',
-    '    /\\ /:||:\\ /\\    ',
-    '   /||\\/:||:\\/||\\   ',
-    '/\\/||\\/=||=\\/||\\/\\',
-    '|::|++|\\=||=/|++|::|',
-    '|==|::|<>||||<>|::|==|',
-    '+--+--+--++++--+--+--+',
-  ]
-  const source = height <= 1 ? small : height <= 4 ? medium : large
-  return Array.from({ length: height }, (_, i) => {
-    const raw = source[Math.min(i, source.length - 1)]!
-    const row = height > 1 ? raw.padEnd(24) : raw
-    return row.repeat(Math.ceil(width / row.length)).slice(0, width)
-  })
+export const ORNAMENT_STYLES = ['crown', 'barbs', 'lattice', 'fangs'] as const
+export type OrnamentStyle = (typeof ORNAMENT_STYLES)[number]
+/** Complete, centred motifs; never crop a repeating tile at the terminal's edge. */
+export function gateRows(width: number, height: number, style: OrnamentStyle = 'crown'): string[] {
+  const rows = Array.from({ length: height }, () => Array<string>(width).fill(' '))
+  const place = (motif: string[], center: number, bottom = height) => {
+    const w = Math.max(...motif.map((r) => r.length))
+    motif.forEach((row, y) => {
+      const at = bottom - motif.length + y
+      if (at < 0 || at >= height) return
+      for (let x = 0; x < row.length; x++) {
+        const col = Math.floor(center - w / 2) + x
+        if (col >= 0 && col < width && row[x] !== ' ') rows[at]![col] = row[x]!
+      }
+    })
+  }
+  const center = width / 2
+  if (style === 'crown') {
+    const peak = (h: number) =>
+      h === 1
+        ? ['/\\']
+        : h === 2
+          ? [' /\\ ', '/||\\']
+          : h === 3
+            ? [' /\\ ', '<||>', ' || ']
+            : Array.from({ length: h }, (_, y) =>
+                y === 0
+                  ? ' '.repeat(h - 1) + '/\\'
+                  : y === h - 1
+                    ? ' '.repeat(h - 1) + '||'
+                    : y === h - 2
+                      ? ' '.repeat(h - 2) + '\\||/'
+                      : ' '.repeat(h - y - 1) + '/' + ':'.repeat(y - 1) + '||' + ':'.repeat(y - 1) + '\\'
+              )
+    const step = Math.max(10, height * 3 + 3)
+    place(peak(height), center)
+    for (let i = 1; i * step + height < width / 2 - 3; i++) {
+      const h = Math.max(1, height - Math.ceil(i / 2))
+      place(peak(h), center - i * step)
+      place(peak(h), center + i * step)
+    }
+  } else if (style === 'barbs') {
+    const motif =
+      height <= 1
+        ? ['>><<']
+        : height <= 2
+          ? [' \\  / ', '>> \\/ <<']
+          : ['  \\      /  ', '   \\ /\\ /   ', '>>> <    > <<<', '   / \\/ \\   ', '  /      \\  '].slice(
+              0,
+              height
+            )
+    const step = 24
+    const count = Math.max(1, Math.floor((width - 8) / step))
+    for (let i = 0; i < count; i++) place(motif, center + (i - (count - 1) / 2) * step)
+  } else if (style === 'lattice') {
+    const motif =
+      height <= 1
+        ? ['<>  <>']
+        : height <= 2
+          ? [' /\\  /\\ ', ' \\/  \\/ ']
+          : [
+              '   /\\    /\\   ',
+              '  /  \\  /  \\  ',
+              ' < /\\ >< /\\ > ',
+              '  \\/  \\/  \\/  ',
+              '   \\  /\\  /   ',
+            ].slice(0, height)
+    const step = height <= 2 ? 12 : 16
+    const count = Math.max(1, Math.floor((width - 8) / step))
+    for (let i = 0; i < count; i++) place(motif, center + (i - (count - 1) / 2) * step)
+  } else {
+    const motif =
+      height <= 1
+        ? ['/\\  /\\']
+        : height <= 2
+          ? [' /\\  /\\ ', '/ /\\/\\ \\']
+          : ['    /\\    ', ' /\\/  \\/\\ ', '/ / /\\ \\ \\', ' / /  \\ \\ ', '  /    \\  '].slice(0, height)
+    place(motif, Math.max(9, width * 0.16))
+    place(motif, Math.min(width - 9, width * 0.84))
+    place(height === 1 ? ['<>'] : [' /\\ ', ' \\/ '], center)
+  }
+  return rows.map((r) => r.join(''))
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { drawEye, gateRows, gazeAt } from './art.js'
+import { drawEye, gateRows, gazeAt, ORNAMENT_STYLES } from './art.js'
 import { canvas, button, hit, text, textWidth, cleanText, wrap, art, rule, graphemes } from './canvas.js'
 import { workspaceFrame } from './frame.js'
 import { workspaceLayout } from './layout.js'
@@ -45,11 +45,13 @@ describe('responsive terminal artwork and layout', () => {
     expect(workspaceLayout(180, 56).tier).toBe('wide')
     expect(drawEye(120, 24, 0, false)).toEqual(drawEye(120, 24, 900, false))
     expect(gazeAt(0, true)).not.toEqual(gazeAt(12, true))
-    for (const height of [1, 4, 8]) {
-      const g = gateRows(120, height)
-      expect(g).toHaveLength(height)
-      g.forEach((r) => expect(r.length).toBe(120))
-    }
+    for (const style of ORNAMENT_STYLES)
+      for (const height of [1, 2, 5, 8])
+        for (const width of [54, 120, 180]) {
+          const g = gateRows(width, height, style)
+          expect(g).toHaveLength(height)
+          g.forEach((r) => expect(r.length).toBe(width))
+        }
   })
   it('keeps overlay controls separate from hidden controls', () => {
     const s = createWorkspace('chat')
