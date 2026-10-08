@@ -66,4 +66,47 @@ describe('workspace actions', () => {
     expect(models).not.toHaveBeenCalled()
     expect(ctx.get().message).toContain('Start the API')
   })
+  it('opens live engine setup from the composer while preserving the draft', async () => {
+    const { ctx } = context()
+    Object.assign(ctx.controller, {
+      config: async () => ({ values: { tui: { mode: 'personal' } } }),
+      initializeKeys: async () => undefined,
+      setup: {
+        catalogs: async () => [
+          {
+            provider: 'llamacpp-upstream',
+            available: [{ version: 'v1', backend: 'metal' }],
+            recommended: 'v1/metal',
+          },
+        ],
+      },
+    })
+    ctx.update((s) => ({ ...s, draft: 'Keep this draft' }))
+    await activate('choose-engine', ctx)
+    expect(ctx.get()).toMatchObject({
+      page: 'setup',
+      draft: 'Keep this draft',
+      setup: { stage: 'engine', engine: 'llamacpp-upstream|v1|metal' },
+    })
+  })
+  it('returns from a local model selection to the composer after the real load succeeds', async () => {
+    const { ctx, save } = context(),
+      loadModel = vi.fn(async () => undefined)
+    Object.assign(ctx.controller, { loadModel, localEndpoint: async () => 'http://127.0.0.1:1337/v1' })
+    ctx.update((s) => ({
+      ...s,
+      page: 'models',
+      draft: 'Still here',
+      installed: [{ id: 'local-model', name: 'Local model', provider: 'llamacpp-upstream' }],
+    }))
+    await activate('installed:0', ctx)
+    expect(loadModel).toHaveBeenCalledWith('llamacpp-upstream', 'local-model')
+    expect(save).toHaveBeenCalledWith('tui.model', 'local-model')
+    expect(ctx.get()).toMatchObject({
+      page: 'chat',
+      focus: 'composer',
+      model: 'local-model',
+      draft: 'Still here',
+    })
+  })
 })

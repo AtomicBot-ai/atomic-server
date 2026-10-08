@@ -19,6 +19,7 @@ import { workspaceInput } from './input.js'
 import { activate } from './actions.js'
 import { COLORS } from './canvas.js'
 import type { Cell } from './canvas.js'
+const lightSurfaces = new Set([COLORS.text, COLORS.composer, COLORS.modelButton, COLORS.sendButton])
 export interface WorkspaceProps {
   onLaunch?: (launch: AgentLaunch) => void
   initialMessage?: string
@@ -48,7 +49,7 @@ function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueC
             ? {
                 color: trueColor
                   ? r.color
-                  : r.background === COLORS.text
+                  : lightSurfaces.has(r.background ?? '')
                     ? 'white'
                     : r.color === COLORS.gold
                       ? 'cyan'
@@ -64,7 +65,9 @@ function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueC
               }
             : {})}
           {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}
-          inverse={(!color || !trueColor) && (r.background === COLORS.text || r.background === COLORS.focus)}
+          inverse={
+            (!color || !trueColor) && (lightSurfaces.has(r.background ?? '') || r.background === COLORS.focus)
+          }
         >
           {r.text}
         </Text>

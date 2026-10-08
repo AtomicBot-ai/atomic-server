@@ -12,6 +12,12 @@ export const COLORS = {
   focus: '#17322f',
   surface: '#171b1d',
   header: '#202628',
+  composer: '#effaf7',
+  composerFrame: '#b7d4cd',
+  composerInk: '#102d28',
+  engineButton: '#265951',
+  modelButton: '#c0e6de',
+  sendButton: '#50d5bf',
 }
 
 export interface Cell {

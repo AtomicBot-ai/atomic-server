@@ -3,7 +3,7 @@ import { drawSetup } from './setup-panel.js'
 import { drawDataPanel } from './data-panels.js'
 import { gateRows } from './art.js'
 import type { OrnamentStyle } from './art.js'
-import { button, canvas, COLORS, text, graphemes, wrap } from './canvas.js'
+import { button, canvas, COLORS, text, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 import { workspaceLayout } from './layout.js'
 import type { WorkspaceState } from './state.js'
@@ -11,6 +11,7 @@ import { PAGES } from './state.js'
 import { drawPanels } from './panels.js'
 import { drawOverlay } from './overlay.js'
 import { tooltip } from './tooltip.js'
+import { drawComposer } from './composer.js'
 export function workspaceFrame(
   s: WorkspaceState,
   width: number,
@@ -105,7 +106,7 @@ export function workspaceFrame(
     bodyWidth = width - x - l.inset
   }
   if (s.page === 'welcome') {
-    drawWelcome(c, focus, seconds, s.motion, l.gate + 3, l.bottom - 1)
+    drawWelcome(c, focus, seconds, s.motion, l.gate + 3, l.bottom)
   } else if (s.page === 'setup') {
     drawSetup(c, s, x, y, bodyWidth, l.bottom, focus, seconds)
   } else if (drawDataPanel(c, s, x, y, bodyWidth, l.bottom, focus)) {
@@ -118,15 +119,12 @@ export function workspaceFrame(
     }
     const composerY = l.bottom - 4
     if (!s.messages.length) {
-      const eh = Math.max(5, Math.min(l.eyeHeight, composerY - y - 1)),
-        ew = Math.min(bodyWidth - 4, Math.max(56, eh * 5), 122)
-      const ey = y + Math.max(0, Math.floor((composerY - y - eh - 2) / 2))
-      eyeArtwork(c, x + Math.floor((bodyWidth - ew) / 2), ey, ew, eh, seconds, s.motion)
+      const eye = eyeArtwork(c, x, y, bodyWidth, Math.max(3, composerY - y - 2), seconds, s.motion)
       const line = s.model ? 'What would you like to explore?' : 'Your next idea starts here.'
       text(
         c,
         x + Math.max(0, Math.floor((bodyWidth - line.length) / 2)),
-        Math.min(composerY - 1, ey + eh + 1),
+        Math.min(composerY - 1, eye.y + eye.height + 1),
         line,
         COLORS.muted
       )
@@ -151,56 +149,7 @@ export function workspaceFrame(
           )
         )
     }
-    fill(c, x, composerY + 1, bodyWidth, 2, COLORS.text)
-    const chars = graphemes(s.draft)
-    if (s.focus === 'composer' && !s.overlay) chars.splice(s.cursor, 0, '▏')
-    const draftRows = wrap(
-      s.draft ? chars.join('') : s.focus === 'composer' ? '▏ Write a message...' : 'Write a message...',
-      bodyWidth - 4
-    )
-    draftRows
-      .slice(-2)
-      .forEach((r, i) =>
-        text(
-          c,
-          x + 2,
-          composerY + 1 + i,
-          r,
-          s.draft ? COLORS.ground : COLORS.stone,
-          bodyWidth - 4,
-          COLORS.text
-        )
-      )
-    c.targets.push({
-      id: 'composer',
-      x,
-      y: composerY + 1,
-      width: bodyWidth,
-      height: 2,
-      hint: 'Enter Send | Alt+Enter New line | Esc Menu | Ctrl+N New chat',
-    })
-    if (s.focus === 'composer' && !s.hover) text(c, x, composerY + 1, '>', COLORS.ground, 1, COLORS.text)
-    let cx = x
-    cx +=
-      button(
-        c,
-        'choose-model',
-        cx,
-        l.bottom,
-        s.model ? `Model: ${s.model.slice(0, l.tier === 'compact' ? 15 : 32)}` : 'Choose a model',
-        'Choose a model from your endpoint. Ctrl+G then M',
-        focus
-      ) + 1
-    cx += button(c, 'endpoint', cx, l.bottom, 'Connect', 'Edit the OpenAI-compatible endpoint.', focus) + 1
-    button(
-      c,
-      s.generating ? 'cancel' : 'send',
-      Math.max(cx, width - l.inset - 10),
-      l.bottom,
-      s.generating ? 'Stop' : 'Send',
-      s.generating ? 'Stop this response. Ctrl+C' : 'Send your message. Enter in the editor',
-      focus
-    )
+    drawComposer(c, s, x, composerY, bodyWidth, focus)
   } else drawPanels(c, s, { x, y, width: bodyWidth, bottom: l.bottom }, focus)
   if (s.overlay) drawOverlay(c, s, focus)
   const active = c.targets.find((t) => t.id === focus)

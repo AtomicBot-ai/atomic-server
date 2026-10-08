@@ -55,7 +55,7 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
   const density = '.:;=+*xX#%@'
   return Array.from({ length: height }, (_, row) =>
     Array.from({ length: width }, (_, col) => {
-      const x = (col + 0.5 - width / 2) / (width * 0.37)
+      const x = (col + 0.5 - width / 2) / (width / 2)
       const y = (row + 0.5 - height / 2) / (height / 2)
       const lid = 0.97 * Math.pow(Math.max(0, 1 - Math.abs(x) ** 1.45), 0.72)
       const dx = x - gaze.x * 0.14,
@@ -66,7 +66,10 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29) * 5))
       const dist = Math.abs(y) - lid
       if (Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
-      const slit = (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.98) ** 2)
+      const slit = Math.max(
+        compact ? 1.05 / width : 0,
+        (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.98) ** 2)
+      )
       if (Math.abs(dx) < slit && Math.abs(dy) < 0.96) return EMPTY()
       const rim = Math.exp(-Math.abs(dist) * 26)
       const core =
@@ -77,6 +80,15 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       return { char, color: glow(heat) }
     })
   )
+}
+/** About 4:3 on 2:1 terminal cells, including the eye's small horizontal inset. */
+export function eyeSize(width: number, height: number): { width: number; height: number } {
+  const share = height >= 12 ? 2 / 3 : 1
+  const maxWidth = Math.max(1, Math.floor(width * share)),
+    maxHeight = Math.max(1, Math.floor(height * share))
+  const columnsPerRow = ((4 / 3) * 2) / 0.96
+  const rows = Math.max(1, Math.min(maxHeight, Math.floor(maxWidth / columnsPerRow)))
+  return { width: Math.min(maxWidth, Math.round(rows * columnsPerRow)), height: rows }
 }
 export const ORNAMENT_STYLES = ['crown', 'barbs', 'lattice', 'fangs'] as const
 export type OrnamentStyle = (typeof ORNAMENT_STYLES)[number]

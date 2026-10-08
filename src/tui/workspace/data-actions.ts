@@ -120,7 +120,13 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
       const endpoint = await c.localEndpoint()
       await c.save('tui.model', model.id)
       await c.save('tui.endpoint', endpoint)
-      patch({ model: model.id, endpoint, message: 'Model loaded. Ready for chat and API requests.' })
+      patch({
+        model: model.id,
+        endpoint,
+        page: 'chat',
+        focus: 'composer',
+        message: 'Model loaded. Ready for chat and API requests.',
+      })
     } finally {
       patch({ busy: false })
     }

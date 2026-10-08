@@ -5,8 +5,6 @@ export interface WorkspaceLayout {
   bottom: number
   width: number
   gate: number
-  eyeWidth: number
-  eyeHeight: number
   sidebar: number
 }
 export function workspaceLayout(columns: number, rows: number): WorkspaceLayout {
@@ -17,10 +15,6 @@ export function workspaceLayout(columns: number, rows: number): WorkspaceLayout 
     bottom = rows - 4
   const sidebar = tier === 'wide' ? 22 : 0
   const width = Math.max(12, columns - inset * 2 - sidebar)
-  const eyeHeight = Math.max(
-    5,
-    Math.min(tier === 'wide' ? 30 : tier === 'standard' ? 17 : 9, bottom - top - 7)
-  )
   return {
     tier,
     inset,
@@ -29,7 +23,5 @@ export function workspaceLayout(columns: number, rows: number): WorkspaceLayout 
     width,
     gate,
     sidebar,
-    eyeHeight,
-    eyeWidth: Math.min(width - 4, eyeHeight * 5, 122),
   }
 }

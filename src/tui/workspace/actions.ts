@@ -124,6 +124,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'choose-model') return activate('page:models', ctx)
+  if (id === 'choose-engine') return activate('install-models', ctx)
   if (id === 'endpoint') {
     patch({ overlay: 'endpoint', edit: 'endpoint', editValue: s.endpoint, focus: 'save-edit', message: '' })
     return

@@ -1,4 +1,4 @@
-import { drawEye } from './art.js'
+import { drawEye, eyeSize } from './art.js'
 import { art, COLORS, text, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 export function fill(c: Canvas, x: number, y: number, width: number, height: number, background: string) {
@@ -41,7 +41,11 @@ export function eyeArtwork(
   seconds: number,
   motion: boolean
 ) {
-  if (height >= 3) art(c, x, y, drawEye(width, height, seconds, motion))
+  const size = eyeSize(width, height)
+  const left = x + Math.floor((width - size.width) / 2),
+    top = y + Math.floor((height - size.height) / 2)
+  if (size.height >= 3) art(c, left, top, drawEye(size.width, size.height, seconds, motion))
+  return { x: left, y: top, ...size }
 }
 export function drawWelcome(
   c: Canvas,
@@ -54,11 +58,10 @@ export function drawWelcome(
   const narrow = c.width < 78,
     slabHeight = narrow ? 5 : c.height >= 35 ? 7 : 5
   const blockHeight = narrow ? slabHeight * 2 + 1 : slabHeight
-  const artHeight = Math.max(5, Math.min(34, bottom - top - blockHeight - 2))
-  const artWidth = Math.min(c.width - 8, Math.max(46, artHeight * 5 + 16), 160)
-  eyeArtwork(c, Math.floor((c.width - artWidth) / 2), top, artWidth, artHeight, seconds, motion)
+  const plateY = bottom - blockHeight + 1
+  eyeArtwork(c, 4, top, c.width - 8, Math.max(3, plateY - top - 1), seconds, motion)
   const title = 'Choose your workspace',
-    ty = top + artHeight
+    ty = plateY - 1
   text(c, Math.floor((c.width - title.length) / 2), ty, title, COLORS.gold)
   const w = narrow ? c.width - 8 : Math.min(48, Math.floor((c.width - 10) / 2)),
     sx = narrow ? 4 : Math.floor((c.width - w * 2 - 3) / 2)
