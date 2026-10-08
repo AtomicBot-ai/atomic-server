@@ -105,8 +105,8 @@ describe('working terminal workspace', () => {
     t.press(KEYS.escape)
     t.terminal.stdout.resize(120, 36)
     await t.sees('YOUR SERVER IS READY TO START')
-    // The standard header is on row 8; Settings begins at column 31.
-    t.press('\u001b[<0;34;6M')
+    // The standard menu is on row 7, below its blank header-coloured row.
+    t.press('\u001b[<0;34;7M')
     await t.sees('Make yourself at home')
     t.press('\u0011')
     await t.ui.waitUntilExit()

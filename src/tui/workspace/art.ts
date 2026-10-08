@@ -29,7 +29,7 @@ function glow(t: number): string {
       .join('')
   )
 }
-/** A slow gaze with long rests. The pupil moves; the outline does not wobble. */
+/** Unhurried glances with a pause on each target; the outline remains anchored. */
 export function gazeAt(seconds: number, motion: boolean): { x: number; y: number } {
   if (!motion) return { x: 0, y: 0 }
   const targets = [
@@ -40,17 +40,19 @@ export function gazeAt(seconds: number, motion: boolean): { x: number; y: number
     [0.65, 0.12],
     [-0.25, -0.1],
   ]
-  const phase = seconds / 4.8,
+  const phase = seconds / 3.6,
     i = Math.floor(phase) % targets.length
   const a = targets[i]!,
     b = targets[(i + 1) % targets.length]!
-  const t = clamp(((phase % 1) - 0.72) / 0.28),
+  const t = clamp(((phase % 1) - 0.55) / 0.45),
     ease = t * t * (3 - 2 * t)
   return { x: a[0]! + (b[0]! - a[0]!) * ease, y: a[1]! + (b[1]! - a[1]!) * ease }
 }
 /** Pointed lids, a vertical void, radial fibres and uneven tongues of fire. */
 export function drawEye(width: number, height: number, seconds = 0, motion = true): Drawing {
   const gaze = gazeAt(seconds, motion)
+  const time = motion ? seconds : 0
+  const breath = Math.sin(time * 0.9)
   const compact = height <= 5
   const density = '.:;=+*xX#%@'
   return Array.from({ length: height }, (_, row) =>
@@ -62,19 +64,24 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
         dy = y - gaze.y * 0.12
       const theta = Math.atan2(dy * 0.68, dx)
       const radius = Math.hypot(dx, dy * 0.68)
-      const grain = (Math.sin(theta * 51 + radius * 35) + Math.sin(theta * 93 - radius * 21) * 0.45) / 1.45
-      const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29) * 5))
+      const grain =
+        (Math.sin(theta * 51 + radius * 35 - time * 0.85) +
+          Math.sin(theta * 93 - radius * 21 + time * 1.15) * 0.45) /
+        1.45
+      const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29 - time * 0.6) * 5))
       const dist = Math.abs(y) - lid
       if (Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
       const slit = Math.max(
         compact ? 1.05 / width : 0,
-        (compact ? 0.065 : 0.05) * Math.max(0, 1 - (dy / 0.98) ** 2)
+        (compact ? 0.065 : 0.05) * (1 + breath * 0.1) * Math.max(0, 1 - (dy / 0.98) ** 2)
       )
       if (Math.abs(dx) < slit && Math.abs(dy) < 0.96) return EMPTY()
       const rim = Math.exp(-Math.abs(dist) * 26)
       const core =
         Math.exp(-Math.abs(Math.abs(dx) - slit - 0.055) * 8) * (0.5 + 0.5 * Math.max(0, 1 - Math.abs(dy)))
-      const heat = clamp(0.24 + core * 0.7 + rim * 0.24 + grain * 0.17 - Math.max(0, dist) * 4)
+      const heat = clamp(
+        0.24 + core * (0.7 + breath * 0.025) + rim * 0.24 + grain * 0.17 - Math.max(0, dist) * 4
+      )
       if (dist > 0 && heat < 0.18) return EMPTY()
       const char = density[Math.min(density.length - 1, Math.floor(heat * density.length))]!
       return { char, color: glow(heat) }

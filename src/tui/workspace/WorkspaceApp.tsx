@@ -185,7 +185,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     )
       return
     const start = Date.now()
-    const timer = setInterval(() => setSeconds((Date.now() - start) / 1000), 180)
+    const timer = setInterval(() => setSeconds((Date.now() - start) / 1000), 140)
     return () => clearInterval(timer)
   }, [state.motion, state.page, state.messages.length, state.overlay])
   useEffect(() => {

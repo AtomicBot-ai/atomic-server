@@ -34,31 +34,16 @@ export function workspaceFrame(
   )
   text(c, l.inset, l.gate + 1, '<|>', COLORS.red)
   text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text, width - l.inset - 5, undefined, true)
-  const state =
-    s.page === 'chat'
-      ? ''
-      : s.base.daemon.kind === 'up'
-        ? s.base.daemon.snapshot.server.running
-          ? 'API running'
-          : 'API stopped'
-        : 'Server offline'
-  text(
-    c,
-    width - state.length - l.inset,
-    l.gate + 1,
-    state,
-    s.base.daemon.kind === 'up' ? COLORS.green : COLORS.muted
-  )
   let nx = l.inset
   if (s.page !== 'welcome') {
-    fill(c, 0, l.gate + 3, width, 2, COLORS.header)
+    fill(c, 0, l.gate + 3, width, 3, COLORS.header)
   }
-  fill(c, 0, l.gate + 2, width, 1, COLORS.black)
+  fill(c, 0, l.gate + 2, width, 1, COLORS.ground)
   if (s.page === 'setup')
     text(
       c,
       l.inset,
-      l.gate + 3,
+      l.gate + 4,
       'PREPARE YOUR WORKSPACE',
       COLORS.gold,
       width - l.inset * 2,
@@ -72,7 +57,7 @@ export function workspaceFrame(
           c,
           `page:${p.id}`,
           nx,
-          l.gate + 3,
+          l.gate + 4,
           p.name,
           p.hint,
           focus,

@@ -44,6 +44,8 @@ describe('responsive terminal artwork and layout', () => {
     expect(workspaceLayout(120, 36).tier).toBe('standard')
     expect(workspaceLayout(180, 56).tier).toBe('wide')
     expect(drawEye(120, 24, 0, false)).toEqual(drawEye(120, 24, 900, false))
+    expect(gazeAt(0, true)).toEqual(gazeAt(1, true))
+    expect(drawEye(120, 24, 0, true)).not.toEqual(drawEye(120, 24, 1, true))
     expect(gazeAt(0, true)).not.toEqual(gazeAt(12, true))
     for (const style of ORNAMENT_STYLES)
       for (const height of [1, 2, 5, 8])
