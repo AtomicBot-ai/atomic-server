@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { persistConversation } from './data-actions.js'
+import { setupAction } from './setup-actions.js'
 import { setupWait } from '../../terminal-setup/index.js'
 type Update = (fn: (s: WorkspaceState) => WorkspaceState) => void
 export function useWorkspaceData(
@@ -12,6 +13,14 @@ export function useWorkspaceData(
   update: Update
 ) {
   const polling = useRef(false)
+  const opened = useRef<number | null>(null)
+  useEffect(() => {
+    if (s.page !== 'setup' || s.setup?.stage !== 'ready' || s.setup.busy || s.setup.error || !c.current)
+      return
+    if (opened.current === s.setup.startedAt) return
+    opened.current = s.setup.startedAt
+    void setupAction('setup-finish', { controller: c.current, get: () => latest.current, update })
+  }, [s.page, s.setup?.stage, s.setup?.busy, s.setup?.error, s.setup?.startedAt, c, latest, update])
   useEffect(() => {
     if (!s.ready || !s.setupComplete) return
     let live = true

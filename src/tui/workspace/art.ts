@@ -4,16 +4,16 @@ export interface ArtCell {
   color: string
 }
 export type Drawing = ArtCell[][]
-const EMPTY = (): ArtCell => ({ char: ' ', color: '#101014' })
+const EMPTY = (): ArtCell => ({ char: ' ', color: '#090b0c' })
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
 const mix = (a: number, b: number, t: number) => Math.round(a + (b - a) * clamp(t))
-function fire(t: number): string {
+function glow(t: number): string {
   const stops = [
-    [49, 16, 24],
-    [126, 27, 30],
-    [224, 57, 30],
-    [255, 135, 45],
-    [255, 217, 130],
+    [7, 34, 35],
+    [12, 85, 83],
+    [24, 161, 153],
+    [79, 225, 207],
+    [211, 255, 247],
   ]
   const at = clamp(t) * 3.999
   const a = stops[Math.floor(at)]!,
@@ -74,7 +74,7 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       const heat = clamp(0.24 + core * 0.7 + rim * 0.24 + grain * 0.17 - Math.max(0, dist) * 4)
       if (dist > 0 && heat < 0.18) return EMPTY()
       const char = density[Math.min(density.length - 1, Math.floor(heat * density.length))]!
-      return { char, color: fire(heat) }
+      return { char, color: glow(heat) }
     })
   )
 }

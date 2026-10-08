@@ -12,7 +12,7 @@ import type { TuiAction } from '../state.js'
 import { oneLine } from '../controller.js'
 import { WorkspaceController } from './controller.js'
 import type { WorkspaceDeps } from './controller.js'
-import { createWorkspace } from './state.js'
+import { createWorkspace, PAGE_FOCUS } from './state.js'
 import type { Page, WorkspaceState } from './state.js'
 import { workspaceFrame } from './frame.js'
 import { workspaceInput } from './input.js'
@@ -49,16 +49,16 @@ function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueC
                 color: trueColor
                   ? r.color
                   : r.color === COLORS.gold
-                    ? 'yellow'
+                    ? 'cyan'
                     : r.color === COLORS.ground
                       ? 'black'
                       : r.color === COLORS.text
                         ? 'white'
                         : r.color === COLORS.green
-                          ? 'green'
+                          ? 'cyan'
                           : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
                             ? 'gray'
-                            : 'red',
+                            : 'cyan',
               }
             : {})}
           {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}
@@ -143,7 +143,14 @@ export function WorkspaceApp(props: WorkspaceProps) {
           model: ui.model,
           motion: ui.motion,
           mouse: ui.mouse,
-          focus: ui.mode === 'personal' || initialPage === 'chat' ? 'composer' : 'personal',
+          focus: onboarding
+            ? 'setup-pause'
+            : !complete
+              ? 'personal'
+              : PAGE_FOCUS[
+                  initialPage ??
+                    (ui.mode === 'personal' ? 'chat' : ui.mode === 'server' ? 'server' : 'welcome')
+                ],
           ready: true,
         })
         if (onboarding)

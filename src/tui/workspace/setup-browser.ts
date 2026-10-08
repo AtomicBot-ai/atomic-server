@@ -35,10 +35,15 @@ export function drawSetupBrowser(
         b(
           `setup-engine:${value}`,
           row++,
-          `${v.engine === value ? '(o)' : '( )'} ${name}`,
-          `${detail}. ${build.version} / ${build.backend}. Enter selects.`,
-          v.engine === value
+          name,
+          `${detail}. ${build.version} / ${build.backend}. Enter confirms and continues.`
         )
+        const target = c.targets.at(-1)!
+        for (let col = target.x; col < target.x + target.width; col++) {
+          const cell = c.cells[target.y]![col]!
+          cell.color = focus === target.id ? COLORS.ground : COLORS.text
+          cell.background = focus === target.id ? COLORS.text : COLORS.surface
+        }
         if (bottom - y >= 17) put(row++, `    ${build.version} / ${build.backend}  •  Recommended`)
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
@@ -93,7 +98,7 @@ export function drawSetupBrowser(
         `setup-repo:${index}`,
         6 + i,
         `${/^AtomicChat\//i.test(item.id) ? '◆ ' : '  '}${item.id}`,
-        `${item.title ?? item.id}${item.summary ? ' — ' + item.summary : ''}. Enter shows available downloads.`
+        `${item.title ?? item.id}${item.summary ? ' — ' + item.summary : ''}. Enter installs the recommended version. Versions lets you choose another quant.`
       )
   })
   if (v.busy && !items.length)
@@ -102,7 +107,7 @@ export function drawSetupBrowser(
   if (items.length)
     put(
       bottom - y - 2,
-      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length}  /  ↑↓ Browse · Enter ${v.repository ? 'download' : 'open'}`
+      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length}  /  ↑↓ Browse · Enter ${v.repository ? 'download' : 'install'}`
     )
   if (v.repository) {
     button(c, 'setup-back', x, bottom, '< Models', 'Return to the model list. Esc returns to Engines.', focus)
@@ -118,13 +123,23 @@ export function drawSetupBrowser(
       'Search additional models. Matching Atomic Chat quants come first.',
       focus
     )
+    if (v.repositories.length)
+      button(
+        c,
+        'setup-variants',
+        x + 23,
+        bottom,
+        'Versions',
+        'Choose a quant for the focused model instead of using the recommended download.',
+        focus
+      )
     if (v.query)
       button(
         c,
         'setup-catalog',
-        x + 23,
+        x + 36,
         bottom,
-        'Staff picks',
+        'Picks',
         'Return to Atomic Chat’s curated model list.',
         focus
       )

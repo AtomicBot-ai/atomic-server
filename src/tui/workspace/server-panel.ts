@@ -17,7 +17,7 @@ export function drawServer(
   const wide = width >= 110,
     compact = bottom - y < 20,
     cardWidth = wide ? Math.floor(width * 0.63) : width
-  fill(c, x, y, cardWidth, compact ? 7 : 9, '#201e24')
+  fill(c, x, y, cardWidth, compact ? 7 : 9, COLORS.surface)
   text(
     c,
     x + 2,
@@ -25,10 +25,10 @@ export function drawServer(
     api?.running ? 'YOUR SERVER IS ONLINE' : 'YOUR SERVER IS READY TO START',
     api?.running ? COLORS.green : COLORS.gold,
     cardWidth - 4,
-    '#201e24'
+    COLORS.surface
   )
-  text(c, x + 2, y + (compact ? 2 : 3), 'API endpoint', COLORS.muted, cardWidth - 4, '#201e24')
-  text(c, x + 2, y + (compact ? 3 : 4), serverEndpoint(s), COLORS.text, cardWidth - 4, '#201e24')
+  text(c, x + 2, y + (compact ? 2 : 3), 'API endpoint', COLORS.muted, cardWidth - 4, COLORS.surface)
+  text(c, x + 2, y + (compact ? 3 : 4), serverEndpoint(s), COLORS.text, cardWidth - 4, COLORS.surface)
   let ax = x + 2
   for (const [id, label, hint] of [
     [

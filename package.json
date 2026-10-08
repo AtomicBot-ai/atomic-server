@@ -1,7 +1,7 @@
 {
   "name": "@atomicbot-ai/atc",
   "version": "0.1.0",
-  "description": "atc — the Atomic Chat server CLI: install an inference engine, pull a model, serve it over an OpenAI-compatible API, and manage it from a local web admin.",
+  "description": "atc \u2014 the Atomic Chat server CLI: install an inference engine, pull a model, serve it over an OpenAI-compatible API, and manage it from a local web admin.",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -36,7 +36,7 @@
     "verify": "npm run lint && npm run typecheck && npm run format:check && npm test && npm run build && npm run build:ui && npm run build:bin && npm run test:e2e && npm run test:runtime-compat"
   },
   "dependencies": {
-    "@atomic-chat/core": "file:vendor/atomic-chat-core-0.11.2-terminal.1.tgz",
+    "@atomic-chat/core": "file:vendor/atomic-chat-core-0.11.2-terminal.2.tgz",
     "ink": "^7.1.1",
     "react": "^19.2.0"
   },

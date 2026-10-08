@@ -1,4 +1,4 @@
-import { fill, drawWelcome, towerEye } from './fortress.js'
+import { fill, drawWelcome, eyeArtwork } from './fortress.js'
 import { drawSetup } from './setup-panel.js'
 import { drawDataPanel } from './data-panels.js'
 import { gateRows } from './art.js'
@@ -20,7 +20,7 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     )
     return c
   }
-  gateRows(width, l.gate).forEach((r, y) => text(c, 0, y, r, y === l.gate - 1 ? '#9a8576' : '#756661'))
+  gateRows(width, l.gate).forEach((r, y) => text(c, 0, y, r, y === l.gate - 1 ? COLORS.muted : COLORS.stone))
   text(c, l.inset, l.gate + 1, '<|>', COLORS.red)
   text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text)
   const state =
@@ -40,10 +40,10 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
   )
   let nx = l.inset
   if (s.page !== 'welcome') {
-    fill(c, 0, l.gate + 2, width, 3, '#32272b')
+    fill(c, 0, l.gate + 2, width, 3, COLORS.header)
   }
   if (s.page === 'setup')
-    text(c, l.inset, l.gate + 3, 'PREPARE YOUR WORKSPACE', COLORS.gold, width - l.inset * 2, '#32272b')
+    text(c, l.inset, l.gate + 3, 'PREPARE YOUR WORKSPACE', COLORS.gold, width - l.inset * 2, COLORS.header)
   if (s.page !== 'welcome' && s.page !== 'setup')
     PAGES.forEach((p) => {
       nx +=
@@ -101,7 +101,7 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
       const eh = Math.max(3, Math.min(l.eyeHeight, composerY - y - 3)),
         ew = Math.min(bodyWidth - 4, Math.max(56, eh * 5), 122)
       const ey = y + Math.max(0, Math.floor((composerY - y - eh - 2) / 2))
-      towerEye(c, x + Math.floor((bodyWidth - ew) / 2), ey, ew, eh, seconds, s.motion)
+      eyeArtwork(c, x + Math.floor((bodyWidth - ew) / 2), ey, ew, eh, seconds, s.motion)
       const line = s.model ? 'What would you like to explore?' : 'Your next idea starts here.'
       text(
         c,

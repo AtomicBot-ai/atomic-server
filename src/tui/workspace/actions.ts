@@ -4,6 +4,7 @@ import type { AgentId, AgentLaunch } from '../../agent-launch/index.js'
 import { endpointUrl } from '../../terminal-service/index.js'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState, Page } from './state.js'
+import { PAGE_FOCUS } from './state.js'
 export interface ActionContext {
   handoff?: (launch: AgentLaunch) => void
   get: () => WorkspaceState
@@ -80,7 +81,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
       overlay: null,
       selected: 0,
       scroll: 0,
-      focus: page === 'chat' ? 'composer' : '',
+      focus: PAGE_FOCUS[page],
       hover: '',
       message: '',
     })
@@ -89,7 +90,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'close') {
-    patch({ overlay: null, secret: '', focus: s.page === 'chat' ? 'composer' : '', message: '' })
+    patch({ overlay: null, secret: '', focus: PAGE_FOCUS[s.page], message: '' })
     return
   }
   if (id === 'composer') {

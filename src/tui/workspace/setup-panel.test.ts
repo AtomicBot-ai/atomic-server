@@ -57,3 +57,18 @@ it('presents the curated model list before the secondary Search button', () => {
       .join('')
   ).toContain('Staff picks')
 })
+
+it('gives the default engine no persistent accent when another control has focus', () => {
+  const s = createWorkspace('setup')
+  s.setup = { ...newSetup('server'), catalogs, engine: 'llamacpp-upstream|v1|metal' }
+  s.focus = 'setup-refresh'
+  const f = workspaceFrame(s, 80, 24, 0)
+  const styles = f.targets
+    .filter((t) => t.id.startsWith('setup-engine:'))
+    .map((t) => {
+      const cell = f.cells[t.y]![t.x]!
+      return [cell.color, cell.background]
+    })
+  expect(styles[0]).toEqual(styles[1])
+  expect(styles[1]).toEqual(styles[2])
+})

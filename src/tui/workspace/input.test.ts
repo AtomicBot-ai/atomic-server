@@ -84,3 +84,28 @@ it.each([
   s.overlay = 'endpoint'
   expect(workspaceInput(input!, key(), s, workspaceFrame(s, 80, 24, 0)).patch?.editValue).toBe(input)
 })
+
+it('Enter activates the visibly highlighted control and confirms Cancel in an editor', () => {
+  const s = createWorkspace('server')
+  s.focus = 'api-toggle'
+  s.hover = 'page:models'
+  expect(workspaceInput('', key({ return: true }), s, workspaceFrame(s, 80, 24, 0)).action).toBe(
+    'page:models'
+  )
+  s.overlay = 'menu'
+  s.focus = 'page:chat'
+  Object.assign(s, workspaceInput('', key({ downArrow: true }), s, workspaceFrame(s, 80, 24, 0)).patch)
+  expect(s.hover).toBe('')
+  expect(workspaceInput('', key({ return: true }), s, workspaceFrame(s, 80, 24, 0)).action).toBe(s.focus)
+  s.overlay = 'endpoint'
+  s.hover = ''
+  s.focus = 'save-edit'
+  Object.assign(s, workspaceInput('', key({ tab: true }), s, workspaceFrame(s, 80, 24, 0)).patch)
+  expect(s.focus).toBe('close')
+  expect(workspaceInput('', key({ return: true }), s, workspaceFrame(s, 80, 24, 0)).action).toBe('close')
+  s.overlay = null
+  s.page = 'chat'
+  s.focus = 'composer'
+  s.hover = 'page:models'
+  expect(workspaceInput('', key({ return: true }), s, workspaceFrame(s, 80, 24, 0)).action).toBe('send')
+})

@@ -77,3 +77,18 @@ it('keeps a selected TurboQuant engine for ordinary GGUF models', async () => {
   await setupAction('setup-file:0', ctx)
   expect(begin).toHaveBeenCalledWith('server', 'llamacpp|v1|metal', [selection])
 })
+
+it('confirms an engine into models and confirms a model directly into installation', async () => {
+  const { ctx, begin } = harness()
+  Object.assign(ctx.controller, {
+    hub: vi.fn(async () => [{ id: 'AtomicChat/model', downloads: 1 }]),
+    files: vi.fn(async () => [{ filename: 'model.gguf', size: 1000 }]),
+  })
+  ctx.update((s) => ({ ...s, setup: { ...s.setup!, stage: 'engine' } }))
+  await setupAction('setup-engine:llamacpp-upstream|b1|cpu', ctx)
+  expect(ctx.get().setup?.stage).toBe('models')
+  expect(ctx.get().focus).toBe('setup-repo:0')
+  await setupAction('setup-repo:0', ctx)
+  expect(ctx.get().setup?.stage).toBe('download')
+  expect(begin).toHaveBeenCalledOnce()
+})

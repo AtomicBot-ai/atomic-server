@@ -32,9 +32,20 @@ export function workspaceInput(
     if (mouse.code & 64) return { action: mouse.code & 1 ? 'scroll-down' : 'scroll-up' }
     if (mouse.released) return {}
     const target = hit(frame, mouse.x, mouse.y)
-    if (mouse.code & 32) return { patch: { hover: target?.id ?? '', message: '' } }
+    if (mouse.code & 32)
+      return {
+        patch: {
+          hover: target?.id ?? '',
+          message: '',
+          ...(target?.id.startsWith('setup-repo:') ? { selected: Number(target.id.slice(11)) } : {}),
+        },
+      }
     if ((mouse.code & 3) !== 0 || !target) return {}
     return { patch: { focus: target.id, hover: '', message: '' }, action: target.id }
+  }
+  const focused = () => {
+    const id = frame.targets.find((t) => t.id === (s.hover || s.focus))?.id ?? frame.targets[0]?.id
+    return { action: id, patch: { focus: id ?? '', hover: '' } }
   }
   if (input.startsWith('[<') || input.startsWith('\u001b[<')) return {}
   if (key.ctrl && input === 'q') return { quit: true }
@@ -47,9 +58,14 @@ export function workspaceInput(
     const p = PAGES.find((p) => p.key === input.toLowerCase())
     return p ? { action: `page:${p.id}`, leader: false } : { leader: false }
   }
+  if (key.tab) {
+    const i = frame.targets.findIndex((t) => t.id === s.focus),
+      next = (i + (key.shift ? -1 : 1) + frame.targets.length) % frame.targets.length
+    return { patch: { focus: frame.targets[next]?.id ?? '', hover: '', message: '' } }
+  }
   if (s.overlay === 'endpoint') {
     if (key.escape) return { action: 'close' }
-    if (key.return) return { action: 'save-edit' }
+    if (key.return) return focused()
     if (key.backspace || key.delete)
       return { patch: { editValue: graphemes(s.editValue).slice(0, -1).join('') } }
     if (key.ctrl && input === 'u') return { patch: { editValue: '' } }
@@ -81,19 +97,15 @@ export function workspaceInput(
   if (key.escape) return s.overlay ? { action: 'close' } : { patch: { overlay: 'menu', focus: 'page:chat' } }
   if (key.ctrl && input === 'p') return { action: 'page:history' }
   if (key.ctrl && input === 'n') return { action: 'new' }
-  if (key.tab) {
-    const i = frame.targets.findIndex((t) => t.id === s.focus),
-      next = (i + (key.shift ? -1 : 1) + frame.targets.length) % frame.targets.length
-    return { patch: { focus: frame.targets[next]?.id ?? '', hover: '', message: '' } }
-  }
   if (s.overlay === 'command' && (key.pageDown || key.pageUp))
     return { action: key.pageUp ? 'scroll-up' : 'scroll-down' }
   if (s.overlay) {
-    if (key.return) return { action: s.focus || 'close' }
+    if (key.return) return focused()
     if (key.upArrow || key.downArrow) {
       const i = frame.targets.findIndex((t) => t.id === s.focus)
       return {
         patch: {
+          hover: '',
           focus:
             frame.targets[(i + (key.upArrow ? -1 : 1) + frame.targets.length) % frame.targets.length]?.id ??
             '',
@@ -110,7 +122,9 @@ export function workspaceInput(
     )
     const at = list.findIndex((h) => `history:${h.id}` === s.focus),
       selected = Math.max(0, Math.min(list.length - 1, at + (key.upArrow ? -1 : 1)))
-    return { patch: { selected, focus: list[selected] ? `history:${list[selected]!.id}` : s.focus } }
+    return {
+      patch: { selected, focus: list[selected] ? `history:${list[selected]!.id}` : s.focus, hover: '' },
+    }
   }
   if (key.pageUp || key.pageDown) return { action: key.pageUp ? 'scroll-up' : 'scroll-down' }
   if (s.page === 'chat' && s.focus === 'composer') {
@@ -121,7 +135,7 @@ export function workspaceInput(
         chars.splice(at, 0, '\n')
         return { patch: { draft: chars.join(''), cursor: at + 1 } }
       }
-      return { action: 'send' }
+      return { action: 'send', patch: { hover: '' } }
     }
     if (key.leftArrow) return { patch: { cursor: Math.max(0, at - 1) } }
     if (key.rightArrow) return { patch: { cursor: Math.min(chars.length, at + 1) } }
@@ -171,7 +185,7 @@ export function workspaceInput(
     return { patch: { selected, focus: `${prefix}${selected}`, hover: '' } }
   }
   if (input === ' ' && s.focus.startsWith('setup-file:')) return { action: s.focus }
-  if (key.return) return { action: frame.targets.find((t) => t.id === s.focus)?.id ?? frame.targets[0]?.id }
+  if (key.return) return focused()
   if (input === '?') return { patch: { overlay: 'help', focus: 'close' } }
   if (key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) {
     const delta = key.upArrow || key.leftArrow ? -1 : 1,

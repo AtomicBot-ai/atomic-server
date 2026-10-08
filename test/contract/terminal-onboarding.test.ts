@@ -100,8 +100,6 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     await sees('fixture/repo')
     // The first curated model has focus; searching is optional.
     terminal.stdin.press('\r')
-    await sees('model.Q4_K_M.gguf')
-    terminal.stdin.press('\r')
     await sees('BUILDING YOUR LOCAL WORKSPACE')
     terminal.stdin.press('\u0007')
     terminal.stdin.press('c')
@@ -111,8 +109,6 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     ui.unmount()
     jobs[0]!.stage = 'ready'
     ui = mount()
-    await sees('THE GATES ARE READY')
-    terminal.stdin.press('\r')
     await sees('YOUR SERVER IS READY TO START')
     expect(link.calls.some((c) => c.path === '/models/llamacpp-upstream/fixture/model/load')).toBe(true)
     expect(link.calls.some((c) => c.path === '/server/start')).toBe(false)

@@ -1,6 +1,6 @@
 import { button, COLORS, text, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
-import { towerEye, drawRider } from './fortress.js'
+import { eyeArtwork, drawRider } from './fortress.js'
 import type { WorkspaceState } from './state.js'
 import { computeRowWindow } from '../row-window.js'
 import { drawSetupBrowser } from './setup-browser.js'
@@ -61,14 +61,22 @@ export function drawSetup(
     if (roomy) {
       const h = Math.min(12, bottom - y - 20),
         w = Math.min(width - 4, h * 6 + 20)
-      towerEye(c, x + Math.floor((width - w) / 2), y + row, w, h, seconds, s.motion)
+      eyeArtwork(c, x + Math.floor((width - w) / 2), y + row, w, h, seconds, s.motion)
       row += h + 1
     }
-    put(row++, ready ? 'THE GATES ARE READY.' : 'BUILDING YOUR LOCAL WORKSPACE.', COLORS.gold)
     put(
       row++,
       ready
-        ? 'Every selected component is installed and verified.'
+        ? v.error
+          ? 'MODEL NEEDS ATTENTION.'
+          : 'STARTING YOUR MODEL.'
+        : 'BUILDING YOUR LOCAL WORKSPACE.',
+      COLORS.gold
+    )
+    put(
+      row++,
+      ready
+        ? 'Download verified. Loading the model into memory...'
         : v.preparing
           ? 'Checking model requirements before downloading.'
           : 'Leave this terminal open, or close it and return later. Downloads continue.',
@@ -91,9 +99,9 @@ export function drawSetup(
       row++,
       `${progress?.engineReady ? '[ready]' : '[ ... ]'} Engine  ${v.engine.split('|').slice(1).join(' / ')}`
     )
-    if (v.preparing && v.pending) {
-      put(row++, v.pending.repo, COLORS.text)
-      put(row++, v.pending.file, COLORS.muted)
+    if (v.preparing) {
+      put(row++, v.pending?.repo ?? v.repository, COLORS.text)
+      put(row++, v.pending?.file ?? 'Finding the recommended GGUF download...', COLORS.muted)
       const track = Array.from({ length: Math.min(30, width - 4) }, (_, i) =>
         Math.abs(i - (Math.floor(seconds * 4) % Math.min(30, width - 4))) < 2 ? '=' : '.'
       ).join('')
@@ -154,7 +162,7 @@ export function drawSetup(
         'setup-finish',
         x,
         bottom,
-        v.busy ? 'Loading model...' : 'Open workspace >',
+        v.busy ? 'Loading model...' : 'Retry model load',
         'Load your first model, then open the workspace.',
         focus
       )

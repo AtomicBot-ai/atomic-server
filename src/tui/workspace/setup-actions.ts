@@ -3,7 +3,10 @@ import type { ActionContext } from './actions.js'
 import type { SetupView } from '../../terminal-setup/index.js'
 import type { WorkspaceController } from './controller.js'
 const operations = new WeakMap<WorkspaceController, AbortController>()
-export async function setupAction(id: string, ctx: ActionContext): Promise<boolean> {
+export async function setupAction(
+  id: string,
+  ctx: Pick<ActionContext, 'controller' | 'get' | 'update'>
+): Promise<boolean> {
   const { controller: c, get, update } = ctx
   const change = (p: Partial<SetupView>) =>
     update((s) => ({ ...s, setup: s.setup ? { ...s.setup, ...p } : null }))
@@ -93,9 +96,11 @@ export async function setupAction(id: string, ctx: ActionContext): Promise<boole
       const build =
         first.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first.available[0]!
       patch({ catalogs, engine: view.engine || `${first.provider}|${build.version}|${build.backend}` })
-      if (!operation.signal.aborted) focus('setup-models')
+      if (!operation.signal.aborted)
+        focus(`setup-engine:${view.engine || `${first.provider}|${build.version}|${build.backend}`}`)
     } else if (id.startsWith('setup-engine:')) {
-      patch({ engine: id.slice(13) })
+      patch({ engine: id.slice(13), busy: false })
+      return setupAction('setup-models', ctx)
     } else if (['setup-models', 'setup-search', 'setup-catalog'].includes(id)) {
       const query = id === 'setup-catalog' ? '' : view.query
       patch({ stage: 'models', repository: '', files: [], query })
@@ -115,16 +120,30 @@ export async function setupAction(id: string, ctx: ActionContext): Promise<boole
         editValue: view.query,
         focus: 'save-edit',
       }))
-    } else if (id.startsWith('setup-repo:')) {
-      const repository = view.repositories[Number(id.slice(11))]?.id
+    } else if (id.startsWith('setup-repo:') || id === 'setup-variants') {
+      const index = id === 'setup-variants' ? get().selected : Number(id.slice(11))
+      const repository = view.repositories[index]?.id
       if (repository) {
-        patch({ repository, files: [] })
-        const files = await wait(c.files(repository, operation.signal), 22000)
+        const browse = id === 'setup-variants'
         patch({
-          files,
-          error: files.length ? '' : 'No single-file GGUF downloads found. Choose another model.',
+          repository,
+          files: [],
+          selections: [],
+          progress: null,
+          error: '',
+          stage: browse ? 'models' : 'download',
+          preparing: !browse,
+          pending: null,
+          startedAt: Date.now(),
         })
-        if (!operation.signal.aborted) focus(files.length ? 'setup-file:0' : 'setup-back')
+        focus(browse ? 'setup-back' : 'setup-cancel')
+        const files = await wait(c.files(repository, operation.signal), 22000)
+        if (operation.signal.aborted) return true
+        if (!files.length)
+          throw new Error('No supported GGUF file is available for this model. Go back and choose another.')
+        patch({ files, busy: false })
+        if (browse) focus('setup-file:0')
+        else return setupAction('setup-file:0', ctx)
       }
     } else if (id.startsWith('setup-file:') || (id === 'setup-retry' && view.pending && !view.progress)) {
       const file = view.files[Number(id.slice(11))]
@@ -167,6 +186,9 @@ export async function setupAction(id: string, ctx: ActionContext): Promise<boole
     } else if (id === 'setup-pause') {
       await wait(c.setup.pause())
       patch({ error: 'Downloads paused. Resume whenever you are ready.' })
+    } else if (id === 'setup-retry' && view.preparing && !view.pending) {
+      patch({ busy: false })
+      return setupAction(`setup-repo:${view.repositories.findIndex((r) => r.id === view.repository)}`, ctx)
     } else if (id === 'setup-retry') {
       patch({ progress: await wait(c.setup.resume()) })
     } else if (id === 'setup-finish') {

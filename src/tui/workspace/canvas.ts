@@ -1,15 +1,18 @@
 import type { Drawing } from './art.js'
 export const COLORS = {
-  text: '#ddd6ca',
-  muted: '#a49c91',
-  stone: '#655b57',
-  line: '#463e3e',
-  red: '#ed594a',
-  gold: '#e6b877',
-  green: '#a6bd9b',
-  ground: '#101014',
-  focus: '#362825',
+  text: '#f2f4f4',
+  muted: '#a3aaac',
+  stone: '#596164',
+  line: '#303638',
+  red: '#b2fff4',
+  gold: '#53dcca',
+  green: '#70c9bf',
+  ground: '#090b0c',
+  focus: '#17322f',
+  surface: '#171b1d',
+  header: '#202628',
 }
+
 export interface Cell {
   char: string
   color: string
@@ -135,7 +138,7 @@ export function button(
     shown,
     selected || focused === id ? COLORS.gold : COLORS.text,
     width,
-    selected || focused === id ? COLORS.focus : '#1e1b20'
+    selected || focused === id ? COLORS.focus : COLORS.surface
   )
   c.targets.push({ id, x, y, width: Math.min(width, c.width - x), height: 1, hint })
   return width

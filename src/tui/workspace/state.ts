@@ -19,6 +19,21 @@ export type Page =
   | 'logs'
   | 'checks'
   | 'commands'
+export const PAGE_FOCUS: Record<Page, string> = {
+  welcome: 'personal',
+  setup: 'setup-refresh',
+  chat: 'composer',
+  server: 'api-toggle',
+  models: 'install-models',
+  settings: 'endpoint',
+  history: 'history-search',
+  keys: 'key-new',
+  requests: 'refresh',
+  access: 'page:keys',
+  logs: 'log-filter',
+  checks: 'checks',
+  commands: 'command:0',
+}
 export interface WorkspaceState {
   setup: SetupView | null
   setupComplete: boolean
@@ -86,7 +101,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     base: initialState(),
     page,
     overlay: null,
-    focus: page === 'chat' ? 'composer' : '',
+    focus: PAGE_FOCUS[page],
     hover: '',
     message: '',
     draft: '',

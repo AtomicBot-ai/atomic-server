@@ -18,7 +18,7 @@ export function stonePlate(
   focus: string
 ) {
   const active = focus === id,
-    background = active ? COLORS.text : '#202027',
+    background = active ? COLORS.text : COLORS.surface,
     ink = active ? COLORS.ground : COLORS.text
   fill(c, x, y, width, height, background)
   const put = (dy: number, value: string) => text(c, x, y + dy, value, ink, width, background)
@@ -31,8 +31,8 @@ export function stonePlate(
     .forEach((line, i) => text(c, x + 2, y + 2 + i, line, ink, width - 4, background))
   c.targets.push({ id, x, y, width, height, hint: `${title}. ${tagline} Enter to choose.` })
 }
-/** The two flanking crowns become buttressed towers as the terminal grows. */
-export function towerEye(
+/** Keep the same detailed eye at every scale, with no flanking architecture. */
+export function eyeArtwork(
   c: Canvas,
   x: number,
   y: number,
@@ -41,55 +41,7 @@ export function towerEye(
   seconds: number,
   motion: boolean
 ) {
-  if (height < 3) return
-  const tw = height >= 14 && width >= 90 ? 15 : height >= 7 ? 9 : 3
-  const gap = tw >= 9 ? 2 : 1
-  const ew = Math.max(10, width - tw * 2 - gap * 2)
-  art(c, x + tw + gap, y, drawEye(ew, height, seconds, motion))
-  for (const tx of [x, x + width - tw]) {
-    for (let row = 0; row < height; row++) {
-      let line: string
-      if (tw === 3) line = row === 0 ? '/\\ ' : row === height - 1 ? '==+' : '|I|'
-      else if (tw === 9)
-        line =
-          row === 0
-            ? '    /\\   '
-            : row === 1
-              ? '   /||\\  '
-              : row === height - 1
-                ? '/=======\\'
-                : row === height - 2
-                  ? '|[|||||]|'
-                  : row % 3 === 0
-                    ? '/|=|||=|\\'
-                    : ' |:|||:| '
-      else
-        line =
-          row === 0
-            ? '       /\\      '
-            : row === 1
-              ? '      /||\\     '
-              : row === 2
-                ? '  /\\ /||||\\ /\\'
-                : row === height - 1
-                  ? '/=============\\'
-                  : row === height - 2
-                    ? '|[]|||||||||[]|'
-                    : row % 4 === 0
-                      ? '/|/|==|||==|\\|\\'
-                      : row % 4 === 1
-                        ? ' |:|::|||::|:| '
-                        : ' |/|  |||  |\\| '
-      text(
-        c,
-        tx,
-        y + row,
-        line,
-        row < 3 || row === height - 1 ? '#b4a394' : row % 4 === 0 ? '#84776f' : '#554c4b',
-        tw
-      )
-    }
-  }
+  if (height >= 3) art(c, x, y, drawEye(width, height, seconds, motion))
 }
 export function drawWelcome(
   c: Canvas,
@@ -104,7 +56,7 @@ export function drawWelcome(
   const blockHeight = narrow ? slabHeight * 2 + 1 : slabHeight
   const artHeight = Math.max(3, Math.min(28, bottom - top - blockHeight - 4))
   const artWidth = Math.min(c.width - 8, Math.max(46, artHeight * 5 + 16), 160)
-  towerEye(c, Math.floor((c.width - artWidth) / 2), top, artWidth, artHeight, seconds, motion)
+  eyeArtwork(c, Math.floor((c.width - artWidth) / 2), top, artWidth, artHeight, seconds, motion)
   const title = 'Choose your workspace',
     ty = top + artHeight + 1
   text(c, Math.floor((c.width - title.length) / 2), ty, title, COLORS.gold)
