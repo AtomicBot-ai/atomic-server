@@ -1,3 +1,6 @@
+import { persistConversation } from './data-actions.js'
+import { newSetup } from '../../terminal-setup/index.js'
+import { useWorkspaceData } from './data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
 import type { Key } from 'ink'
@@ -44,17 +47,19 @@ function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueC
                   ? r.color
                   : r.color === COLORS.gold
                     ? 'yellow'
-                    : r.color === COLORS.text
-                      ? 'white'
-                      : r.color === COLORS.green
-                        ? 'green'
-                        : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
-                          ? 'gray'
-                          : 'red',
+                    : r.color === COLORS.ground
+                      ? 'black'
+                      : r.color === COLORS.text
+                        ? 'white'
+                        : r.color === COLORS.green
+                          ? 'green'
+                          : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
+                            ? 'gray'
+                            : 'red',
               }
             : {})}
           {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}
-          inverse={!color && Boolean(r.background)}
+          inverse={(!color || !trueColor) && (r.background === COLORS.text || r.background === COLORS.focus)}
         >
           {r.text}
         </Text>
@@ -104,12 +109,33 @@ export function WorkspaceApp(props: WorkspaceProps) {
     c.start()
     void c
       .config()
-      .then((config) => {
+      .then(async (config) => {
         if (!live) return
         const ui = config.values.tui
+        const manifest = await c.setup.read()
+        const history = await c.history.list()
+        if (!live) return
+        const complete = manifest?.complete === true
+        const onboarding =
+          manifest && !complete
+            ? {
+                ...newSetup(manifest.mode),
+                stage: 'download' as const,
+                startedAt: manifest.startedAt,
+                selections: manifest.selections,
+                engine: `${manifest.engine.provider}|${manifest.engine.version}|${manifest.engine.backend}`,
+              }
+            : null
         patch({
-          page:
-            initialPage ?? (ui.mode === 'personal' ? 'chat' : ui.mode === 'server' ? 'server' : 'welcome'),
+          setupComplete: complete,
+          setup: onboarding,
+          history,
+          page: onboarding
+            ? 'setup'
+            : !complete
+              ? 'welcome'
+              : (initialPage ??
+                (ui.mode === 'personal' ? 'chat' : ui.mode === 'server' ? 'server' : 'welcome')),
           endpoint: ui.endpoint,
           model: ui.model,
           motion: ui.motion,
@@ -117,6 +143,10 @@ export function WorkspaceApp(props: WorkspaceProps) {
           focus: ui.mode === 'personal' || initialPage === 'chat' ? 'composer' : 'personal',
           ready: true,
         })
+        if (onboarding)
+          void c.setup.resume().catch((e) => {
+            if (live) patch({ message: oneLine(e) })
+          })
       })
       .catch((e) => {
         if (live) patch({ message: oneLine(e), ready: true })
@@ -132,7 +162,13 @@ export function WorkspaceApp(props: WorkspaceProps) {
     void controller.current?.observe(instance)
   }, [instance])
   useEffect(() => {
-    if (!state.motion || state.page !== 'chat' || state.messages.length || state.overlay) return
+    if (
+      !state.motion ||
+      !['welcome', 'chat', 'setup'].includes(state.page) ||
+      (state.page === 'chat' && state.messages.length) ||
+      state.overlay
+    )
+      return
     const start = Date.now()
     const timer = setInterval(() => setSeconds((Date.now() - start) / 1000), 180)
     return () => clearInterval(timer)
@@ -140,6 +176,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
   useEffect(() => {
     write(state.mouse ? '\u001b[?1000h\u001b[?1003h\u001b[?1006h' : '\u001b[?1000l\u001b[?1003l\u001b[?1006l')
   }, [state.mouse, write])
+  useWorkspaceData(state, latest, controller, update)
   const frame = workspaceFrame(state, columns, rows, seconds)
   function cancel() {
     epoch.current++
@@ -157,6 +194,10 @@ export function WorkspaceApp(props: WorkspaceProps) {
     const messages = [...s.messages, { role: 'user' as const, content: s.draft.trim() }],
       id = ++epoch.current
     patch({
+      conversation: s.conversation ?? {
+        ...c.history.create(s.endpoint, s.model, process.cwd()),
+        title: s.draft.trim().replace(/\s+/g, ' ').slice(0, 70),
+      },
       messages: [...messages, { role: 'assistant', content: '' }],
       draft: '',
       cursor: 0,
@@ -214,7 +255,13 @@ export function WorkspaceApp(props: WorkspaceProps) {
     else if (leader.current) leader.current = false
     if (result.patch) patch(result.patch)
     if (result.quit) {
-      exit()
+      const current = controller.current
+      if (current)
+        void persistConversation({ get: () => latest.current, controller: current }).then(
+          () => exit(),
+          (e) => patch({ message: oneLine(e) })
+        )
+      else exit()
       return
     }
     if (result.action) run(result.action)

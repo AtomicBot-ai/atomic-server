@@ -5,6 +5,7 @@
  * that attaches to it.
  */
 
+import { ClientKeys } from '../terminal-data/index.js'
 import { AtomicCore } from '@atomic-chat/core'
 import { CoreClient } from '@atomic-chat/core/client'
 import { AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
@@ -53,7 +54,10 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   const now = options.now ?? Date.now
   const startedAt = now()
   const coreLog = log.child('core')
+  const keys = new ClientKeys(paths.atcDir)
   const core = await AtomicCore.create({
+    publicApiKeys: () => keys.current(),
+    downloadStreams: 4,
     ownerScope: 'cli',
     dataFolder: paths.dataFolder,
     controlPort: options.controlPort,

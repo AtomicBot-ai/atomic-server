@@ -19,10 +19,39 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     text(c, x + 2, y + row, v, color, w - 4)
   const b = (id: string, row: number, label: string, hint: string) =>
     button(c, id, x + 2, y + row, label, hint, focus)
-  if (s.overlay === 'menu') {
+  if (s.overlay === 'credential') {
+    put(2, 'Your API key', COLORS.gold)
+    wrap(s.secret || 'Key hidden.', w - 4).forEach((line, i) => put(5 + i, line))
+    put(9, 'Shown for one minute. You can reveal it again from API keys.', COLORS.muted)
+    b('copy-secret', h - 3, 'Copy key', 'Copy this credential to your terminal clipboard.')
+    button(c, 'close', x + 16, y + h - 3, 'Done', 'Hide this key.', focus)
+    return
+  } else if (s.overlay === 'revoke-key' || s.overlay === 'delete-chat') {
+    const key = s.overlay === 'revoke-key'
+    put(2, key ? 'Revoke this API key?' : 'Delete this conversation?', COLORS.gold)
+    wrap(
+      key
+        ? 'Apps using this key will lose access on their next request. Other keys continue to work.'
+        : 'This removes the saved conversation from this device. It cannot be undone.',
+      w - 4
+    ).forEach((line, i) => put(4 + i, line))
+    b(
+      key ? 'revoke-key-confirm' : 'delete-chat-confirm',
+      h - 3,
+      key ? 'Revoke key' : 'Delete conversation',
+      'Confirm this action.'
+    )
+    button(c, 'close', x + 25, y + h - 3, 'Keep it', 'Cancel without making changes.', focus)
+    return
+  } else if (s.overlay === 'menu' && !s.setupComplete) {
+    put(2, 'Prepare your workspace first', COLORS.gold)
+    put(4, 'Choose an engine and models, then let installation finish.', COLORS.muted)
+    put(6, 'Ctrl+Q closes this terminal. Background downloads keep running.', COLORS.muted)
+  } else if (s.overlay === 'menu') {
     put(2, 'Go to', COLORS.gold)
     PAGES.forEach((p, i) => b(`page:${p.id}`, 4 + i, `${p.name}  [${p.key}]`, p.hint))
-    b('new', 9, 'New chat  [Ctrl+N]', 'Start another conversation.')
+    b('page:history', 9, 'History  [Ctrl+P]', 'Search and resume saved conversations.')
+    b('new', 10, 'New chat  [Ctrl+N]', 'Start another conversation.')
   } else if (s.overlay === 'agent') {
     put(2, `Use with ${AGENTS.find((a) => a.id === s.agent)?.name}`, COLORS.gold)
     put(4, 'Atomic Chat will provide the model for this session.', COLORS.muted)
@@ -54,7 +83,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
       'Esc               Close this layer or open the menu',
       'Ctrl+G, C/S/M/,   Chat / Server / Models / Settings',
       'Ctrl+K            Keyboard shortcuts',
-      'Ctrl+N            New chat',
+      'Ctrl+N / Ctrl+P   New chat / history',
       'Ctrl+X            Mouse / text selection',
       'Ctrl+C            Stop a response',
       'Ctrl+Q            Leave the console; server stays running',
@@ -64,14 +93,30 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
       .slice(0, h - 6)
       .forEach((r, i) => put(i + 4, r))
   } else if (s.overlay === 'endpoint') {
-    put(2, s.edit.startsWith('setting:') ? 'Edit setting' : 'Connect a model endpoint', COLORS.gold)
+    const titles: Record<string, string> = {
+      'setup-query': 'Find a model',
+      'history-search': 'Search your conversations',
+      'key-name': 'Name this API key',
+      'rename-chat': 'Rename conversation',
+    }
+    put(
+      2,
+      titles[s.edit] ?? (s.edit.startsWith('setting:') ? 'Edit setting' : 'Connect a model endpoint'),
+      COLORS.gold
+    )
     put(
       4,
-      s.edit.startsWith('setting:') ? s.edit.slice(8) : 'OpenAI-compatible base URL, including /v1',
+      titles[s.edit]
+        ? s.edit === 'key-name'
+          ? 'For example: Atomic Agent, work laptop, or test app'
+          : 'Type a name or search term'
+        : s.edit.startsWith('setting:')
+          ? s.edit.slice(8)
+          : 'OpenAI-compatible base URL, including /v1',
       COLORS.muted
     )
     put(6, (s.editValue + '_').slice(-(w - 4)), COLORS.text)
-    put(8, 'Enter saves. Esc cancels. Credentials belong in ATC_CHAT_API_KEY.', COLORS.muted)
+    put(8, 'Enter confirms. Esc cancels. Ctrl+U clears the field.', COLORS.muted)
     b('save-edit', h - 3, 'Save', 'Validate and save this setting.')
     button(c, 'close', x + 12, y + h - 3, 'Cancel', 'Discard this edit.', focus)
     return

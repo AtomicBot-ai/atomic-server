@@ -1,3 +1,4 @@
+import { readyWorkspace } from '../helpers/ready-workspace.js'
 /** Commands against a fake core: what they print, what they call, how they fail. */
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -111,13 +112,14 @@ describe('the terminal UI', () => {
         waitForShutdown: () => new Promise<void>(() => undefined),
       },
     })
+    readyWorkspace(t.io.env['ATC_DATA_FOLDER']!)
     const exit = t.run([])
-    await eventually(() => terminal.stdout.text().includes('How will you use Atomic Chat?'), 'welcome')
+    await eventually(() => terminal.stdout.text().includes('Choose your workspace'), 'welcome')
     terminal.stdin.press('1')
     await eventually(() => terminal.stdout.text().includes('Your next idea starts here.'), 'chat')
     terminal.stdin.press('\u0007')
     terminal.stdin.press('s')
-    await eventually(() => terminal.stdout.text().includes('Bring your API online'), 'server')
+    await eventually(() => terminal.stdout.text().includes('YOUR SERVER IS READY TO START'), 'server')
     terminal.stdin.press('\u0011')
     expect(await exit).toBe(0)
     expect(t.link.shutdowns).toBe(0)

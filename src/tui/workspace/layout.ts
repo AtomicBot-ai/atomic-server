@@ -12,7 +12,7 @@ export interface WorkspaceLayout {
 export function workspaceLayout(columns: number, rows: number): WorkspaceLayout {
   const tier = columns >= 140 && rows >= 40 ? 'wide' : columns >= 100 && rows >= 30 ? 'standard' : 'compact'
   const inset = tier === 'wide' ? 5 : 2
-  const gate = tier === 'wide' ? 8 : tier === 'standard' ? 4 : 1
+  const gate = tier === 'wide' ? 5 : tier === 'standard' ? 2 : 1
   const top = gate + 4,
     bottom = rows - 4
   const sidebar = tier === 'wide' ? 22 : 0

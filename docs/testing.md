@@ -104,3 +104,11 @@ runtime-compat.
   the summary. Windows CI is mandatory for anything that spawns.
 - Tests never sleep on wall-clock time to synchronise; they wait on the thing (a lock state, a response, an
   event). Timeouts are the ceilings above, not the mechanism.
+
+## Terminal installation, credentials and history
+
+`test/contract/terminal-onboarding.test.ts` walks the real Ink application with mouse and keyboard against scripted Core operations: whole-plate selection, engine catalog, model selection, reviewed installation, navigation gating, close/reopen, recovered progress, model load and explicit server start. `src/terminal-setup/service.test.ts` checks durable operation reuse, readiness and disk-space refusal. Data-store tests cover private key files, concurrent mutations, revocation, chat context across launches, rename and deletion.
+
+The private macOS arm64 build was additionally exercised against live catalogs and a real llama.cpp engine (`b11463`, `macos-arm64`) with `ggml-org/stories15M-q4_0`: engine and model download, Core verification, load, authenticated `/v1/models`, a second named key, revocation returning 401, and streamed inference ending in `[DONE]`. This tiny model validates plumbing; it is not a quality recommendation. The test used a separate data folder and stopped its own background service afterward.
+
+Before release, test this flow on Linux and Windows terminals, including clipboard support and third-party agent tool use. The private vendored Core package is a reproducible preview dependency; replace it with the companion published Core version before a public merge.

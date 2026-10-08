@@ -32,7 +32,7 @@ export function workspaceInput(
     if (mouse.code & 64) return { action: mouse.code & 1 ? 'scroll-down' : 'scroll-up' }
     if (mouse.released) return {}
     const target = hit(frame, mouse.x, mouse.y)
-    if (mouse.code & 32) return { patch: { hover: target?.id ?? '' } }
+    if (mouse.code & 32) return { patch: { hover: target?.id ?? '', message: '' } }
     if ((mouse.code & 3) !== 0 || !target) return {}
     return { patch: { focus: target.id, hover: '', message: '' }, action: target.id }
   }
@@ -64,6 +64,7 @@ export function workspaceInput(
     return { patch: { base: { ...s.base, logs: { ...s.base.logs, filter } } } }
   }
   if (key.escape) return s.overlay ? { action: 'close' } : { patch: { overlay: 'menu', focus: 'page:chat' } }
+  if (key.ctrl && input === 'p') return { action: 'page:history' }
   if (key.ctrl && input === 'n') return { action: 'new' }
   if (key.tab) {
     const i = frame.targets.findIndex((t) => t.id === s.focus),
@@ -85,6 +86,14 @@ export function workspaceInput(
       }
     }
     return {}
+  }
+  if ((key.upArrow || key.downArrow) && s.focus.startsWith('history:')) {
+    const list = s.history.filter((h) =>
+      `${h.title} ${h.model} ${h.workingDirectory}`.toLowerCase().includes(s.historyFilter.toLowerCase())
+    )
+    const at = list.findIndex((h) => `history:${h.id}` === s.focus),
+      selected = Math.max(0, Math.min(list.length - 1, at + (key.upArrow ? -1 : 1)))
+    return { patch: { selected, focus: list[selected] ? `history:${list[selected]!.id}` : s.focus } }
   }
   if (key.pageUp || key.pageDown) return { action: key.pageUp ? 'scroll-up' : 'scroll-down' }
   if (s.page === 'chat' && s.focus === 'composer') {
@@ -113,17 +122,39 @@ export function workspaceInput(
     }
     return {}
   }
-  if (
-    (key.upArrow || key.downArrow) &&
-    (s.focus.startsWith('model:') || s.focus.startsWith('request:') || s.focus.startsWith('command:'))
-  ) {
-    const prefix = s.focus.split(':')[0]!,
-      length =
-        prefix === 'model' ? s.models.length : prefix === 'command' ? s.commands.length : s.requests.length
-    const selected = Math.max(0, Math.min(length - 1, Number(s.focus.split(':')[1]) + (key.upArrow ? -1 : 1)))
-    return { patch: { selected, focus: `${prefix}:${selected}`, hover: '' } }
+  const listPrefixes = [
+    'model:',
+    'installed:',
+    'request:',
+    'command:',
+    'setup-repo:',
+    'setup-file:',
+    'setup-job:',
+  ]
+  const prefix = listPrefixes.find((p) => s.focus.startsWith(p))
+  if ((key.upArrow || key.downArrow) && prefix) {
+    const length =
+      prefix === 'model:'
+        ? s.models.length
+        : prefix === 'installed:'
+          ? s.installed.length
+          : prefix === 'request:'
+            ? s.requests.length
+            : prefix === 'command:'
+              ? s.commands.length
+              : prefix === 'setup-repo:'
+                ? (s.setup?.repositories.length ?? 0)
+                : prefix === 'setup-job:'
+                  ? (s.setup?.selections.length ?? 0)
+                  : (s.setup?.files.length ?? 0)
+    const selected = Math.max(
+      0,
+      Math.min(length - 1, Number(s.focus.slice(prefix.length)) + (key.upArrow ? -1 : 1))
+    )
+    return { patch: { selected, focus: `${prefix}${selected}`, hover: '' } }
   }
-  if (key.return) return { action: s.focus || frame.targets[0]?.id }
+  if (input === ' ' && s.focus.startsWith('setup-file:')) return { action: s.focus }
+  if (key.return) return { action: frame.targets.find((t) => t.id === s.focus)?.id ?? frame.targets[0]?.id }
   if (input === '?') return { patch: { overlay: 'help', focus: 'close' } }
   if (s.page === 'welcome' && (input === '1' || input === '2'))
     return { action: input === '1' ? 'personal' : 'hosting' }

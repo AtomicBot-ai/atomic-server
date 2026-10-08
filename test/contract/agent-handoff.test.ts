@@ -1,3 +1,4 @@
+import { readyWorkspace } from '../helpers/ready-workspace.js'
 import { expect, it } from 'vitest'
 import { runTui } from '../../src/tui/index.js'
 import { ROOT } from '../../src/commands/index.js'
@@ -11,6 +12,7 @@ it('releases mouse capture before handing off and returns to Server without stop
   const tmp = tmpDataFolder(),
     terminal = fakeTerminal(100, 30),
     link = fakeCoreLink()
+  readyWorkspace(tmp.paths.dataFolder)
   link.snapshotValue.server.running = true
   let launched = false
   const promise = runTui({
@@ -46,7 +48,7 @@ it('releases mouse capture before handing off and returns to Server without stop
     },
   })
   try {
-    await eventually(() => terminal.stdout.text().includes('Ready for requests'))
+    await eventually(() => terminal.stdout.text().includes('YOUR SERVER IS ONLINE'))
     const target = workspaceFrame(createWorkspace('server'), 100, 30, 0).targets.find(
       (t) => t.id === 'agent:atomic-agent'
     )!

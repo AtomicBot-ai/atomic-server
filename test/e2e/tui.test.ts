@@ -1,3 +1,4 @@
+import { readyWorkspace } from '../helpers/ready-workspace.js'
 /**
  * The terminal UI in the built program. Without a terminal it must refuse (every platform); in a
  * real pseudo-terminal — Python's `pty`, so no native addon is needed — bare `atc` must open the
@@ -94,13 +95,14 @@ describe(`atc tui (${command.join(' ')})`, () => {
   it.skipIf(process.platform === 'win32' || !hasPython())(
     'opens on bare atc in a pseudo-terminal, switches screens, and gives the terminal back',
     () => {
+      readyWorkspace(dataFolder)
       const steps = [
-        { wait: 'How will you use Atomic Chat?' },
+        { wait: 'Choose your workspace' },
         { type: '1' },
         { wait: 'Your next idea starts here.' },
         { type: '\u0007' },
         { type: 's' },
-        { wait: 'Bring your API online' },
+        { wait: 'YOUR SERVER IS READY TO START' },
         { type: '\u000b' },
         { wait: 'A few keys, anywhere' },
         { type: '\u001b' },

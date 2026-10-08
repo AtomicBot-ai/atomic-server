@@ -5,7 +5,7 @@ import { createWorkspace } from './state.js'
 import type { WorkspaceController } from './controller.js'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 function context() {
-  let state = createWorkspace('chat')
+  let state = { ...createWorkspace('chat'), setupComplete: true }
   const save = vi.fn(async () => undefined),
     api = vi.fn(async () => undefined),
     run = vi.fn(async () => undefined),
@@ -15,7 +15,7 @@ function context() {
     update: (fn) => {
       state = fn(state)
     },
-    controller: { save, api, run, models } as unknown as WorkspaceController,
+    controller: { save, api, run, models, installed: async () => [] } as unknown as WorkspaceController,
     copy: vi.fn(),
     send: vi.fn(),
     cancel: vi.fn(),

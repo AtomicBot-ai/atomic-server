@@ -1,5 +1,8 @@
-import { drawEye, gateRows } from './art.js'
-import { art, button, canvas, COLORS, rule, text, graphemes, wrap } from './canvas.js'
+import { fill, drawWelcome, towerEye } from './fortress.js'
+import { drawSetup } from './setup-panel.js'
+import { drawDataPanel } from './data-panels.js'
+import { gateRows } from './art.js'
+import { button, canvas, COLORS, rule, text, graphemes, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 import { workspaceLayout } from './layout.js'
 import type { WorkspaceState } from './state.js'
@@ -17,7 +20,7 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     )
     return c
   }
-  gateRows(width, l.gate).forEach((r, y) => text(c, 0, y, r, y === l.gate - 1 ? COLORS.stone : COLORS.line))
+  gateRows(width, l.gate).forEach((r, y) => text(c, 0, y, r, y === l.gate - 1 ? '#9a8576' : '#756661'))
   text(c, l.inset, l.gate + 1, '<|>', COLORS.red)
   text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text)
   const state =
@@ -36,7 +39,12 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     s.base.daemon.kind === 'up' ? COLORS.green : COLORS.muted
   )
   let nx = l.inset
-  if (s.page !== 'welcome')
+  if (s.page !== 'welcome') {
+    fill(c, 0, l.gate + 2, width, 3, '#32272b')
+  }
+  if (s.page === 'setup')
+    text(c, l.inset, l.gate + 3, 'PREPARE YOUR WORKSPACE', COLORS.gold, width - l.inset * 2, '#32272b')
+  if (s.page !== 'welcome' && s.page !== 'setup')
     PAGES.forEach((p) => {
       nx +=
         button(
@@ -54,56 +62,46 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     y = l.top + 2,
     bodyWidth = width - x - l.inset
   if (s.page === 'chat' && l.sidebar) {
-    text(c, l.inset, y, 'THIS CHAT', COLORS.muted)
+    text(c, l.inset, y, 'CONVERSATIONS', COLORS.muted)
     button(c, 'new', l.inset, y + 2, '+ New chat', 'Start an empty conversation. Ctrl+N', focus)
-    text(c, l.inset, y + 5, s.messages[0]?.content ?? 'Your next idea', COLORS.muted, l.sidebar - 3)
+    button(c, 'page:history', l.inset, y + 4, 'History  Ctrl+P', 'Search and resume conversations.', focus)
+    s.history
+      .slice(0, Math.max(0, l.bottom - y - 8))
+      .forEach((h, i) =>
+        button(
+          c,
+          `history:${h.id}`,
+          l.inset,
+          y + 6 + i,
+          h.title.slice(0, l.sidebar - 5),
+          'Resume this conversation.',
+          focus,
+          h.id === s.conversation?.id
+        )
+      )
     text(c, l.inset, l.bottom - 1, 'Personal workspace', COLORS.stone, l.sidebar - 1)
   } else {
     x = l.inset
     bodyWidth = width - x - l.inset
   }
   if (s.page === 'welcome') {
-    const title = 'How will you use Atomic Chat?'
-    y = Math.max(y, Math.floor(height / 2) - 5)
-    text(c, Math.max(x, Math.floor((width - title.length) / 2)), y, title, COLORS.gold)
-    text(
-      c,
-      x,
-      y + 2,
-      'Choose your starting workspace. You can change it at any time.',
-      COLORS.muted,
-      bodyWidth
-    )
-    const bx = l.tier === 'compact' ? x : Math.max(x, Math.floor((width - 64) / 2))
-    button(
-      c,
-      'personal',
-      bx,
-      y + 4,
-      '1  Personal terminal',
-      'Chat and experiment with a local or connected model. Enter to choose.',
-      focus
-    )
-    button(
-      c,
-      'hosting',
-      l.tier === 'compact' ? bx : bx + 35,
-      y + (l.tier === 'compact' ? 6 : 4),
-      '2  Server console',
-      'Run an API for your apps and monitor its requests. Enter to choose.',
-      focus
-    )
-    if (l.tier !== 'compact') {
-      text(c, bx, y + 6, 'A quiet space to think and build.', COLORS.muted, 33)
-      text(c, bx + 35, y + 6, 'An API you can see and control.', COLORS.muted, 33)
-    }
+    drawWelcome(c, focus, seconds, s.motion, l.gate + 3, l.bottom - 1)
+  } else if (s.page === 'setup') {
+    drawSetup(c, s, x, y, bodyWidth, l.bottom, focus, seconds)
+  } else if (drawDataPanel(c, s, x, y, bodyWidth, l.bottom, focus)) {
+    // History and key management share the same responsive content bounds.
   } else if (s.page === 'chat') {
+    if (!l.sidebar) {
+      button(c, 'new', x, y, '+ New', 'New chat. Ctrl+N', focus)
+      button(c, 'page:history', x + 9, y, 'History', 'Resume a conversation. Ctrl+P', focus)
+      y += 2
+    }
     const composerY = l.bottom - 4
     if (!s.messages.length) {
       const eh = Math.max(3, Math.min(l.eyeHeight, composerY - y - 3)),
         ew = Math.min(bodyWidth - 4, Math.max(56, eh * 5), 122)
       const ey = y + Math.max(0, Math.floor((composerY - y - eh - 2) / 2))
-      art(c, x + Math.floor((bodyWidth - ew) / 2), ey, drawEye(ew, eh, seconds, s.motion))
+      towerEye(c, x + Math.floor((bodyWidth - ew) / 2), ey, ew, eh, seconds, s.motion)
       const line = s.model ? 'What would you like to explore?' : 'Your next idea starts here.'
       text(
         c,
@@ -189,9 +187,12 @@ export function workspaceFrame(s: WorkspaceState, width: number, height: number,
     s.message ? COLORS.gold : COLORS.muted,
     width - l.inset * 2
   )
-  const footer = s.mouse
-    ? 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Select text  |  Ctrl+Q Quit'
-    : 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Enable mouse  |  Ctrl+Q Quit'
+  const footer =
+    width < 80
+      ? 'Ctrl+K Help  Ctrl+G Menu  Ctrl+X Mouse  Ctrl+Q Quit'
+      : s.mouse
+        ? 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Select text  |  Ctrl+Q Quit'
+        : 'Ctrl+K Help  |  Ctrl+G Menu  |  Ctrl+X Enable mouse  |  Ctrl+Q Quit'
   text(c, l.inset, height - 1, footer, COLORS.stone, width - l.inset * 2)
   if (s.overlay) drawOverlay(c, s, focus)
   // Never register invisible controls on an unusually narrow viewport.

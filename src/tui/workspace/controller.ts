@@ -1,3 +1,6 @@
+import { dirname } from 'node:path'
+import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
+import { TerminalSetup, installedModels, searchHub, modelFiles } from '../../terminal-setup/index.js'
 import { prepareAgent } from '../../agent-launch/index.js'
 import type { AgentHost, AgentId } from '../../agent-launch/index.js'
 import type { TuiAction } from '../state.js'
@@ -17,6 +20,9 @@ export interface WorkspaceDeps {
   chatKey: string
 }
 export class WorkspaceController {
+  readonly keys: ClientKeys
+  readonly history: ChatHistory
+  readonly setup: TerminalSetup
   private legacy: TuiController
   private abort = new AbortController()
   private turn: AbortController | undefined
@@ -30,6 +36,10 @@ export class WorkspaceController {
     private onError: (message: string) => void
   ) {
     this.legacy = new TuiController(deps.base, dispatch)
+    const directory = dirname(deps.base.paths.configFile)
+    this.keys = new ClientKeys(directory)
+    this.history = new ChatHistory(directory)
+    this.setup = new TerminalSetup(directory, (launch) => deps.base.attach({ launch, log: this.log }))
   }
   start(): void {
     this.legacy.start()
@@ -52,17 +62,75 @@ export class WorkspaceController {
   cancel(): void {
     this.turn?.abort()
   }
-  prepareAgent(id: AgentId, endpoint: string, model: string) {
+  async prepareAgent(id: AgentId, endpoint: string, model: string) {
     if (!this.deps.agentHost) throw new Error('Agent handoff is unavailable in this terminal.')
-    return prepareAgent(id, endpoint, model, this.deps.apiKey, this.deps.agentHost)
+    return prepareAgent(id, endpoint, model, await this.localKey(), this.deps.agentHost)
   }
-  models(endpoint: string, server = false): Promise<string[]> {
+  async models(endpoint: string, server = false): Promise<string[]> {
     return listChatModels(
       endpoint,
       this.deps.request,
-      server ? this.deps.apiKey : this.deps.chatKey,
+      server ? await this.localKey() : await this.keyFor(endpoint),
       AbortSignal.any([this.abort.signal, AbortSignal.timeout(10000)])
     )
+  }
+  installed() {
+    return installedModels(this.deps.base.paths.layout)
+  }
+  hub(query: string) {
+    return searchHub(
+      query,
+      this.deps.request,
+      AbortSignal.any([this.abort.signal, AbortSignal.timeout(20000)])
+    )
+  }
+  files(repository: string) {
+    return modelFiles(repository, this.deps.request)
+  }
+  async localKey() {
+    return (await this.keys.get()) || this.deps.apiKey
+  }
+  async initializeKeys() {
+    await this.keys.initialize(this.deps.apiKey)
+  }
+  async loadModel(provider: string, model: string) {
+    const link = await this.deps.base.attach({ launch: true, log: this.log })
+    await link.models.load(provider, model)
+    await this.api(true, false)
+  }
+  async localEndpoint(): Promise<string> {
+    const api = (await this.config()).values.api
+    let port = api.port
+    if (port === 0) {
+      const link = await this.deps.base.attach({ launch: false, log: this.log })
+      port = (await link.server.status()).port
+    }
+    const host = ['0.0.0.0', '::'].includes(api.host) ? '127.0.0.1' : api.host
+    return `http://${host.includes(':') ? '[' + host + ']' : host}:${port}${api.prefix}`
+  }
+  private async keyFor(endpoint: string) {
+    const api = (await this.config()).values.api
+    const url = new URL(endpoint)
+    const localHosts = ['127.0.0.1', 'localhost', '[::1]']
+    const hostMatches =
+      url.hostname === api.host ||
+      (localHosts.includes(url.hostname) && ['0.0.0.0', '::', ...localHosts].includes(api.host))
+    let port = api.port
+    if (hostMatches && port === 0) {
+      try {
+        const link = await this.deps.base.attach({ launch: false, log: this.log })
+        port = (await link.server.status()).port
+      } catch {
+        /* No local listener. */
+      }
+    }
+    if (
+      hostMatches &&
+      Number(url.port || 80) === port &&
+      url.pathname.replace(/\/$/, '') === api.prefix.replace(/\/$/, '')
+    )
+      return this.localKey()
+    return this.deps.chatKey
   }
   async chat(
     endpoint: string,
@@ -78,7 +146,7 @@ export class WorkspaceController {
         endpoint,
         model,
         messages,
-        key: this.deps.chatKey,
+        key: await this.keyFor(endpoint),
         request: this.deps.request,
         signal: AbortSignal.any([turn.signal, this.abort.signal, AbortSignal.timeout(600000)]),
         onText,
@@ -87,10 +155,20 @@ export class WorkspaceController {
       if (this.turn === turn) this.turn = undefined
     }
   }
-  async api(start: boolean): Promise<void> {
+  async api(start: boolean, restoreModel = true): Promise<void> {
+    if (start) await this.keys.initialize(this.deps.apiKey)
     const link = await this.deps.base.attach({ launch: start, log: this.log })
-    if (start) await startApi(link, (await this.config()).values, this.deps.apiKey)
-    else await link.server.stop()
+    if (start) {
+      if (!(await link.server.status()).running) {
+        const config = (await this.config()).values
+        if (restoreModel && config.tui.model) {
+          const selected = (await this.installed()).find((m) => m.id === config.tui.model)
+          if (selected && !(await link.models.sessions()).some((s) => s.model_id === selected.id))
+            await link.models.load(selected.provider, selected.id)
+        }
+        await startApi(link, config, await this.localKey())
+      }
+    } else await link.server.stop()
     await this.legacy.run({ name: 'refresh' })
   }
   /** A daemon replacement gets a fresh subscription; the console holds no ownership lease. */
@@ -106,6 +184,8 @@ export class WorkspaceController {
       if (observer.signal.aborted) return
       await link.events.subscribe(
         (message) => {
+          const payload = (message.data as { payload?: unknown })?.payload ?? message.data
+          this.setup.event(message.event, payload)
           if (message.event !== 'api:request') return
           const data = message.data as { payload?: unknown }
           const row = requestRow(data?.payload ?? data)

@@ -1,8 +1,7 @@
-import { AGENTS } from '../../agent-launch/index.js'
+import { drawServer } from './server-panel.js'
 import type { Canvas } from './canvas.js'
 import { button, COLORS, text, wrap } from './canvas.js'
 import type { WorkspaceState } from './state.js'
-import { serverEndpoint } from './actions.js'
 import { drawReference } from './reference.js'
 import { computeRowWindow } from '../row-window.js'
 import { visibleLogLines } from '../state.js'
@@ -14,93 +13,18 @@ interface Bounds {
 }
 export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: string): void {
   const { x, y, width, bottom } = b
-  const api = s.base.daemon.kind === 'up' ? s.base.daemon.snapshot.server : undefined
   if (['server', 'requests', 'access'].includes(s.page)) {
     let bx = x
-    for (const [id, label] of [
-      ['server', 'Overview'],
-      ['requests', 'Requests'],
-      ['access', 'Access'],
-    ])
-      bx += button(c, `page:${id}`, bx, y, label!, `Open ${label?.toLowerCase()}.`, focus, s.page === id) + 2
-    if (s.page === 'server') {
-      text(c, x, y + 2, api?.running ? 'Ready for requests' : 'Bring your API online', COLORS.gold, width)
-      text(
-        c,
-        x,
-        y + 4,
-        api?.running ? serverEndpoint(s) : 'Start the API, then connect your applications.',
-        COLORS.text,
-        width
-      )
-      let ax = x
-      ax +=
-        button(
-          c,
-          'api-toggle',
-          ax,
-          y + 6,
-          api?.running ? 'Stop API' : 'Start API',
-          api?.running
-            ? 'Stop the public API; the background server and models stay available.'
-            : 'Start the background server if needed, then open the configured API.',
-          focus
-        ) + 2
-      ax +=
-        button(
-          c,
-          'copy-endpoint',
-          ax,
-          y + 6,
-          'Copy URL',
-          'Copy the API base URL to your terminal clipboard.',
-          focus
-        ) + 2
-      if (width >= 70)
-        button(
-          c,
-          'examples',
-          ax,
-          y + 6,
-          'Connect an app',
-          'View a copyable curl example. Keys are never included.',
-          focus
-        )
-      text(
-        c,
-        x,
-        y + 8,
-        `${s.requests.length} recent requests  /  ${s.requests.filter((r) => Number(r.status) >= 400).length} errors`,
-        COLORS.text,
-        width
-      )
-      text(c, x, y + 9, 'USE WITH AN AGENT', COLORS.muted, width)
-      let gx = x,
-        gy = y + 10
-      for (const agent of AGENTS) {
-        const label = `${agent.name} >`
-        if (gx + label.length + 2 > x + width) {
-          gx = x
-          gy++
-        }
-        gx +=
-          button(
-            c,
-            `agent:${agent.id}`,
-            gx,
-            gy,
-            label,
-            `Connect Atomic Chat and switch to ${agent.name}. Exit the agent to return here.`,
-            focus
-          ) + 1
-      }
-      let tx = x
-      for (const [id, label, hint] of [
-        ['test-request', 'Test request', 'Open chat against this API. Choose a model and send a request.'],
-        ['page:logs', 'Logs', 'Read, filter, and follow the server log.'],
-        ['page:checks', 'Checks', 'Check this machine and the server configuration.'],
+    if (s.page !== 'server')
+      for (const [id, label] of [
+        ['server', 'Overview'],
+        ['requests', 'Requests'],
+        ['access', 'Access'],
       ])
-        tx += button(c, id!, tx, bottom, label!, hint!, focus) + 1
+        bx +=
+          button(c, `page:${id}`, bx, y, label!, `Open ${label?.toLowerCase()}.`, focus, s.page === id) + 2
+    if (s.page === 'server') {
+      drawServer(c, s, x, y, width, bottom, focus)
     } else if (s.page === 'requests') {
       text(c, x, y + 2, 'RECENT REQUESTS', COLORS.gold)
       if (!s.requests.length)
@@ -142,50 +66,45 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
             focus
           )
         )
-      text(
-        c,
-        x,
-        bottom,
-        'Keys: set ATC_API_KEY before launching. Keys never appear here.',
-        COLORS.muted,
-        width
-      )
+      button(c, 'page:keys', x, bottom, 'Manage API keys', 'Create and revoke keys for your apps.', focus)
     }
   } else if (s.page === 'models') {
-    text(c, x, y, 'Choose a model', COLORS.gold)
-    text(c, x, y + 2, s.endpoint, COLORS.muted, width)
-    if (!s.models.length)
-      wrap(
-        'No models are available from this endpoint. Connect to Atomic Chat with a model ready, then refresh.',
-        width
-      ).forEach((r, i) => text(c, x, y + 4 + i, r, COLORS.muted, width))
-    const win = computeRowWindow(s.models.length, s.selected, bottom - y - 5)
-    s.models
+    text(c, x, y, 'Your model library', COLORS.gold)
+    text(
+      c,
+      x,
+      y + 2,
+      s.modelsError || `Live endpoint / refreshed every 5 seconds / ${s.endpoint}`,
+      COLORS.muted,
+      width
+    )
+    const rows = [
+      ...s.installed.map((m, i) => ({
+        id: `installed:${i}`,
+        label: `${s.models.includes(m.id) ? '[loaded]' : '[local] '} ${m.id}`,
+        hint: 'Load this installed model and make it available to chat and the API.',
+      })),
+      ...s.models
+        .filter((m) => !s.installed.some((i) => i.id === m))
+        .map((m) => ({
+          id: `model:${s.models.indexOf(m)}`,
+          label: `[remote] ${m}`,
+          hint: 'Use this live model in chat.',
+        })),
+    ]
+    const win = computeRowWindow(rows.length, s.selected, Math.max(1, bottom - y - 5))
+    rows
       .slice(win.start, win.start + win.count)
-      .forEach((m, i) =>
-        button(
-          c,
-          `model:${win.start + i}`,
-          x,
-          y + 4 + i,
-          m.slice(0, width - 4),
-          'Use this model in chat. Enter selects; Escape returns.',
-          focus,
-          s.model === m
-        )
-      )
+      .forEach((r, i) => button(c, r.id, x, y + 4 + i, r.label.slice(0, width - 3), r.hint, focus))
+    if (!rows.length)
+      text(c, x, y + 4, 'Install a model, or connect an endpoint with models available.', COLORS.muted, width)
     let bx = x
-    bx +=
-      button(
-        c,
-        'refresh-models',
-        bx,
-        bottom,
-        'Refresh models',
-        'Read the available models from the connected endpoint.',
-        focus
-      ) + 2
-    button(c, 'endpoint', bx, bottom, 'Change connection', 'Enter the OpenAI-compatible base URL.', focus)
+    for (const [id, label, hint] of [
+      ['install-models', '+ Add models', 'Browse live models and install them.'],
+      ['refresh-models', 'Refresh', 'Refresh installed and served models now.'],
+      ['endpoint', 'Connection', 'Change the chat endpoint.'],
+    ])
+      bx += button(c, id!, bx, bottom, label!, hint!, focus) + 1
   } else if (s.page === 'settings') {
     text(c, x, y, 'Make yourself at home', COLORS.gold)
     let row = y + 2

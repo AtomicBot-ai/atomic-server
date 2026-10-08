@@ -1,0 +1,150 @@
+import { drawEye } from './art.js'
+import { art, COLORS, text, wrap } from './canvas.js'
+import type { Canvas } from './canvas.js'
+export function fill(c: Canvas, x: number, y: number, width: number, height: number, background: string) {
+  for (let row = y; row < y + height; row++)
+    text(c, x, row, ' '.repeat(Math.max(0, width)), COLORS.text, width, background)
+}
+/** The whole slab is one focus and mouse target, including its inscription. */
+export function stonePlate(
+  c: Canvas,
+  id: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  title: string,
+  tagline: string,
+  focus: string
+) {
+  const active = focus === id,
+    background = active ? COLORS.text : '#202027',
+    ink = active ? COLORS.ground : COLORS.text
+  fill(c, x, y, width, height, background)
+  const put = (dy: number, value: string) => text(c, x, y + dy, value, ink, width, background)
+  put(0, '/' + '='.repeat(width - 2) + '\\')
+  for (let i = 1; i < height - 1; i++) put(i, '|' + ' '.repeat(width - 2) + '|')
+  put(height - 1, '\\' + '='.repeat(width - 2) + '/')
+  text(c, x + 2, y + 1, title, ink, width - 4, background)
+  wrap(tagline, width - 4)
+    .slice(0, height - 3)
+    .forEach((line, i) => text(c, x + 2, y + 2 + i, line, ink, width - 4, background))
+  c.targets.push({ id, x, y, width, height, hint: `${title}. ${tagline} Enter to choose.` })
+}
+/** The two flanking crowns become buttressed towers as the terminal grows. */
+export function towerEye(
+  c: Canvas,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  seconds: number,
+  motion: boolean
+) {
+  if (height < 3) return
+  const tw = height >= 14 && width >= 90 ? 15 : height >= 7 ? 9 : 3
+  const gap = tw >= 9 ? 2 : 1
+  const ew = Math.max(10, width - tw * 2 - gap * 2)
+  art(c, x + tw + gap, y, drawEye(ew, height, seconds, motion))
+  for (const tx of [x, x + width - tw]) {
+    for (let row = 0; row < height; row++) {
+      let line: string
+      if (tw === 3) line = row === 0 ? '/\\ ' : row === height - 1 ? '==+' : '|I|'
+      else if (tw === 9)
+        line =
+          row === 0
+            ? '    /\\   '
+            : row === 1
+              ? '   /||\\  '
+              : row === height - 1
+                ? '/=======\\'
+                : row === height - 2
+                  ? '|[|||||]|'
+                  : row % 3 === 0
+                    ? '/|=|||=|\\'
+                    : ' |:|||:| '
+      else
+        line =
+          row === 0
+            ? '       /\\      '
+            : row === 1
+              ? '      /||\\     '
+              : row === 2
+                ? '  /\\ /||||\\ /\\'
+                : row === height - 1
+                  ? '/=============\\'
+                  : row === height - 2
+                    ? '|[]|||||||||[]|'
+                    : row % 4 === 0
+                      ? '/|/|==|||==|\\|\\'
+                      : row % 4 === 1
+                        ? ' |:|::|||::|:| '
+                        : ' |/|  |||  |\\| '
+      text(
+        c,
+        tx,
+        y + row,
+        line,
+        row < 3 || row === height - 1 ? '#b4a394' : row % 4 === 0 ? '#84776f' : '#554c4b',
+        tw
+      )
+    }
+  }
+}
+export function drawWelcome(
+  c: Canvas,
+  focus: string,
+  seconds: number,
+  motion: boolean,
+  top: number,
+  bottom: number
+) {
+  const narrow = c.width < 78,
+    slabHeight = narrow ? 5 : c.height >= 35 ? 7 : 5
+  const blockHeight = narrow ? slabHeight * 2 + 1 : slabHeight
+  const artHeight = Math.max(3, Math.min(28, bottom - top - blockHeight - 4))
+  const artWidth = Math.min(c.width - 8, Math.max(46, artHeight * 5 + 16), 160)
+  towerEye(c, Math.floor((c.width - artWidth) / 2), top, artWidth, artHeight, seconds, motion)
+  const title = 'Choose your workspace',
+    ty = top + artHeight + 1
+  text(c, Math.floor((c.width - title.length) / 2), ty, title, COLORS.gold)
+  const w = narrow ? c.width - 8 : Math.min(48, Math.floor((c.width - 10) / 2)),
+    sx = narrow ? 4 : Math.floor((c.width - w * 2 - 3) / 2)
+  stonePlate(
+    c,
+    'personal',
+    sx,
+    ty + 2,
+    w,
+    slabHeight,
+    '1  PERSONAL TERMINAL',
+    'Think, write and build.\nYour models. Your workspace.',
+    focus
+  )
+  stonePlate(
+    c,
+    'hosting',
+    narrow ? sx : sx + w + 3,
+    ty + 2 + (narrow ? slabHeight + 1 : 0),
+    w,
+    slabHeight,
+    '2  SERVER CONSOLE',
+    'Serve models. Connect apps.\nYour API, under your control.',
+    focus
+  )
+}
+/** One crossing per minute, starting after the first minute; no timer or I/O in the art. */
+export function drawRider(c: Canvas, y: number, elapsed: number, motion: boolean, compact = false) {
+  if (!motion || elapsed < 60 || elapsed % 60 >= 9) return
+  const phase = elapsed % 60,
+    x = Math.floor((phase / 9) * (c.width + 22)) - 22
+  const legs = Math.floor(phase * 6) % 2 === 0 ? '  / /  / /' : '   \\ \\  \\ \\'
+  const rider = compact
+    ? ['   o/|  /\\', ' _/###\\/_)~'].concat(legs)
+    : ['       /|', '    o / |', '   /|/  |   /\\', ' _/###\\___/  )~', '(_________ /'].concat(legs)
+  rider.forEach((row, i) =>
+    [...row].forEach((char, j) => {
+      if (x + j >= 0) text(c, x + j, y + i, char, COLORS.stone, 1)
+    })
+  )
+}

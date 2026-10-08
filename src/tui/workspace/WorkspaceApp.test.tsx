@@ -1,3 +1,4 @@
+import { readyWorkspace } from '../../../test/helpers/ready-workspace.js'
 import { render } from 'ink'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
@@ -18,6 +19,7 @@ function mount() {
     terminal = fakeTerminal(80, 24),
     link = fakeCoreLink(),
     attach = vi.fn(async (_options: { launch: boolean }) => link)
+  readyWorkspace(tmp.paths.dataFolder)
   cleanup.push(tmp.cleanup)
   const request = vi.fn(async (url: unknown) =>
     String(url).endsWith('/models')
@@ -62,7 +64,7 @@ function mount() {
 describe('working terminal workspace', () => {
   it('chooses personal mode, selects a discovered model, edits and sends a message, then resizes', async () => {
     const t = mount()
-    await t.sees('How will you use Atomic Chat?')
+    await t.sees('Choose your workspace')
     t.press('1')
     await t.sees('Your next idea starts here.')
     t.press('\u0007')
@@ -75,10 +77,16 @@ describe('working terminal workspace', () => {
     t.press('d')
     t.press(KEYS.enter)
     await t.sees('A real streamed reply')
+    t.press('\u0010')
+    await t.sees('Your conversations')
+    await t.sees('Hello world')
+    t.press('\t')
+    t.press('\r')
+    await t.sees('A real streamed reply')
     const posted = t.request.mock.calls.find((c) => String(c[0]).endsWith('/chat/completions'))
     expect(posted).toBeDefined()
     t.terminal.stdout.resize(180, 56)
-    await t.sees('THIS CHAT')
+    await t.sees('CONVERSATIONS')
     expect(t.attach.mock.calls.every((c) => !(c[0] as { launch?: boolean } | undefined)?.launch)).toBe(true)
     t.press('\u000e')
     await t.sees('What would you like to explore?')
@@ -89,16 +97,16 @@ describe('working terminal workspace', () => {
   })
   it('opens help through a global shortcut and supports mouse navigation after resize', async () => {
     const t = mount()
-    await t.sees('How will you use Atomic Chat?')
+    await t.sees('Choose your workspace')
     t.press('2')
-    await t.sees('Bring your API online')
+    await t.sees('YOUR SERVER IS READY TO START')
     t.press('\u000b')
     await t.sees('A few keys, anywhere')
     t.press(KEYS.escape)
     t.terminal.stdout.resize(120, 36)
-    await t.sees('Bring your API online')
+    await t.sees('YOUR SERVER IS READY TO START')
     // The standard header is on row 8; Settings begins at column 31.
-    t.press('\u001b[<0;34;8M')
+    t.press('\u001b[<0;34;6M')
     await t.sees('Make yourself at home')
     t.press('\u0011')
     await t.ui.waitUntilExit()

@@ -7,6 +7,8 @@ import { createWorkspace } from './state.js'
 import type { Page } from './state.js'
 const pages: Page[] = [
   'welcome',
+  'history',
+  'keys',
   'chat',
   'server',
   'models',
@@ -71,4 +73,17 @@ describe('responsive terminal artwork and layout', () => {
     rule(c, 0, 3, 12)
     expect(c.cells[3]?.map((v) => v.char).join('')).toBe('------------')
   })
+})
+
+it('makes the complete stone inscription clickable and reverses its colours on hover', () => {
+  const s = createWorkspace('welcome'),
+    normal = workspaceFrame(s, 120, 36, 0)
+  const plate = normal.targets.find((t) => t.id === 'hosting')!
+  expect(plate.height).toBeGreaterThan(3)
+  expect(hit(normal, plate.x + 3, plate.y + 2)?.id).toBe('hosting')
+  const hovered = workspaceFrame({ ...s, hover: 'hosting' }, 120, 36, 0)
+  const from = normal.cells[plate.y + 2]![plate.x + 2]!,
+    to = hovered.cells[plate.y + 2]![plate.x + 2]!
+  expect(to.background).toBe(from.color)
+  expect(to.color).not.toBe(from.color)
 })

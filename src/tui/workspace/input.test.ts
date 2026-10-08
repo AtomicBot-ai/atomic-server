@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { workspaceInput, mouseReport } from './input.js'
 import { workspaceFrame } from './frame.js'
 import { createWorkspace } from './state.js'
+import { newSetup } from '../../terminal-setup/index.js'
 const key = (value: Partial<Key> = {}) => value as Key
 describe('keyboard and mouse controls', () => {
   it('routes the same visible button from keyboard and mouse', () => {
@@ -46,5 +47,27 @@ describe('keyboard and mouse controls', () => {
     s.overlay = 'help'
     expect(workspaceInput('', key({ escape: true }), s, f).action).toBe('close')
     expect(workspaceInput('q', key({ ctrl: true }), s, f).quit).toBe(true)
+  })
+  it('scrolls all installation jobs in a compact terminal without relying on the file browser', () => {
+    const s = createWorkspace('setup')
+    s.setup = {
+      ...newSetup('server'),
+      stage: 'download',
+      selections: Array.from({ length: 4 }, (_, i) => ({
+        requestId: `job-${i}`,
+        request: { repo: 'owner/repo', file: `${i}.gguf` },
+        plan: { model_id: `model-${i}`, model: { size: 1000 }, total_download_bytes: 1000 } as never,
+      })),
+    }
+    s.focus = 'setup-job:0'
+    for (let i = 0; i < 3; i++)
+      Object.assign(s, workspaceInput('', key({ downArrow: true }), s, workspaceFrame(s, 54, 24, 0)).patch)
+    expect(s.focus).toBe('setup-job:3')
+    const f = workspaceFrame(s, 54, 24, 0)
+    expect(f.targets.some((t) => t.id === s.focus)).toBe(true)
+    for (const t of f.targets) {
+      expect(t.y + t.height).toBeLessThanOrEqual(21)
+      expect(t.x + t.width).toBeLessThanOrEqual(54)
+    }
   })
 })

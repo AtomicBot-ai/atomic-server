@@ -1,3 +1,5 @@
+import { setupAction } from './setup-actions.js'
+import { dataAction, persistConversation, saveDataEdit } from './data-actions.js'
 import type { AgentId, AgentLaunch } from '../../agent-launch/index.js'
 import { endpointUrl } from '../../terminal-service/index.js'
 import type { WorkspaceController } from './controller.js'
@@ -12,7 +14,10 @@ export interface ActionContext {
   cancel: () => void
 }
 export function serverEndpoint(s: WorkspaceState): string {
-  const api = s.base.daemon.kind === 'up' ? s.base.daemon.snapshot.server : undefined
+  const api =
+    s.base.daemon.kind === 'up' && s.base.daemon.snapshot.server.running
+      ? s.base.daemon.snapshot.server
+      : undefined
   const value = (key: string, fallback: string) =>
     s.base.config.rows.find((r) => r.path === key)?.value ?? fallback
   let host = api?.host ?? value('api.host', '127.0.0.1')
@@ -27,6 +32,9 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   const { update, controller, get } = ctx,
     s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
+  if (await setupAction(id, ctx)) return
+  if (!s.setupComplete && (id.startsWith('page:') || ['new', 'send', 'api-toggle'].includes(id))) return
+  if (await dataAction(id, ctx)) return
   if (id.startsWith('agent:')) {
     if (s.base.daemon.kind !== 'up' || !s.base.daemon.snapshot.server.running) {
       patch({ message: 'Start the API, then open an agent.' })
@@ -81,21 +89,11 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'close') {
-    patch({ overlay: null, focus: s.page === 'chat' ? 'composer' : '', message: '' })
+    patch({ overlay: null, secret: '', focus: s.page === 'chat' ? 'composer' : '', message: '' })
     return
   }
   if (id === 'composer') {
     patch({ focus: id })
-    return
-  }
-  if (id === 'personal' || id === 'hosting') {
-    await controller.save('tui.mode', id === 'personal' ? 'personal' : 'server')
-    patch({
-      page: id === 'personal' ? 'chat' : 'server',
-      focus: id === 'personal' ? 'composer' : '',
-      overlay: null,
-      message: '',
-    })
     return
   }
   if (id === 'switch-mode') {
@@ -103,10 +101,12 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'new') {
+    await persistConversation(ctx)
     ctx.cancel()
     patch({
       page: 'chat',
       messages: [],
+      conversation: null,
       draft: '',
       cursor: 0,
       focus: 'composer',
@@ -139,6 +139,10 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'save-edit') {
+    if (await saveDataEdit(ctx)) {
+      if (s.edit === 'setup-query') await setupAction('setup-search', ctx)
+      return
+    }
     const isEndpoint = s.edit === 'endpoint',
       value = isEndpoint ? endpointUrl(s.editValue.trim()) : s.editValue
     await controller.save(isEndpoint ? 'tui.endpoint' : s.edit.slice(8), value)
@@ -159,6 +163,8 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   if (id === 'refresh-models') {
     patch({ busy: true, message: 'Reading available models...' })
     try {
+      const installed = await controller.installed()
+      patch({ installed })
       const models = await controller.models(s.endpoint)
       if (get().endpoint === s.endpoint)
         patch({
