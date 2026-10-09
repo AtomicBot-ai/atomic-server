@@ -87,8 +87,8 @@ describe('working terminal workspace', () => {
     t.press('\u0007')
     t.press('c')
     await t.sees('Recents')
-    // The older conversation is the second sidebar row, at x=2,y=14.
-    t.press('\u001b[<0;4;15M')
+    // The older conversation is the second sidebar row, at x=2,y=15.
+    t.press('\u001b[<0;4;16M')
     await t.sees('The earlier response')
     t.press('\u000e')
     await t.sees('What would you like to explore?')
@@ -109,8 +109,8 @@ describe('working terminal workspace', () => {
     t.press('\u0007')
     t.press('m')
     await t.sees('local-model')
-    // The model row is a mouse target at x=2,y=11 in the compact layout.
-    t.press('\u001b[<0;4;12M')
+    // The model row is a mouse target at x=2,y=12 in the compact layout.
+    t.press('\u001b[<0;4;13M')
     await t.sees('Model: local-model')
     t.press('Hello worl')
     t.press('d')

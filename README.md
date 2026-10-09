@@ -1,4 +1,30 @@
-# Atomic Server
+# eye-cli
+
+Atomic Chat's terminal workspace: local conversations, model and engine installation, and an
+OpenAI-compatible server console. Keyboard shortcuts and mouse controls share the same interface,
+with an animated turquoise eye and layouts that adapt to the terminal window.
+
+Choose Personal terminal for chat or Server console for API controls and credentials. First run installs
+an engine and model before opening the workspace. The executable is still named **`atc`**.
+
+This repository continues the terminal work built on
+[`atomic-chat-cli`](https://github.com/AtomicBot-ai/atomic-chat-cli). Build from source with Bun and Node 22:
+
+```sh
+git clone https://github.com/AtomicBot-ai/eye-cli.git
+cd eye-cli
+bun install --frozen-lockfile
+npm run build:ui
+npm run embed:ui
+npm run build
+node dist/bin.js
+```
+
+Use `npm run build:bin` to create a standalone executable for the current platform in `dist/bin/`.
+The terminal needs at least 54 columns and 24 rows. **Ctrl+Q** closes the interface; accepted downloads
+and the background server continue. **Ctrl+K** shows shortcuts.
+
+## Server foundation
 
 **Atomic Server** keeps models on a machine — Linux, Windows or macOS, usually a headless server — and
 serves them over an OpenAI-compatible API on `http://127.0.0.1:1337/v1`. Its command is **`atc`**. It
@@ -71,7 +97,7 @@ Hidden: `atc daemon` (the server process itself, which `start` spawns) and `atc 
 <request.json>` (the privileged helper for managed runtimes).
 
 Bare `atc` opens the terminal UI only on an interactive terminal; in a pipe, a script, a service unit or
-with `--json` it prints this help and exits 2, as before. Leaving the UI (`q`) never stops the server.
+with `--json` it prints this help and exits 2, as before. Leaving the UI (`Ctrl+Q`) never stops the server.
 
 Global flags go anywhere on the line: `--json`, `-v/--verbose`, `-q/--quiet`, `-y/--yes`,
 `--data-folder <path>`, `--no-color`, `-h/--help`, `--version`. With `--json` a command prints exactly one
@@ -142,10 +168,10 @@ ssh -L 1338:127.0.0.1:1338 user@server
 
 Prerequisites: Bun 1.3.10 (the package manager — `bun.lock` is committed — and the compiler of the binary)
 and Node 22 (the development and test runtime; scripts run as `npm run …`, like in the core). The core comes
-from npm as `@atomic-chat/core` at an exact version.
+from the pinned companion archive in `vendor/`, including the terminal's installation and download fixes.
 
 ```sh
-bun install                  # the core from npm and the admin-ui workspace
+bun install                  # the vendored core and the admin-ui workspace
 npm test                     # unit + contract projects on Node
 npm run build:bin            # embeds the admin SPA (or the placeholder) and compiles dist/bin/atc-<triple>
 npm run verify               # lint, typecheck, format, tests, build, UI, binary, e2e, runtime-compat

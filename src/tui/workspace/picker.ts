@@ -49,7 +49,7 @@ export function drawPicker(c: Canvas, s: WorkspaceState, focus: string) {
   const width = Math.min(62, c.width - l.inset * 2)
   const x = Math.min(anchor.x - 1, c.width - l.inset - width)
   const bottom = l.bottom - COMPOSER_HEIGHT
-  const height = Math.min(22, bottom - l.gate - 4, Math.max(8, rows.length * 2 + 4))
+  const height = Math.min(22, bottom - l.top - 1, Math.max(8, rows.length * 2 + 4))
   const y = bottom - height + 1,
     count = Math.max(1, Math.floor((height - 4) / 2))
   const selected = Math.max(
