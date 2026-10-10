@@ -185,11 +185,11 @@ ssh -L 1338:127.0.0.1:1338 user@server
 ## Development
 
 Prerequisites: Bun 1.3.10 (the package manager — `bun.lock` is committed — and the compiler of the binary)
-and Node 22 (the development and test runtime; scripts run as `npm run …`, like in the core). The core comes
-from the pinned companion archive in `vendor/`, including the terminal's installation and download fixes.
+and Node 22 (the development and test runtime; scripts run as `npm run …`, like in the core). The core is the
+npm package `@atomic-chat/core`, pinned to an exact version (`docs/release.md`, "The core pin").
 
 ```sh
-bun install                  # the vendored core and the admin-ui workspace
+bun install                  # the pinned core and the admin-ui workspace
 npm test                     # unit + contract projects on Node
 npm run build:bin            # embeds the admin SPA (or the placeholder) and compiles dist/bin/atc-<triple>
 npm run verify               # lint, typecheck, format, tests, build, UI, binary, e2e, runtime-compat

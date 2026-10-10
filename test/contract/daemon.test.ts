@@ -6,6 +6,7 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { rm } from 'node:fs/promises'
+import { AtomicCore } from '@atomic-chat/core'
 import { inspectLock } from '@atomic-chat/core/host'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { attachCore, readDaemonRecord } from '../../src/core-link/index.js'
@@ -22,6 +23,7 @@ const { paths, cleanup } = tmpDataFolder('atc-contract-')
 const log = createLogger(() => {}, { level: 'silent' })
 let daemon: RunningDaemon
 let adminUrl: string
+let coreOptions: Parameters<typeof AtomicCore.create>[0]
 
 beforeAll(async () => {
   daemon = await startDaemon({
@@ -34,6 +36,10 @@ beforeAll(async () => {
     admin: { enabled: true, host: '127.0.0.1', port: 0 },
     telemetry: false,
     probeHardware: false,
+    createCore: (options) => {
+      coreOptions = options
+      return AtomicCore.create(options)
+    },
   })
   adminUrl = daemon.admin!.url
 }, 60_000)
@@ -148,6 +154,11 @@ describe('the daemon owns the folder', () => {
     ).rejects.toMatchObject({ code: 'ATC_DAEMON_FOREIGN' })
     const { writeDaemonRecord } = await import('../../src/core-link/index.js')
     await writeDaemonRecord(paths.daemonRecord, record!)
+  })
+
+  it('gives the core the keyring, four download streams and a 20 s limit on remote GGUF reads', () => {
+    expect(coreOptions).toMatchObject({ ownerScope: 'cli', downloadStreams: 4, remoteGgufTimeoutMs: 20_000 })
+    expect(coreOptions?.publicApiKeys?.()).toEqual([expect.stringMatching(/^atc_[0-9a-f]{64}$/)])
   })
 
   it('never serves the public API without a key, even if nobody opened the terminal UI', async () => {

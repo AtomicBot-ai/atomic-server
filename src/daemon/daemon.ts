@@ -42,6 +42,8 @@ export interface DaemonOptions {
   now?: () => number
   /** Test seam: skip the hardware probe (it spawns `nvidia-smi`). */
   probeHardware?: boolean
+  /** Test seam: how the core is created (the tests record the options it is given). */
+  createCore?: typeof AtomicCore.create
 }
 
 export interface RunningDaemon {
@@ -73,9 +75,14 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   // Before the core: with no keyring the public server would check no key at all.
   await keys.initialize(io.env['ATC_API_KEY'] ?? '')
   const consent = telemetryConsent(options.telemetry, options.config)
-  const core = await AtomicCore.create({
+  const core = await (options.createCore ?? AtomicCore.create.bind(AtomicCore))({
+    // The keyring, read on every public request: one of its keys is required, a revoked one is refused
+    // at once (`[]` refuses everyone). The core's own `server.api_key` does not apply.
     publicApiKeys: () => keys.current(),
+    // Model files of 32 MiB and more come over four byte-range streams.
     downloadStreams: 4,
+    // A model check gives up reading a remote GGUF header after 20 s instead of hanging on a slow mirror.
+    remoteGgufTimeoutMs: 20_000,
     ownerScope: 'cli',
     dataFolder: paths.dataFolder,
     controlPort: options.controlPort,

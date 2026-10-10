@@ -121,4 +121,4 @@ runtime-compat.
 
 The private macOS arm64 build was additionally exercised against live catalogs and a real llama.cpp engine (`b11463`, `macos-arm64`) with `ggml-org/stories15M-q4_0`: engine and model download, Core verification, load, authenticated `/v1/models`, a second named key, revocation returning 401, and streamed inference ending in `[DONE]`. This tiny model validates plumbing; it is not a quality recommendation. The test used a separate data folder and stopped its own background service afterward.
 
-Before release, test this flow on Linux and Windows terminals, including clipboard support and third-party agent tool use. The private vendored Core package is a reproducible preview dependency; replace it with the companion published Core version before a public merge.
+Before release, test this flow on Linux and Windows terminals, including clipboard support and third-party agent tool use.

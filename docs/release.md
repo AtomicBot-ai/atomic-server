@@ -117,11 +117,14 @@ Authenticode. `atc update` refuses a binary less trusted than the installed one 
 
 `atc` embeds the core as the npm package `@atomic-chat/core` (repo `atomic-chat-core`, published by its
 release workflow) at an **exact** version, never a caret: the protocol and version checks make a silently
-newer core unsafe.
+newer core unsafe. 0.13.6 is the first published core with what `atc` needs (0.13.3, where it landed, never passed its release gates): the public API keyring
+(`publicApiKeys`), parallel model downloads (`downloadStreams`), active downloads in the snapshot, and a time
+limit on remote GGUF reads (`remoteGgufTimeoutMs`) — until then `atc` ran on a private 0.11.2 build kept in
+`vendor/`. `startDaemon` passes all three options explicitly.
 
 ```jsonc
 // package.json
-"dependencies": { "@atomic-chat/core": "0.5.1" }
+"dependencies": { "@atomic-chat/core": "0.13.6" }
 ```
 
 To bump the core: `bun add --exact @atomic-chat/core@<version>`, run `npm run verify`, and commit the bump
