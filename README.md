@@ -36,61 +36,61 @@ products for different audiences: they share the core (and the core's per-user m
 nothing else. The words used everywhere — server, engine, engine build, model, run, unload — are defined
 in [`docs/concepts.md`](docs/concepts.md).
 
-> **Status: scaffold.** The command tree, help texts, config, server lifecycle, terminal UI, admin, build
-> and release pipeline are real. Commands marked **stub** parse their flags and print their help, but
-> running one exits with code 3 (`ATC_NOT_IMPLEMENTED`) and names the iteration that implements it.
-> [`docs/commands.md`](docs/commands.md) is generated from the command specs and is the authoritative list.
+> **Status.** The server, its lifecycle and supervision, the terminal UI (chat, server console, model
+> and engine setup), the API with its keyring, the web admin's dashboard, installers, updates and the
+> release pipeline work. Commands marked **stub** below parse their flags and print their help, but exit
+> with code 3 (`ATC_NOT_IMPLEMENTED`) and name the iteration that brings them; the terminal UI already
+> does what most of them will. [`docs/commands.md`](docs/commands.md) is generated from the command specs
+> and is the authoritative list.
 
 ## Quick start on a server
 
 ```sh
-curl -fsSL https://github.com/AtomicBot-ai/atomic-chat-cli/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/AtomicBot-ai/eye-cli/releases/latest/download/install.sh | sh
 ```
 
-On Windows, in PowerShell: `irm https://github.com/AtomicBot-ai/atomic-chat-cli/releases/latest/download/install.ps1 | iex`.
+On Windows, in PowerShell: `irm https://github.com/AtomicBot-ai/eye-cli/releases/latest/download/install.ps1 | iex`.
 
-The installer downloads the release's `SHA256SUMS`, picks the binary for this machine, verifies it, puts it
-in `~/.local/bin/atc` (`%LOCALAPPDATA%\atc\atc.exe` on Windows) and adds that directory to `PATH`.
-`ATC_INSTALL_DIR`, `ATC_VERSION` (a tag, e.g. `v0.1.0`), `ATC_NO_PATH=1` and `ATC_REPO` override the defaults.
-
-Getting a model to answer takes three steps, as in the desktop app (iteration 2; stubs in this build):
-
-```sh
-atc engines install              # the engine build the core picks for this hardware
-atc models pull Qwen/Qwen3-8B-GGUF
-atc run Qwen/Qwen3-8B-GGUF       # starts it on the running server; `atc unload` stops it
-```
-
-What runs today:
+The installer downloads the release's `SHA256SUMS`, picks the binary for this machine — the CPU, musl on
+Alpine, a baseline build for x64 CPUs without AVX2, arm64 under Rosetta — verifies it (and refuses when it
+cannot), puts it in `~/.local/bin/atc` (`%LOCALAPPDATA%\atc\atc.exe` on Windows) and adds that directory to
+`PATH`. `ATC_INSTALL_DIR`, `ATC_VERSION` (a tag, e.g. `v0.1.0`), `ATC_NO_PATH=1` and `ATC_REPO` override the
+defaults. The macOS and Windows binaries are signed (Developer ID with notarisation, Authenticode), and every
+binary carries a build provenance attestation (`gh attestation verify atc-… -R AtomicBot-ai/eye-cli`).
 
 ```sh
-atc                  # on a terminal: the terminal UI — Overview, Logs, Config, Doctor, Commands (? for keys)
-atc doctor           # versions, data folder, config, ports 1337/1338, PATH, GPU driver
-atc start            # the server (core, API, web admin) in the background; it outlives this command
+atc                  # on a terminal: the terminal UI — choose a workspace, install an engine and a model
+atc service install  # keep the server running: systemd, launchd or a scheduled task; back after a crash
 atc status           # pid, versions, API endpoint, running models, admin URL   (--json for one document)
+atc api start        # the OpenAI-compatible API; every client needs a key from atc/client-keys.json
 atc admin            # prints http://127.0.0.1:1338/#token=… and opens a browser
-atc stop             # graceful; --force while other commands are attached, --kill after the timeout
+atc update           # the next release: checked against SHA256SUMS and the installed signature
+atc doctor           # versions, data folder, config, ports 1337/1338, PATH, GPU driver
 ```
+
+`atc start` / `atc stop` run the server in the background without a service; `atc start --foreground`
+runs it in place (containers). `atc logs [-f]` shows the server's own log, rotated by size.
 
 ## Commands
 
 | Group | Command | What it does | Status |
 | --- | --- | --- | --- |
-| Server | `atc start` / `stop` / `restart` | The server: core, API and web admin in the background | works (`start --foreground` is a stub) |
+| Server | `atc start` / `stop` / `restart` | The server: core, API and web admin in the background; `start --foreground` runs it in place | works |
 | Server | `atc status` | The server, the API endpoint, running models, the admin URL | works (`--watch` is a stub) |
-| Server | `atc logs` | Tail of the server log | works (`-f` is a stub) |
+| Server | `atc logs` | Tail of the server log; `-f` follows it | works |
 | Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on the active engine; stop it | stub (iteration 2) |
 | Models & engines | `atc models search\|pull\|list\|rm\|info` | The catalog and the model files | stub (`pull`: iteration 2; the rest: 3) |
 | Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, TensorRT-LLM) and their builds; installing one prepares what it needs | stub (`install`: iteration 2; the rest: 4) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
-| Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server | stub (iteration 2) |
-| Access | `atc api key show\|set\|rotate\|clear` | The API key (a core setting) | stub (iteration 3) |
+| Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
+| Access | `atc chat` | Send a message to an OpenAI-compatible model | works |
+| Access | `atc api key show\|set\|rotate\|clear` | The keyring from the command line (the terminal UI manages it today; `--api-key` adds one) | stub (iteration 3) |
 | Access | `atc admin [open\|status\|token]` | Sign-in link, where the admin listens, token rotation | works |
-| Access | `atc tui` | The terminal UI, explicitly (what bare `atc` opens on a terminal) | works (Models and Downloads screens come with iterations 2–3) |
+| Access | `atc tui` | The terminal UI, explicitly (what bare `atc` opens on a terminal) | works |
 | System | `atc config get\|set\|unset\|list\|path` | `atc` settings | works (`engine.*` keys are a stub) |
 | System | `atc doctor` | Diagnostic table with hints | works (GPU: NVIDIA only; Docker check skipped) |
-| System | `atc service install\|uninstall\|status\|start\|stop` | The server as an OS service | stub (iteration 6) |
-| System | `atc update` | Self-update from GitHub Releases | `--check` works; applying is a stub (iteration 6) |
+| System | `atc service install\|uninstall\|status\|start\|stop\|restart` | The server as an OS service (systemd, launchd, Task Scheduler) | works |
+| System | `atc update` | Self-update from GitHub Releases: checksum and signature checked, the server restarted onto it | works |
 | System | `atc version`, `atc completion <shell>` | Versions; bash/zsh/fish/powershell completion | works |
 
 Hidden: `atc daemon` (the server process itself, which `start` spawns) and `atc host-step exec
@@ -113,14 +113,16 @@ Exit codes: `0` success, `1` runtime error, `2` usage (also bare `atc` and bare 
 <data>/atomic-core/           the core: instance.lock, control-token (0600), settings.json, processes.json, logs/
 <data>/llamacpp/models/       GGUF models, one folder with model.yml each (both llama.cpp providers)
 <data>/<provider>/backends/   engine builds the core installs
-<data>/atc/                   what only atc owns
+<data>/atc/                   what only atc owns (owner-only ACL on Windows)
   config.json                 settings (0644, written atomically; unknown keys are kept)
-  secrets.json                0600: hfToken, adminPassword
+  client-keys.json            0600: the API keyring, created when the server starts
+  setup.json, chats/          0600: the terminal UI's setup and conversations
   run/daemon.json             pid, instance_id, state (starting|ready), atc/core versions, control_url, admin_url, started_at
   run/admin-token             0600: the admin login token
-  run/host-steps/             <step_id>.request.json, <step_id>.result.json, journal.json
-  logs/daemon.log             the server's stderr
-  cache/                      catalog and recommendation caches (iteration 3)
+  run/host-steps/             0700: <step_id>.request.json (0600), <step_id>.result.json, journal.json
+  logs/daemon.log             the server's own log, rotated by size (log.maxSizeMb, log.maxFiles)
+  logs/daemon.out.log         the server process's output from its last start (crashes before the logger)
+  cache/                      catalog and recommendation caches
 ```
 
 `<system data>` is `$XDG_DATA_HOME` or `~/.local/share` on Linux, `~/Library/Application Support` on macOS
@@ -143,7 +145,23 @@ Keys are `api.*`, `admin.*`, `engines.*` (`engines.default` is the engine `atc r
 `models.*`, `managed.*`, `proxy.*`, `update.*`, `telemetry.*`, `log.*` (the table is `src/config/schema.ts`). Engine parameters
 (`engine.<provider>.<key>`) belong to the core's settings; forwarding them through `atc config` is a stub.
 A config file written by a newer `atc` is refused with a hint rather than half-read; an older one is
-migrated (version 2 dropped the `serve.*` keys along with the `serve` command).
+migrated (version 2 dropped the `serve.*` keys along with the `serve` command; version 4 dropped
+`api.requireKey`, since every API client needs a key from the keyring).
+
+## Privacy
+
+The server sends anonymous crash and error reports to Atomic Chat's error tracker: the error, the
+versions and the platform — never prompts, replies, file paths, keys or personal data (the core scrubs
+them before anything leaves). Reports are on by default, and the first `atc start` or terminal UI says
+so once. Turn them off with any of:
+
+```sh
+atc config set telemetry.enabled false     # applies to the running server at once
+```
+
+```sh
+export DO_NOT_TRACK=1                      # or ATC_TELEMETRY_ENABLED=false, for services and containers
+```
 
 ## The web admin
 
@@ -195,3 +213,11 @@ Note: the core's own CLI defaults its public API to port 6767; `atc` uses 1337, 
 - [`docs/release.md`](docs/release.md) — releasing, installers, self-update, the core pin
 - [`docs/admin-ui.md`](docs/admin-ui.md) — the web admin SPA
 - [`docs/decisions/INDEX.md`](docs/decisions/INDEX.md) — engineering decisions
+
+## License
+
+Apache-2.0 ([`LICENSE`](LICENSE)). The web admin includes files from
+[Atomic Chat](https://github.com/AtomicBot-ai/Atomic-Chat), also Apache-2.0; the attribution is in
+[`NOTICE`](NOTICE). The binary bundles third-party packages, listed with their licenses in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) (`npm run notices` regenerates it; CI checks it is
+current and that every license is on the policy in `scripts/licenses.mjs`).

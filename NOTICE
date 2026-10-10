@@ -1,0 +1,11 @@
+Atomic Server (atc)
+Copyright 2026 Atomic Chat (https://atomic.chat)
+
+This product includes software from Atomic Chat (https://github.com/AtomicBot-ai/Atomic-Chat):
+Copyright 2026 Atomic Chat (https://atomic.chat)
+Copyright 2025 Menlo Research (https://menlo.ai)
+licensed under the Apache License, Version 2.0. The files are listed in packages/admin-ui/LIFTED.md
+and carry a "Lifted from Atomic-Chat/..." header.
+
+The atc binary bundles third-party software; their notices and licenses are in
+THIRD_PARTY_NOTICES.md, published with every release.

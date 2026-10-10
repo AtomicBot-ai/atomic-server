@@ -1,11 +1,12 @@
 import type { AtcConfig } from '../config/index.js'
 import type { CoreLink } from '../core-link/index.js'
-/** Explicitly starts inference; attaching or opening the console does not expose a listener. */
-export async function startApi(link: CoreLink, config: AtcConfig, apiKey = ''): Promise<void> {
-  if (config.api.requireKey && !apiKey)
-    throw new Error('Set ATC_API_KEY before starting an API that requires a key.')
-  if (!['127.0.0.1', 'localhost', '::1'].includes(config.api.host) && !apiKey)
-    throw new Error('Set ATC_API_KEY before exposing the API beyond this machine.')
+/**
+ * Explicitly starts inference; attaching or opening the console does not expose a listener. Clients
+ * always need a key: the server checks the keyring (`client-keys.json`, created when it starts) on
+ * every request, on any address. `apiKey` is one of those keys, so the core reports the API as keyed.
+ */
+export async function startApi(link: CoreLink, config: AtcConfig, apiKey: string): Promise<void> {
+  if (!apiKey) throw new Error('No API key: the keyring is empty.')
   await link.server.start({
     host: config.api.host,
     port: config.api.port,

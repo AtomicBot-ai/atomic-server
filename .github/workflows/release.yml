@@ -1,12 +1,26 @@
 name: release
 
 # Publishes the `atc` binaries. To release: `npm run release -- patch --push` (scripts/release.mjs
-# bumps, commits, tags and pushes). The pushed `v*` tag runs this workflow after the CI gates.
-# A published version is never replaced: the updater and the installer pin checksums.
+# bumps, commits, tags and pushes). The pushed `v*` tag runs this workflow:
+#
+#   gates → build (each target on its own runner, e2e on the very binary uploaded)
+#         → sign-macos (Developer ID + notarisation) and sign-windows (Authenticode)
+#         → draft (SHA256SUMS over the signed binaries, provenance attestations, a draft release)
+#         → smoke (each runner installs the draft's assets with the installer and runs them)
+#         → publish (the draft becomes the release; a version with "-" is a pre-release)
+#
+# A published version is never replaced: the updater and the installer pin checksums. A run by hand
+# (workflow_dispatch) on a branch may set allow_unsigned for a dry run without the signing secrets; a
+# tag never does.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      allow_unsigned:
+        description: 'Dry run: build and publish a draft without signing secrets (never for a tag)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -15,19 +29,24 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  ATC_ALLOW_UNSIGNED: ${{ github.ref_type != 'tag' && inputs.allow_unsigned && '1' || '0' }}
+
 jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Resolve the version and refuse one already released
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           version="$(node -p "require('./package.json').version")"
           tag="v$version"
           if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
@@ -36,67 +55,263 @@ jobs:
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::release $tag already exists"; exit 1
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          { echo "version=$version"; echo "tag=$tag"; echo "prerelease=$prerelease"; } >> "$GITHUB_OUTPUT"
 
   gates:
     needs: version
     uses: ./.github/workflows/ci.yml
-    with:
-      release: true
+
+  build:
+    needs: [version, gates]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { runner: macos-15, targets: 'aarch64-apple-darwin x86_64-apple-darwin' }
+          - {
+              runner: ubuntu-latest,
+              targets: 'x86_64-unknown-linux-gnu x86_64-unknown-linux-gnu-baseline x86_64-unknown-linux-musl',
+            }
+          - { runner: ubuntu-24.04-arm, targets: 'aarch64-unknown-linux-gnu aarch64-unknown-linux-musl' }
+          - { runner: windows-2022, targets: 'x86_64-pc-windows-msvc x86_64-pc-windows-msvc-baseline' }
+          - { runner: windows-11-arm, targets: 'aarch64-pc-windows-msvc' }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with: { bun-version: 1.3.10 }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - run: bun install --frozen-lockfile
+      - run: npm run build:ui
+      - run: npm run embed:ui
+      - name: Build the binaries of this runner
+        shell: bash
+        env:
+          ATC_GIT_SHA: ${{ github.sha }}
+          ATC_SENTRY_ENVIRONMENT: ${{ needs.version.outputs.prerelease == 'true' && 'prerelease' || 'production' }}
+        run: |
+          set -euo pipefail
+          for triple in ${{ matrix.targets }}; do node scripts/build-binaries.mjs --target "$triple"; done
+      # The e2e runs on this runner's native binary — the file uploaded below, not a rebuild.
+      - run: npm run build
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: built-${{ matrix.runner }}
+          path: dist/bin/atc-*
+          if-no-files-found: error
+
+  sign-macos:
+    needs: build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-macos-15, path: dist/bin }
+      - name: Write the notary API key
+        env:
+          NOTARYTOOL_KEY_CONTENT: ${{ secrets.NOTARYTOOL_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "$NOTARYTOOL_KEY_CONTENT" ]; then
+            key="$RUNNER_TEMP/notary-key.p8"
+            printf '%s' "$NOTARYTOOL_KEY_CONTENT" > "$key"; chmod 600 "$key"
+            echo "NOTARYTOOL_KEY=$key" >> "$GITHUB_ENV"
+          fi
+      - name: Sign with the Developer ID
+        env:
+          MACOS_CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          MACOS_CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+          MACOS_CSC_NAME: ${{ secrets.MACOS_CSC_NAME }}
+        run: scripts/sign-mac-binary.sh dist/bin/atc-*-apple-darwin
+      - name: Notarise
+        env:
+          NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
+          NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
+        run: scripts/notarize-mac-binary.sh dist/bin/atc-*-apple-darwin
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-macos
+          path: dist/bin/atc-*
+          if-no-files-found: error
+
+  sign-windows:
+    needs: build
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-windows-2022, path: dist/bin }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-windows-11-arm, path: dist/bin }
+      - name: Sign with Authenticode (DigiCert KeyLocker)
+        shell: pwsh
+        env:
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
+        run: ./scripts/sign-windows-binary.ps1 (Get-ChildItem dist/bin/atc-*.exe).FullName
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-windows
+          path: dist/bin/atc-*
+          if-no-files-found: error
+
+  draft:
+    needs: [version, sign-macos, sign-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: signed-macos, path: bin }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: signed-windows, path: bin }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-ubuntu-latest, path: bin }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-ubuntu-24.04-arm, path: bin }
+      - name: Name the assets and checksum them, after signing
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          for path in bin/atc-*; do
+            name="$(basename "$path")"
+            cp "$path" "release/atc-$VERSION-${name#atc-}"
+          done
+          expected="$(node --input-type=module -e "import { TARGETS } from './scripts/targets.mjs'; console.log(TARGETS.length)")"
+          actual="$(ls release/atc-* | wc -l | tr -d ' ')"
+          if [ "$actual" != "$expected" ]; then echo "::error::$actual binaries, expected $expected"; exit 1; fi
+          cp scripts/install.sh scripts/install.ps1 LICENSE NOTICE THIRD_PARTY_NOTICES.md release/
+          cd release
+          sha256sum atc-* install.sh install.ps1 > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: release/atc-*
+      - name: Create the draft release
+        run: |
+          set -euo pipefail
+          flags=(--draft --title "$TAG" --generate-notes --target "$GITHUB_SHA")
+          if [ "${{ needs.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); fi
+          if [ "$GITHUB_REF_TYPE" = tag ]; then flags+=(--verify-tag); fi
+          gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+
+  smoke:
+    needs: [version, draft]
+    # A draft and its assets are visible only with write access.
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, ubuntu-latest, ubuntu-24.04-arm, windows-2022, windows-11-arm]
+    runs-on: ${{ matrix.runner }}
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # A draft's assets are not public: fetch them, then serve them to the installer from loopback.
+      - name: Fetch the draft's assets
+        shell: bash
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl
+      - name: Serve them on loopback
+        shell: bash
+        run: |
+          py="$(command -v python3 || command -v python)"
+          "$py" -m http.server 8765 --bind 127.0.0.1 --directory dl >/dev/null 2>&1 &
+          sleep 2
+      - name: Install with install.sh and run it
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          ATC_DOWNLOAD_BASE: http://127.0.0.1:8765
+          ATC_INSTALL_DIR: ${{ runner.temp }}/atc-bin
+          ATC_NO_PATH: '1'
+        run: |
+          set -euo pipefail
+          sh dl/install.sh
+          atc="$ATC_INSTALL_DIR/atc"
+          test "$("$atc" --version)" = "$VERSION"
+          data="$RUNNER_TEMP/atc-data"
+          "$atc" config set admin.port 0 --data-folder "$data"
+          "$atc" start --no-admin --data-folder "$data"
+          "$atc" status --json --data-folder "$data" | grep -q '"running": true'
+          "$atc" stop --data-folder "$data"
+      # No native runner for these: the musl builds in Alpine, the baseline build on this CPU.
+      - name: Run the musl and baseline builds
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"; [ "$arch" = arm64 ] && arch=aarch64
+          chmod +x dl/atc-*
+          docker run --rm -v "$PWD/dl:/dl:ro" alpine:3.20 "/dl/atc-$VERSION-$arch-unknown-linux-musl" --version | grep -qx "$VERSION"
+          if [ "$arch" = x86_64 ]; then test "$(dl/atc-$VERSION-x86_64-unknown-linux-gnu-baseline --version)" = "$VERSION"; fi
+      - name: Check the macOS signatures (both architectures)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for bin in dl/atc-*-apple-darwin; do
+            chmod +x "$bin"
+            codesign --verify --strict --verbose=2 "$bin"
+            if [ "$ATC_ALLOW_UNSIGNED" != 1 ]; then
+              codesign -dv "$bin" 2>&1 | grep -q '^TeamIdentifier=[A-Z0-9]\{10\}$'
+              spctl --assess --type execute --verbose "$bin"
+            fi
+          done
+          # The Intel build, under Rosetta.
+          test "$(arch -x86_64 dl/atc-*-x86_64-apple-darwin --version 2>/dev/null)" = "$VERSION"
+      - name: Install with install.ps1, run it, check the signatures
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ATC_DOWNLOAD_BASE: http://127.0.0.1:8765
+          ATC_INSTALL_DIR: ${{ runner.temp }}\atc-bin
+          ATC_NO_PATH: '1'
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./dl/install.ps1
+          $atc = Join-Path $env:ATC_INSTALL_DIR "atc.exe"
+          if ((& $atc --version) -ne $env:VERSION) { throw "atc --version is not $env:VERSION" }
+          $data = Join-Path $env:RUNNER_TEMP "atc-data"
+          & $atc config set admin.port 0 --data-folder $data; if ($LASTEXITCODE) { throw "config" }
+          & $atc start --no-admin --data-folder $data; if ($LASTEXITCODE) { throw "start" }
+          & $atc stop --data-folder $data; if ($LASTEXITCODE) { throw "stop" }
+          if ($env:ATC_ALLOW_UNSIGNED -ne "1") {
+            foreach ($exe in Get-ChildItem dl/atc-*.exe) {
+              $status = (Get-AuthenticodeSignature -LiteralPath $exe.FullName).Status
+              if ($status -ne "Valid") { throw "$($exe.Name): Authenticode status $status" }
+            }
+          }
 
   publish:
-    needs: [version, gates]
+    needs: [version, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
-      VERSION: ${{ needs.version.outputs.version }}
-      TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
-        with: { bun-version: 1.3.10 }
-      - uses: actions/setup-node@v7
-        with: { node-version: 22 }
-      - run: bun install --frozen-lockfile
-      - run: npm run build:ui
-      - run: npm run build:bin:all
-        env:
-          ATC_GIT_SHA: ${{ github.sha }}
-
-      - name: Check the binary reports the version
+      - name: Publish the draft
         run: |
-          got="$(dist/bin/atc-x86_64-unknown-linux-gnu --version)"
-          test "$got" = "$VERSION" || { echo "::error::atc reports '$got', expected $VERSION"; exit 1; }
-
-      - name: Name the assets and checksum them
-        run: |
-          mkdir -p release
-          for path in dist/bin/atc-*; do
-            name="$(basename "$path")"
-            cp "$path" "release/atc-$VERSION-${name#atc-}"
-          done
-          cp scripts/install.sh scripts/install.ps1 release/
-          cd release
-          sha256sum atc-* > SHA256SUMS
-          cat SHA256SUMS
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: atc-binaries
-          path: release/
-
-      - name: Publish the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          verify=""
-          if [ "$GITHUB_REF_TYPE" = tag ]; then verify="--verify-tag"; fi
-          gh release create "$TAG" release/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "$TAG" \
-            --generate-notes \
-            --latest \
-            $verify
+          set -euo pipefail
+          if [ "$ATC_ALLOW_UNSIGNED" = 1 ]; then
+            echo "dry run (allow_unsigned): the draft stays a draft"; exit 0
+          fi
+          flags=(--draft=false)
+          if [ "${{ needs.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release edit "${{ needs.version.outputs.tag }}" --repo "$GITHUB_REPOSITORY" "${flags[@]}"

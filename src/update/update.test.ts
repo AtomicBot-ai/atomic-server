@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseSha256Sums } from './checksums.js'
-import { checkForUpdate } from './release.js'
+import { ATC_REPO, checkForUpdate } from './release.js'
 import { assetNameFor, planReplace } from './replace-plan.js'
 import { compareSemver, isNewer, parseSemver } from './semver.js'
 
@@ -53,5 +54,13 @@ describe('checkForUpdate', () => {
     })
     const missing = (async () => new Response('', { status: 404 })) as unknown as typeof fetch
     await expect(checkForUpdate(missing, '0.1.0')).rejects.toMatchObject({ code: 'ATC_UPDATE_FAILED' })
+  })
+})
+
+describe('the repository releases come from', () => {
+  it('is the one both installers default to', () => {
+    const script = (name: string) => readFileSync(new URL(`../../scripts/${name}`, import.meta.url), 'utf8')
+    expect(script('install.sh')).toContain(`REPO="\${ATC_REPO:-${ATC_REPO}}"`)
+    expect(script('install.ps1')).toContain(`else { "${ATC_REPO}" }`)
   })
 })

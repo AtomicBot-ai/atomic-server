@@ -2,6 +2,7 @@
   "name": "@atomicbot-ai/atc-admin-ui",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "description": "The atc web admin: a React SPA served by the atc daemon. Mirrors Atomic-Chat/web-app so its files lift 1:1.",
   "scripts": {

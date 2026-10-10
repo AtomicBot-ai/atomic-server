@@ -33,3 +33,12 @@ add a new one that says which record it supersedes.
 - **2026-10-08** — [Simplify the header and animate the eye](2026-10-08-simplify-header-and-animate-eye.md).
 - **2026-10-08** — [Keep model selection in chat and make onboarding one-time](2026-10-08-keep-model-selection-in-chat.md).
 - **2026-10-09** — [Order recent chats by message activity](2026-10-09-order-recents-by-message-activity.md).
+- **2026-10-09** — [Replace a server another build left running](2026-10-09-replace-a-server-another-build-left-running.md).
+- **2026-10-09** — [Run the server under the OS service manager](2026-10-09-run-the-server-under-the-os-service-manager.md).
+- **2026-10-09** — [Require a key from the keyring for every API client](2026-10-09-require-a-key-from-the-keyring-for-every-api-client.md).
+- **2026-10-09** — [Keep error reports on and say so once](2026-10-09-keep-error-reports-on-and-say-so-once.md).
+- **2026-10-09** — [Publish baseline and musl builds and pick them in the installers](2026-10-09-publish-baseline-and-musl-builds-and-pick-them-in-the-installers.md).
+- **2026-10-09** — [License atc under Apache-2.0 with generated notices](2026-10-09-license-atc-under-apache-2-0-with-generated-notices.md).
+- **2026-10-09** — [Apply updates in place and never downgrade trust](2026-10-09-apply-updates-in-place-and-never-downgrade-trust.md).
+- **2026-10-09** — [Build natively, sign, then smoke the draft before publishing](2026-10-09-build-natively-sign-then-smoke-the-draft.md).
+- **2026-10-09** — [Run host steps through the core executor](2026-10-09-run-host-steps-through-the-core-executor.md).

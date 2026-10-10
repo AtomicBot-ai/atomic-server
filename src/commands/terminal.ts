@@ -1,5 +1,6 @@
 import { defineCommand, AtcError } from '../cli/index.js'
 import type { CommandRun } from '../cli/index.js'
+import { ClientKeys } from '../terminal-data/index.js'
 import { startApi, streamChat, listChatModels } from '../terminal-service/index.js'
 export const apiStart: CommandRun = async (inv, ctx) => {
   const config = structuredClone((await ctx.config()).values)
@@ -22,14 +23,22 @@ export const apiStart: CommandRun = async (inv, ctx) => {
   if (inv.values['cors'] === false)
     throw new AtcError('ATC_USAGE', 'CORS cannot be disabled by this Core API. Remove --no-cors.')
   const link = await ctx.core.attach({ launch: true })
-  await startApi(link, config, key)
+  const keys = new ClientKeys(ctx.paths.atcDir)
+  await keys.initialize(key)
+  if (key)
+    await keys
+      .ensure(key, 'CLI key')
+      .catch((e: Error) => Promise.reject(new AtcError('ATC_USAGE', e.message)))
+  await startApi(link, config, key || (await keys.get()))
   const status = await link.server.status()
-  ctx.out.result(status, () =>
+  ctx.out.result({ ...status, keys_file: keys.path }, () => {
     ctx.out.kv([
       ['API', `http://${status.host}:${status.port}${status.prefix}`],
-      ['Authentication', status.requires_api_key ? 'Key required' : 'Local access'],
+      ['Authentication', 'Key required (Authorization: Bearer <key>)'],
+      ['Keys', keys.path],
     ])
-  )
+    if (!key) ctx.out.note('manage keys in the terminal UI (`atc`, Server → Keys), or pass --api-key')
+  })
   return 0
 }
 export const apiStop: CommandRun = async (_inv, ctx) => {

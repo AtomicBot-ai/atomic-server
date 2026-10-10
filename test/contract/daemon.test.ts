@@ -3,7 +3,8 @@
  * the run record atc adds, the admin BFF's auth and proxy, the SSE relay, and attach-or-spawn from
  * a command's point of view. No engine is started; the core's own tests cover model loads.
  */
-import { statSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { rm } from 'node:fs/promises'
 import { inspectLock } from '@atomic-chat/core/host'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -147,6 +148,29 @@ describe('the daemon owns the folder', () => {
     ).rejects.toMatchObject({ code: 'ATC_DAEMON_FOREIGN' })
     const { writeDaemonRecord } = await import('../../src/core-link/index.js')
     await writeDaemonRecord(paths.daemonRecord, record!)
+  })
+
+  it('never serves the public API without a key, even if nobody opened the terminal UI', async () => {
+    // The server created the keyring when it started; the API started here passes no key itself.
+    const keys = JSON.parse(readFileSync(join(paths.atcDir, 'client-keys.json'), 'utf8')) as {
+      keys: Array<{ token: string }>
+    }
+    expect(keys.keys).toHaveLength(1)
+    await daemon.link.server.start({
+      host: '127.0.0.1',
+      port: 0,
+      prefix: '/v1',
+      api_key: '',
+      trusted_hosts: [],
+      fallback_port: false,
+    })
+    const { port } = await daemon.link.server.status()
+    const models = (headers: Record<string, string> = {}) =>
+      fetch(`http://127.0.0.1:${port}/v1/models`, { headers }).then((r) => r.status)
+    expect(await models()).toBe(401)
+    expect(await models({ authorization: 'Bearer not-a-key' })).toBe(401)
+    expect(await models({ authorization: `Bearer ${keys.keys[0]!.token}` })).toBe(200)
+    await daemon.link.server.stop()
   })
 
   it('shuts down cleanly: lock released, record removed', async () => {

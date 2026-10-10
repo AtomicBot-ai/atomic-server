@@ -1,3 +1,4 @@
+// Lifted from Atomic-Chat/web-app/src/main.tsx @ f71e2280b; adapted: router setup only; no Sentry, migrations, mobile or zoom handling
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'

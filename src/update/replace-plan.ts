@@ -3,6 +3,9 @@
  * cannot, so the running file is moved aside first and cleaned up on the next run.
  */
 
+import { AtcError } from '../errors/index.js'
+import { assetName, targetByTriple, targetFor } from './targets.js'
+
 export interface ReplacePlan {
   steps: Array<
     | { op: 'rename'; from: string; to: string }
@@ -34,10 +37,18 @@ export function planReplace(
   }
 }
 
-/** The release asset for this machine, as the release workflow names it. */
-export function assetNameFor(version: string, platform: NodeJS.Platform, arch: string): string {
-  const os =
-    platform === 'win32' ? 'pc-windows-msvc' : platform === 'darwin' ? 'apple-darwin' : 'unknown-linux-gnu'
-  const cpu = arch === 'arm64' ? 'aarch64' : 'x86_64'
-  return `atc-${version}-${cpu}-${os}${platform === 'win32' ? '.exe' : ''}`
+/**
+ * The release asset for this machine, as the release workflow names it: the variant this binary was
+ * built as (`builtFor`, its baked-in triple) when known, otherwise the default build for the platform.
+ */
+export function assetNameFor(
+  version: string,
+  platform: NodeJS.Platform,
+  arch: string,
+  builtFor?: string
+): string {
+  const target = (builtFor ? targetByTriple(builtFor) : undefined) ?? targetFor(platform, arch)
+  if (!target)
+    throw new AtcError('ATC_UNSUPPORTED_PLATFORM', `No atc build is published for ${platform}/${arch}.`)
+  return assetName(version, target)
 }

@@ -24,6 +24,8 @@ export interface RunTuiOptions {
   root: CommandSpec
   agentHost?: AgentHost
   launchAgent?: (launch: AgentLaunch) => Promise<void>
+  /** Shown in the status line when the screen first opens (the one-time telemetry notice). */
+  notice?: string
 }
 export async function runTui(options: RunTuiOptions): Promise<number> {
   const { terminal, deps } = options
@@ -44,7 +46,7 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
           : options.screen
   let instance: ReturnType<typeof render> | undefined,
     signalled = false,
-    message = ''
+    message = options.notice ?? ''
   void options.waitForShutdown(async () => {
     signalled = true
     instance?.unmount()

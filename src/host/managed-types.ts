@@ -1,57 +1,22 @@
 /**
- * Wire types of the core's managed-runtime contract, mirrored from
- * `atomic-chat-core@feat/tenzor-rt:src/contracts/environment.ts`. They are not in the core
- * version `atc` embeds yet; once that branch lands, this file becomes re-exports from
- * `atomic-chat-core/contracts` and nothing else changes.
+ * The managed-runtime contract `atc` speaks, from the core it embeds (`@atomic-chat/core/contracts`).
+ * Only `EnvironmentOperationView` is local: the slice of an operation the host-step executor reads.
  */
 
-export const MANAGED_HOST_ACTIONS = ['linux.install-container-runtime', 'windows.enable-wsl'] as const
-export type ManagedHostAction = (typeof MANAGED_HOST_ACTIONS)[number]
+import type { ManagedHostReceipt, ManagedHostStep, ManagedPhase } from '@atomic-chat/core/contracts'
 
-export type Sha256Digest = `sha256:${string}`
-
-export type ManagedPhase =
-  | 'checking'
-  | 'awaiting-consent'
-  | 'preparing-host'
-  | 'relogin-required'
-  | 'reboot-required'
-  | 'preparing-environment'
-  | 'pulling-image'
-  | 'verifying'
-  | 'activating'
-  | 'removing'
-  | 'ready'
-  | 'removed'
-  | 'cancelling'
-  | 'cancelled'
-  | 'failed'
+export { MANAGED_HOST_ACTIONS } from '@atomic-chat/core/contracts'
+export type {
+  ManagedHostAction,
+  ManagedHostReceipt,
+  ManagedHostStep,
+  ManagedPhase,
+  Sha256Digest,
+} from '@atomic-chat/core/contracts'
 
 export const TERMINAL_PHASES: readonly ManagedPhase[] = ['ready', 'removed', 'cancelled', 'failed']
 
-/** The pending privileged step. `nonce` is single-use; the digests bind it to what was approved. */
-export interface ManagedHostStep {
-  step_id: string
-  action: ManagedHostAction
-  recipe_id: string
-  recipe_digest: Sha256Digest
-  parameters_digest: Sha256Digest
-  nonce: string
-  expected_operation_revision: number
-}
-
-export type HostStepOutcomeKind = 'completed' | 'declined' | 'relogin-required' | 'reboot-required' | 'failed'
-
-/** What the host reports back. An assertion, not proof: the core re-probes before believing it. */
-export interface ManagedHostReceipt {
-  step_id: string
-  nonce: string
-  expected_operation_revision: number
-  recipe_digest: Sha256Digest
-  parameters_digest: Sha256Digest
-  outcome: HostStepOutcomeKind
-  receipt_id: string
-}
+export type HostStepOutcomeKind = ManagedHostReceipt['outcome']
 
 /** The slice of `EnvironmentOperation` the host-step executor reads. */
 export interface EnvironmentOperationView {

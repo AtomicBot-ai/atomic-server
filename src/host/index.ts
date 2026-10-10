@@ -3,6 +3,9 @@
  * host-step protocol, hardware probing, OS services, ports. `nodeHostServices` is the real one;
  * tests build the same shape from fakes.
  */
+import { access, mkdir, rm, writeFile } from 'node:fs/promises'
+import { homedir, userInfo } from 'node:os'
+import { dirname } from 'node:path'
 import { selfCommand } from '@atomic-chat/core/host'
 import type { AtcIo } from '../io.js'
 import { createElevator } from './elevator.js'
@@ -13,9 +16,11 @@ import { nodeHostFacts } from './facts.js'
 import type { HostFacts } from './facts.js'
 import { readResultFile } from './host-step.js'
 import { probePort } from './ports.js'
-import { notImplementedServiceManager } from './service-manager.js'
 import type { ServiceManager } from './service-manager.js'
+import { createServiceManager } from './service-plans.js'
+import type { ServiceFiles } from './service-plans.js'
 
+export * from './acl.js'
 export * from './exec.js'
 export * from './facts.js'
 export * from './ports.js'
@@ -25,6 +30,7 @@ export * from './helper.js'
 export * from './host-step.js'
 export * from './hardware-prober.js'
 export * from './service-manager.js'
+export * from './service-plans.js'
 
 export interface HostServices {
   facts: HostFacts
@@ -41,10 +47,39 @@ export function nodeHostServices(io: AtcIo, self: readonly string[] = selfComman
   return {
     facts: nodeHostFacts(io),
     exec: execCommand,
-    elevator: createElevator({ exec: execCommand, selfCommand: self, readResult: readResultFile }),
-    services: notImplementedServiceManager(),
+    elevator: createElevator({
+      exec: execCommand,
+      selfCommand: self,
+      readResult: readResultFile,
+      env: io.env,
+    }),
+    services: createServiceManager({
+      platform: process.platform,
+      env: {
+        home: homedir(),
+        uid: typeof process.getuid === 'function' ? process.getuid() : null,
+        windowsUser: io.env['USERDOMAIN']
+          ? `${io.env['USERDOMAIN']}\\${userInfo().username}`
+          : userInfo().username,
+      },
+      exec: execCommand,
+      files: nodeServiceFiles,
+    }),
     selfCommand: self,
     probePort,
     findOnPath: (name) => findOnPath(name, io.env),
   }
+}
+
+const nodeServiceFiles: ServiceFiles = {
+  write: async (path, content, encoding) => {
+    await mkdir(dirname(path), { recursive: true })
+    await writeFile(path, content, { encoding })
+  },
+  remove: (path) => rm(path, { force: true }),
+  exists: (path) =>
+    access(path).then(
+      () => true,
+      () => false
+    ),
 }

@@ -216,23 +216,3 @@ export const apiCommand = defineCommand({
     }),
   ],
 })
-
-export const serviceCommand = defineCommand({
-  name: 'service',
-  summary: 'Run the server as an OS service (systemd, launchd, Windows task)',
-  group: 'system',
-  subcommands: [
-    notImplemented({
-      name: 'install',
-      summary: 'Install and enable the service',
-      options: {
-        system: { type: 'boolean', description: 'System-wide (needs root)' },
-        name: { type: 'string', description: 'Service name', placeholder: 'name', default: 'atc' },
-      },
-    }),
-    notImplemented({ name: 'uninstall', summary: 'Disable and remove the service' }),
-    notImplemented({ name: 'status', summary: 'Whether the service is installed and running' }),
-    notImplemented({ name: 'start', summary: 'Start the service' }),
-    notImplemented({ name: 'stop', summary: 'Stop the service' }),
-  ],
-})

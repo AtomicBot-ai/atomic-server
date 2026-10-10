@@ -3,18 +3,11 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { expect, it } from 'vitest'
-const root = fileURLToPath(new URL('../..', import.meta.url))
-const triple = { darwin: 'apple-darwin', win32: 'pc-windows-msvc', linux: 'unknown-linux-gnu' }[
-  process.platform as 'darwin'
-]
-const binary = join(
-  root,
-  'dist/bin',
-  `atc-${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}-${triple}${process.platform === 'win32' ? '.exe' : ''}`
-)
+import { BINARY, ROOT } from '../helpers/binary.js'
+const root = ROOT
+const binary = BINARY
 it('streams chat through the built executable against an isolated local endpoint', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'atc-chat-e2e-'))
   let received = ''

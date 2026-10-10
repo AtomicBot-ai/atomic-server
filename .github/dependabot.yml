@@ -1,0 +1,7 @@
+# Actions are pinned to commits (supply chain); Dependabot moves the pins and their version comments.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

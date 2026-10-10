@@ -20,7 +20,7 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 3
+export const CONFIG_VERSION = 4
 
 export interface AtcConfig {
   version: number
@@ -38,7 +38,6 @@ export interface AtcConfig {
     cors: boolean
     trustedHosts: string[]
     autoStart: boolean
-    requireKey: boolean
   }
   admin: { host: string; port: number; openOnStart: boolean; autoStart: boolean }
   engines: { autoInstall: boolean; default: 'llamacpp-upstream' | 'llamacpp' | 'mlx' }
@@ -101,12 +100,6 @@ export const FIELDS: readonly FieldSpec[] = [
     type: 'boolean',
     default: true,
     description: 'Start the API when the server starts',
-  },
-  {
-    path: 'api.requireKey',
-    type: 'boolean',
-    default: true,
-    description: 'Refuse a non-loopback API without a key',
   },
   { path: 'admin.host', type: 'string', default: '127.0.0.1', description: 'Bind address of the web admin' },
   {

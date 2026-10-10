@@ -1,7 +1,9 @@
 # Lifted files
 
 Files copied from the desktop app (`Atomic-Chat`, commit `f71e2280b`) so they can be lifted again 1:1 later.
-Every one carries a header comment `// Lifted from Atomic-Chat/<path> @ f71e2280b; adapted: <what changed>`.
+Every source file carries a header comment `// Lifted from Atomic-Chat/<path> @ f71e2280b; adapted: <what changed>`;
+the JSON configs and `eslint.config.js` are listed here only. They are Apache-2.0, Copyright Atomic Chat and
+Menlo Research, as the rest of this repository; the attribution is in the root `NOTICE`.
 
 | Here                                  | From                                          | Adapted                                                                  |
 | ------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------ |

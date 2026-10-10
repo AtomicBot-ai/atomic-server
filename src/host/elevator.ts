@@ -8,9 +8,13 @@
  * the result file and exits. The unprivileged daemon turns the result into the receipt.
  */
 
-import { AtcError } from '../errors/index.js'
 import type { ExecFn } from './exec.js'
-import type { HostStepOutcomeKind, ManagedHostAction, Sha256Digest } from './managed-types.js'
+import type {
+  HostStepOutcomeKind,
+  ManagedHostAction,
+  ManagedHostStep,
+  Sha256Digest,
+} from './managed-types.js'
 
 export type ElevationStrategy = 'root' | 'sudo-tty' | 'pkexec' | 'windows-runas' | 'manual'
 
@@ -50,6 +54,8 @@ export interface HostStepRequestFile {
   expected_operation_revision: number
   data_folder: string
   requested_at: number
+  /** The step's parameters, copied unchanged from `pending_host_step.parameters`. */
+  parameters: ManagedHostStep['parameters']
 }
 
 export interface HostStepResultFile {
@@ -92,43 +98,80 @@ function quote(arg: string): string {
   return /[\s"']/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg
 }
 
-export function createElevator(deps: ElevatorDeps, platform: NodeJS.Platform = process.platform): Elevator {
-  const [exe, ...prefix] = deps.selfCommand
+export const ELEVATED_STEP_TIMEOUT_MS = 30 * 60_000
+
+/** The command line for a strategy: what runs, with what, and which environment it starts from. */
+export function elevatedCommand(
+  strategy: Exclude<ElevationStrategy, 'manual'>,
+  selfCommand: readonly string[],
+  requestPath: string,
+  env: NodeJS.ProcessEnv
+): { command: string; args: string[]; env?: NodeJS.ProcessEnv; interactive: boolean } {
+  const [exe = 'atc', ...prefix] = selfCommand
+  const helper = [...prefix, 'host-step', 'exec', requestPath]
+  switch (strategy) {
+    case 'root': {
+      // Already root: an inherited SUDO_UID/PKEXEC_UID (a server started with `sudo atc start`) would
+      // make the executor trust only that user's folder, while this root process created its own.
+      const { SUDO_UID: _sudo, PKEXEC_UID: _pkexec, ...clean } = env
+      return { command: exe, args: helper, env: clean, interactive: true }
+    }
+    case 'sudo-tty':
+      // -k: always ask on this terminal; never reuse a cached ticket for a privileged install.
+      return { command: 'sudo', args: ['-k', '--', exe, ...helper], interactive: true }
+    case 'pkexec':
+      return { command: 'pkexec', args: [exe, ...helper], interactive: false }
+    case 'windows-runas': {
+      const quoted = helper.map((a) => `'${a.replace(/'/g, "''")}'`).join(',')
+      const script =
+        `$p = Start-Process -FilePath '${exe.replace(/'/g, "''")}' -ArgumentList @(${quoted}) ` +
+        '-Verb RunAs -Wait -PassThru -WindowStyle Hidden; exit $p.ExitCode'
+      return {
+        command: 'powershell.exe',
+        args: ['-NoProfile', '-NonInteractive', '-Command', script],
+        interactive: false,
+      }
+    }
+  }
+}
+
+/** A prompt the person dismissed: pkexec's 126, UAC's "canceled by the user", sudo's three wrong tries. */
+export function wasDeclined(strategy: ElevationStrategy, code: number | null, stderr: string): boolean {
+  if (strategy === 'pkexec') return code === 126
+  if (strategy === 'windows-runas') return /cancel+ed by the user/i.test(stderr)
+  if (strategy === 'sudo-tty') return /incorrect password attempts|a password is required/i.test(stderr)
+  return false
+}
+
+export function createElevator(
+  deps: ElevatorDeps & { env?: NodeJS.ProcessEnv },
+  platform: NodeJS.Platform = process.platform
+): Elevator {
   return {
     select: selectStrategy,
     async run(strategy, requestPath) {
-      switch (strategy) {
-        case 'root': {
-          const result = await deps.exec(exe as string, [...prefix, 'host-step', 'exec', requestPath], {
-            timeoutMs: 30 * 60_000,
-            stdio: 'inherit',
-          })
-          const file = await deps.readResult(requestPath)
-          if (file) return { kind: 'result', result: file }
-          return {
-            kind: 'result',
-            result: {
-              schema_version: 1,
-              step_id: '',
-              outcome: 'failed',
-              exit_code: result.code,
-              log_tail: result.error ?? result.stderr.slice(-2000),
-              finished_at: Date.now(),
-            },
-          }
-        }
-        case 'manual':
-          return {
-            kind: 'pending',
-            instructions: manualInstructions(deps.selfCommand, requestPath, platform),
-          }
-        case 'sudo-tty':
-        case 'pkexec':
-        case 'windows-runas':
-          throw new AtcError('ATC_NOT_IMPLEMENTED', `Elevation through ${strategy} is not implemented yet.`, {
-            details: 'planned for iteration 4 (engines, setup, managed environment, elevation)',
-            hint: manualInstructions(deps.selfCommand, requestPath, platform),
-          })
+      if (strategy === 'manual')
+        return { kind: 'pending', instructions: manualInstructions(deps.selfCommand, requestPath, platform) }
+      const line = elevatedCommand(strategy, deps.selfCommand, requestPath, deps.env ?? {})
+      const result = await deps.exec(line.command, line.args, {
+        timeoutMs: ELEVATED_STEP_TIMEOUT_MS,
+        ...(line.interactive ? { stdio: 'inherit' as const } : {}),
+        ...(line.env ? { env: line.env } : {}),
+      })
+      const file = await deps.readResult(requestPath)
+      if (file) return { kind: 'result', result: file }
+      // No result file: the helper never ran (a declined prompt) or could not write one.
+      return {
+        kind: 'result',
+        result: {
+          schema_version: 1,
+          step_id: '',
+          outcome: wasDeclined(strategy, result.code, result.stderr) ? 'declined' : 'failed',
+          exit_code: result.code,
+          log_tail:
+            (result.error ?? result.stderr.slice(-2000)) || `${line.command} exited with ${result.code}`,
+          finished_at: Date.now(),
+        },
       }
     },
   }

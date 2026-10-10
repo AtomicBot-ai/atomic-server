@@ -215,10 +215,11 @@ export class TuiController implements TuiControllerLike {
   private async followLog(): Promise<void> {
     const path = this.deps.paths.daemonLog
     try {
-      const { lines, offset } = await readLogTail(path, MAX_LOG_LINES)
+      const { lines, offset, id } = await readLogTail(path, MAX_LOG_LINES)
       this.dispatch({ type: 'logs-reset', lines })
       await followLog(path, offset, {
         signal: this.abort.signal,
+        ...(id ? { id } : {}),
         onLines: (appended) => this.dispatch({ type: 'logs-append', lines: appended }),
         onReset: () => this.dispatch({ type: 'logs-reset', lines: [] }),
       })

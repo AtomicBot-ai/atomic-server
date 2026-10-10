@@ -31,6 +31,18 @@ export class ClientKeys {
       }
     })
   }
+  /**
+   * Make `token` one of the keys, adding it under `name` when it is not there yet. A key handed to
+   * `atc api start --api-key` or `ATC_API_KEY` must work, and the core checks the keyring only.
+   */
+  async ensure(token: string, name: string): Promise<void> {
+    if (!/^\S{8,512}$/.test(token)) throw new Error('An API key is 8 to 512 characters without spaces.')
+    await mutateDocument<KeyDocument>(this.path, { version: 1, keys: [] }, (doc) => {
+      if (doc.keys.some((k) => k.token === token)) return doc
+      if (doc.keys.length >= 100) throw new Error('Revoke an unused key before creating another.')
+      return { ...doc, keys: [...doc.keys, { id: randomUUID(), name, token, createdAt: Date.now() }] }
+    })
+  }
   async list(): Promise<ClientKeyView[]> {
     return (await this.read()).keys.map(({ token, ...key }) => ({
       ...key,

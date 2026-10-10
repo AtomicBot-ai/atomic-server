@@ -25,13 +25,32 @@ the code disagree, fix the page.
 | Process | Lifetime | Responsibilities |
 | --- | --- | --- |
 | `atc <command>` | seconds | Parse, resolve paths and config, `attach` (or spawn) the daemon, hold a lease while it works, print one result, exit with a code. Never holds a URL or token outside `src/core-link/`. |
-| `atc daemon` (hidden) | until `atc stop`, `POST /shutdown` or a signal | Owns the data folder through the core's lock. Runs the core in-process, the admin server, the hardware push, the host-step loop; writes `daemon.json`; cleans up on exit. Spawned by `start` and `admin`; run in place by a service or `atc start --foreground` (iteration 2). Users know it as "the server" ([`concepts.md`](concepts.md)). |
+| `atc daemon` (hidden) | until `atc stop`, `POST /shutdown` or a signal | Owns the data folder through the core's lock. Runs the core in-process, the admin server, the hardware push, the host-step loop; writes `daemon.json`; cleans up on exit. Spawned by `start` and `admin`; run in place by `atc start --foreground` (containers, OS services). Users know it as "the server" ([`concepts.md`](concepts.md)). |
 | engines | per session | Children of the daemon, journalled by the core in `processes.json`; a later owner reaps orphans. |
 | `atc host-step exec` (hidden) | seconds | The privileged half of a managed-runtime step: file in, file out, no network. |
 
 Crashes: the daemon is the core; they fall together. Recovery is the core's model — the next command
-respawns, the new owner reaps orphans, managed operations recover from the core's store. There is no
-supervisor in the scaffold; real supervision is `atc service` (iteration 6) or the container runtime.
+respawns, the new owner reaps orphans, managed operations recover from the core's store. Supervision
+is the OS service manager (`atc service`) or the container runtime.
+
+## OS services
+
+`atc service install` puts `atc start --foreground --data-folder <data>` under the platform's manager
+(`src/host/service-manager.ts` for the definitions, `service-plans.ts` for the steps):
+
+| Platform | Per user | `--system` (root / elevated) | Restart |
+| --- | --- | --- | --- |
+| Linux | systemd user unit, `~/.config/systemd/user/<name>.service`; `loginctl enable-linger` keeps it after logout | `/etc/systemd/system/<name>.service`, `User=` from `--user` (default `SUDO_USER`) | `Restart=on-failure`, 5 s |
+| macOS | LaunchAgent in `gui/<uid>` | LaunchDaemon, `UserName` from `--user` | `KeepAlive { SuccessfulExit: false }`, 5 s |
+| Windows | scheduled task at the user's logon | scheduled task at boot as SYSTEM | `RestartOnFailure` every minute; no 72 h execution limit |
+
+All three restart only after a failure. `atc stop` exits 0, so the server stays stopped until
+`atc service start`, the next boot or logon. systemd and launchd stop with SIGTERM, which the server
+treats as a graceful stop; a scheduled task has no signal, so `atc service stop|restart|uninstall` on
+Windows stops the server through its control API first. `install` stops a server started by hand for
+the same folder, so the service can take the lock. A system-wide service runs as another account than
+the one that installs it, so the data folder is passed explicitly and printed. ADR 2026-10-09 "Run the
+server under the OS service manager".
 
 ## The data folder
 
@@ -50,7 +69,9 @@ rest.
 <data>/atc/run/daemon.json        {schema_version, pid, instance_id, state, atc_version, core_version, control_url, admin_url, started_at}
 <data>/atc/run/admin-token        0600: 32 random bytes, base64url
 <data>/atc/run/host-steps/        <step_id>.request.json, <step_id>.result.json, journal.json
-<data>/atc/logs/daemon.log        the daemon's stderr (the spawner appends; rotation by log.* is iteration 2)
+<data>/atc/logs/daemon.log        the server's own log, timestamped lines, rotated by size (log.maxSizeMb, log.maxFiles → .1, .2 …)
+<data>/atc/logs/daemon.out.log    the server process's stdout and stderr from its last start (crash output before the logger is up)
+<data>/atc/logs/service.log       the same for a launchd service
 <data>/atc/cache/                 catalog and recommendation caches (iteration 3)
 ```
 
@@ -61,7 +82,7 @@ The managed-runtime store is not here: it is the core's shared per-user root, an
 | Listener | Default | Bound to | Credential | Who holds it |
 | --- | --- | --- | --- | --- |
 | Core control API `/atomic/v1` | random port | loopback | `control-token` (Bearer) | The core writes it (0600). The daemon reads it from the facade; commands read it through `attachToOwner`. **Never** leaves the machine's processes: not in the browser, not in the helper, not in a log. |
-| Public API `/v1` | 1337 | `api.host` (127.0.0.1) | API key, a core setting (`server.api_key`) | Clients of the model. `api.requireKey` refuses a non-loopback bind without a key (iteration 2). |
+| Public API `/v1` | 1337 | `api.host` (127.0.0.1) | A key from the keyring `atc/client-keys.json` (0600; owner-only ACL on Windows) | Clients of the model. The server creates the keyring when it starts (seeded from `ATC_API_KEY`), and the core checks it on every request on any address, so there is no keyless API. `atc api start --api-key` adds that key to the keyring. |
 | Admin `/`, `/api/*` | 1338 (`0` = random, published in `daemon.json`) | loopback only | `admin-token` → session cookie | The daemon writes the token (0600); `atc admin` puts it in a URL fragment once; the browser keeps only the cookie. |
 
 Two things reach the outside: the public API for model clients and the admin for people. The control API
@@ -77,7 +98,8 @@ and its token stay behind both, mirroring the desktop app's Rust bridge.
    `atc start`.
 3. Otherwise `inspectLock`: if nobody owns the folder, spawn `atc daemon --data-folder <data>
    --control-port 0 [--no-admin] [--admin-port N] …` detached, `windowsHide`, stdin ignored, stdout and
-   stderr appended to `atc/logs/daemon.log` (a file, never a pipe the parent could close), then `unref`.
+   stderr to `atc/logs/daemon.out.log`, overwritten (a file, never a pipe the parent could close), then
+   `unref`. The server writes and rotates `daemon.log` itself, so that file has one writer.
    If someone is already starting, just wait. Readiness is the core's lock: `waitForPublishedOwner`, 20 s.
 4. Attach again, then read `atc/run/daemon.json`. Missing, or an `instance_id` that differs from the lock →
    `ATC_DAEMON_FOREIGN`: the owner is a core that is not an `atc` daemon (typically the core's own CLI
@@ -90,6 +112,16 @@ interval the core returns, `DELETE` on exit. Components inside the daemon never 
 otherwise `atc stop` would always need `--force`. `atc stop` posts `/shutdown { client_id, force? }` under
 its own lease, waits up to 30 s for the lock to change hands, and only with `--kill` sends `SIGKILL`
 (`taskkill /T /F` on Windows).
+
+**A server from another build.** After an update the lock names another core version and the core's
+attach refuses (`CORE_PROTOCOL_MISMATCH`). `src/core-link/stale-owner.ts` then talks to the old owner
+directly with the lock record and the control token: snapshot, check the instance and its clients,
+`/shutdown`, wait for the lock (with `--kill`, the pid the lock names; an unknown control protocol is
+never spoken to). Without `launch` a command gets `ATC_DAEMON_OUTDATED`; `atc status` shows
+`outdated: true` and exits 0; `start`, `restart` and launching commands replace it (refused while other
+clients are attached, unless `--force`). A spawned server that dies while starting is reported as
+`ATC_DAEMON_START_FAILED` with the last lines of `daemon.out.log`. ADR 2026-10-09 "Replace a server another
+build left running".
 
 ## The terminal UI is a client
 
@@ -113,7 +145,10 @@ the foreground process, and changes nothing above:
 `src/daemon/daemon.ts`, `startDaemon()`:
 
 1. `AtomicCore.create({ ownerScope: 'cli', dataFolder, controlPort, env, logger, telemetry: { host: 'atc',
-   hostVersion, enabled } })` — takes `instance.lock`, writes `control-token`, starts the control API.
+   hostVersion, enabled? } })` — takes `instance.lock`, writes `control-token`, starts the control API.
+   `enabled` is passed only when the person chose (`--telemetry`, or `telemetry.enabled` set in the
+   config); otherwise the core's own precedence applies (`DO_NOT_TRACK`, `ATOMIC_CORE_TELEMETRY`, its
+   stored consent, then on). `src/telemetry/`.
 2. `RelayHub` (the admin's event ring) and the daemon's own `HttpCoreLink` over a `CoreClient` with the
    facade's token and `InProcessEvents` (the emitter, not SSE to itself). The facade exposes no hardware,
    backends, disk or environments methods, so the daemon calls its own core over loopback for those.
@@ -132,8 +167,13 @@ the foreground process, and changes nothing above:
    `Promise.race([io.waitForShutdown(shutdown), core.stopped])`. Shutdown: `core.shutdown()`, stop the
    poll, unsubscribe, close the admin, remove `daemon.json` (only if it is still ours), exit 0.
 
-Not in the scaffold: auto-starting the public API and `models.autoLoad` (iteration 2), log rotation for
-the daemon file (the `fileSink` exists), a supervisor.
+Logging: the server's logger writes `daemon.log` through `fileSink` (text lines, `log.level`,
+rotation by `log.maxSizeMb`/`log.maxFiles`); `start --foreground` also sends every line to stderr, for
+journald, launchd and `docker logs`. `atc logs` and the TUI read the tail across `daemon.log.1` and follow
+the file through a rotation by its identity (dev and inode), so no line is lost or read twice. When the
+server is not running, `atc logs` also prints what its last start wrote to `daemon.out.log`.
+
+Not done here: auto-starting the public API and `models.autoLoad` (iteration 2).
 
 ## The admin security model
 
@@ -151,8 +191,9 @@ the daemon file (the `fileSink` exists), a supervisor.
 - **Routes** (`bff.ts`): `GET /api/status`, `POST|DELETE /api/session`, `GET /api/config` (`PATCH` is
   iteration 5), `GET /api/events` (SSE), `ANY /api/core/*` → the control API with the daemon's token, but only
   on the allowlist: reads of `/health /snapshot /sessions /server /backends /hardware /environments
-  /settings /telemetry /disk`; writes of model load/unload, server start/stop, backends, hardware override,
-  settings, environments, downloads, disk, GGUF validation. `/shutdown`, `/clients`, telemetry consent and
+  /settings /telemetry /disk` and their sub-paths; writes only on the exact routes of `WRITE_ROUTES` (model
+  load/unload, server start/stop, backends, hardware override, `PATCH /settings/:provider`, environment
+  operations, download cancel, disk, GGUF validation). A page can never post a host-step receipt. `/shutdown`, `/clients`, telemetry consent and
   cloud keys are never reachable from a page. `/api/setup/*`, `/api/logs`, `/api/engines/:p/schema` answer
   501 until their iterations.
 - **Events** (`relay.ts`): one stream for the browser — the core's events plus `atc:*` — numbered `r<n>` by
@@ -194,18 +235,20 @@ Flow, in `src/host/host-step.ts` and `elevator.ts`:
 | Strategy | Chosen when (first match) | Runs | Status |
 | --- | --- | --- | --- |
 | `root` | euid 0, or an elevated Windows process | the helper directly | works |
-| `pkexec` | the daemon, on Linux, with `DISPLAY`/`WAYLAND_DISPLAY` and `pkexec` on PATH | `pkexec atc host-step exec …` (a polkit agent prompts) | iteration 4 |
-| `windows-runas` | Windows, in the daemon or with a terminal | `Start-Process -Verb RunAs -Wait` (UAC) | iteration 4 |
-| `sudo-tty` | a command (not the daemon) with a terminal and `sudo` | `sudo -k -- atc host-step exec …`, stdio inherited for the password | iteration 4 |
+| `pkexec` | the daemon, on Linux, with `DISPLAY`/`WAYLAND_DISPLAY` and `pkexec` on PATH | `pkexec atc host-step exec …` (a polkit agent prompts; exit 126 is a declined prompt) | works |
+| `windows-runas` | Windows, in the daemon or with a terminal | `Start-Process -Verb RunAs -Wait` (UAC; "canceled by the user" is declined) | works |
+| `sudo-tty` | a command (not the daemon) with a terminal and `sudo` | `sudo -k -- atc host-step exec …`, stdio inherited for the password | works |
 | `manual` | anything else — a headless daemon without a display, no sudo | nothing; the request file stays and the command is printed | works |
 
-Today `Elevator.run` implements `root` and `manual`; the other three throw `ATC_NOT_IMPLEMENTED` with the
-manual command as the hint. The helper (`src/host/helper.ts`) answers `failed` with
-`MANAGED_ADAPTER_UNAVAILABLE` for every request, because the core ships no recipes yet
-(`provisionerFor()` is null on `main`), and `HttpCoreLink.environments.*` turns the core's "no such control
-route" into `ATC_NOT_IMPLEMENTED`. `src/host/managed-types.ts` mirrors the branch's contract types until the
-branch lands. The journal carries the whole step, so a manual result found after a daemon restart is posted
-from the journal alone (`HostStepExecutor.checkPendingResults`).
+`root` clears an inherited `SUDO_UID`/`PKEXEC_UID`, so the executor trusts the folder this root process
+created. A strategy that ends with no result file reports `declined` (the person dismissed the prompt) or
+`failed`. The helper (`src/host/helper.ts`) runs the core's own executor (`executeHostStep` from
+`@atomic-chat/core/host`, the code the desktop app runs): it refuses a request whose recipe, digests or
+parameters do not match this build, trusts only a request folder owned by the invoking user with mode
+0700 (on Windows, an owner-only ACL — which `<data>\atc` has), and writes the result file. The daemon writes
+`parameters` into the request verbatim, creates the folder 0700 and the file 0600, and forwards the
+result's `log_tail` in the receipt, which the core turns into the error's details on a failure. The
+contract types are the core's (`src/host/managed-types.ts` re-exports them).
 
 ## The core's role, atc's role
 
@@ -215,7 +258,7 @@ from the journal alone (`HostStepExecutor.checkPendingResults`).
 | Models | `model.yml`, registry, GGUF metadata, sessions, load/unload; the downloader and HF helpers as a library. | Installs models on the client side like the desktop app does: resolve, disk check, download, `model.yml` (iteration 3, over `@atomic-chat/core/models` and `/downloads`). |
 | Public API | The `/v1` server, its settings (`server.api_key`, `enable_on_startup`). | Where and how to expose it: `api.*` config, `atc api` (iteration 2). |
 | Environments | The managed-runtime state machine, store, image pulls, WSL import, recovery. | Consent UI and the privileged step (above). |
-| Settings | Engine parameters (`GET/PATCH /settings/:provider`), telemetry consent. | `atc`'s own `config.json`; `config set telemetry.enabled` also reaches the core (iteration 2). |
+| Settings | Engine parameters (`GET/PATCH /settings/:provider`), telemetry consent. | `atc`'s own `config.json`; `config set telemetry.enabled` also reaches a running core (`PUT /telemetry`). |
 | Ownership | The lock, the token, attach semantics, client leases, shutdown. | `daemon.json` to tell an `atc` daemon from the core's CLI daemon; spawn with a log file. |
 
 The rule in `AGENTS.md` §8 follows from this table: `atc` never copies core logic; a missing capability is

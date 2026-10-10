@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { configDocument, readSecrets, readTextFile, writeConfigFile, writeSecrets } from './file.js'
-import { defaultConfig } from './schema.js'
+import { CONFIG_VERSION, defaultConfig } from './schema.js'
 
 const dir = mkdtempSync(join(tmpdir(), 'atc-config-'))
 afterAll(() => rmSync(dir, { recursive: true, force: true }))
@@ -19,7 +19,7 @@ describe('config files', () => {
     expect(doc['api']!['extra']).toBe(1)
     expect(doc['custom']).toEqual({ keep: true })
     expect(await readTextFile(join(dir, 'missing'))).toBeUndefined()
-    expect(configDocument(config, {})['version']).toBe(3)
+    expect(configDocument(config, {})['version']).toBe(CONFIG_VERSION)
   })
 
   it('keeps secrets private', async () => {

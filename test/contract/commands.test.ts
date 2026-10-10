@@ -59,6 +59,29 @@ describe('config', () => {
   })
 })
 
+describe('telemetry', () => {
+  it('hands a changed consent to the running server at once, and only to a running one', async () => {
+    t = testRun()
+    expect(await t.run(['config', 'set', 'telemetry.enabled', 'false'])).toBe(0)
+    expect(t.link.calls).toContainEqual(
+      expect.objectContaining({ method: 'PUT', path: '/telemetry', body: { enabled: false } })
+    )
+    t.cleanup()
+    t = testRun({ running: false })
+    expect(await t.run(['config', 'set', 'telemetry.enabled', 'true'])).toBe(0)
+    expect(t.link.calls).toEqual([])
+  })
+
+  it('says once, after the first start, that reports go out and how to stop them', async () => {
+    t = testRun({ running: false })
+    expect(await t.run(['start'])).toBe(0)
+    expect(t.io.err.join('')).toContain('atc config set telemetry.enabled false')
+    t.io.err.length = 0
+    expect(await t.run(['start'])).toBe(0)
+    expect(t.io.err.join('')).not.toContain('telemetry')
+  }, 120_000)
+})
+
 describe('admin and doctor', () => {
   it('prints a login link only when the daemon has an admin', async () => {
     t = testRun()
@@ -83,11 +106,11 @@ describe('admin and doctor', () => {
     expect(code).toBe(0)
   })
 
-  it('shows logs, and names the stub for --follow', async () => {
+  it('shows logs, and refuses --follow with --json', async () => {
     t = testRun()
     expect(await t.run(['logs'])).toBe(0)
     expect(t.io.err.join('')).toContain('no log yet')
-    expect(await t.run(['logs', '-f'])).toBe(3)
+    expect(await t.run(['logs', '-f', '--json'])).toBe(2)
   })
 })
 

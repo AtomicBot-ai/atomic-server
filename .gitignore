@@ -25,3 +25,4 @@ test/tmp/
 
 # Bun compile temp files
 *.bun-build
+.e2e-acl/

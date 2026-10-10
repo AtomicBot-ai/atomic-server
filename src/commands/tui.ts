@@ -10,6 +10,7 @@ import { readTextFile, resolveConfig } from '../config/index.js'
 import { CHECKS, runChecks } from '../doctor/index.js'
 import { HostStepJournal } from '../host/index.js'
 import { colorEnabled } from '../output/index.js'
+import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../telemetry/index.js'
 
 const SCREENS = [
   'chat',
@@ -55,8 +56,10 @@ export const tuiCommand = defineCommand({
     const loadConfig = async () =>
       resolveConfig({ fileText: await readTextFile(paths.configFile), env: io.env })
     const { runTui } = await import('../tui/index.js')
+    const notice = await takeTelemetryNotice({ config: await ctx.config(), paths, env: io.env })
     return runTui({
       terminal,
+      ...(notice ? { notice: TELEMETRY_NOTICE } : {}),
       agentHost: {
         env: io.env,
         cwd: io.cwd,

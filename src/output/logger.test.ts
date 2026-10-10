@@ -1,10 +1,10 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { recordingIo } from '../io.js'
 import { colorsFor } from './color.js'
-import { createLogger, fileSink, formatEntry, levelFromFlags, stderrSink, tee } from './logger.js'
+import { createLogger, fileSink, formatEntry, levelFromFlags, stderrSink } from './logger.js'
 import type { LogEntry } from './logger.js'
 
 describe('logger', () => {
@@ -40,16 +40,59 @@ describe('logger', () => {
     const dir = mkdtempSync(join(tmpdir(), 'atc-log-'))
     afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
-    it('appends and rotates by size', () => {
+    const write = (path: string, options: Parameters<typeof fileSink>[1], lines: string[]) => {
+      const log = createLogger(fileSink(path, options), { level: 'debug', now: () => 0 })
+      for (const line of lines) log.info(line)
+    }
+
+    it.each([
+      [1, ['d.log']],
+      [2, ['d.log', 'd.log.1']],
+      [3, ['d.log', 'd.log.1', 'd.log.2']],
+    ])('keeps exactly %i file(s) after many rotations', (maxFiles, expected) => {
       const path = join(dir, 'd.log')
-      const sink = tee(fileSink(path, { maxSizeBytes: 120, maxFiles: 3 }))
-      const log = createLogger(sink, { level: 'debug', now: () => 0 })
-      for (let i = 0; i < 6; i += 1) log.info(`line ${i} ${'x'.repeat(30)}`)
-      const files = readdirSync(dir).sort()
-      expect(files).toContain('d.log')
-      expect(files).toContain('d.log.1')
-      expect(files.length).toBeLessThanOrEqual(3)
-      expect(readFileSync(path, 'utf8').trim().split('\n').length).toBeGreaterThanOrEqual(1)
+      write(
+        path,
+        { maxSizeBytes: 200, maxFiles },
+        Array.from({ length: 40 }, (_, i) => `line ${i} ${'x'.repeat(30)}`)
+      )
+      expect(readdirSync(dir).sort()).toEqual(expected)
+      for (const name of expected) expect(statSync(join(dir, name)).size).toBeLessThanOrEqual(200)
+    })
+
+    it('measures lines in bytes, not characters', () => {
+      const path = join(dir, 'd.log')
+      // 30 Cyrillic letters are 60 bytes: three such lines cross 200 bytes, as characters they would not.
+      write(path, { maxSizeBytes: 200, maxFiles: 2, format: 'text' }, [
+        'ж'.repeat(30),
+        'ж'.repeat(30),
+        'ж'.repeat(30),
+      ])
+      expect(readdirSync(dir)).toContain('d.log.1')
+    })
+
+    it('keeps the newest lines in the live file and the ones before in .1', () => {
+      const path = join(dir, 'd.log')
+      write(path, { maxSizeBytes: 120, maxFiles: 2, format: 'text' }, ['one', 'two', 'three', 'four', 'five'])
+      const live = readFileSync(path, 'utf8')
+      expect(live).toContain('five')
+      expect(readFileSync(`${path}.1`, 'utf8') + live).toContain('four')
+    })
+
+    it('writes the human line with a timestamp in text format, JSON otherwise', () => {
+      const text = join(dir, 't.log')
+      const json = join(dir, 'j.log')
+      createLogger(fileSink(text, { maxSizeBytes: 1e6, maxFiles: 2, format: 'text' }), {
+        level: 'info',
+        scope: 'core',
+        now: () => 0,
+      }).warn('hot')
+      createLogger(fileSink(json, { maxSizeBytes: 1e6, maxFiles: 2 }), { level: 'info', now: () => 0 }).info(
+        'x',
+        { a: 1 }
+      )
+      expect(readFileSync(text, 'utf8')).toBe('1970-01-01T00:00:00.000Z [warn] core: hot\n')
+      expect(JSON.parse(readFileSync(json, 'utf8'))).toMatchObject({ level: 'info', message: 'x', a: 1 })
     })
   })
 })
