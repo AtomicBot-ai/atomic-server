@@ -6,7 +6,7 @@
  * while a person runs the manual command — is repaired on the next start rather than repeated.
  */
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Logger } from '../output/logger.js'
 import type { ElevationContext, Elevator, HostStepRequestFile, HostStepResultFile } from './elevator.js'
@@ -69,7 +69,8 @@ export function validateHostStep(step: ManagedHostStep, operation: { revision: n
 export function receiptFor(
   step: ManagedHostStep,
   outcome: HostStepOutcomeKind,
-  receiptId: string
+  receiptId: string,
+  logTail?: string
 ): ManagedHostReceipt {
   return {
     step_id: step.step_id,
@@ -79,6 +80,8 @@ export function receiptFor(
     parameters_digest: step.parameters_digest,
     outcome,
     receipt_id: receiptId,
+    // The step's own log: on a failure the core makes it the error's details (the cause, in words).
+    ...(logTail ? { log_tail: logTail.slice(-16 * 1024) } : {}),
   }
 }
 
@@ -130,9 +133,15 @@ export class HostStepExecutor {
       expected_operation_revision: step.expected_operation_revision,
       data_folder: this.deps.dataFolder,
       requested_at: this.now(),
+      // Verbatim: the executor recomputes `parameters_digest` from them and refuses a mismatch.
+      parameters: step.parameters,
     }
-    await mkdir(this.deps.hostStepsDir, { recursive: true })
-    await writeFile(requestPath, `${JSON.stringify(request, null, 2)}\n`)
+    // The executor trusts only a folder its invoking user owns with mode 0700 and a request no one
+    // else can write; the umask (a desktop's 002) must not decide that.
+    await mkdir(this.deps.hostStepsDir, { recursive: true, mode: 0o700 })
+    await chmod(this.deps.hostStepsDir, 0o700).catch(() => undefined)
+    await writeFile(requestPath, `${JSON.stringify(request, null, 2)}\n`, { mode: 0o600 })
+    await chmod(requestPath, 0o600).catch(() => undefined)
     const base = {
       operation_id: operation.operation_id,
       step_id: step.step_id,
@@ -159,7 +168,7 @@ export class HostStepExecutor {
       outcome: outcome.result.outcome,
       updated_at: this.now(),
     })
-    await this.post(base, outcome.result.outcome)
+    await this.post(base, outcome.result.outcome, outcome.result.log_tail)
     return 'posted'
   }
 
@@ -170,7 +179,7 @@ export class HostStepExecutor {
       if (entry.state !== 'pending-manual') continue
       const result = await (this.deps.readResult ?? readResultFile)(entry.request_path)
       if (!result) continue
-      await this.post(entry, result.outcome)
+      await this.post(entry, result.outcome, result.log_tail)
       posted += 1
     }
     return posted
@@ -182,9 +191,10 @@ export class HostStepExecutor {
 
   private async post(
     entry: Pick<HostStepJournalEntry, 'operation_id' | 'step_id' | 'step' | 'request_path'>,
-    outcome: HostStepOutcomeKind
+    outcome: HostStepOutcomeKind,
+    logTail?: string
   ): Promise<void> {
-    await this.deps.post(entry.operation_id, receiptFor(entry.step, outcome, this.deps.newId()))
+    await this.deps.post(entry.operation_id, receiptFor(entry.step, outcome, this.deps.newId(), logTail))
     await this.deps.journal.upsert({
       operation_id: entry.operation_id,
       step_id: entry.step_id,

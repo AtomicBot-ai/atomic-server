@@ -5,17 +5,15 @@
  */
 
 import type { CoreSnapshot } from '@atomic-chat/core/client'
-import { inspectLock } from '@atomic-chat/core/host'
 import type { AtcPaths } from '../config/paths.js'
 import { AtcError } from '../errors/index.js'
 import { readDaemonRecord } from './daemon-record.js'
 import type { DaemonRecord } from './daemon-record.js'
 import { waitForDaemonReady } from './attach.js'
 import type { CoreLink } from './link.js'
+import { waitForRelease } from './stale-owner.js'
 
 export type AttachFn = (options: { launch: boolean; daemonArgs?: readonly string[] }) => Promise<CoreLink>
-
-export const STOP_TIMEOUT_MS = 30_000
 
 /** The link when a daemon owns the folder, `undefined` when none does; other failures throw. */
 export async function attachIfRunning(attach: AttachFn): Promise<CoreLink | undefined> {
@@ -84,22 +82,6 @@ export async function startDaemon(
   const link = await attach({ launch: true, daemonArgs })
   await waitForDaemonReady(paths.daemonRecord, link.endpoint.instanceId)
   return link
-}
-
-/** True once no daemon with `instanceId` owns the folder any more; false after `timeoutMs`. */
-export async function waitForRelease(
-  paths: Pick<AtcPaths, 'layout'>,
-  instanceId: string,
-  now: () => Date,
-  timeoutMs = STOP_TIMEOUT_MS
-): Promise<boolean> {
-  const deadline = now().getTime() + timeoutMs
-  while (now().getTime() < deadline) {
-    const state = await inspectLock(paths.layout)
-    if (state.kind !== 'owned' || state.record.instance_id !== instanceId) return true
-    await new Promise((r) => setTimeout(r, 200))
-  }
-  return false
 }
 
 /**

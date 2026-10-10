@@ -5,7 +5,9 @@
  * that attaches to it.
  */
 
+import { mkdir } from 'node:fs/promises'
 import { ClientKeys } from '../terminal-data/index.js'
+import { telemetryConsent } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
 import { CoreClient } from '@atomic-chat/core/client'
 import { AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
@@ -14,7 +16,13 @@ import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { FIELDS, getAt } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
-import { HostStepExecutor, HostStepJournal, probeHardware, toOverride } from '../host/index.js'
+import {
+  HostStepExecutor,
+  HostStepJournal,
+  probeHardware,
+  restrictToOwner,
+  toOverride,
+} from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
@@ -34,6 +42,8 @@ export interface DaemonOptions {
   now?: () => number
   /** Test seam: skip the hardware probe (it spawns `nvidia-smi`). */
   probeHardware?: boolean
+  /** Test seam: how the core is created (the tests record the options it is given). */
+  createCore?: typeof AtomicCore.create
 }
 
 export interface RunningDaemon {
@@ -54,10 +64,25 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   const now = options.now ?? Date.now
   const startedAt = now()
   const coreLog = log.child('core')
+  await mkdir(paths.atcDir, { recursive: true })
+  const denied = await restrictToOwner(paths.atcDir, {
+    platform: host.facts.platform,
+    user: io.env['USERDOMAIN'] ? `${io.env['USERDOMAIN']}\\${host.facts.username}` : host.facts.username,
+    exec: host.exec,
+  })
+  if (denied) log.warn(`could not restrict ${paths.atcDir} to this user: ${denied}`)
   const keys = new ClientKeys(paths.atcDir)
-  const core = await AtomicCore.create({
+  // Before the core: with no keyring the public server would check no key at all.
+  await keys.initialize(io.env['ATC_API_KEY'] ?? '')
+  const consent = telemetryConsent(options.telemetry, options.config)
+  const core = await (options.createCore ?? AtomicCore.create.bind(AtomicCore))({
+    // The keyring, read on every public request: one of its keys is required, a revoked one is refused
+    // at once (`[]` refuses everyone). The core's own `server.api_key` does not apply.
     publicApiKeys: () => keys.current(),
+    // Model files of 32 MiB and more come over four byte-range streams.
     downloadStreams: 4,
+    // A model check gives up reading a remote GGUF header after 20 s instead of hanging on a slow mirror.
+    remoteGgufTimeoutMs: 20_000,
     ownerScope: 'cli',
     dataFolder: paths.dataFolder,
     controlPort: options.controlPort,
@@ -67,7 +92,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     telemetry: {
       host: 'atc',
       hostVersion: ATC_VERSION,
-      enabled: options.telemetry ?? options.config.values.telemetry.enabled,
+      // Only an explicit choice: the default would override DO_NOT_TRACK and the core's stored consent.
+      ...(consent !== undefined ? { enabled: consent } : {}),
     },
   })
   // Published before anything slow: a command attaching now must see an atc daemon, not a foreign owner.
@@ -229,11 +255,26 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
 
 /** Run as the foreground process until a signal or a control-API shutdown; the exit code. */
 export async function runDaemon(options: DaemonOptions & { printReadyLine?: boolean }): Promise<number> {
+  // Listen before starting: a signal during startup (the core, the hardware probe, the admin bind)
+  // would otherwise kill the process with Node's default handler and leave `daemon.json` behind.
+  const started: { daemon?: RunningDaemon } = {}
+  let stopRequested = false
+  let stopping: Promise<void> | undefined
+  const stop = (d: RunningDaemon) => (stopping ??= d.shutdown())
+  const signalled = options.io.waitForShutdown(async () => {
+    stopRequested = true
+    if (started.daemon) await stop(started.daemon)
+  })
   const daemon = await startDaemon(options)
+  started.daemon = daemon
+  if (stopRequested) {
+    await stop(daemon)
+    return 0
+  }
   if (options.printReadyLine !== false)
     options.io.stdout(
       `${JSON.stringify({ ...daemon.core.readyLine(), admin_url: daemon.record.admin_url })}\n`
     )
-  await Promise.race([options.io.waitForShutdown(() => daemon.shutdown()), daemon.stopped])
+  await Promise.race([signalled, daemon.stopped])
   return 0
 }

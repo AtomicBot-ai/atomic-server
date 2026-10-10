@@ -15,9 +15,9 @@ import {
   hardwareCommand,
   modelsCommand,
   runCommand,
-  serviceCommand,
   unloadCommand,
 } from './stubs.js'
+import { serviceCommand } from './service.js'
 import { chatCommand } from './terminal.js'
 import { tuiCommand } from './tui.js'
 import { updateCommand } from './update.js'

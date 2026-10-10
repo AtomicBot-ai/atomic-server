@@ -25,9 +25,10 @@ engines are installed on demand and the core picks the build for the hardware. A
 product from the Atomic Chat desktop app; they share the core and nothing else. Words in user-facing text
 follow [`docs/concepts.md`](docs/concepts.md) ("server", not "daemon"; `run`/`unload` a model).
 
-This iteration is the **scaffold**: real where the core already does the work (daemon lifecycle, health,
-admin shell, config, doctor, the terminal UI), stubs that exit 3 everywhere else. `src/cli/not-implemented.ts`
-is the map of what is stubbed and when it lands. Bare `atc` on an interactive terminal opens the terminal UI
+Real today: the server and its lifecycle (including replacing one another build left running), OS services,
+its own rotated log, the API with its keyring, the terminal UI, the admin's dashboard, config, doctor,
+`atc update`, the installers and the signed release pipeline. The remaining stubs exit 3;
+`src/cli/not-implemented.ts` is the map of what is stubbed and when it lands. Bare `atc` on an interactive terminal opens the terminal UI
 (Ink, `src/tui/`); anywhere else it prints help and exits 2 — scripts never get a screen.
 
 ---
@@ -127,7 +128,7 @@ otherwise fails with `ATC_CONSENT_REQUIRED`.
 
 ## 6. Testing
 
-Five layers (`vitest.config.ts`, details in `docs/testing.md`):
+Six layers (`vitest.config.ts`, details in `docs/testing.md`):
 
 - **unit** — `src/**/*.test.{ts,tsx}`, next to the code, pure tables and fakes; the Ink app on
   `test/helpers/fake-terminal.ts`.
@@ -135,6 +136,8 @@ Five layers (`vitest.config.ts`, details in `docs/testing.md`):
   a real `AtomicCore` in a temporary folder (`daemon.test.ts`): lock, token, run record, admin auth, proxy, SSE.
 - **e2e** — `test/e2e/`: the built program (`dist/bin/atc-*` when present, else `node dist/bin.js`); the
   terminal UI in a real pseudo-terminal (Python's `pty`, POSIX).
+- **installers** — `test/installers/`: `install.sh` and `install.ps1` against a release on loopback, on a
+  faked machine (`npm run test:installers`).
 - **runtime-compat** — `test/runtime-compat/`: Node behaviours the daemon relies on, and Ink's raw keys and
   resize, under vitest **and** `bun test`.
 - **ui** — `packages/admin-ui`, its own vitest (jsdom).

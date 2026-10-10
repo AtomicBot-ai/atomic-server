@@ -3,8 +3,10 @@
  * the run record atc adds, the admin BFF's auth and proxy, the SSE relay, and attach-or-spawn from
  * a command's point of view. No engine is started; the core's own tests cover model loads.
  */
-import { statSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { rm } from 'node:fs/promises'
+import { AtomicCore } from '@atomic-chat/core'
 import { inspectLock } from '@atomic-chat/core/host'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { attachCore, readDaemonRecord } from '../../src/core-link/index.js'
@@ -21,6 +23,7 @@ const { paths, cleanup } = tmpDataFolder('atc-contract-')
 const log = createLogger(() => {}, { level: 'silent' })
 let daemon: RunningDaemon
 let adminUrl: string
+let coreOptions: Parameters<typeof AtomicCore.create>[0]
 
 beforeAll(async () => {
   daemon = await startDaemon({
@@ -33,6 +36,10 @@ beforeAll(async () => {
     admin: { enabled: true, host: '127.0.0.1', port: 0 },
     telemetry: false,
     probeHardware: false,
+    createCore: (options) => {
+      coreOptions = options
+      return AtomicCore.create(options)
+    },
   })
   adminUrl = daemon.admin!.url
 }, 60_000)
@@ -147,6 +154,34 @@ describe('the daemon owns the folder', () => {
     ).rejects.toMatchObject({ code: 'ATC_DAEMON_FOREIGN' })
     const { writeDaemonRecord } = await import('../../src/core-link/index.js')
     await writeDaemonRecord(paths.daemonRecord, record!)
+  })
+
+  it('gives the core the keyring, four download streams and a 20 s limit on remote GGUF reads', () => {
+    expect(coreOptions).toMatchObject({ ownerScope: 'cli', downloadStreams: 4, remoteGgufTimeoutMs: 20_000 })
+    expect(coreOptions?.publicApiKeys?.()).toEqual([expect.stringMatching(/^atc_[0-9a-f]{64}$/)])
+  })
+
+  it('never serves the public API without a key, even if nobody opened the terminal UI', async () => {
+    // The server created the keyring when it started; the API started here passes no key itself.
+    const keys = JSON.parse(readFileSync(join(paths.atcDir, 'client-keys.json'), 'utf8')) as {
+      keys: Array<{ token: string }>
+    }
+    expect(keys.keys).toHaveLength(1)
+    await daemon.link.server.start({
+      host: '127.0.0.1',
+      port: 0,
+      prefix: '/v1',
+      api_key: '',
+      trusted_hosts: [],
+      fallback_port: false,
+    })
+    const { port } = await daemon.link.server.status()
+    const models = (headers: Record<string, string> = {}) =>
+      fetch(`http://127.0.0.1:${port}/v1/models`, { headers }).then((r) => r.status)
+    expect(await models()).toBe(401)
+    expect(await models({ authorization: 'Bearer not-a-key' })).toBe(401)
+    expect(await models({ authorization: `Bearer ${keys.keys[0]!.token}` })).toBe(200)
+    await daemon.link.server.stop()
   })
 
   it('shuts down cleanly: lock released, record removed', async () => {

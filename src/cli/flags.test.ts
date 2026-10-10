@@ -24,3 +24,12 @@ describe('splitGlobalFlags', () => {
     expect(splitGlobalFlags(['--data-folder=']).error).toMatch(/needs a path/)
   })
 })
+
+describe('--version', () => {
+  it("is the global flag before a command and the command's option after it", () => {
+    expect(splitGlobalFlags(['--version']).globals.version).toBe(true)
+    const update = splitGlobalFlags(['update', '--version', '1.2.3'])
+    expect(update.globals.version).toBe(false)
+    expect(update.rest).toEqual(['update', '--version', '1.2.3'])
+  })
+})

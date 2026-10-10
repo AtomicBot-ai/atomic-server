@@ -16,6 +16,14 @@ const step: ManagedHostStep = {
   recipe_id: 'r1',
   recipe_digest: 'sha256:a',
   parameters_digest: 'sha256:b',
+  parameters: {
+    user: 'alice',
+    arch: 'x86_64',
+    family: 'apt',
+    distro_id: 'ubuntu',
+    version_id: '24.04',
+    components: ['docker-engine'],
+  },
   nonce: 'n1',
   expected_operation_revision: 2,
 }

@@ -13,6 +13,16 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 /** Key N migrates a version-N document to N+1. */
 export const MIGRATIONS: Record<number, Migration> = {
+  /**
+   * 3 → 4: `api.requireKey` is gone. The server creates its keyring when it starts and the core checks
+   * it on every request on any address, so there is no keyless API left to refuse
+   * (ADR "Require a key from the keyring for every API client").
+   */
+  3: (raw) => {
+    if (!isObject(raw['api']) || !('requireKey' in raw['api'])) return { ...raw }
+    const { requireKey: _dropped, ...api } = raw['api']
+    return { ...raw, api }
+  },
   2: (raw) => ({ ...raw }),
   /**
    * 1 → 2: `atc serve` is gone (ADR "Name the product Atomic Server and align the commands with

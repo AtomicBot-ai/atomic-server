@@ -34,20 +34,11 @@ export const PLANNED: Record<string, Iteration> = {
   'engines rm': 'I4',
   'hardware show': 'I4',
   'hardware refresh': 'I4',
-  'service install': 'I6',
-  'service uninstall': 'I6',
-  'service status': 'I6',
-  'service start': 'I6',
-  'service stop': 'I6',
 }
 
 /** Features of otherwise working commands that are still stubs (`atc logs -f`, `atc update` without `--check`). */
 export const PLANNED_PARTIAL: Record<string, Iteration> = {
-  'start --foreground': 'I2',
-  'logs --follow': 'I2',
-  'update apply': 'I6',
   'config engine.*': 'I2',
-  'host-step recipes': 'I4',
 }
 
 export function plannedPartial(feature: string): string {

@@ -3,12 +3,11 @@ import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { defaultConfig } from '../config/index.js'
 import { requestRow, startApi } from './operations.js'
 describe('shared API operations', () => {
-  it('requires a key for remote access and preserves the requested port', async () => {
+  it('starts only with a key from the keyring, on any host, and keeps the requested port', async () => {
     const link = fakeCoreLink(),
       config = defaultConfig()
-    config.api.requireKey = false
     config.api.host = '0.0.0.0'
-    await expect(startApi(link, config)).rejects.toThrow('ATC_API_KEY')
+    await expect(startApi(link, config, '')).rejects.toThrow('keyring is empty')
     expect(link.calls).toEqual([])
     await startApi(link, config, 'local-key')
     expect(link.calls[0]).toMatchObject({

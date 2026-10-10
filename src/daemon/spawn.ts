@@ -1,7 +1,8 @@
 /**
- * Start `atc daemon` as an independent process: detached, its stderr appended to the daemon log
- * file (never a pipe the parent might close), and left running when this command exits. Readiness
- * is read from the core's lock by the caller, not from this child.
+ * Start `atc daemon` as an independent process: detached, its stdout and stderr in
+ * `daemon.out.log` (never a pipe the parent might close; overwritten on each start, since the
+ * server writes and rotates `daemon.log` itself), and left running when this command exits.
+ * Readiness is read from the core's lock by the caller, not from this child.
  */
 
 import { spawn } from 'node:child_process'
@@ -27,7 +28,7 @@ export async function spawnDaemon(options: SpawnDaemonOptions): Promise<{ pid: n
   const [exe, ...prefix] = options.selfCommand
   if (!exe) throw new AtcError('ATC_INTERNAL', 'no program to start the daemon with')
   mkdirSync(options.paths.logsDir, { recursive: true })
-  const logFd = openSync(options.paths.daemonLog, 'a')
+  const logFd = openSync(options.paths.daemonOutLog, 'w')
   const args = [...prefix, ...daemonArgs(options.paths, options.args)]
   options.log.debug(`spawning: ${[exe, ...args].join(' ')}`)
   const child = spawn(exe, args, {

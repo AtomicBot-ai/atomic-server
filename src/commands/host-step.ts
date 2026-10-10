@@ -1,4 +1,3 @@
-import { readFile, writeFile } from 'node:fs/promises'
 import { defineCommand } from '../cli/index.js'
 import { runHostStepHelper } from '../host/index.js'
 
@@ -8,13 +7,8 @@ const exec = defineCommand({
   positionals: [{ name: 'request', description: 'Path to <step_id>.request.json', required: true }],
   run: async (inv, ctx) => {
     const result = await runHostStepHelper(inv.positionals[0] as string, {
-      readFile: (p) =>
-        readFile(p, 'utf8').then(
-          (t) => t,
-          () => undefined
-        ),
-      writeFile: (p, text) => writeFile(p, text),
-      now: () => ctx.now().getTime(),
+      platform: ctx.host.facts.platform,
+      env: ctx.io.env,
     })
     ctx.out.result(result, () =>
       ctx.out.line(`${result.step_id}: ${result.outcome}${result.log_tail ? ` — ${result.log_tail}` : ''}`)

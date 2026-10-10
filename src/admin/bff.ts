@@ -35,28 +35,59 @@ export const READ_ALLOW = [
   '/telemetry',
   '/disk',
 ]
-/** Control routes a page may change, by method and prefix. */
-export const WRITE_ALLOW: ReadonlyArray<[string, string]> = [
-  ['POST', '/models/'],
+/**
+ * Control routes a page may change, exactly: `:name` is one path segment, `*name` one or more (model
+ * ids contain slashes). Nothing a page does not need: not the settings import and acknowledge routes
+ * (the desktop app's migration), and never `host-step-result`, whose only writer is the daemon.
+ */
+export const WRITE_ROUTES: ReadonlyArray<readonly [string, string]> = [
+  ['POST', '/models/:provider/*model/load'],
+  ['POST', '/models/:provider/*model/load/cancel'],
+  ['POST', '/models/:provider/*model/unload'],
+  ['POST', '/models/:provider/check'],
+  ['POST', '/models/compatibility'],
+  ['POST', '/models/setup-plan'],
   ['POST', '/server/start'],
   ['POST', '/server/stop'],
   ['PUT', '/server/inspector'],
-  ['POST', '/backends/'],
-  ['PUT', '/backends/'],
-  ['DELETE', '/backends/'],
+  ['POST', '/backends/:provider/catalog'],
+  ['POST', '/backends/:provider/install'],
+  ['POST', '/backends/:provider/recommendation'],
+  ['POST', '/backends/:provider/updates'],
+  ['PUT', '/backends/:provider/optimal'],
+  ['DELETE', '/backends/:provider/:version/:backend'],
   ['PUT', '/hardware/override'],
   ['DELETE', '/hardware/override'],
-  ['PATCH', '/settings/'],
-  ['POST', '/settings/'],
-  ['POST', '/environments'],
-  ['POST', '/downloads/'],
+  ['PATCH', '/settings/:provider'],
+  ['POST', '/environments/probe'],
+  ['POST', '/environments/:environment/operations'],
+  ['POST', '/environments/:environment/reset'],
+  ['POST', '/environments/operations/:operation/cancel'],
+  ['POST', '/environments/operations/:operation/resume'],
+  ['POST', '/downloads/*task/cancel'],
   ['POST', '/disk/available'],
   ['POST', '/gguf/validate'],
 ]
 
+function routePattern(route: string): RegExp {
+  const body = route
+    .split('/')
+    .map((part) =>
+      part.startsWith(':')
+        ? '[^/]+'
+        : part.startsWith('*')
+          ? '[^/]+(?:/[^/]+)*'
+          : part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    )
+    .join('/')
+  return new RegExp(`^${body}$`)
+}
+
+const WRITE_PATTERNS = WRITE_ROUTES.map(([method, route]) => [method, routePattern(route)] as const)
+
 export function proxyAllowed(method: string, path: string): boolean {
   if (method === 'GET') return READ_ALLOW.some((p) => path === p || path.startsWith(`${p}/`))
-  return WRITE_ALLOW.some(([m, prefix]) => m === method && (path === prefix || path.startsWith(prefix)))
+  return WRITE_PATTERNS.some(([m, pattern]) => m === method && pattern.test(path))
 }
 
 export interface BffDeps {

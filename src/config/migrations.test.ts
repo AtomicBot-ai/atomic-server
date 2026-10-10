@@ -30,6 +30,18 @@ describe('migrateConfig', () => {
     expect(migrateConfig(from)).toEqual({ raw: to, migratedFrom: 1 })
   })
 
+  it.each([
+    [
+      'api.requireKey is dropped, the rest of api kept',
+      { version: 3, api: { requireKey: false, port: 9 } },
+      { api: { port: 9 } },
+    ],
+    ['an api without it is left as it was', { version: 3, api: { port: 9 } }, { api: { port: 9 } }],
+    ['no api at all', { version: 3, tui: { mode: 'personal' } }, { tui: { mode: 'personal' } }],
+  ])('3 → 4: %s', (_name, from, to) => {
+    expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 3 })
+  })
+
   it('refuses a newer file with an update hint', () => {
     expect(() => migrateConfig({ version: CONFIG_VERSION + 1 })).toThrow(/this atc understands/)
   })

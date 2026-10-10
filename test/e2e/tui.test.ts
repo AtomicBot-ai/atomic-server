@@ -6,19 +6,13 @@ import { readyWorkspace } from '../helpers/ready-workspace.js'
  * checked by hand there (docs/testing.md).
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
+import { ATC } from '../helpers/binary.js'
 
-const ROOT = fileURLToPath(new URL('../..', import.meta.url))
-const triple = { darwin: 'apple-darwin', win32: 'pc-windows-msvc', linux: 'unknown-linux-gnu' }[
-  process.platform as 'darwin'
-]
-const cpu = process.arch === 'arm64' ? 'aarch64' : 'x86_64'
-const binary = join(ROOT, 'dist/bin', `atc-${cpu}-${triple}${process.platform === 'win32' ? '.exe' : ''}`)
-const command = existsSync(binary) ? [binary] : [process.execPath, join(ROOT, 'dist/bin.js')]
+const command = [...ATC]
 const dataFolder = join(mkdtempSync(join(tmpdir(), 'atc-e2e-tui-')), 'data')
 
 afterAll(() => rmSync(join(dataFolder, '..'), { recursive: true, force: true }))

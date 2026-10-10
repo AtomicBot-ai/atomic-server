@@ -1,4 +1,6 @@
 import { AtcError, defineCommand, plannedPartial } from '../cli/index.js'
+import type { CommandContext } from '../cli/index.js'
+import { attachIfRunning } from '../core-link/index.js'
 import { fieldFor, FIELDS, getAt, setConfigValue, unsetConfigValue } from '../config/index.js'
 
 const ENGINE_KEY = /^engine\./
@@ -54,6 +56,7 @@ const set = defineCommand({
     )
     ctx.out.result({ key, value }, () => ctx.out.success(`${key} = ${JSON.stringify(value)}`))
     if (overriddenByEnv) ctx.out.warn(`an environment variable currently overrides ${key}`)
+    else if (key === 'telemetry.enabled') await applyTelemetry(ctx, value === true)
     return 0
   },
 })
@@ -113,3 +116,11 @@ export const configCommand = defineCommand({
   group: 'system',
   subcommands: [get, set, unset, list, path],
 })
+
+/** A running server reads its config once; the consent goes to its core at once as well. */
+async function applyTelemetry(ctx: CommandContext, enabled: boolean): Promise<void> {
+  const link = await attachIfRunning((o) => ctx.core.attach(o)).catch(() => undefined)
+  if (!link) return
+  await link.request('PUT', '/telemetry', { enabled })
+  ctx.log.info(`error reports ${enabled ? 'on' : 'off'} for the running server`)
+}

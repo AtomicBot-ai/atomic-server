@@ -28,3 +28,20 @@ it('keeps named keys private, supports concurrent creation, and revokes without 
     await rm(folder, { recursive: true, force: true })
   }
 })
+
+it('adds a key handed to the CLI once, and refuses one that is not a key', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'atc-keys-'))
+  try {
+    const keys = new ClientKeys(dir)
+    expect(keys.current()).toBeUndefined()
+    await keys.initialize()
+    await keys.ensure('my-own-key-123', 'CLI key')
+    await keys.ensure('my-own-key-123', 'CLI key')
+    expect(keys.current()).toHaveLength(2)
+    expect(keys.current()).toContain('my-own-key-123')
+    await expect(keys.ensure('short', 'CLI key')).rejects.toThrow('8 to 512')
+    await expect(keys.ensure('has space in it', 'CLI key')).rejects.toThrow('without spaces')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

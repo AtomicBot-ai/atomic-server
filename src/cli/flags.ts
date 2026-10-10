@@ -55,6 +55,12 @@ export function splitGlobalFlags(argv: readonly string[]): SplitResult {
       break
     }
     const flag = BOOLEANS[arg]
+    // `atc --version` prints the version; after a command `--version` is that command's
+    // (`atc update --version 1.2.3`), as in git.
+    if (flag === 'version' && rest.length > 0) {
+      rest.push(arg)
+      continue
+    }
     if (flag !== undefined) {
       ;(globals as unknown as Record<string, boolean>)[flag] = true
       continue

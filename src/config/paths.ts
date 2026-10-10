@@ -25,7 +25,10 @@ export interface AtcPaths {
   hostStepsDir: string
   hostStepsJournal: string
   logsDir: string
+  /** The server's own log, written and rotated by its logger. */
   daemonLog: string
+  /** The server process's stdout and stderr from its last start (crash output before the logger is up). */
+  daemonOutLog: string
   cacheDir: string
 }
 
@@ -48,6 +51,7 @@ export function atcPathsFor(dataFolder: string, platform: NodeJS.Platform = proc
     hostStepsJournal: join(runDir, 'host-steps', 'journal.json'),
     logsDir,
     daemonLog: join(logsDir, 'daemon.log'),
+    daemonOutLog: join(logsDir, 'daemon.out.log'),
     cacheDir: join(atcDir, 'cache'),
   }
 }

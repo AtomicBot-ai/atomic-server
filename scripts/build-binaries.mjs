@@ -3,35 +3,27 @@
 // the runtime choice lives: swapping Bun for Node SEA means editing this file, not src/.
 //
 //   node scripts/build-binaries.mjs --host   # current platform only
-//   node scripts/build-binaries.mjs --all    # all six targets (cross-compile)
+//   node scripts/build-binaries.mjs --all    # every target in targets.mjs (cross-compile)
+//   node scripts/build-binaries.mjs --target x86_64-unknown-linux-musl   # one, by triple
 //
 // Run `npm run embed:ui` first (the npm scripts do): the admin SPA is a generated module.
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { TARGETS } from './targets.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const ENTRY = join(ROOT, 'src/bin.ts')
 const OUT_DIR = join(ROOT, 'dist/bin')
 
-// Bun target → the triple the release assets and the updater use.
-export const TARGETS = {
-  'bun-darwin-arm64': 'aarch64-apple-darwin',
-  'bun-darwin-x64': 'x86_64-apple-darwin',
-  'bun-windows-x64': 'x86_64-pc-windows-msvc',
-  'bun-windows-arm64': 'aarch64-pc-windows-msvc',
-  'bun-linux-x64': 'x86_64-unknown-linux-gnu',
-  'bun-linux-arm64': 'aarch64-unknown-linux-gnu',
-}
+export { TARGETS }
 
 function hostTarget() {
   const { platform, arch } = process
-  if (arch !== 'arm64' && arch !== 'x64') throw new Error(`unsupported host ${platform}/${arch}`)
-  if (platform === 'darwin') return `bun-darwin-${arch}`
-  if (platform === 'win32') return `bun-windows-${arch}`
-  if (platform === 'linux') return `bun-linux-${arch}`
-  throw new Error(`unsupported host ${platform}/${arch}`)
+  const target = TARGETS.find((t) => t.platform === platform && t.arch === arch && t.variant === 'default')
+  if (!target) throw new Error(`unsupported host ${platform}/${arch}`)
+  return target
 }
 
 if (!existsSync(join(ROOT, 'src/admin/static-assets.generated.ts'))) {
@@ -48,12 +40,18 @@ function gitSha() {
 }
 
 const all = process.argv.includes('--all')
-const targets = all ? Object.keys(TARGETS) : [hostTarget()]
+const only = process.argv.includes('--target')
+  ? process.argv[process.argv.indexOf('--target') + 1]
+  : undefined
+const targets = all ? TARGETS : only ? TARGETS.filter((t) => t.triple === only) : [hostTarget()]
+if (targets.length === 0) {
+  console.error(`no target ${only}; known: ${TARGETS.map((t) => t.triple).join(', ')}`)
+  process.exit(1)
+}
 mkdirSync(OUT_DIR, { recursive: true })
 
-for (const target of targets) {
-  const triple = TARGETS[target]
-  const outfile = join(OUT_DIR, `atc-${triple}${target.includes('windows') ? '.exe' : ''}`)
+for (const { bun: target, triple, platform } of targets) {
+  const outfile = join(OUT_DIR, `atc-${triple}${platform === 'win32' ? '.exe' : ''}`)
   const args = [
     'build',
     '--compile',
@@ -70,6 +68,16 @@ for (const target of targets) {
     `__ATC_GIT_SHA__=${JSON.stringify(GIT_SHA)}`,
     '--define',
     `__ATC_BUILD_DATE__=${JSON.stringify(BUILD_DATE)}`,
+    // Which binary this is, so `atc update` fetches the same variant (baseline, musl) the installer chose.
+    '--define',
+    `__ATC_TARGET__=${JSON.stringify(triple)}`,
+    // The core labels its error reports with this; unset, a release would report as "source".
+    ...(process.env.ATC_SENTRY_ENVIRONMENT
+      ? [
+          '--define',
+          `__ATOMIC_CORE_SENTRY_ENVIRONMENT__=${JSON.stringify(process.env.ATC_SENTRY_ENVIRONMENT)}`,
+        ]
+      : []),
     ENTRY,
     '--outfile',
     outfile,
@@ -79,6 +87,19 @@ for (const target of targets) {
   if (res.status !== 0) {
     console.error(`build failed for ${target}`)
     process.exit(res.status ?? 1)
+  }
+  // Bun's darwin output carries a signature that no longer matches once the program is embedded
+  // (the x64 one is even Bun's own Developer ID): `codesign --verify` fails on it. Re-sign ad hoc on a
+  // Mac, as atomic-agent does, so local and CI runs execute a valid binary; the release workflow then
+  // signs with the Developer ID (scripts/sign-mac-binary.sh).
+  if (platform === 'darwin' && process.platform === 'darwin') {
+    const sign = spawnSync('codesign', ['--force', '--sign', '-', '--timestamp=none', outfile], {
+      stdio: 'inherit',
+    })
+    if (sign.status !== 0) {
+      console.error(`ad-hoc signing failed for ${outfile}`)
+      process.exit(sign.status ?? 1)
+    }
   }
 }
 console.log(`built ${targets.length} binar${targets.length === 1 ? 'y' : 'ies'} into dist/bin`)

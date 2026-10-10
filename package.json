@@ -1,8 +1,12 @@
 {
   "name": "@atomicbot-ai/atc",
   "version": "0.1.0",
-  "description": "atc \u2014 the Atomic Chat server CLI: install an inference engine, pull a model, serve it over an OpenAI-compatible API, and manage it from a local web admin.",
-  "license": "MIT",
+  "description": "atc — the Atomic Chat server CLI: install an inference engine, pull a model, serve it over an OpenAI-compatible API, and manage it from a local web admin.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AtomicBot-ai/eye-cli.git"
+  },
   "private": true,
   "type": "module",
   "engines": {
@@ -29,14 +33,16 @@
     "test:watch": "vitest --project unit --project contract",
     "test:e2e": "vitest run --project e2e",
     "test:runtime-compat": "vitest run --project runtime-compat",
+    "test:installers": "vitest run --project installers",
     "test:ui": "npm run test --workspace packages/admin-ui",
     "test:coverage": "vitest run --project unit --project contract --coverage",
     "docs:commands": "node scripts/gen-command-docs.mjs",
+    "notices": "node scripts/gen-third-party-notices.mjs",
     "release": "node scripts/release.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run format:check && npm test && npm run build && npm run build:ui && npm run build:bin && npm run test:e2e && npm run test:runtime-compat"
+    "verify": "npm run lint && npm run typecheck && npm run format:check && node scripts/gen-third-party-notices.mjs --check && npm test && npm run build && npm run build:ui && npm run build:bin && npm run test:e2e && npm run test:runtime-compat && npm run test:installers"
   },
   "dependencies": {
-    "@atomic-chat/core": "file:vendor/atomic-chat-core-0.11.2-terminal.3.tgz",
+    "@atomic-chat/core": "0.13.6",
     "ink": "^7.1.1",
     "react": "^19.2.0"
   },

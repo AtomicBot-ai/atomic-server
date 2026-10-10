@@ -8,3 +8,4 @@ test/fixtures/
 *.md
 *.generated.ts
 bun.lock
+THIRD_PARTY_NOTICES.md

@@ -1,13 +1,13 @@
 import { defineConfig } from 'vitest/config'
 
-// Four test layers, see AGENTS.md. Unit tests live next to the code; the rest under test/.
+// Five test layers, see AGENTS.md and docs/testing.md. Unit tests live next to the code; the rest under test/.
 export default defineConfig({
   test: {
     projects: [
       {
         test: {
           name: 'unit',
-          include: ['src/**/*.test.{ts,tsx}'],
+          include: ['src/**/*.test.{ts,tsx}', 'test/scripts/**/*.test.ts'],
           environment: 'node',
           setupFiles: ['test/setup.ts'],
           // The first PowerShell identity probe on a cold Windows CI runner alone takes ~5 s.
@@ -30,6 +30,15 @@ export default defineConfig({
           environment: 'node',
           setupFiles: ['test/setup.ts'],
           testTimeout: 120_000,
+        },
+      },
+      {
+        test: {
+          // The installers against a release served from loopback; POSIX for install.sh, Windows for install.ps1.
+          name: 'installers',
+          include: ['test/installers/**/*.test.ts'],
+          environment: 'node',
+          testTimeout: 60_000,
         },
       },
       {
