@@ -6,7 +6,8 @@
  * old file from `.1` before it starts again at the top of the new one.
  */
 
-import { open, stat } from 'node:fs/promises'
+import { open } from 'node:fs/promises'
+import type { FileHandle } from 'node:fs/promises'
 import { sleep } from '../core-link/index.js'
 
 /** How much of the end of the file `readLogTail` looks at; plenty for a screen of lines. */
@@ -18,34 +19,53 @@ export function tailLines(text: string, count: number): string[] {
   return lines.slice(-count)
 }
 
-async function readRange(path: string, start: number, end: number): Promise<string> {
-  const handle = await open(path, 'r')
-  try {
-    const buffer = Buffer.alloc(end - start)
-    const { bytesRead } = await handle.read(buffer, 0, buffer.length, start)
-    return buffer.subarray(0, bytesRead).toString('utf8')
-  } finally {
-    await handle.close()
-  }
+async function readRange(file: FileHandle, start: number, end: number): Promise<string> {
+  const buffer = Buffer.alloc(end - start)
+  const { bytesRead } = await file.read(buffer, 0, buffer.length, start)
+  return buffer.subarray(0, bytesRead).toString('utf8')
 }
 
-async function sizeOf(path: string): Promise<number | undefined> {
-  return (await fileState(path))?.size
+interface OpenLog {
+  file: FileHandle
+  size: number
+  /** A rotated file is a new inode, which a size check alone misses once it grows. */
+  id: string
 }
 
-/** Size and identity: a rotated file is a new inode, which a size check alone misses once it grows. */
-async function fileState(path: string): Promise<{ size: number; id: string } | undefined> {
+/**
+ * The file at `path`, open, with its size and identity taken from that same handle: a rotation between
+ * a stat by path and a read by path would read the new file at the old file's offset.
+ */
+async function openLog(path: string): Promise<OpenLog | undefined> {
+  let file: FileHandle
   try {
-    const s = await stat(path)
-    return { size: s.size, id: `${s.dev}:${s.ino}` }
+    file = await open(path, 'r')
   } catch {
+    return undefined
+  }
+  try {
+    const s = await file.stat()
+    return { file, size: s.size, id: `${s.dev}:${s.ino}` }
+  } catch {
+    await file.close()
     return undefined
   }
 }
 
-async function tailOf(path: string, size: number, count: number, maxBytes: number): Promise<string[]> {
+/** `use` on the open file at `path`, or `fallback` when there is none; the file is closed after. */
+async function withLog<T>(path: string, fallback: T, use: (log: OpenLog) => Promise<T>): Promise<T> {
+  const log = await openLog(path)
+  if (!log) return fallback
+  try {
+    return await use(log)
+  } finally {
+    await log.file.close()
+  }
+}
+
+async function tailOf(file: FileHandle, size: number, count: number, maxBytes: number): Promise<string[]> {
   const start = Math.max(0, size - maxBytes)
-  let text = await readRange(path, start, size)
+  let text = await readRange(file, start, size)
   // Reading from the middle of the file: the first line is a fragment.
   if (start > 0) text = text.slice(text.indexOf('\n') + 1)
   return tailLines(text, count)
@@ -57,17 +77,20 @@ export async function readLogTail(
   count: number,
   maxBytes = LOG_TAIL_BYTES
 ): Promise<{ lines: string[]; offset: number; id?: string }> {
-  const state = await fileState(path)
-  const size = state?.size
-  const lines = size === undefined ? [] : await tailOf(path, size, count, maxBytes)
+  const current = await withLog(path, undefined, async (log) => ({
+    lines: await tailOf(log.file, log.size, count, maxBytes),
+    offset: log.size,
+    id: log.id,
+  }))
+  const lines = current?.lines ?? []
   if (lines.length < count) {
     // Just rotated: the lines before the new file's first are at the end of the previous one.
-    const previous = `${path}.1`
-    const before = await sizeOf(previous)
-    if (before !== undefined)
-      lines.unshift(...(await tailOf(previous, before, count - lines.length, maxBytes)))
+    const before = await withLog(`${path}.1`, [], (log) =>
+      tailOf(log.file, log.size, count - lines.length, maxBytes)
+    )
+    lines.unshift(...before)
   }
-  return { lines, offset: size ?? 0, ...(state ? { id: state.id } : {}) }
+  return { lines, offset: current?.offset ?? 0, ...(current ? { id: current.id } : {}) }
 }
 
 export interface FollowLogOptions {
@@ -85,31 +108,36 @@ export async function followLog(path: string, offset: number, options: FollowLog
   const { signal } = options
   let position = offset
   let partial = ''
-  let id = options.id ?? (await fileState(path))?.id
+  let id = options.id ?? (await withLog(path, undefined, async (log) => log.id))
   while (!signal.aborted) {
-    const state = await fileState(path)
-    const size = state?.size
-    const replaced = state !== undefined && id !== undefined && state.id !== id
-    if (state) id = state.id
-    if (size !== undefined && (size < position || replaced)) {
-      // Rotated: what was appended to the old file since the last read is now the end of `.1`.
-      const previous = `${path}.1`
-      const rest = await sizeOf(previous)
-      if (rest !== undefined && rest > position) {
-        const lines = (partial + (await readRange(previous, position, rest))).split(/\r?\n/)
-        if (lines.at(-1) === '') lines.pop()
+    await withLog(path, undefined, async ({ file, size, id: current }) => {
+      const followed = id
+      const replaced = followed !== undefined && current !== followed
+      id = current
+      if (size < position || replaced) {
+        // Rotated: what was appended to the old file since the last read is now the end of `.1`. It is
+        // the file followed so far when it has its inode, even if it was already read to the end.
+        const rest = await withLog(`${path}.1`, undefined, async (old) =>
+          (followed !== undefined ? old.id === followed : old.size > position)
+            ? readRange(old.file, position, Math.max(position, old.size))
+            : undefined
+        )
+        if (rest !== undefined) {
+          const lines = (partial + rest).split(/\r?\n/)
+          if (lines.at(-1) === '') lines.pop()
+          if (lines.length > 0 && !signal.aborted) options.onLines(lines)
+        } else options.onReset?.()
+        position = 0
+        partial = ''
+      }
+      if (size > position) {
+        const text = partial + (await readRange(file, position, size))
+        position = size
+        const lines = text.split(/\r?\n/)
+        partial = lines.pop() ?? ''
         if (lines.length > 0 && !signal.aborted) options.onLines(lines)
-      } else options.onReset?.()
-      position = 0
-      partial = ''
-    }
-    if (size !== undefined && size > position) {
-      const text = partial + (await readRange(path, position, size))
-      position = size
-      const lines = text.split(/\r?\n/)
-      partial = lines.pop() ?? ''
-      if (lines.length > 0 && !signal.aborted) options.onLines(lines)
-    }
+      }
+    })
     await sleep(options.intervalMs ?? 500, signal)
   }
 }

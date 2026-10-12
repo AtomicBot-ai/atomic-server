@@ -14,7 +14,8 @@ it('keeps named keys private, supports concurrent creation, and revokes without 
     expect(a.current()).toEqual(expect.arrayContaining(['existing-preview-key', one.token, two.token]))
     const views = await a.list()
     expect(JSON.stringify(views)).not.toContain(one.token)
-    expect((await stat(a.path)).mode & 0o777).toBe(0o600)
+    // Windows has no POSIX modes; there the folder's owner-only ACL protects it (host/acl.ts).
+    if (process.platform !== 'win32') expect((await stat(a.path)).mode & 0o777).toBe(0o600)
     await b.revoke(one.id)
     expect(a.current()).not.toContain(one.token)
     expect(await a.get(two.id)).toBe(two.token)

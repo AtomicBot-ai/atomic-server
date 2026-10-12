@@ -17,7 +17,7 @@
 #>
 
 $ErrorActionPreference = "Stop"
-try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { Write-Verbose "TLS 1.2 not settable here: $($_.Exception.Message)" }
 
 # Run as `irm | iex`, `exit` would close the user's PowerShell window: report and stop the script instead.
 function Fail([string]$Message) {
@@ -35,7 +35,7 @@ function Get-Triple {
       try {
         Add-Type -Namespace AtcInstall -Name Cpu -MemberDefinition '[DllImport("kernel32.dll")] public static extern bool IsProcessorFeaturePresent(uint feature);' -ErrorAction Stop
         $avx2 = [AtcInstall.Cpu]::IsProcessorFeaturePresent(40) # PF_AVX2_INSTRUCTIONS_AVAILABLE
-      } catch { }
+      } catch { Write-Verbose "AVX2 check unavailable, assuming AVX2: $($_.Exception.Message)" }
       if ($avx2) { return "x86_64-pc-windows-msvc" } else { return "x86_64-pc-windows-msvc-baseline" }
     }
     default { Fail "atc needs 64-bit Windows (this is $native)" }
@@ -81,7 +81,7 @@ function Install-Atc {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     $Target = Join-Path $InstallDir "atc.exe"
     Get-ChildItem -Path $InstallDir -File -Filter "atc.exe.old-*" -ErrorAction SilentlyContinue | ForEach-Object {
-      try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop } catch { }
+      try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop } catch { Write-Verbose "kept $($_.TargetObject): still in use" }
     }
     # A running atc.exe cannot be overwritten but can be renamed: move it aside first, put it back if
     # the new one cannot be written, and remove the old one on the next install.
@@ -96,7 +96,7 @@ function Install-Atc {
       if ($Backup) { Move-Item -LiteralPath $Backup -Destination $Target -Force }
       Fail "could not write $Target ($($_.Exception.Message)); the previous atc is unchanged"
     }
-    if ($Backup) { try { Remove-Item -LiteralPath $Backup -Force -ErrorAction Stop } catch { } }
+    if ($Backup) { try { Remove-Item -LiteralPath $Backup -Force -ErrorAction Stop } catch { Write-Verbose "kept ${Backup}: still in use, removed by the next install" } }
   } finally {
     Remove-Item -Path $Work -Recurse -Force -ErrorAction SilentlyContinue
   }

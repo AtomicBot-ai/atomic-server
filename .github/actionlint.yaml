@@ -1,0 +1,4 @@
+# GitHub-hosted labels newer than the actionlint pinned in ci.yml.
+self-hosted-runner:
+  labels:
+    - windows-11-arm
