@@ -20,6 +20,8 @@ REPO="${ATC_REPO:-AtomicBot-ai/eye-cli}"
 VERSION="${ATC_VERSION:-}"
 INSTALL_DIR="${ATC_INSTALL_DIR:-$HOME/.local/bin}"
 CPUINFO="${ATC_CPUINFO:-/proc/cpuinfo}"
+# Left by a deb, rpm or AUR package of atc (src/update/install-source.ts).
+PACKAGE_MARKER="${ATC_PACKAGE_MARKER:-/usr/lib/atc/install-source}"
 
 fail() {
   echo "$1" >&2
@@ -158,6 +160,11 @@ add_to_path "$INSTALL_DIR"
 
 echo
 echo "installed atc to ${INSTALL_DIR}/atc ($("$INSTALL_DIR/atc" --version 2>/dev/null || echo "$ASSET"))"
+if [ -f "$PACKAGE_MARKER" ]; then
+  # Two copies: whichever comes first on PATH runs, and only the package's follows system updates.
+  echo "note: a $(cat "$PACKAGE_MARKER") package also installed atc in /usr/bin; with ${INSTALL_DIR} first on PATH"
+  echo "      this copy shadows it. Keep one: remove the package, or ${INSTALL_DIR}/atc."
+fi
 case "$PATH_STATUS" in
   present) ;;
   manual) echo "add ${INSTALL_DIR} to your PATH: export PATH=\"${INSTALL_DIR}:\$PATH\"" ;;

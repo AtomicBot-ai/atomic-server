@@ -148,6 +148,7 @@ async function install(machine: Machine = {}, env: Record<string, string> = {}) 
     ATC_INSTALL_DIR: join(dir, 'install'),
     ATC_CPUINFO: cpuinfo,
     ATC_NO_PATH: '1',
+    ATC_PACKAGE_MARKER: join(dir, 'no-package'),
     ...env,
   })
   const installed = join(dir, 'install', 'atc')
@@ -240,5 +241,21 @@ describe.runIf(enabled)('install.sh and PATH', () => {
     const rc = readFileSync(join(first.home, '.zshrc'), 'utf8')
     expect(rc.match(/# added by atc installer/g)).toHaveLength(1)
     expect(rc).toContain(join(first.dir, 'install'))
+  })
+})
+
+describe.runIf(enabled)('install.sh beside a Linux package', () => {
+  it('installs, and says the package copy in /usr/bin is shadowed', async () => {
+    const marker = join(root, 'install-source')
+    writeFileSync(marker, 'deb\n')
+    const r = await install({}, { ATC_PACKAGE_MARKER: marker })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.triple()).toBe('x86_64-unknown-linux-gnu')
+    expect(r.stdout).toContain('a deb package also installed atc in /usr/bin')
+  })
+
+  it('says nothing without a package', async () => {
+    const r = await install()
+    expect(r.stdout).not.toContain('package also installed')
   })
 })
