@@ -11,6 +11,8 @@ import { CHECKS, runChecks } from '../doctor/index.js'
 import { HostStepJournal } from '../host/index.js'
 import { colorEnabled } from '../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../telemetry/index.js'
+import { detectInstall } from '../update/index.js'
+import { ATC_TARGET } from '../version.js'
 
 const SCREENS = [
   'chat',
@@ -88,6 +90,12 @@ export const tuiCommand = defineCommand({
             env: io.env,
             apiPort: config.values.api.port,
             adminPort: config.values.admin.port,
+            install: await detectInstall(
+              io.readFile,
+              ctx.host.facts.platform,
+              ctx.host.selfCommand[0] ?? process.execPath,
+              ATC_TARGET
+            ),
           })
         },
         pendingHostSteps: async () =>

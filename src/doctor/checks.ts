@@ -10,6 +10,8 @@ import { readTextFile, resolveConfig } from '../config/index.js'
 import type { DaemonRecord } from '../core-link/index.js'
 import { readDaemonRecord } from '../core-link/index.js'
 import type { HostServices } from '../host/index.js'
+import { installLabel } from '../update/index.js'
+import type { InstallInfo } from '../update/index.js'
 import { ATC_VERSION, CORE_VERSION } from '../version.js'
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'skip'
@@ -28,6 +30,7 @@ export interface CheckContext {
   env: NodeJS.ProcessEnv
   apiPort: number
   adminPort: number
+  install: InstallInfo
 }
 
 export interface Check {
@@ -41,6 +44,14 @@ export const CHECKS: Check[] = [
     id: 'version',
     title: 'atc and core versions',
     run: async () => ({ status: 'ok', message: `atc ${ATC_VERSION}, core ${CORE_VERSION}` }),
+  },
+  {
+    id: 'install',
+    title: 'how atc was installed',
+    run: async (ctx) => ({
+      status: 'ok',
+      message: `${ctx.install.path} (${installLabel(ctx.install.kind)})`,
+    }),
   },
   {
     id: 'data-folder',
@@ -123,7 +134,10 @@ export const CHECKS: Check[] = [
         : {
             status: 'warn',
             message: 'not on PATH',
-            hint: 'the installer adds ~/.local/bin (or %LOCALAPPDATA%\\atc) to PATH; open a new shell',
+            hint:
+              ctx.install.kind === 'release' || ctx.install.kind === 'source'
+                ? 'the installer adds ~/.local/bin (or %LOCALAPPDATA%\\atc) to PATH; open a new shell'
+                : 'the package installs /usr/bin/atc; check that /usr/bin is on PATH',
           }
     },
   },

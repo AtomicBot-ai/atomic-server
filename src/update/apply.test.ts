@@ -115,6 +115,7 @@ describe('applyUpdate', () => {
 
   it.each([
     ['running from source', { builtFor: undefined }, 'runs from source'],
+    ['a package installed it', { installSource: 'deb' }, 'installed by the deb package'],
     [
       'no asset for this machine',
       { fetch: release({ assets: ['SHA256SUMS'] }) as typeof fetch },
