@@ -28,4 +28,19 @@ describe('owner-only folder ACL', () => {
     )
     expect(calls).toEqual(['icacls C:\\d\\atc'])
   })
+
+  it('reads the folder back and reports entries still inherited after a successful icacls', async () => {
+    const dir = 'C:\\a (I) dir\\atc'
+    const listing = (aces: string) => ({ code: 0, stdout: `${dir} ${aces}\n`, stderr: '', timedOut: false })
+    const owned = listing('HOST\\alice:(OI)(CI)(F)\n NT AUTHORITY\\SYSTEM:(OI)(CI)(F)')
+    const inherited = listing('HOST\\alice:(OI)(CI)(F)\n BUILTIN\\Users:(I)(OI)(CI)(RX)')
+    const run = (read: typeof owned) =>
+      restrictToOwner(dir, {
+        platform: 'win32',
+        user: 'HOST\\alice',
+        exec: async (_c, args) => (args.length === 1 ? read : { ...owned, stdout: 'processed 1 files' }),
+      })
+    expect(await run(owned)).toBeUndefined()
+    expect(await run(inherited)).toMatch(/still inherits: .*BUILTIN\\Users:\(I\).*processed 1 files/s)
+  })
 })
