@@ -69,6 +69,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     platform: host.facts.platform,
     user: io.env['USERDOMAIN'] ? `${io.env['USERDOMAIN']}\\${host.facts.username}` : host.facts.username,
     exec: host.exec,
+    systemRoot: io.env['SystemRoot'] ?? io.env['SYSTEMROOT'],
   })
   if (denied) log.warn(`could not restrict ${paths.atcDir} to this user: ${denied}`)
   const keys = new ClientKeys(paths.atcDir)

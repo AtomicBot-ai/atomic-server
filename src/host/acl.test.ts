@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ownerOnlyAclArgs, restrictToOwner } from './acl.js'
+import { icaclsPath, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
 
 describe('owner-only folder ACL', () => {
   it('removes inherited entries and grants this user, SYSTEM and Administrators by SID', () => {
@@ -23,10 +23,11 @@ describe('owner-only folder ACL', () => {
     }
     expect(await restrictToOwner('/d/atc', { platform: 'linux', user: 'u', exec })).toBeUndefined()
     expect(calls).toEqual([])
-    expect(await restrictToOwner('C:\\d\\atc', { platform: 'win32', user: 'u', exec })).toBe(
-      'Access is denied.'
-    )
-    expect(calls).toEqual(['icacls C:\\d\\atc'])
+    expect(
+      await restrictToOwner('C:\\d\\atc', { platform: 'win32', user: 'u', exec, systemRoot: 'D:\\Win\\' })
+    ).toBe('Access is denied.')
+    expect(calls).toEqual(['D:\\Win\\System32\\icacls.exe C:\\d\\atc'])
+    expect(icaclsPath(undefined)).toBe('C:\\Windows\\System32\\icacls.exe')
   })
 
   it('reads the folder back and reports entries still inherited after a successful icacls', async () => {
@@ -42,5 +43,9 @@ describe('owner-only folder ACL', () => {
       })
     expect(await run(owned)).toBeUndefined()
     expect(await run(inherited)).toMatch(/still inherits: .*BUILTIN\\Users:\(I\).*processed 1 files/s)
+    // Nothing listed, or UTF-16: not taken for "no inherited entries".
+    expect(await run({ ...owned, stdout: '' })).toMatch(/did not list the folder/)
+    const utf16 = { ...inherited, stdout: [...inherited.stdout].join('\0') }
+    expect(await run(utf16)).toMatch(/still inherits/)
   })
 })
