@@ -30,22 +30,50 @@ describe('owner-only folder ACL', () => {
     expect(icaclsPath(undefined)).toBe('C:\\Windows\\System32\\icacls.exe')
   })
 
-  it('reads the folder back and reports entries still inherited after a successful icacls', async () => {
+  it('removes the broad groups by SID, then reads the folder back for anyone else left', async () => {
     const dir = 'C:\\a (I) dir\\atc'
-    const listing = (aces: string) => ({ code: 0, stdout: `${dir} ${aces}\n`, stderr: '', timedOut: false })
-    const owned = listing('HOST\\alice:(OI)(CI)(F)\n NT AUTHORITY\\SYSTEM:(OI)(CI)(F)')
-    const inherited = listing('HOST\\alice:(OI)(CI)(F)\n BUILTIN\\Users:(I)(OI)(CI)(RX)')
-    const run = (read: typeof owned) =>
-      restrictToOwner(dir, {
+    const listing = (aces: string[]) => ({
+      code: 0,
+      stdout: `${dir} ${aces.join('\n      ')}\n\nSuccessfully processed 1 files; Failed processing 0 files\n`,
+      stderr: '',
+      timedOut: false,
+    })
+    const owned = listing([
+      'HOST\\alice:(OI)(CI)(F)',
+      'NT AUTHORITY\\SYSTEM:(OI)(CI)(F)',
+      'BUILTIN\\Administrators:(OI)(CI)(F)',
+    ])
+    // What the windows-11-arm runner listed: no (I), but the drive's groups as the folder's own.
+    const explicit = listing([
+      'NT AUTHORITY\\Authenticated Users:(M)',
+      'HOST\\alice:(OI)(CI)(F)',
+      'NT AUTHORITY\\SYSTEM:(OI)(CI)(F)',
+      'BUILTIN\\Administrators:(OI)(CI)(F)',
+      'BUILTIN\\Users:(OI)(CI)(RX)',
+    ])
+    const inherited = listing(['HOST\\alice:(OI)(CI)(F)', 'BUILTIN\\Users:(I)(OI)(CI)(RX)'])
+    const run = async (read: typeof owned) => {
+      const calls: string[][] = []
+      const result = await restrictToOwner(dir, {
         platform: 'win32',
         user: 'HOST\\alice',
-        exec: async (_c, args) => (args.length === 1 ? read : { ...owned, stdout: 'processed 1 files' }),
+        exec: async (_c, args) => {
+          calls.push([...args])
+          return args.length === 1 ? read : { ...owned, stdout: 'processed 1 files' }
+        },
       })
-    expect(await run(owned)).toBeUndefined()
-    expect(await run(inherited)).toMatch(/still inherits: .*BUILTIN\\Users:\(I\).*processed 1 files/s)
-    // Nothing listed, or UTF-16: not taken for "no inherited entries".
-    expect(await run({ ...owned, stdout: '' })).toMatch(/did not list the folder/)
-    const utf16 = { ...inherited, stdout: [...inherited.stdout].join('\0') }
-    expect(await run(utf16)).toMatch(/still inherits/)
+      return { result, calls }
+    }
+    const ok = await run(owned)
+    expect(ok.result).toBeUndefined()
+    expect(ok.calls[1]).toEqual([dir, '/remove:g', '*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'])
+    expect((await run(explicit)).result).toMatch(
+      /still grants more .*Authenticated Users:\(M\).*BUILTIN\\Users/
+    )
+    expect((await run(inherited)).result).toMatch(/still grants more .*BUILTIN\\Users:\(I\)/)
+    // Nothing listed, or UTF-16: not taken for an owner-only folder.
+    expect((await run({ ...owned, stdout: '' })).result).toMatch(/did not list the folder/)
+    const utf16 = { ...explicit, stdout: [...explicit.stdout].join('\0') }
+    expect((await run(utf16)).result).toMatch(/still grants more/)
   })
 })
