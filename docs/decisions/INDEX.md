@@ -42,3 +42,4 @@ add a new one that says which record it supersedes.
 - **2026-10-09** — [Apply updates in place and never downgrade trust](2026-10-09-apply-updates-in-place-and-never-downgrade-trust.md).
 - **2026-10-09** — [Build natively, sign, then smoke the draft before publishing](2026-10-09-build-natively-sign-then-smoke-the-draft.md).
 - **2026-10-09** — [Run host steps through the core executor](2026-10-09-run-host-steps-through-the-core-executor.md).
+- **2026-10-13** — [Ship Linux packages from our own repository and the AUR](2026-10-13-ship-linux-packages-from-our-own-repository-and-aur.md).

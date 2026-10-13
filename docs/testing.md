@@ -11,7 +11,7 @@ loopback stands in for GitHub wherever downloading is under test.
 | `unit` | `src/**/*.test.{ts,tsx}`, next to the code, and `test/scripts/**` (the scripts' pure parts) | `npm test` | Pure policy by table: flag splitting, config parsers and precedence, elevation selection, `nvidia-smi` parsing, service templates, semver, the stub registry vs the tree, the TUI's reducer and key table. Fakes for I/O. The Ink app renders on `fake-terminal.ts` in Ink's debug mode (one full frame per write). | 5 s (20 s on Windows: the first PowerShell identity probe on a cold runner) |
 | `contract` | `test/contract/**/*.test.ts` | `npm test` | `commands.test.ts`: commands against `FakeCoreLink` — what they print, what they call, how they fail. `daemon.test.ts`: `startDaemon` with a **real** `AtomicCore` in a temp folder — the lock and token the core writes, `daemon.json`, admin 401/204/200, the proxy allowlist (403), Bearer auth, SSE relay, attach + lease, the foreign-owner check, clean shutdown. | 60 s |
 | `e2e` | `test/e2e/**/*.test.ts` | `npm run test:e2e` | The built program end to end in a temp data folder: `version --json`, `--help`, exit 2 for unknown commands, exit 3 + JSON error for a stub, `start --admin-port 0` → `status` → `admin status` → second `start` is a no-op → `stop`, `completion bash`. `tui.test.ts`: without a terminal `atc tui` exits 2 and bare `atc` prints help; in a 100×30 pseudo-terminal (Python's `pty`, POSIX only) bare `atc` opens the screen, answers keys, and leaves the alternate screen on `q` with exit 0. | 120 s |
-| `installers` | `test/installers/**/*.test.ts` | `npm run test:installers` | `install.sh` end to end against a release served from loopback (`ATC_DOWNLOAD_BASE`), on a faked machine: shims for `uname`, `ldd`, `sysctl` on a sandboxed PATH and a fake `/proc/cpuinfo` (`ATC_CPUINFO`) — the table OS × CPU × musl × AVX2 × Rosetta → binary, a checksum mismatch and a missing sha tool installing nothing, the PATH line written once. `install.ps1` on Windows with the built `atc.exe` as the asset. Spawns are asynchronous: the release is served from the test process. | 60 s |
+| `installers` | `test/installers/**/*.test.ts` | `npm run test:installers` | `install.sh` end to end against a release served from loopback (`ATC_DOWNLOAD_BASE`), on a faked machine: shims for `uname`, `ldd`, `sysctl` on a sandboxed PATH and a fake `/proc/cpuinfo` (`ATC_CPUINFO`) — the table OS × CPU × musl × AVX2 × Rosetta → binary, a checksum mismatch and a missing sha tool installing nothing, the PATH line written once, the note when a Linux package's marker (`ATC_PACKAGE_MARKER`) says a packaged copy is shadowed. `install.ps1` on Windows with the built `atc.exe` as the asset. Spawns are asynchronous: the release is served from the test process. | 60 s |
 | `runtime-compat` | `test/runtime-compat/**/*.test.ts` | `npm run test:runtime-compat` **and** `bun test test/runtime-compat` | The Node behaviours the daemon relies on, pinned under both runtimes: a detached `unref`ed child survives the parent, gzip/base64 round trip (the embedded assets), SSE chunks arrive one by one, and Ink renders, reads raw keys, follows `resize` and restores raw mode and the screen (`ink.test.ts`, no JSX). No setup file: it must not depend on the repo's test harness. | 60 s |
 | `ui` | `packages/admin-ui` (its own vitest, jsdom) | `npm run test:ui` | Components and hooks of the SPA against a fake hub; see `docs/admin-ui.md`. | — |
 
@@ -25,6 +25,13 @@ recording manager, `start --foreground` against a real core), `daemon-log.test.t
 (the built binary updates itself from a loopback GitHub and restarts its server), and `service.test.ts`, which
 installs, crashes and removes a real OS service — only with `ATC_E2E_SERVICE=1`, which CI sets (it changes
 the machine).
+
+The Linux packages are not a vitest project: they need real distros. `test/scripts/linux-packaging.test.ts`
+covers their pure parts (asset names, versions, the PKGBUILD, which releases the repository carries, the
+upload order, the README blocks), and the release workflow's `smoke-packages` installs each package in
+clean Debian, Ubuntu, Fedora, Rocky and Arch containers with `scripts/smoke-linux-package.sh`, the
+README's own commands and a repository of the draft on loopback (`docs/release.md` shows how to run it
+locally with Docker).
 
 ## Isolation
 

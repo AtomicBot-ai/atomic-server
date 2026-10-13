@@ -27,7 +27,8 @@ follow [`docs/concepts.md`](docs/concepts.md) ("server", not "daemon"; `run`/`un
 
 Real today: the server and its lifecycle (including replacing one another build left running), OS services,
 its own rotated log, the API with its keyring, the terminal UI, the admin's dashboard, config, doctor,
-`atc update`, the installers and the signed release pipeline. The remaining stubs exit 3;
+`atc update`, the installers, the signed release pipeline and the Linux packages (deb, rpm from
+`packages.atomic.chat`, the AUR's `atc-bin`). The remaining stubs exit 3;
 `src/cli/not-implemented.ts` is the map of what is stubbed and when it lands. Bare `atc` on an interactive terminal opens the terminal UI
 (Ink, `src/tui/`); anywhere else it prints help and exits 2 — scripts never get a screen.
 
@@ -52,7 +53,8 @@ its own rotated log, the API with its keyring, the terminal UI, the admin's dash
 | `src/models/` `src/engines/` `src/update/` `src/doctor/` | Interfaces, pure parsers and tables for later iterations; the doctor's check table. |
 | `packages/admin-ui/`    | The web admin SPA (React, Vite, Tailwind), copied and adapted from the desktop `web-app`.           |
 | `test/`                 | `contract/` (fake core and real core), `e2e/` (the built program), `runtime-compat/`, `helpers/`, `setup.ts`. |
-| `scripts/`              | Core preparation, binary build, SPA embedding, release, installers, gates, docs generation.          |
+| `scripts/`              | Core preparation, binary build, SPA embedding, release, installers, Linux packages and their repository, gates, docs generation. |
+| `packaging/`            | The deb/rpm definition (nfpm), the AUR PKGBUILD template, the packages' public signing key.       |
 | `docs/`                 | Architecture, testing, release, admin UI, generated `commands.md`, `decisions/` (ADRs).             |
 
 ---
