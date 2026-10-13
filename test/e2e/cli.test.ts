@@ -196,11 +196,12 @@ describe(`atc (${command.join(' ')})`, () => {
           spawnSync(exe as string, [...prefix, ...args, '--data-folder', folder], { encoding: 'utf8' })
         expect(run('config', 'set', 'admin.port', '0').status).toBe(0)
         expect(run('start', '--no-admin').status).toBe(0)
-        const acl = spawnSync('icacls', [join(folder, 'atc', 'client-keys.json')], {
-          encoding: 'utf8',
-        }).stdout
-        // The server only warns when icacls fails; its log says why.
-        const why = () => `${acl}\n${run('logs', '-n', '50').stdout}`
+        const icacls = (...path: string[]) =>
+          spawnSync('icacls', [join(folder, 'atc', ...path)], { encoding: 'utf8' }).stdout
+        const acl = icacls('client-keys.json')
+        // Where the open entry comes from (the folder, or only this file), and what the server logged.
+        const why = () =>
+          [acl, icacls(), icacls('config.json'), icacls('logs'), run('logs', '-n', '50').stdout].join('\n')
         expect(acl, why()).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
         expect(acl.toLowerCase()).toContain((process.env['USERNAME'] ?? '').toLowerCase())
         run('stop', '--force', '--kill')
