@@ -70,6 +70,12 @@ describe('renderPkgbuild', () => {
     expect(text).toContain(`sha256sums_aarch64=('${hash('5')}')`)
   })
 
+  it('writes LF line ends from a CRLF template', () => {
+    const crlf = template.replace(/\r?\n/g, '\r\n')
+    const text = renderPkgbuild(crlf, { version: '0.3.0', sums, sourceBase: 'x' })
+    expect(text).not.toContain('\r')
+  })
+
   it('refuses a release whose SHA256SUMS misses a file', () => {
     const { NOTICE: _, ...partial } = sums
     expect(() => renderPkgbuild(template, { version: '0.3.0', sums: partial, sourceBase: 'x' })).toThrow(
@@ -170,6 +176,11 @@ describe('readmeInstallBlock', () => {
     const readme = 'x\n<!-- install:apt -->\n\n```sh\nsudo apt install atc\n```\n'
     expect(readmeInstallBlock(readme, 'apt')).toBe('sudo apt install atc\n')
     expect(() => readmeInstallBlock(readme, 'dnf')).toThrow('no <!-- install:dnf -->')
+  })
+
+  it('reads a CRLF checkout (Windows) as plain lines', () => {
+    const readme = '<!-- install:apt -->\r\n\r\n```sh\r\nsudo apt install atc\r\n```\r\n'
+    expect(readmeInstallBlock(readme, 'apt')).toBe('sudo apt install atc\n')
   })
 
   it.each(['apt', 'dnf'])('finds the %s instructions in README.md', (name) => {

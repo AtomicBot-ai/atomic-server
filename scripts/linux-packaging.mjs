@@ -64,7 +64,8 @@ export function renderPkgbuild(template, { version, sums, sourceBase }) {
     SHA_X86_64: sum(binaryAsset(version, x64.triple)),
     SHA_AARCH64: sum(binaryAsset(version, arm64.triple)),
   }
-  const out = template.replace(/@([A-Z0-9_]+)@/g, (match, key) => {
+  // A Windows checkout has CRLF line ends; bash would read the \r as part of every line.
+  const out = template.replace(/\r\n/g, '\n').replace(/@([A-Z0-9_]+)@/g, (match, key) => {
     if (!(key in values)) throw new Error(`PKGBUILD.in has an unknown placeholder ${match}`)
     return values[key]
   })
@@ -170,6 +171,7 @@ export function syncPlan(local, remote) {
 
 /** The shell lines of the README block marked `<!-- install:<name> -->`, the instructions users follow. */
 export function readmeInstallBlock(readme, name) {
+  readme = readme.replace(/\r\n/g, '\n')
   const marker = `<!-- install:${name} -->`
   const at = readme.indexOf(marker)
   if (at < 0) throw new Error(`README.md has no ${marker}`)
