@@ -1,13 +1,18 @@
 name: release
 
-# Publishes the `atc` binaries. To release: `npm run release -- patch --push` (scripts/release.mjs
-# bumps, commits, tags and pushes). The pushed `v*` tag runs this workflow:
+# Publishes the `atc` binaries and the Linux packages. To release: `npm run release -- patch --push`
+# (scripts/release.mjs bumps, commits, tags and pushes). The pushed `v*` tag runs this workflow:
 #
 #   gates → build (each target on its own runner, e2e on the very binary uploaded)
-#         → sign-macos (Developer ID + notarisation) and sign-windows (Authenticode)
-#         → draft (SHA256SUMS over the signed binaries, provenance attestations, a draft release)
-#         → smoke (each runner installs the draft's assets with the installer and runs them)
+#         → sign-macos (Developer ID + notarisation), sign-windows (Authenticode) and packages (the deb
+#           and rpm of the Linux binaries, nfpm; the rpm signed with the packages key)
+#         → draft (SHA256SUMS over the signed binaries and the packages, provenance attestations, a draft)
+#         → smoke (each runner installs the draft's assets with the installer and runs them) and
+#           smoke-packages (each distro installs the packages the way README.md says, from a repository
+#           of the draft served on loopback; Arch builds the AUR PKGBUILD)
 #         → publish (the draft becomes the release; a version with "-" is a pre-release)
+#         → repo (packages.atomic.chat rebuilt from the newest releases, mirrored to R2) → smoke-repo,
+#           and aur (atc-bin pushed to the AUR); both only for a stable release from a tag
 #
 # A published version is never replaced: the updater and the installer pin checksums. A run by hand
 # (workflow_dispatch) on a branch may set allow_unsigned for a dry run without the signing secrets; a
@@ -39,6 +44,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       prerelease: ${{ steps.version.outputs.prerelease }}
+      publish_packages: ${{ steps.version.outputs.publish_packages }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Resolve the version and refuse one already released
@@ -56,7 +62,14 @@ jobs:
             echo "::error::release $tag already exists"; exit 1
           fi
           case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
-          { echo "version=$version"; echo "tag=$tag"; echo "prerelease=$prerelease"; } >> "$GITHUB_OUTPUT"
+          # The package repository and the AUR carry stable releases from a tag only (the environment
+          # holding their credentials admits tags only). Job-level `if:` cannot read env, hence an output.
+          publish_packages=false
+          if [ "$prerelease" = false ] && [ "$GITHUB_REF_TYPE" = tag ]; then publish_packages=true; fi
+          {
+            echo "version=$version"; echo "tag=$tag"; echo "prerelease=$prerelease"
+            echo "publish_packages=$publish_packages"
+          } >> "$GITHUB_OUTPUT"
 
   gates:
     needs: version
@@ -101,6 +114,83 @@ jobs:
         with:
           name: built-${{ matrix.runner }}
           path: dist/bin/atc-*
+          if-no-files-found: error
+
+  # The deb and rpm of this run's Linux binaries: the very files `build` tested, no rebuild. The x64
+  # packages carry the baseline build, since a package cannot pick by CPU.
+  packages:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-ubuntu-latest, path: dist/bin }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: built-ubuntu-24.04-arm, path: dist/bin }
+      - name: Install nfpm (pinned, checksum checked)
+        env:
+          NFPM_VERSION: 2.48.0
+          NFPM_SHA256: 6d7f9a28b2f397934403950fcbba83f598b08d02edbe79a0815b3b4897341750
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/nfpm.tar.gz"
+          curl -fsSLo "$archive" \
+            "https://github.com/goreleaser/nfpm/releases/download/v$NFPM_VERSION/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz"
+          echo "$NFPM_SHA256  $archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" nfpm
+          sudo install "$RUNNER_TEMP/nfpm" /usr/local/bin/nfpm
+      # packaging/nfpm.yaml declares glibc >= 2.17 (Bun's floor); a binary needing more must not ship
+      # with a dependency that lets it install where it cannot run.
+      - name: Check the glibc the binaries need
+        run: |
+          set -euo pipefail
+          chmod +x dist/bin/atc-*
+          for bin in dist/bin/atc-x86_64-unknown-linux-gnu-baseline dist/bin/atc-aarch64-unknown-linux-gnu; do
+            need="$(readelf --dyn-syms --wide "$bin" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -1)"
+            echo "$bin needs glibc $need"
+            if [ "$(printf '%s\n2.17\n' "$need" | sort -V | tail -1)" != 2.17 ]; then
+              echo "::error::$bin needs glibc $need; packaging/nfpm.yaml promises 2.17"; exit 1
+            fi
+          done
+      - name: Import the packages key (must be packaging/atomic-chat.asc)
+        if: env.ATC_ALLOW_UNSIGNED != '1'
+        env:
+          KEY: ${{ secrets.LINUX_PACKAGES_GPG_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEY" ]; then echo "::error::the LINUX_PACKAGES_GPG_KEY secret is not set"; exit 1; fi
+          file="$RUNNER_TEMP/packages-key.asc"
+          (umask 077; printf '%s\n' "$KEY" > "$file")
+          fpr() { gpg --show-keys --with-colons "$1" | awk -F: '/^fpr:/ {print $10; exit}'; }
+          if [ "$(fpr "$file")" != "$(fpr packaging/atomic-chat.asc)" ]; then
+            echo "::error::LINUX_PACKAGES_GPG_KEY is not the key in packaging/atomic-chat.asc"; exit 1
+          fi
+          echo "RPM_SIGNING_KEY_FILE=$file" >> "$GITHUB_ENV"
+      - name: Build the packages
+        env:
+          NFPM_RPM_PASSPHRASE: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
+        run: node scripts/linux-packages.mjs build --version "$VERSION" --bin-dir dist/bin --out dist/pkg
+      - name: Check the rpm signatures
+        if: env.ATC_ALLOW_UNSIGNED != '1'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y -qq rpm >/dev/null
+          db="$RUNNER_TEMP/rpmdb"
+          mkdir -p "$db"
+          rpmkeys --dbpath "$db" --import packaging/atomic-chat.asc
+          for rpm in dist/pkg/*.rpm; do
+            out="$(rpmkeys --dbpath "$db" --checksig "$rpm")"
+            echo "$out"
+            case "$out" in *'signatures OK'*) ;; *) echo "::error::$rpm is not signed by the packages key"; exit 1 ;; esac
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: packages
+          path: dist/pkg/atc_*
           if-no-files-found: error
 
   sign-macos:
@@ -161,7 +251,7 @@ jobs:
           if-no-files-found: error
 
   draft:
-    needs: [version, sign-macos, sign-windows]
+    needs: [version, sign-macos, sign-windows, packages]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -181,6 +271,8 @@ jobs:
         with: { name: built-ubuntu-latest, path: bin }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with: { name: built-ubuntu-24.04-arm, path: bin }
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { name: packages, path: pkg }
       - name: Name the assets and checksum them, after signing
         run: |
           set -euo pipefail
@@ -192,13 +284,23 @@ jobs:
           expected="$(node --input-type=module -e "import { TARGETS } from './scripts/targets.mjs'; console.log(TARGETS.length)")"
           actual="$(find release -maxdepth 1 -name 'atc-*' | wc -l | tr -d ' ')"
           if [ "$actual" != "$expected" ]; then echo "::error::$actual binaries, expected $expected"; exit 1; fi
+          # The packages are named atc_… (underscore): no atc-* glob above or in the installers sees them.
+          cp pkg/atc_* release/
+          node --input-type=module -e "
+            import { existsSync } from 'node:fs'
+            import { packageAssets } from './scripts/linux-packaging.mjs'
+            const missing = packageAssets(process.env.VERSION).filter((f) => !existsSync('release/' + f))
+            if (missing.length) { console.error('::error::missing packages: ' + missing.join(', ')); process.exit(1) }"
           cp scripts/install.sh scripts/install.ps1 LICENSE NOTICE THIRD_PARTY_NOTICES.md release/
           cd release
-          sha256sum atc-* install.sh install.ps1 > SHA256SUMS
+          # The license files too: the AUR PKGBUILD downloads them and pins their checksums.
+          sha256sum atc-* atc_* install.sh install.ps1 LICENSE NOTICE THIRD_PARTY_NOTICES.md > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
         with:
-          subject-path: release/atc-*
+          subject-path: |
+            release/atc-*
+            release/atc_*
       - name: Create the draft release
         run: |
           set -euo pipefail
@@ -298,8 +400,73 @@ jobs:
             }
           }
 
+  # Each package of the draft, installed the way README.md says in a clean container of the distro: apt
+  # and dnf from a repository of the draft served on loopback (its metadata signed with a throwaway key;
+  # the rpm signatures checked against packaging/atomic-chat.asc), Arch by building the AUR PKGBUILD
+  # against the draft's files. scripts/smoke-linux-package.sh holds the checks.
+  smoke-packages:
+    needs: [version, draft]
+    # A draft and its assets are visible only with write access.
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, image: 'debian:12', manager: apt }
+          - { runner: ubuntu-latest, image: 'ubuntu:24.04', manager: apt }
+          - { runner: ubuntu-latest, image: 'fedora:44', manager: dnf }
+          - { runner: ubuntu-latest, image: 'rockylinux/rockylinux:9', manager: dnf }
+          - { runner: ubuntu-latest, image: 'archlinux:latest', manager: pacman }
+          - { runner: ubuntu-24.04-arm, image: 'debian:12', manager: apt }
+          - { runner: ubuntu-24.04-arm, image: 'fedora:44', manager: dnf }
+    runs-on: ${{ matrix.runner }}
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      IMAGE: ${{ matrix.image }}
+      MANAGER: ${{ matrix.manager }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - name: Fetch the draft's assets
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl
+      - name: Serve a repository of the draft's packages on loopback
+        if: matrix.manager != 'pacman'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dpkg-dev apt-utils createrepo-c >/dev/null
+          gpg --batch --passphrase '' --quick-gen-key 'atc smoke <smoke@invalid>' rsa3072 sign 1d
+          fpr() { gpg --show-keys --with-colons "$1" | awk -F: '/^fpr:/ {print $10; exit}'; }
+          smoke="$(gpg --list-keys --with-colons smoke@invalid | awk -F: '/^fpr:/ {print $10; exit}')"
+          keys="$smoke"
+          flags=()
+          if [ "$ATC_ALLOW_UNSIGNED" = 1 ]; then
+            flags+=(--unsigned-packages)
+          else
+            gpg --batch --import packaging/atomic-chat.asc
+            keys="$keys,$(fpr packaging/atomic-chat.asc)"
+          fi
+          node scripts/linux-repo.mjs build --assets dl --key "$smoke" --publish-keys "$keys" --out site \
+            --base-url http://127.0.0.1:8766 "${flags[@]}"
+          node scripts/linux-repo.mjs readme --block "$MANAGER" --base-url http://127.0.0.1:8766 > install-commands.sh
+          python3 -m http.server 8766 --bind 127.0.0.1 --directory site >/dev/null 2>&1 &
+          sleep 2
+      - name: Render the AUR PKGBUILD against the draft's files
+        if: matrix.manager == 'pacman'
+        run: node scripts/linux-packages.mjs pkgbuild --version "$VERSION" --sums dl/SHA256SUMS --source-base file:///w/dl --out aur
+      - name: Install and check in the container
+        run: |
+          set -euo pipefail
+          input=/w/install-commands.sh
+          if [ "$MANAGER" = pacman ]; then input=/w/aur; fi
+          docker run --rm --network host -v "$PWD:/w:ro" "$IMAGE" sh /w/scripts/smoke-linux-package.sh "$MANAGER" "$VERSION" "$input"
+
   publish:
-    needs: [version, smoke]
+    needs: [version, smoke, smoke-packages]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -315,3 +482,116 @@ jobs:
           flags=(--draft=false)
           if [ "${{ needs.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release edit "${{ needs.version.outputs.tag }}" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
+
+  # packages.atomic.chat: rebuilt from scratch out of the newest stable releases (this one now among
+  # them, so after publish: the repository lists public assets only), signed, mirrored to the R2 bucket.
+  # Nothing to repair after a failure: re-running the job rebuilds the same repository.
+  repo:
+    needs: [version, publish]
+    if: needs.version.outputs.publish_packages == 'true'
+    runs-on: ubuntu-latest
+    environment: packages
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - name: Install the repository tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dpkg-dev apt-utils createrepo-c >/dev/null
+      - name: Import the packages key (must be packaging/atomic-chat.asc)
+        env:
+          KEY: ${{ secrets.LINUX_PACKAGES_GPG_KEY }}
+        run: |
+          set -euo pipefail
+          expected="$(gpg --show-keys --with-colons packaging/atomic-chat.asc | awk -F: '/^fpr:/ {print $10; exit}')"
+          printf '%s\n' "$KEY" | gpg --batch --import
+          if ! gpg --list-secret-keys "$expected" >/dev/null 2>&1; then
+            echo "::error::LINUX_PACKAGES_GPG_KEY is not the key in packaging/atomic-chat.asc"; exit 1
+          fi
+          echo "PACKAGES_KEY=$expected" >> "$GITHUB_ENV"
+      - name: Fetch the packages of the newest releases, checked against their SHA256SUMS
+        run: node scripts/linux-repo.mjs fetch --out dl
+      - name: Build the repository
+        env:
+          LINUX_PACKAGES_GPG_PASSPHRASE: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
+        run: node scripts/linux-repo.mjs build --assets dl --key "$PACKAGES_KEY" --out site
+      - name: Mirror it to the R2 bucket
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: |
+          node scripts/linux-repo.mjs sync --site site --bucket "$R2_BUCKET" \
+            --endpoint "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+
+  # The live repository, the way README.md tells users to add it: catches what the loopback smoke cannot
+  # (the domain, the cache, the published key).
+  smoke-repo:
+    needs: [version, repo]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: 'debian:12', manager: apt }
+          - { image: 'fedora:44', manager: dnf }
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      IMAGE: ${{ matrix.image }}
+      MANAGER: ${{ matrix.manager }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - name: Install from packages.atomic.chat and check
+        run: |
+          set -euo pipefail
+          node scripts/linux-repo.mjs readme --block "$MANAGER" > install-commands.sh
+          docker run --rm -v "$PWD:/w:ro" "$IMAGE" \
+            sh /w/scripts/smoke-linux-package.sh "$MANAGER" "$VERSION" /w/install-commands.sh
+
+  # atc-bin on the AUR: the PKGBUILD downloads this release's public assets, so after publish. A re-run
+  # finds the AUR already at this version and does nothing.
+  aur:
+    needs: [version, publish]
+    if: needs.version.outputs.publish_packages == 'true'
+    runs-on: ubuntu-latest
+    environment: packages
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - name: Render the PKGBUILD for the published release
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS --dir release
+          node scripts/linux-packages.mjs pkgbuild --version "$VERSION" --sums release/SHA256SUMS --out aur
+      - name: Skip when the AUR already has this version
+        id: aur
+        run: |
+          set -euo pipefail
+          current="$(curl -fsSL --globoff 'https://aur.archlinux.org/rpc/v5/info?arg[]=atc-bin' | jq -r '.results[0].Version // ""')"
+          want="$(node --input-type=module -e "
+            import { archPkgver } from './scripts/linux-packaging.mjs'
+            console.log(archPkgver(process.env.VERSION) + '-1')")"
+          echo "the AUR has '$current'; this release is $want"
+          if [ "$current" = "$want" ]; then echo "push=false" >> "$GITHUB_OUTPUT"; else echo "push=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: KSXGitHub/github-actions-deploy-aur@084b0d9b15415bf9cdb65d44dad1efe37a354050 # v4.2.0
+        if: steps.aur.outputs.push == 'true'
+        with:
+          pkgname: atc-bin
+          pkgbuild: aur/PKGBUILD
+          commit_username: Atomic Chat
+          commit_email: support@atomic.chat
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: atc ${{ needs.version.outputs.version }}
+          # Builds the package from the PKGBUILD (downloads, checksums, package()) before pushing.
+          test: true
