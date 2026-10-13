@@ -10,17 +10,26 @@ import { tmpdir, userInfo } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { runAtc } from '../helpers/binary.js'
+import type { AtcResult } from '../helpers/binary.js'
 
 const enabled = process.env['ATC_E2E_SERVICE'] === '1'
 const root = mkdtempSync(join(tmpdir(), 'atc-service-'))
 const dataFolder = join(root, 'data')
 const system = process.platform === 'linux'
-const scope = [...(system ? ['--system', '--user', userInfo().username] : []), '--name', 'atc-e2e']
+const scope = [...(system ? ['--system'] : []), '--name', 'atc-e2e']
+// Only `install` takes --user (the account a system service runs as); the others find it by name.
+const runAs = system ? ['--user', userInfo().username] : []
 const sudo = system
 
 const atc = (...args: string[]) => runAtc([...args, '--data-folder', dataFolder, '--json'])
 const service = (...args: string[]) =>
   runAtc(['service', ...args, ...scope, '--data-folder', dataFolder, '--json'], { sudo })
+
+/** The JSON document of a command that must succeed; its stderr says why when it did not. */
+function doc(r: AtcResult): unknown {
+  expect(r.code, r.err).toBe(0)
+  return JSON.parse(r.out)
+}
 
 async function until<T>(read: () => T | undefined, timeoutMs: number): Promise<T | undefined> {
   const deadline = Date.now() + timeoutMs
@@ -49,13 +58,11 @@ describe.runIf(enabled)(`atc service under the OS service manager (${process.pla
     // A server started by hand first: install must take it over.
     expect(atc('config', 'set', 'admin.port', '0').code).toBe(0)
     expect(atc('start').code).toBe(0)
-    const install = service('install')
-    expect(install.code, install.err).toBe(0)
-    expect(JSON.parse(install.out)).toMatchObject({ installed: true, name: 'atc-e2e' })
+    expect(doc(service('install', ...runAs))).toMatchObject({ installed: true, name: 'atc-e2e' })
 
     const first = await until(serverPid, 60_000)
     expect(first, 'the service did not start the server').toBeDefined()
-    expect(JSON.parse(service('status').out)).toMatchObject({ installed: true, running: true })
+    expect(doc(service('status'))).toMatchObject({ installed: true, running: true })
 
     // A crash: the manager brings it back (systemd after 5 s, launchd after 5 s, a task after 1 min).
     process.kill(first!, 'SIGKILL')
@@ -70,12 +77,11 @@ describe.runIf(enabled)(`atc service under the OS service manager (${process.pla
     await new Promise((r) => setTimeout(r, 10_000))
     expect(serverPid()).toBeUndefined()
 
-    expect(service('start').code).toBe(0)
+    expect(doc(service('start'))).toMatchObject({ started: true })
     expect(await until(serverPid, 60_000)).toBeDefined()
 
-    const uninstall = service('uninstall')
-    expect(uninstall.code, uninstall.err).toBe(0)
-    expect(JSON.parse(service('status').out)).toMatchObject({ installed: false })
+    expect(doc(service('uninstall'))).toMatchObject({ uninstalled: true })
+    expect(doc(service('status'))).toMatchObject({ installed: false })
     expect(await until(() => (serverPid() === undefined ? true : undefined), 30_000)).toBe(true)
   }, 360_000)
 })

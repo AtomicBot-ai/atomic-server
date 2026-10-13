@@ -20,7 +20,9 @@ it('restores conversation context across launches, renames, and deletes just the
     expect(await reopened.list()).toMatchObject([
       { title: 'A design question', turns: 1, interrupted: true, workingDirectory: '/project' },
     ])
-    expect((await stat(join(folder, 'chats', chat.id + '.json'))).mode & 0o777).toBe(0o600)
+    // Windows has no POSIX modes; there the folder's owner-only ACL protects it (host/acl.ts).
+    if (process.platform !== 'win32')
+      expect((await stat(join(folder, 'chats', chat.id + '.json'))).mode & 0o777).toBe(0o600)
     await reopened.save({ ...chat, title: 'Renamed' })
     expect((await reopened.load(chat.id))?.title).toBe('Renamed')
     await reopened.remove(chat.id)

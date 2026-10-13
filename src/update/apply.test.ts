@@ -1,3 +1,4 @@
+import { basename, dirname, join, sep } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { ExecResult } from '../host/index.js'
 import { applyUpdate, executeReplace } from './apply.js'
@@ -5,6 +6,9 @@ import type { ApplyDeps, UpdateFiles } from './apply.js'
 import { planReplace } from './replace-plan.js'
 
 const HASH = 'a'.repeat(64)
+// The updater joins paths with node:path, so the fixture uses this platform's separators.
+const DIR = join(sep, 'opt', 'atc')
+const BIN = join(DIR, 'atc')
 const NAME = 'atc-0.2.0-x86_64-unknown-linux-gnu'
 const ok = (over: Partial<ExecResult> = {}): ExecResult => ({
   code: 0,
@@ -30,9 +34,9 @@ function release(over: { tag?: string; sums?: string; assets?: string[] } = {}) 
   }
 }
 
-/** An in-memory folder with the installed binary at /opt/atc/atc. */
+/** An in-memory folder with the installed binary at BIN. */
 function folder(downloaded = HASH) {
-  const files = new Map<string, string>([['/opt/atc/atc', 'old']])
+  const files = new Map<string, string>([[BIN, 'old']])
   const ops: string[] = []
   const fs: UpdateFiles = {
     download: async (_url, path) => {
@@ -50,7 +54,7 @@ function folder(downloaded = HASH) {
     chmod: async (path) => void ops.push(`chmod ${path}`),
     remove: async (path) => void files.delete(path),
     list: async (dir) =>
-      [...files.keys()].filter((p) => p.startsWith(`${dir}/`)).map((p) => p.slice(dir.length + 1)),
+      [...files.keys()].filter((p) => p.startsWith(`${dir}${sep}`)).map((p) => p.slice(dir.length + 1)),
   }
   return { files, ops, fs }
 }
@@ -66,7 +70,7 @@ function deps(
     files: f.fs,
     platform: 'linux',
     arch: 'x64',
-    execPath: '/opt/atc/atc',
+    execPath: BIN,
     builtFor: 'x86_64-unknown-linux-gnu',
     currentVersion: '0.1.0',
     now: () => new Date('2026-10-09T12:00:00Z'),
@@ -82,9 +86,12 @@ describe('applyUpdate', () => {
     const d = deps()
     const r = await applyUpdate(d)
     expect(r).toMatchObject({ updated: true, from: '0.1.0', to: '0.2.0' })
-    expect(d.f.files.get('/opt/atc/atc')).toBe('new')
-    expect(only(d)).toEqual(['/opt/atc/atc'])
-    expect(d.f.ops[0]).toMatch(/^download \/opt\/atc\/\.atc\.download\.\d+$/)
+    expect(d.f.files.get(BIN)).toBe('new')
+    expect(only(d)).toEqual([BIN])
+    const [verb, download = ''] = d.f.ops[0]?.split(' ') ?? []
+    expect(verb).toBe('download')
+    expect(dirname(download)).toBe(DIR)
+    expect(basename(download)).toMatch(/^\.atc\.download\.\d+$/)
   })
 
   it('does nothing when already on the latest, unless asked for a version or forced', async () => {
@@ -121,8 +128,8 @@ describe('applyUpdate', () => {
     async (_name, over, message) => {
       const d = deps(over as Partial<ApplyDeps>)
       await expect(applyUpdate(d)).rejects.toThrow(message)
-      expect(d.f.files.get('/opt/atc/atc')).toBe('old')
-      expect(only(d)).toEqual(['/opt/atc/atc'])
+      expect(d.f.files.get(BIN)).toBe('old')
+      expect(only(d)).toEqual([BIN])
     }
   )
 
@@ -144,27 +151,24 @@ describe('applyUpdate', () => {
       },
     })
     await expect(applyUpdate(d)).rejects.toThrow('not signed by team ATOMIC')
-    expect(d.f.files.get('/opt/atc/atc')).toBe('old')
+    expect(d.f.files.get(BIN)).toBe('old')
   })
 })
 
 describe('executeReplace on Windows', () => {
   it('moves the running binary aside, puts the new one in place, and clears old copies', async () => {
     const f = folder()
-    f.files.set('/opt/atc/atc.old-20260101000000', 'older')
-    f.files.set('/opt/atc/.atc.download.1', 'new')
-    await executeReplace(
-      planReplace('win32', '/opt/atc/atc', '/opt/atc/.atc.download.1', '20261009120000'),
-      f.fs
-    )
-    expect([...f.files.entries()]).toEqual([['/opt/atc/atc', 'new']])
+    f.files.set(`${BIN}.old-20260101000000`, 'older')
+    f.files.set(join(DIR, '.atc.download.1'), 'new')
+    await executeReplace(planReplace('win32', BIN, join(DIR, '.atc.download.1'), '20261009120000'), f.fs)
+    expect([...f.files.entries()]).toEqual([[BIN, 'new']])
   })
 
   it('puts the old binary back when the new one cannot be moved in', async () => {
     const f = folder()
     await expect(
-      executeReplace(planReplace('win32', '/opt/atc/atc', '/opt/atc/missing', '20261009120000'), f.fs)
+      executeReplace(planReplace('win32', BIN, join(DIR, 'missing'), '20261009120000'), f.fs)
     ).rejects.toThrow('installed one is unchanged')
-    expect(f.files.get('/opt/atc/atc')).toBe('old')
+    expect(f.files.get(BIN)).toBe('old')
   })
 })

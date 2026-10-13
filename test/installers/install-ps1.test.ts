@@ -81,7 +81,8 @@ function install(): Promise<{ status: number | null; out: string; dir: string }>
   })
 }
 
-describe.runIf(enabled)('install.ps1', () => {
+// Each run downloads the whole atc.exe from loopback and runs it; the first test installs twice.
+describe.runIf(enabled)('install.ps1', { timeout: 180_000 }, () => {
   it('installs the binary for this CPU, verified, and runs it', async () => {
     const r = await install()
     expect(r.status, r.out).toBe(0)

@@ -190,7 +190,7 @@ jobs:
             cp "$path" "release/atc-$VERSION-${name#atc-}"
           done
           expected="$(node --input-type=module -e "import { TARGETS } from './scripts/targets.mjs'; console.log(TARGETS.length)")"
-          actual="$(ls release/atc-* | wc -l | tr -d ' ')"
+          actual="$(find release -maxdepth 1 -name 'atc-*' | wc -l | tr -d ' ')"
           if [ "$actual" != "$expected" ]; then echo "::error::$actual binaries, expected $expected"; exit 1; fi
           cp scripts/install.sh scripts/install.ps1 LICENSE NOTICE THIRD_PARTY_NOTICES.md release/
           cd release
@@ -259,7 +259,7 @@ jobs:
           arch="$(uname -m)"; [ "$arch" = arm64 ] && arch=aarch64
           chmod +x dl/atc-*
           docker run --rm -v "$PWD/dl:/dl:ro" alpine:3.20 "/dl/atc-$VERSION-$arch-unknown-linux-musl" --version | grep -qx "$VERSION"
-          if [ "$arch" = x86_64 ]; then test "$(dl/atc-$VERSION-x86_64-unknown-linux-gnu-baseline --version)" = "$VERSION"; fi
+          if [ "$arch" = x86_64 ]; then test "$("dl/atc-$VERSION-x86_64-unknown-linux-gnu-baseline" --version)" = "$VERSION"; fi
       - name: Check the macOS signatures (both architectures)
         if: runner.os == 'macOS'
         shell: bash

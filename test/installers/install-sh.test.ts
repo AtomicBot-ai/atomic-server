@@ -47,6 +47,8 @@ const TOOLS = [
 ]
 const SHA_TOOLS = ['sha256sum', 'shasum']
 const VERSION = '9.9.9'
+// It stands in for Linux and macOS with sh shims and symlinks; install.ps1 is the Windows installer.
+const enabled = process.platform !== 'win32'
 
 const root = mkdtempSync(join(tmpdir(), 'atc-install-sh-'))
 const release = join(root, 'release')
@@ -65,6 +67,7 @@ function writeSums(override: Record<string, string> = {}) {
 }
 
 beforeAll(async () => {
+  if (!enabled) return
   mkdirSync(release, { recursive: true })
   for (const t of TARGETS.filter((x) => x.platform !== 'win32')) {
     const name = assetName(VERSION, t)
@@ -83,7 +86,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await new Promise<void>((resolve) => server.close(() => resolve()))
+  if (enabled) await new Promise<void>((resolve) => server.close(() => resolve()))
   rmSync(root, { recursive: true, force: true })
 })
 
@@ -152,7 +155,7 @@ async function install(machine: Machine = {}, env: Record<string, string> = {}) 
   return { ...r, dir, home, installed, triple }
 }
 
-describe('install.sh picks the binary for the machine', () => {
+describe.runIf(enabled)('install.sh picks the binary for the machine', () => {
   it.each([
     [{ os: 'Linux', cpu: 'x86_64' }, 'x86_64-unknown-linux-gnu'],
     [{ os: 'Linux', cpu: 'x86_64', avx2: false }, 'x86_64-unknown-linux-gnu-baseline'],
@@ -171,7 +174,7 @@ describe('install.sh picks the binary for the machine', () => {
   })
 })
 
-describe('install.sh refuses rather than installing something unverified', () => {
+describe.runIf(enabled)('install.sh refuses rather than installing something unverified', () => {
   it('stops on a checksum mismatch and leaves nothing behind', async () => {
     writeSums({
       [assetName(VERSION, { triple: 'x86_64-unknown-linux-gnu', platform: 'linux' })]: '0'.repeat(64),
@@ -220,7 +223,7 @@ describe('install.sh refuses rather than installing something unverified', () =>
   })
 })
 
-describe('install.sh and PATH', () => {
+describe.runIf(enabled)('install.sh and PATH', () => {
   it('adds the folder to the shell rc once, however often it runs', async () => {
     const first = await install({}, { ATC_NO_PATH: '0', SHELL: '/bin/zsh' })
     expect(first.status, first.stderr).toBe(0)
