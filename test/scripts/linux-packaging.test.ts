@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   archPkgver,
   binaryAsset,
+  glibcFloor,
   cacheControl,
   contentType,
   packageAssets,
@@ -36,6 +37,27 @@ describe('package assets', () => {
       'x86_64-unknown-linux-gnu-baseline',
       'aarch64-unknown-linux-gnu',
     ])
+  })
+})
+
+describe('glibcFloor', () => {
+  // readelf -V of a Bun 1.3.10 Linux build (abridged).
+  const readelf = [
+    "Version needs section '.gnu.version_r' contains 2 entries:",
+    '  0x0000: Version: 1  File: libc.so.6  Cnt: 12',
+    '  0x0010:   Name: GLIBC_2.2.5  Flags: none  Version: 2',
+    '  0x0130:   Name: GLIBC_2.18  Flags: none  Version: 23',
+    '  0x0140:   Name: GLIBC_2.24  Flags: none  Version: 8',
+    '  0x0150:   Name: GLIBC_2.25  Flags: none  Version: 22',
+    '  0x0160:   Name: GLIBC_2.34  Flags: WEAK  Version: 24',
+  ].join('\n')
+
+  it('is the newest required version, compared as numbers, ignoring WEAK ones', () => {
+    expect(glibcFloor(readelf)).toBe('2.25')
+  })
+
+  it('refuses output with no glibc reference', () => {
+    expect(() => glibcFloor('no version info')).toThrow('no GLIBC_')
   })
 })
 

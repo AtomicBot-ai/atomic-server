@@ -147,19 +147,8 @@ jobs:
           echo "$NFPM_SHA256  $archive" | sha256sum -c -
           tar -xzf "$archive" -C "$RUNNER_TEMP" nfpm
           sudo install "$RUNNER_TEMP/nfpm" /usr/local/bin/nfpm
-      # packaging/nfpm.yaml declares glibc >= 2.17 (Bun's floor); a binary needing more must not ship
-      # with a dependency that lets it install where it cannot run.
-      - name: Check the glibc the binaries need
-        run: |
-          set -euo pipefail
-          chmod +x dist/bin/atc-*
-          for bin in dist/bin/atc-x86_64-unknown-linux-gnu-baseline dist/bin/atc-aarch64-unknown-linux-gnu; do
-            need="$(readelf --dyn-syms --wide "$bin" | grep -o 'GLIBC_[0-9.]*' | sed 's/GLIBC_//' | sort -uV | tail -1)"
-            echo "$bin needs glibc $need"
-            if [ "$(printf '%s\n2.17\n' "$need" | sort -V | tail -1)" != 2.17 ]; then
-              echo "::error::$bin needs glibc $need; packaging/nfpm.yaml promises 2.17"; exit 1
-            fi
-          done
+      # Artifacts lose the executable bit; the completions come from running the binary.
+      - run: chmod +x dist/bin/atc-*
       - name: Import the packages key (must be packaging/atomic-chat.asc)
         if: env.ATC_ALLOW_UNSIGNED != '1'
         env:

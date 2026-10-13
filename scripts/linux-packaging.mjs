@@ -38,6 +38,23 @@ export function archPkgver(version) {
   return version.replace(/^v/, '').replaceAll('-', '')
 }
 
+/**
+ * The oldest glibc a binary runs on: the highest GLIBC_x.y it requires, from `readelf -V` (its
+ * .gnu.version_r). WEAK references are optional and do not count.
+ */
+export function glibcFloor(readelfVersions) {
+  const versions = [...readelfVersions.matchAll(/Name: GLIBC_(\d+(?:\.\d+)+)\s+Flags: (\S+)/g)]
+    .filter((m) => !m[2].includes('WEAK'))
+    .map((m) => m[1].split('.').map(Number))
+  if (versions.length === 0) throw new Error('readelf lists no GLIBC_ version the binary needs')
+  const newer = (a, b) => {
+    for (let i = 0; i < Math.max(a.length, b.length); i++)
+      if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0)
+    return false
+  }
+  return versions.reduce((max, v) => (newer(v, max) ? v : max)).join('.')
+}
+
 /** `sha256sum` output → { name: hash }. */
 export function parseSha256Sums(text) {
   const sums = {}

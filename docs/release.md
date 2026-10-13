@@ -40,9 +40,9 @@ branch. One run at a time (`concurrency: release`):
    with a DigiCert timestamp and `signtool verify /pa`, for the x64 and arm64 executables.
 6. **packages** — the deb and rpm of the Linux binaries `build` uploaded (`scripts/linux-packages.mjs`,
    `packaging/nfpm.yaml`, nfpm pinned by checksum): x64 packages carry the baseline build, arm64 the glibc
-   build. It checks that the binaries need no glibc newer than the 2.17 the packages declare, signs the rpm
-   with the packages key (after checking the secret is the key in `packaging/atomic-chat.asc`) and checks
-   the signatures. See [Linux packages](#linux-packages-and-the-repository).
+   build. Each package depends on the glibc its binary requires, read from the binary (`readelf`). The job
+   signs the rpm with the packages key (after checking the secret is the key in `packaging/atomic-chat.asc`)
+   and checks the signatures. See [Linux packages](#linux-packages-and-the-repository).
 7. **draft** — names the assets, writes `SHA256SUMS` **after** signing (over the binaries, the packages,
    the installers and the license files), attests build provenance for every binary and package (`gh
    attestation verify <file> -R AtomicBot-ai/eye-cli` checks it), attaches `LICENSE`, `NOTICE`,

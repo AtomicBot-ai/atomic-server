@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url'
 import {
   PACKAGE_FORMATS,
   PACKAGE_TARGETS,
+  glibcFloor,
   packageFileName,
   parseSha256Sums,
   renderPkgbuild,
@@ -68,6 +69,11 @@ function build() {
       const script = run(host.path, ['completion', shell, '--data-folder', join(stage, 'data')])
       writeFileSync(join(stage, 'completions', file), script)
     }
+    // The packages depend on the glibc the binary actually needs, read from the binary itself.
+    for (const b of binaries) {
+      b.glibc = glibcFloor(run('readelf', ['--version-info', '--wide', b.path]))
+      console.log(`${b.path} needs glibc >= ${b.glibc}`)
+    }
     mkdirSync(out, { recursive: true })
     for (const format of PACKAGE_FORMATS) {
       // nfpm reads the marker from the stage; each format writes its own name into it.
@@ -79,6 +85,7 @@ function build() {
           VERSION: version,
           ARCH: b.nfpm,
           BINARY: b.path,
+          GLIBC: b.glibc,
           STAGE: stage,
           RPM_SIGNING_KEY_FILE: process.env.RPM_SIGNING_KEY_FILE ?? '',
         }

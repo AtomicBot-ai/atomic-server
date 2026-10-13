@@ -1,6 +1,7 @@
 # The atc deb and rpm. scripts/linux-packages.mjs runs nfpm once per format and architecture and sets
-# the ${...} values: VERSION (package.json), ARCH (amd64 | arm64), BINARY (the release binary), STAGE
-# (completions and the install-source marker it wrote) and RPM_SIGNING_KEY_FILE (empty: unsigned).
+# the ${...} values: VERSION (package.json), ARCH (amd64 | arm64), BINARY (the release binary), GLIBC
+# (the newest glibc version the binary requires, read from it), STAGE (completions and the
+# install-source marker it wrote) and RPM_SIGNING_KEY_FILE (empty: unsigned).
 name: atc
 arch: ${ARCH}
 platform: linux
@@ -60,14 +61,15 @@ contents:
 scripts:
   postinstall: ./packaging/postinstall.sh
 
-# Bun's documented floor; the release workflow checks the binaries' GLIBC_ symbols against it.
+# The glibc the binary requires (its GLIBC_ version references), so a package never installs where
+# the binary cannot start.
 overrides:
   deb:
     depends:
-      - libc6 (>= 2.17)
+      - libc6 (>= ${GLIBC})
   rpm:
     depends:
-      - glibc >= 2.17
+      - glibc >= ${GLIBC}
 
 deb:
   compression: xz

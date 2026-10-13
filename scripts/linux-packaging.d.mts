@@ -21,6 +21,7 @@ export declare function packageFileName(version: string, format: 'deb' | 'rpm', 
 export declare function packageAssets(version: string): string[]
 export declare function binaryAsset(version: string, triple: string): string
 export declare function archPkgver(version: string): string
+export declare function glibcFloor(readelfVersions: string): string
 export declare function parseSha256Sums(text: string): Record<string, string>
 export declare function renderPkgbuild(
   template: string,
