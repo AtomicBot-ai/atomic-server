@@ -199,7 +199,9 @@ describe(`atc (${command.join(' ')})`, () => {
         const acl = spawnSync('icacls', [join(folder, 'atc', 'client-keys.json')], {
           encoding: 'utf8',
         }).stdout
-        expect(acl).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
+        // The server only warns when icacls fails; its log says why.
+        const why = () => `${acl}\n${run('logs', '-n', '50').stdout}`
+        expect(acl, why()).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
         expect(acl.toLowerCase()).toContain((process.env['USERNAME'] ?? '').toLowerCase())
         run('stop', '--force', '--kill')
       } finally {
