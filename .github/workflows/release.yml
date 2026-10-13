@@ -102,6 +102,10 @@ jobs:
       - name: Build the binaries of this runner
         shell: bash
         env:
+          # Bun before 1.4.2 cannot move a downloaded runtime across volumes (oven-sh/bun#43446); on
+          # Windows runners the workspace is on D: and the default cache on C:, which breaks the baseline
+          # target, the only one Bun downloads there. runner.temp shares the workspace's volume.
+          BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
           ATC_GIT_SHA: ${{ github.sha }}
           ATC_SENTRY_ENVIRONMENT: ${{ needs.version.outputs.prerelease == 'true' && 'prerelease' || 'production' }}
         run: |
