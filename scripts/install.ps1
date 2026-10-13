@@ -17,6 +17,8 @@
 #>
 
 $ErrorActionPreference = "Stop"
+# Windows PowerShell 5.1 redraws a progress bar per chunk, which makes a large download take minutes.
+$ProgressPreference = "SilentlyContinue"
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { Write-Verbose "TLS 1.2 not settable here: $($_.Exception.Message)" }
 
 # Run as `irm | iex`, `exit` would close the user's PowerShell window: report and stop the script instead.
