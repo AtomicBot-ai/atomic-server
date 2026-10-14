@@ -2,7 +2,7 @@
 
 One command tags a release; the pushed tag builds every binary and the Linux packages, checksums them,
 publishes a GitHub release with the installers as assets, and then brings the apt/dnf repository
-(`https://atc-packages.fsn1.your-objectstorage.com`) and the AUR package `atc-bin` up to it. A published version is never replaced.
+(`https://atc-packages.fsn1.your-objectstorage.com`) up to it. A published version is never replaced.
 
 ## The command
 
@@ -53,18 +53,17 @@ branch. One run at a time (`concurrency: release`):
    is `Valid`). The musl builds run in Alpine, the baseline build and the Intel macOS build (Rosetta) run
    `--version`.
 9. **smoke-packages** — in clean containers (Debian 12, Ubuntu 24.04, Fedora 44, Rocky 9 on x64; Debian 12
-   and Fedora 44 on arm64; Arch on x64): a repository built from the draft's packages is served on
+   and Fedora 44 on arm64): a repository built from the draft's packages is served on
    loopback, signed with a throwaway key, and the README's own install commands (`<!-- install:apt -->`,
-   `<!-- install:dnf -->`) add it and install `atc`; Arch builds the AUR PKGBUILD against the draft's
-   files. `scripts/smoke-linux-package.sh` then checks the version, the install-source marker, that `atc
+   `<!-- install:dnf -->`) add it and install `atc`. `scripts/smoke-linux-package.sh` then checks the version, the install-source marker, that `atc
    update` refuses and names the package manager, the completions, a server that starts and stops, and
    that removing the package removes `/usr/bin/atc`.
 10. **publish** — the draft becomes the release (`--latest`, or `--prerelease`).
 11. **linux-repo** — stable releases from a tag only: calls `.github/workflows/linux-repo.yml`, below.
 
-### After publishing: the repository and the AUR (`.github/workflows/linux-repo.yml`)
+### After publishing: the repository (`.github/workflows/linux-repo.yml`)
 
-The apt/dnf repository and the AUR package follow **published** releases, however they were published:
+The apt/dnf repository follows **published** releases, however they were published:
 `release.yml` calls this workflow after its `publish` (a release published with `GITHUB_TOKEN` starts no
 other workflow), a release published by a person (the GitHub UI, `gh release edit --draft=false`) starts
 it through `release: published`, and it runs by hand on a tag (`gh workflow run linux-repo.yml --ref
@@ -76,21 +75,24 @@ change nothing.
    and mirrors it to the Hetzner Object Storage bucket `atc-packages` in `fsn1`, each file `public-read` (environment
    `packages`; one run at a time). **smoke-repo** then installs from it in Debian and Fedora with the
    README's commands.
-3. **aur** — renders `packaging/PKGBUILD.in` with the release's checksums and pushes it to the AUR as
-   `atc-bin` (KSXGitHub/github-actions-deploy-aur, which builds it first). Only the latest release goes
-   there, so publishing an older one later never downgrades it; a version the AUR already has is skipped.
 
 These are the only steps that run after a release is public (they download its assets by their public
-URLs), and each is safe to re-run: `repo` rebuilds the same repository from scratch, `aur` skips a version
-already pushed.
+URLs), and they are safe to re-run: `repo` rebuilds the same repository from scratch.
+
+**The AUR is not published yet** (no AUR account). What it needs is in place: `packaging/PKGBUILD.in`
+(`atc-bin`, the release binaries, completions, the `aur` install-source marker) rendered by
+`scripts/linux-packages.mjs pkgbuild` from a release's `SHA256SUMS`, which is why the license files are
+in it. Bringing it back is one job in `linux-repo.yml` (render the PKGBUILD, push it with
+KSXGitHub/github-actions-deploy-aur and an `AUR_SSH_PRIVATE_KEY` in the `packages` environment, latest
+release only) and an Arch row in `smoke-packages` (`smoke-linux-package.sh pacman` builds the PKGBUILD
+with makepkg); both are in this branch's history (commit 7bb57c3).
 
 Secrets (the names atomic-agent uses): `MACOS_CSC_LINK`, `MACOS_CSC_KEY_PASSWORD`, optional
 `MACOS_CSC_NAME`, `NOTARYTOOL_KEY` (the `.p8` contents), `NOTARYTOOL_KEY_ID`, `NOTARYTOOL_ISSUER`;
 `SM_API_KEY`, `SM_CLIENT_CERT_FILE_B64`, `SM_CLIENT_CERT_PASSWORD`, `SM_CODE_SIGNING_CERT_SHA1_HASH`;
 `LINUX_PACKAGES_GPG_KEY` (the armored private packages key) and `LINUX_PACKAGES_GPG_PASSPHRASE`. In the
 environment `packages` (deployment tags `v*` only): `PACKAGES_S3_ACCESS_KEY_ID`, `PACKAGES_S3_SECRET_ACCESS_KEY`
-(Hetzner Object Storage S3 credentials) and `AUR_SSH_PRIVATE_KEY` (the key registered on the AUR
-account). A missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
+(Hetzner Object Storage S3 credentials). A missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
 draft is never published. Actions are pinned to commits; Dependabot (`.github/dependabot.yml`) moves them.
 
 ## Assets
@@ -99,7 +101,7 @@ draft is never published. Actions are pinned to commits; Dependabot (`.github/de
 | --- | --- |
 | `atc-<version>-<triple>[.exe]` × 10 | `dist/bin/atc-<triple>` renamed with the version. The table is `scripts/targets.mjs` (mirrored by `src/update/targets.ts`, a test keeps them equal): macOS arm64 and x64; Linux x64 and arm64 on glibc, the same on musl (`…-unknown-linux-musl`, Alpine), and x64 for CPUs without AVX2 (`…-unknown-linux-gnu-baseline`); Windows x64, x64 baseline (`…-pc-windows-msvc-baseline.exe`) and arm64. |
 | `atc_<version>_<amd64\|arm64>.deb`, `atc_<version>_<x86_64\|aarch64>.rpm` | `dist/pkg/`, from the `packages` job. Named `atc_…` so no `atc-*` glob (the workflow's count of binaries, the installers) picks them up. |
-| `SHA256SUMS` | `sha256sum` over the renamed binaries, the packages, the installers and the license files. The installers and the updater verify against it; the AUR PKGBUILD pins its checksums from it. |
+| `SHA256SUMS` | `sha256sum` over the renamed binaries, the packages, the installers and the license files. The installers and the updater verify against it; an AUR PKGBUILD would pin its checksums from it. |
 | `install.sh`, `install.ps1` | Copied from `scripts/`; served at `releases/latest/download/install.sh` so the one-liner in the README works. |
 
 Binaries are built with `--production --keep-names --sourcemap` (identifiers kept, so stack traces name

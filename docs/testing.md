@@ -29,7 +29,7 @@ the machine).
 The Linux packages are not a vitest project: they need real distros. `test/scripts/linux-packaging.test.ts`
 covers their pure parts (asset names, versions, the PKGBUILD, which releases the repository carries, the
 upload order, the README blocks), and the release workflow's `smoke-packages` installs each package in
-clean Debian, Ubuntu, Fedora, Rocky and Arch containers with `scripts/smoke-linux-package.sh`, the
+clean Debian, Ubuntu, Fedora and Rocky containers with `scripts/smoke-linux-package.sh`, the
 README's own commands and a repository of the draft on loopback (`docs/release.md` shows how to run it
 locally with Docker).
 

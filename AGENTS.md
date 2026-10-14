@@ -28,7 +28,7 @@ follow [`docs/concepts.md`](docs/concepts.md) ("server", not "daemon"; `run`/`un
 Real today: the server and its lifecycle (including replacing one another build left running), OS services,
 its own rotated log, the API with its keyring, the terminal UI, the admin's dashboard, config, doctor,
 `atc update`, the installers, the signed release pipeline and the Linux packages (deb and rpm from our
-apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). The remaining stubs exit 3;
+apt/dnf repository on Hetzner Object Storage). The remaining stubs exit 3;
 `src/cli/not-implemented.ts` is the map of what is stubbed and when it lands. Bare `atc` on an interactive terminal opens the terminal UI
 (Ink, `src/tui/`); anywhere else it prints help and exits 2 — scripts never get a screen.
 
@@ -54,7 +54,7 @@ apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). The remainin
 | `packages/admin-ui/`    | The web admin SPA (React, Vite, Tailwind), copied and adapted from the desktop `web-app`.           |
 | `test/`                 | `contract/` (fake core and real core), `e2e/` (the built program), `runtime-compat/`, `helpers/`, `setup.ts`. |
 | `scripts/`              | Core preparation, binary build, SPA embedding, release, installers, Linux packages and their repository, gates, docs generation. |
-| `packaging/`            | The deb/rpm definition (nfpm), the AUR PKGBUILD template, the packages' public signing key.       |
+| `packaging/`            | The deb/rpm definition (nfpm), the packages' public signing key, an AUR PKGBUILD template (unpublished).       |
 | `docs/`                 | Architecture, testing, release, admin UI, generated `commands.md`, `decisions/` (ADRs).             |
 
 ---
