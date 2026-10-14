@@ -73,7 +73,7 @@ change nothing.
 
 1. **release** — resolves the tag and whether it qualifies.
 2. **repo** — rebuilds the repository from the newest ten published stable releases' packages, signs it
-   and mirrors it to the public Hetzner Object Storage bucket `atc-packages` in `fsn1` (environment
+   and mirrors it to the Hetzner Object Storage bucket `atc-packages` in `fsn1`, each file `public-read` (environment
    `packages`; one run at a time). **smoke-repo** then installs from it in Debian and Fedora with the
    README's commands.
 3. **aur** — renders `packaging/PKGBUILD.in` with the release's checksums and pushes it to the AUR as
@@ -135,8 +135,9 @@ the old binary until `atc restart` (the package's post-install script says so). 
 the package: `atc service install` writes one pointing at `/usr/bin/atc`.
 
 **The repository** (`scripts/linux-repo.mjs`, pure parts in `scripts/linux-packaging.mjs`, whose
-`REPOSITORY` names the bucket and its URL) is the public bucket `atc-packages` on Hetzner Object Storage
-in Falkenstein, served at `https://atc-packages.fsn1.your-objectstorage.com`: Hetzner terminates HTTPS only
+`REPOSITORY` names the bucket and its URL) is the bucket `atc-packages` on Hetzner Object Storage in
+Falkenstein; the bucket is private and every object is uploaded `public-read`, so anyone can download a
+file but nobody can list or write without the keys. It is served at `https://atc-packages.fsn1.your-objectstorage.com`: Hetzner terminates HTTPS only
 on its own host, so a domain of ours would need a proxy in front. GitHub Releases are the source of truth
 and the bucket is a mirror rebuilt from scratch on every release: the
 newest ten stable releases that carry packages, each package checked against its release's

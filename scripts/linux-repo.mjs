@@ -193,9 +193,12 @@ function sync() {
     console.log(`${step.op} ${step.path}`)
     if (process.argv.includes('--dry-run')) continue
     if (step.op === 'delete') aws(['s3', 'rm', `s3://${bucket}/${step.path}`, '--only-show-errors'])
+    // Each object is public-read: the bucket itself stays private (no listing, no anonymous writes), and
+    // the repository needs no setting outside this script.
     else
       aws([
         ...['s3', 'cp', join(site, step.path), `s3://${bucket}/${step.path}`, '--only-show-errors'],
+        ...['--acl', 'public-read'],
         ...['--cache-control', step.cacheControl, '--content-type', contentType(step.path)],
       ])
   }
