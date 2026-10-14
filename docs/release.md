@@ -139,8 +139,8 @@ older than the window stay downloadable from GitHub as `.deb` and `.rpm`.
 (private, RSA 4096: EdDSA rpm signatures are not readable everywhere). The workflow refuses a secret that
 is not that key. It expires after five years; extend it well before
 (`gpg --quick-set-expire <fingerprint> 5y`, commit the re-exported `packaging/atomic-chat.asc`, update the
-secret, release): an expired key makes `apt update` fail for every user. If the private key leaks, make a
-new one, publish it the same way, and tell users to re-run the README's key line; apt and dnf trust only
+secret, release; the fingerprint stays the same): an expired key makes `apt update` fail for every user. If the private key leaks, make a
+new one, publish it the same way (and its fingerprint in README.md), and tell users to re-run the README's key line; apt and dnf trust only
 the keyring file the README writes.
 
 **Testing locally** (Docker): build `dist/bin/atc-x86_64-unknown-linux-gnu-baseline` and

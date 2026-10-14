@@ -64,7 +64,8 @@ On Debian, Ubuntu, Fedora, RHEL-compatible systems and Arch, `atc` also comes as
 manager then updates it with the rest of the system. A package carries the same binary as the release (on
 x86-64 the baseline build, so it runs on any x86-64 CPU) and the shell completions. The repository and the
 rpm packages are signed with the Atomic Chat packages key in
-[`packaging/atomic-chat.asc`](packaging/atomic-chat.asc).
+[`packaging/atomic-chat.asc`](packaging/atomic-chat.asc), fingerprint
+`1047 F119 58C6 442D D472  E497 E4C3 D361 FB7F F123`.
 
 Debian, Ubuntu (x86-64, arm64):
 
