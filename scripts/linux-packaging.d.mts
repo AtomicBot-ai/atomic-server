@@ -15,6 +15,7 @@ export interface GithubRelease {
 export type SyncStep = { op: 'put'; path: string; cacheControl: string } | { op: 'delete'; path: string }
 
 export declare const PACKAGE_TARGETS: readonly PackageTarget[]
+export declare const REPOSITORY: { bucket: string; region: string; endpoint: string; baseUrl: string }
 export declare const PACKAGE_FORMATS: readonly ['deb', 'rpm']
 export declare const LICENSE_FILES: readonly string[]
 export declare function packageFileName(version: string, format: 'deb' | 'rpm', target: PackageTarget): string

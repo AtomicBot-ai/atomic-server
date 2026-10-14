@@ -27,8 +27,8 @@ follow [`docs/concepts.md`](docs/concepts.md) ("server", not "daemon"; `run`/`un
 
 Real today: the server and its lifecycle (including replacing one another build left running), OS services,
 its own rotated log, the API with its keyring, the terminal UI, the admin's dashboard, config, doctor,
-`atc update`, the installers, the signed release pipeline and the Linux packages (deb, rpm from
-`packages.atomic.chat`, the AUR's `atc-bin`). The remaining stubs exit 3;
+`atc update`, the installers, the signed release pipeline and the Linux packages (deb and rpm from our
+apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). The remaining stubs exit 3;
 `src/cli/not-implemented.ts` is the map of what is stubbed and when it lands. Bare `atc` on an interactive terminal opens the terminal UI
 (Ink, `src/tui/`); anywhere else it prints help and exits 2 — scripts never get a screen.
 

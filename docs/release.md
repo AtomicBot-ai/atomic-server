@@ -1,8 +1,8 @@
 # Releasing
 
 One command tags a release; the pushed tag builds every binary and the Linux packages, checksums them,
-publishes a GitHub release with the installers as assets, and then brings the apt/dnf repository at
-`packages.atomic.chat` and the AUR package `atc-bin` up to it. A published version is never replaced.
+publishes a GitHub release with the installers as assets, and then brings the apt/dnf repository
+(`https://atc-packages.fsn1.your-objectstorage.com`) and the AUR package `atc-bin` up to it. A published version is never replaced.
 
 ## The command
 
@@ -61,8 +61,8 @@ branch. One run at a time (`concurrency: release`):
    that removing the package removes `/usr/bin/atc`.
 10. **publish** — the draft becomes the release (`--latest`, or `--prerelease`).
 11. **repo** — stable releases from a tag only: rebuilds the repository from the newest ten releases'
-    packages, signs it and mirrors it to the R2 bucket behind `packages.atomic.chat` (environment
-    `packages`). **smoke-repo** then installs from the live repository in Debian and Fedora.
+    packages, signs it and mirrors it to the public Hetzner Object Storage bucket `atc-packages` in `fsn1`
+    (environment `packages`). **smoke-repo** then installs from the live repository in Debian and Fedora.
 12. **aur** — stable releases from a tag only: renders `packaging/PKGBUILD.in` with this release's
     checksums and pushes it to the AUR as `atc-bin` (KSXGitHub/github-actions-deploy-aur, which builds it
     first). It does nothing when the AUR already has this version.
@@ -75,9 +75,9 @@ Secrets (the names atomic-agent uses): `MACOS_CSC_LINK`, `MACOS_CSC_KEY_PASSWORD
 `MACOS_CSC_NAME`, `NOTARYTOOL_KEY` (the `.p8` contents), `NOTARYTOOL_KEY_ID`, `NOTARYTOOL_ISSUER`;
 `SM_API_KEY`, `SM_CLIENT_CERT_FILE_B64`, `SM_CLIENT_CERT_PASSWORD`, `SM_CODE_SIGNING_CERT_SHA1_HASH`;
 `LINUX_PACKAGES_GPG_KEY` (the armored private packages key) and `LINUX_PACKAGES_GPG_PASSPHRASE`. In the
-environment `packages` (deployment tags `v*` only): `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (an R2 API
-token for the bucket only) and `AUR_SSH_PRIVATE_KEY` (the key registered on the AUR account); variables
-`R2_ACCOUNT_ID` and `R2_BUCKET`. A missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
+environment `packages` (deployment tags `v*` only): `PACKAGES_S3_ACCESS_KEY_ID`, `PACKAGES_S3_SECRET_ACCESS_KEY`
+(Hetzner Object Storage S3 credentials) and `AUR_SSH_PRIVATE_KEY` (the key registered on the AUR
+account). A missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
 draft is never published. Actions are pinned to commits; Dependabot (`.github/dependabot.yml`) moves them.
 
 ## Assets
@@ -121,8 +121,11 @@ self-updating; `install.sh` warns that it shadows the package. After an upgrade 
 the old binary until `atc restart` (the package's post-install script says so). No systemd unit ships in
 the package: `atc service install` writes one pointing at `/usr/bin/atc`.
 
-**The repository** (`scripts/linux-repo.mjs`, pure parts in `scripts/linux-packaging.mjs`). GitHub
-Releases are the source of truth and the bucket is a mirror rebuilt from scratch on every release: the
+**The repository** (`scripts/linux-repo.mjs`, pure parts in `scripts/linux-packaging.mjs`, whose
+`REPOSITORY` names the bucket and its URL) is the public bucket `atc-packages` on Hetzner Object Storage
+in Falkenstein, served at `https://atc-packages.fsn1.your-objectstorage.com`: Hetzner terminates HTTPS only
+on its own host, so a domain of ours would need a proxy in front. GitHub Releases are the source of truth
+and the bucket is a mirror rebuilt from scratch on every release: the
 newest ten stable releases that carry packages, each package checked against its release's
 `SHA256SUMS`. Layout: `deb/dists/stable/…` and `deb/pool/main/a/atc/` (apt; `InRelease` and `Release.gpg`
 signed), `rpm/packages/` and `rpm/repodata/` (dnf; gzip metadata for RHEL 8, `repomd.xml.asc` signed, rpms

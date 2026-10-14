@@ -2,7 +2,7 @@
 # Install atc in a clean container the way README.md tells users to, then check what a packaged install
 # promises: the version, `atc update` deferring to the package manager, the completions, a server that
 # starts and stops, and a removal that takes /usr/bin/atc with it. The release workflow runs it on the
-# draft's repository served from loopback (before publishing) and on packages.atomic.chat (after).
+# draft's repository served from loopback (before publishing) and on the published repository (after).
 #
 #   smoke-linux-package.sh apt|dnf <version> <file with the README's install commands>
 #   smoke-linux-package.sh pacman <version> <directory with the PKGBUILD>

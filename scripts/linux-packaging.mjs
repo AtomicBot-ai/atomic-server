@@ -10,6 +10,17 @@ export const PACKAGE_TARGETS = [
 
 export const PACKAGE_FORMATS = ['deb', 'rpm']
 
+/**
+ * Where the apt/dnf repository lives: a public bucket on Hetzner Object Storage, served on its own
+ * HTTPS host. README.md's install commands name the same URL (a test keeps them equal).
+ */
+export const REPOSITORY = {
+  bucket: 'atc-packages',
+  region: 'fsn1',
+  endpoint: 'https://fsn1.your-objectstorage.com',
+  baseUrl: 'https://atc-packages.fsn1.your-objectstorage.com',
+}
+
 /** Release assets the PKGBUILD downloads besides the binaries. */
 export const LICENSE_FILES = ['LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md']
 

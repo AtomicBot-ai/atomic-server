@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// The apt and dnf repository behind packages.atomic.chat. GitHub Releases are the source of truth: the
-// repository is rebuilt from scratch out of the newest releases' packages on every release, signed,
-// and mirrored to the R2 bucket, so a failed or repeated run never leaves state to repair. The pure
+// The apt and dnf repository (REPOSITORY in linux-packaging.mjs: a public Hetzner Object Storage bucket).
+// GitHub Releases are the source of truth: the repository is rebuilt from scratch out of the newest
+// releases' packages on every release, signed, and mirrored to the bucket, so a failed or repeated run never leaves state to repair. The pure
 // parts (which releases, layout, upload order) are in linux-packaging.mjs.
 //
 //   node scripts/linux-repo.mjs fetch --out dl [--keep 10]                    # packages of the window, checked
 //   node scripts/linux-repo.mjs build --assets dl --key FPR --out site [--base-url URL]
 //                                     [--publish-keys FPR,FPR] [--unsigned-packages]
-//   node scripts/linux-repo.mjs sync --site site --bucket NAME --endpoint URL [--dry-run]
+//   node scripts/linux-repo.mjs sync --site site [--bucket NAME --endpoint URL --region R] [--dry-run]
 //   node scripts/linux-repo.mjs readme --block apt|dnf [--base-url URL]       # the README's commands
 //
 // `fetch` needs `gh` (GH_TOKEN); `build` needs dpkg-scanpackages, apt-ftparchive, createrepo_c and gpg
@@ -24,6 +24,7 @@ import {
   PACKAGE_TARGETS,
   parseSha256Sums,
   readmeInstallBlock,
+  REPOSITORY,
   renderRepoFile,
   repoPath,
   selectReleases,
@@ -32,7 +33,7 @@ import {
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const REPO = 'AtomicBot-ai/eye-cli'
-const BASE_URL = 'https://packages.atomic.chat'
+const BASE_URL = REPOSITORY.baseUrl
 const PACKAGE_FILE = /^atc_.+\.(deb|rpm)$/
 
 function fail(message) {
@@ -172,13 +173,13 @@ function build() {
 
 function sync() {
   const site = resolve(option('site', 'site'))
-  const bucket = option('bucket')
-  const endpoint = option('endpoint')
-  if (!bucket || !endpoint) fail('sync needs --bucket and --endpoint')
-  // Newer aws CLIs add checksum headers by default that R2 does not need; only send what is required.
+  const bucket = option('bucket', REPOSITORY.bucket)
+  const endpoint = option('endpoint', REPOSITORY.endpoint)
+  // Newer aws CLIs add checksums by default that not every S3-compatible store accepts; only send what
+  // is required.
   const env = {
     ...process.env,
-    AWS_DEFAULT_REGION: 'auto',
+    AWS_DEFAULT_REGION: option('region', REPOSITORY.region),
     AWS_REQUEST_CHECKSUM_CALCULATION: 'when_required',
     AWS_RESPONSE_CHECKSUM_VALIDATION: 'when_required',
   }

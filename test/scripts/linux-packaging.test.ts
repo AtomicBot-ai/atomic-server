@@ -11,6 +11,7 @@ import {
   readmeInstallBlock,
   renderPkgbuild,
   renderRepoFile,
+  REPOSITORY,
   repoPath,
   selectReleases,
   syncPlan,
@@ -140,10 +141,10 @@ describe('repository layout', () => {
   })
 
   it('writes a .repo that checks the metadata and, when signed, the packages', () => {
-    const repo = renderRepoFile({ baseUrl: 'https://packages.atomic.chat' })
-    expect(repo).toContain('baseurl=https://packages.atomic.chat/rpm\n')
+    const repo = renderRepoFile({ baseUrl: 'https://repo.example' })
+    expect(repo).toContain('baseurl=https://repo.example/rpm\n')
     expect(repo).toContain('gpgcheck=1\nrepo_gpgcheck=1\n')
-    expect(repo).toContain('gpgkey=https://packages.atomic.chat/atomic-chat.asc\n')
+    expect(repo).toContain('gpgkey=https://repo.example/atomic-chat.asc\n')
     expect(renderRepoFile({ baseUrl: 'http://x', packageSignatures: false })).toContain('gpgcheck=0\n')
   })
 
@@ -205,7 +206,7 @@ describe('readmeInstallBlock', () => {
     expect(readmeInstallBlock(readme, 'apt')).toBe('sudo apt install atc\n')
   })
 
-  it.each(['apt', 'dnf'])('finds the %s instructions in README.md', (name) => {
-    expect(readmeInstallBlock(readFileSync('README.md', 'utf8'), name)).toContain('packages.atomic.chat')
+  it.each(['apt', 'dnf'])('finds the %s instructions in README.md, on the repository URL', (name) => {
+    expect(readmeInstallBlock(readFileSync('README.md', 'utf8'), name)).toContain(REPOSITORY.baseUrl)
   })
 })

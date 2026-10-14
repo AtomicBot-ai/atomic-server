@@ -11,7 +11,7 @@ name: release
 #           smoke-packages (each distro installs the packages the way README.md says, from a repository
 #           of the draft served on loopback; Arch builds the AUR PKGBUILD)
 #         → publish (the draft becomes the release; a version with "-" is a pre-release)
-#         → repo (packages.atomic.chat rebuilt from the newest releases, mirrored to R2) → smoke-repo,
+#         → repo (the apt/dnf repository rebuilt from the newest releases, mirrored to its bucket) → smoke-repo,
 #           and aur (atc-bin pushed to the AUR); both only for a stable release from a tag
 #
 # A published version is never replaced: the updater and the installer pin checksums. A run by hand
@@ -476,8 +476,9 @@ jobs:
           if [ "${{ needs.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release edit "${{ needs.version.outputs.tag }}" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
 
-  # packages.atomic.chat: rebuilt from scratch out of the newest stable releases (this one now among
-  # them, so after publish: the repository lists public assets only), signed, mirrored to the R2 bucket.
+  # The apt/dnf repository: rebuilt from scratch out of the newest stable releases (this one now among
+  # them, so after publish: the repository lists public assets only), signed, mirrored to its public
+  # bucket on Hetzner Object Storage (REPOSITORY in scripts/linux-packaging.mjs).
   # Nothing to repair after a failure: re-running the job rebuilds the same repository.
   repo:
     needs: [version, publish]
@@ -511,15 +512,11 @@ jobs:
         env:
           LINUX_PACKAGES_GPG_PASSPHRASE: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
         run: node scripts/linux-repo.mjs build --assets dl --key "$PACKAGES_KEY" --out site
-      - name: Mirror it to the R2 bucket
+      - name: Mirror it to the bucket
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ vars.R2_BUCKET }}
-        run: |
-          node scripts/linux-repo.mjs sync --site site --bucket "$R2_BUCKET" \
-            --endpoint "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+          AWS_ACCESS_KEY_ID: ${{ secrets.PACKAGES_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PACKAGES_S3_SECRET_ACCESS_KEY }}
+        run: node scripts/linux-repo.mjs sync --site site
 
   # The live repository, the way README.md tells users to add it: catches what the loopback smoke cannot
   # (the domain, the cache, the published key).
@@ -540,7 +537,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with: { node-version: 22 }
-      - name: Install from packages.atomic.chat and check
+      - name: Install from the published repository and check
         run: |
           set -euo pipefail
           node scripts/linux-repo.mjs readme --block "$MANAGER" > install-commands.sh

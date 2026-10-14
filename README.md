@@ -71,8 +71,8 @@ Debian, Ubuntu (x86-64, arm64):
 <!-- install:apt -->
 
 ```sh
-curl -fsSL https://packages.atomic.chat/atomic-chat.gpg | sudo tee /usr/share/keyrings/atomic-chat.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/atomic-chat.gpg] https://packages.atomic.chat/deb stable main" \
+curl -fsSL https://atc-packages.fsn1.your-objectstorage.com/atomic-chat.gpg | sudo tee /usr/share/keyrings/atomic-chat.gpg >/dev/null
+echo "deb [signed-by=/usr/share/keyrings/atomic-chat.gpg] https://atc-packages.fsn1.your-objectstorage.com/deb stable main" \
   | sudo tee /etc/apt/sources.list.d/atomic-chat.list
 sudo apt update && sudo apt install atc
 ```
@@ -82,7 +82,7 @@ Fedora, RHEL, Rocky, Alma (x86-64, aarch64):
 <!-- install:dnf -->
 
 ```sh
-sudo curl -fsSL -o /etc/yum.repos.d/atomic-chat.repo https://packages.atomic.chat/rpm/atc.repo
+sudo curl -fsSL -o /etc/yum.repos.d/atomic-chat.repo https://atc-packages.fsn1.your-objectstorage.com/rpm/atc.repo
 sudo dnf install atc
 ```
 
