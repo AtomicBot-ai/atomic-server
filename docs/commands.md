@@ -721,7 +721,7 @@ Usage: atc models import <path>
 Validate and register a local GGUF
 
 Arguments:
-  <path>  Absolute model file path
+  <path>  Model file path
 
 Global options:
   --json                Print the result as one JSON document (errors go to stderr as JSON)

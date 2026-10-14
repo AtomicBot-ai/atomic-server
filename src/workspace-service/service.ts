@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { basename, join, resolve } from 'node:path'
+import { basename, isAbsolute, join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { ModelRegistry } from '@atomic-chat/core/models'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
@@ -178,6 +178,9 @@ export class WorkspaceService {
         return { removed: true, model_id: id }
       }
       case 'models.import': {
+        // The daemon's working directory means nothing to the caller; CLI resolves against its own.
+        if (!isAbsolute(String(input['path'])))
+          throw new AtcError('ATC_USAGE', 'Use an absolute path to the GGUF file.')
         const path = resolve(String(input['path'])),
           validation = await link.request<{ isValid: boolean; error?: string }>('POST', '/gguf/validate', {
             path,

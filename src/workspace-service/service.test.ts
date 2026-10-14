@@ -32,6 +32,11 @@ describe('workspace operations', () => {
     expect(link.calls).toEqual([])
     expect(WORKSPACE_OPERATIONS.find((o) => o.name === 'keys.create')?.mutates).toBe(true)
   })
+  it('refuses a relative import path instead of resolving it against the server folder', async () => {
+    const { service, link } = context()
+    await expect(service.execute('models.import', { path: './model.gguf' })).rejects.toThrow('absolute path')
+    expect(link.calls).toEqual([])
+  })
   it('passes the reviewed plan and idempotency key without replanning', async () => {
     const { service, link } = context()
     const request = { repo: 'AtomicChat/example', file: 'model.gguf' }

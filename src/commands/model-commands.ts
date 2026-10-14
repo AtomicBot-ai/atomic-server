@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import { operation, workspace } from './control.js'
@@ -151,8 +152,9 @@ export const modelsCommand = defineCommand({
     defineCommand({
       name: 'import',
       summary: 'Validate and register a local GGUF',
-      positionals: [{ name: 'path', description: 'Absolute model file path', required: true }],
-      run: (inv, ctx) => operation(ctx, 'models.import', { path: inv.positionals[0] }),
+      positionals: [{ name: 'path', description: 'Model file path', required: true }],
+      // The server may run from any folder: resolve here, where the user's working directory is known.
+      run: (inv, ctx) => operation(ctx, 'models.import', { path: resolve(ctx.io.cwd, inv.positionals[0]!) }),
     }),
     defineCommand({
       name: 'info',
