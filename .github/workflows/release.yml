@@ -345,7 +345,8 @@ jobs:
           "$atc" start --no-admin --data-folder "$data"
           "$atc" status --json --data-folder "$data" | grep -q '"running": true'
           "$atc" stop --data-folder "$data"
-      # No native runner for these: the musl builds in Alpine, the baseline build on this CPU.
+      # No native runner for these: the musl builds in Alpine, the baseline build on this CPU. Bun's musl
+      # builds link libstdc++ and libgcc dynamically, which a bare Alpine lacks.
       - name: Run the musl and baseline builds
         if: runner.os == 'Linux'
         shell: bash
@@ -353,7 +354,8 @@ jobs:
           set -euo pipefail
           arch="$(uname -m)"; [ "$arch" = arm64 ] && arch=aarch64
           chmod +x dl/atc-*
-          docker run --rm -v "$PWD/dl:/dl:ro" alpine:3.20 "/dl/atc-$VERSION-$arch-unknown-linux-musl" --version | grep -qx "$VERSION"
+          docker run --rm -v "$PWD/dl:/dl:ro" -e BIN="/dl/atc-$VERSION-$arch-unknown-linux-musl" alpine:3.20 \
+            sh -c 'apk add --no-cache -q libstdc++ libgcc && "$BIN" --version' | grep -qx "$VERSION"
           if [ "$arch" = x86_64 ]; then test "$("dl/atc-$VERSION-x86_64-unknown-linux-gnu-baseline" --version)" = "$VERSION"; fi
       - name: Check the macOS signatures (both architectures)
         if: runner.os == 'macOS'
