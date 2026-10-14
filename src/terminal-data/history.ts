@@ -13,6 +13,8 @@ export interface Conversation {
   updatedAt: number
   messages: ChatMessage[]
   interrupted: boolean
+  archived?: boolean
+  request_settings?: Record<string, unknown>
 }
 export type ConversationSummary = Omit<Conversation, 'messages'> & { turns: number }
 export class ChatHistory {

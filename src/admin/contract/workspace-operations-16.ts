@@ -1,0 +1,67 @@
+import type { WorkspaceOperation } from './workspace.js'
+export const OPERATIONS_16: readonly WorkspaceOperation[] = [
+  {
+    name: 'media.decision.config',
+    title: 'Decision settings',
+    group: 'media',
+    description: 'Decision settings',
+    mutates: false,
+    effect: 'read',
+    inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'artifacts.plan',
+    title: 'Review media installation',
+    group: 'artifacts',
+    description: 'Review media installation',
+    mutates: false,
+    effect: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        category: { type: 'string', enum: ['text', 'image', 'video', 'embedding', 'decision'] },
+        model_id: { type: 'string' },
+        quant: { type: 'string' },
+      },
+      required: ['category', 'model_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'artifacts.install',
+    title: 'Download reviewed media',
+    group: 'artifacts',
+    description: 'Download reviewed media',
+    mutates: true,
+    effect: 'download',
+    inputSchema: {
+      type: 'object',
+      properties: { plan_digest: { type: 'string' }, request_id: { type: 'string' } },
+      required: ['plan_digest', 'request_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'artifacts.list',
+    title: 'Media installations',
+    group: 'artifacts',
+    description: 'Media installations',
+    mutates: false,
+    effect: 'read',
+    inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'artifacts.load',
+    title: 'Load installed media',
+    group: 'artifacts',
+    description: 'Load installed media',
+    mutates: true,
+    effect: 'load',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
+]

@@ -6,6 +6,7 @@
  */
 
 import { mkdir } from 'node:fs/promises'
+import { WorkspaceService, sanitizeWorkspaceData } from '../workspace-service/index.js'
 import { ClientKeys } from '../terminal-data/index.js'
 import { telemetryConsent } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
@@ -122,6 +123,14 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     log: (m) => log.debug(m),
   })
 
+  const workspace = new WorkspaceService({
+    link,
+    paths,
+    config: options.config.values,
+    fetch: io.fetch,
+    platform: host.facts.platform,
+    selfCommand: host.selfCommand,
+  })
   const hostSteps = new HostStepExecutor({
     hostStepsDir: paths.hostStepsDir,
     journal: new HostStepJournal(paths.hostStepsJournal),
@@ -135,7 +144,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     newId: () => crypto.randomUUID(),
   })
   const offEvents = core.events.onAny((record) => {
-    relay.publish(record.name, record.payload)
+    relay.publish(record.name, sanitizeWorkspaceData(record.payload))
+    workspace.event(String(record.name), record.payload)
     if (String(record.name) === 'environment:operation') {
       void hostSteps
         .handle(record.payload as unknown as EnvironmentOperationView)
@@ -215,6 +225,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       adminToken: () => ensureAdminToken(paths.adminToken),
       status,
       config: configView,
+      workspace,
       log: log.child('admin'),
     })
   }

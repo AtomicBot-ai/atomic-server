@@ -32,7 +32,7 @@ export default defineConfig({
     port: 1339,
     fs: {
       // `@contract` lives outside the package root.
-      allow: [root, contract],
+      allow: [root, contract, path.resolve(repoRoot, 'src/workspace-view')],
     },
     proxy: {
       '/api': {

@@ -51,8 +51,8 @@ export function drawSetupBrowser(
       b(
         'setup-engine-info',
         row + (bottom - y >= 17 ? 1 : 0),
-        'MLX / Apple Intelligence: desktop only',
-        'These runtimes require desktop-supplied binaries; they cannot be installed by this terminal yet.'
+        'Other engines & workloads',
+        'Open the full engine and model catalog | Continue setup manually'
       )
     button(c, 'setup-refresh', x, bottom, 'Refresh', 'Retry live engine detection.', focus)
     if (v.engine)
@@ -91,14 +91,14 @@ export function drawSetupBrowser(
         `setup-file:${index}`,
         6 + i,
         `${size}  ${item.filename}${recommended}`,
-        `Download ${item.filename}. Engine and required vision files are included. Enter or Space starts.`
+        `Download ${item.filename}. Engine and required vision files are included. Enter reviews size and compatibility.`
       )
     } else
       b(
         `setup-repo:${index}`,
         6 + i,
         `${/^AtomicChat\//i.test(item.id) ? '◆ ' : '  '}${item.id}`,
-        `${item.title ?? item.id}${item.summary ? ' — ' + item.summary : ''}. Enter installs the recommended version. Versions lets you choose another quant.`
+        `${item.title ?? item.id}${item.summary ? ' — ' + item.summary : ''}. Enter reviews the recommended version. Versions lets you choose another quant.`
       )
   })
   if (v.busy && !items.length)
@@ -107,7 +107,7 @@ export function drawSetupBrowser(
   if (items.length)
     put(
       bottom - y - 2,
-      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length} | ↑↓ Browse | Enter ${v.repository ? 'Download' : 'Install'}`,
+      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length} | ↑↓ Browse | Enter Review`,
       COLORS.stone
     )
   if (v.repository) {

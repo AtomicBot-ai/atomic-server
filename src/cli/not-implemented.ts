@@ -16,25 +16,7 @@ export const ITERATIONS = {
 export type Iteration = keyof typeof ITERATIONS
 
 /** Command path → iteration. Keys are the space-joined path below `atc`. */
-export const PLANNED: Record<string, Iteration> = {
-  'run': 'I2',
-  'unload': 'I2',
-  'api key show': 'I3',
-  'api key set': 'I3',
-  'api key rotate': 'I3',
-  'api key clear': 'I3',
-  'models search': 'I3',
-  'models pull': 'I2',
-  'models list': 'I3',
-  'models rm': 'I3',
-  'models info': 'I3',
-  'engines list': 'I4',
-  'engines install': 'I2',
-  'engines status': 'I4',
-  'engines rm': 'I4',
-  'hardware show': 'I4',
-  'hardware refresh': 'I4',
-}
+export const PLANNED: Record<string, Iteration> = {}
 
 /** Features of otherwise working commands that are still stubs (`atc logs -f`, `atc update` without `--check`). */
 export const PLANNED_PARTIAL: Record<string, Iteration> = {

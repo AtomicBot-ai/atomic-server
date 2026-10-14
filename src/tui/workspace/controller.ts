@@ -1,3 +1,4 @@
+import { WorkspaceRuntime } from './runtime.js'
 import { dirname } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
 import {
@@ -18,7 +19,13 @@ import type { TuiCommand } from '../keys.js'
 import { createLogger } from '../../output/index.js'
 import { setConfigValue } from '../../config/index.js'
 import type { CoreLink } from '../../core-link/index.js'
-import { listChatModels, streamChat, startApi, requestRow } from '../../terminal-service/index.js'
+import {
+  listChatModels,
+  streamChat,
+  startApi,
+  requestRow,
+  readChatImage,
+} from '../../terminal-service/index.js'
 import type { ChatMessage, RequestRow } from '../../terminal-service/index.js'
 export interface WorkspaceDeps {
   agentHost?: AgentHost
@@ -28,6 +35,7 @@ export interface WorkspaceDeps {
   chatKey: string
 }
 export class WorkspaceController {
+  readonly runtime: WorkspaceRuntime
   readonly keys: ClientKeys
   readonly history: ChatHistory
   readonly setup: TerminalSetup
@@ -46,6 +54,7 @@ export class WorkspaceController {
     private onError: (message: string) => void
   ) {
     this.legacy = new TuiController(deps.base, dispatch)
+    this.runtime = new WorkspaceRuntime(deps.base, deps.request)
     const directory = dirname(deps.base.paths.configFile)
     this.keys = new ClientKeys(directory)
     this.history = new ChatHistory(directory)
@@ -63,6 +72,7 @@ export class WorkspaceController {
     this.observer?.abort()
     this.turn?.abort()
     this.legacy.dispose()
+    this.runtime.dispose()
   }
   run(command: TuiCommand): Promise<void> {
     return this.legacy.run(command)
@@ -87,6 +97,9 @@ export class WorkspaceController {
       server ? await this.localKey() : await this.keyFor(endpoint),
       AbortSignal.any([this.abort.signal, AbortSignal.timeout(10000)])
     )
+  }
+  image(path: string) {
+    return readChatImage(path)
   }
   installed() {
     return installedModels(this.deps.base.paths.layout)

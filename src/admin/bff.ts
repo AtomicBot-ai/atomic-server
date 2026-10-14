@@ -18,6 +18,9 @@ import { gateRequest } from './gates.js'
 import { sseFrame } from './relay.js'
 import type { RelayHub } from './relay.js'
 import { tokensMatch } from './token.js'
+import { sanitizeWorkspaceData } from '../workspace-service/index.js'
+import type { WorkspaceClient } from '../workspace-service/index.js'
+import { serveWorkspaceAsset } from './workspace-assets.js'
 
 export const MAX_BODY_BYTES = 8 * 1024 * 1024
 export const SSE_PING_MS = 15_000
@@ -100,6 +103,7 @@ export interface BffDeps {
   log: Logger
   loopbackOnly: boolean
   pingMs?: number
+  workspace?: WorkspaceClient
 }
 
 type Req = IncomingMessage
@@ -131,12 +135,12 @@ function statusFor(error: unknown): number {
   return 500
 }
 
-async function readJson(req: Req): Promise<unknown> {
+async function readJson(req: Req, limit = MAX_BODY_BYTES): Promise<unknown> {
   const chunks: Buffer[] = []
   let size = 0
   for await (const chunk of req) {
     size += (chunk as Buffer).length
-    if (size > MAX_BODY_BYTES) throw new AtcError('ATC_USAGE', 'Request body too large.')
+    if (size > limit) throw new AtcError('ATC_USAGE', 'Request body too large.')
     chunks.push(chunk as Buffer)
   }
   const text = Buffer.concat(chunks).toString('utf8')
@@ -206,8 +210,29 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
         )
         return true
       }
+      if (path === ADMIN_API.workspace && method === 'GET') {
+        if (!deps.workspace) throw notImplemented('Workspace operations', 'a workspace-enabled server')
+        send(res, 200, await deps.workspace.snapshot())
+        return true
+      }
+      if (path === ADMIN_API.workspaceExecute && method === 'POST') {
+        if (!deps.workspace) throw notImplemented('Workspace operations', 'a workspace-enabled server')
+        const body = (await readJson(req, 64 * 1024 * 1024)) as { operation?: unknown; input?: unknown }
+        if (typeof body?.operation !== 'string') throw new AtcError('ATC_USAGE', 'Choose an operation.')
+        send(
+          res,
+          200,
+          await deps.workspace.execute(body.operation, (body.input ?? {}) as Record<string, unknown>)
+        )
+        return true
+      }
+      const asset = /^\/api\/workspace\/artifacts\/(image|video)\/([^/]+)$/.exec(path)
+      if (asset && (method === 'GET' || method === 'HEAD')) {
+        await serveWorkspaceAsset(deps.link, req, res, asset[1]!, asset[2]!)
+        return true
+      }
       if (path === ADMIN_API.status && method === 'GET') {
-        send(res, 200, await deps.status())
+        send(res, 200, sanitizeWorkspaceData(await deps.status()))
         return true
       }
       if (path === ADMIN_API.config) {
@@ -233,7 +258,7 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
         }
         const body = method === 'GET' ? undefined : await readJson(req)
         const result = await deps.link.request<unknown>(method as 'GET', `${target}${url.search}`, body)
-        send(res, 200, result ?? {})
+        send(res, 200, sanitizeWorkspaceData(result ?? {}))
         return true
       }
       if (path.startsWith(`${ADMIN_API.setup}/`) || path === ADMIN_API.setup)

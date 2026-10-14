@@ -20,7 +20,7 @@ it.each([
   expect(frame.targets.filter((t) => t.id.startsWith('setup-engine:'))).toHaveLength(3)
   for (const t of frame.targets) {
     expect(t.x + t.width).toBeLessThanOrEqual(w)
-    expect(t.y + t.height).toBeLessThanOrEqual(h - 3)
+    expect(t.y + t.height).toBeLessThanOrEqual(t.y === h - 1 ? h : h - 3)
   }
 })
 it.each([

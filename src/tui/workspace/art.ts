@@ -7,7 +7,7 @@ export type Drawing = ArtCell[][]
 const EMPTY = (): ArtCell => ({ char: ' ', color: '#090b0c' })
 const clamp = (n: number) => Math.max(0, Math.min(1, n))
 const mix = (a: number, b: number, t: number) => Math.round(a + (b - a) * clamp(t))
-function glow(t: number): string {
+function glow(t: number, fire = false): string {
   const stops = [
     [7, 34, 35],
     [12, 85, 83],
@@ -15,6 +15,8 @@ function glow(t: number): string {
     [79, 225, 207],
     [211, 255, 247],
   ]
+  if (fire)
+    stops.splice(0, stops.length, [30, 5, 5], [120, 20, 6], [211, 71, 11], [255, 161, 31], [255, 245, 182])
   const at = clamp(t) * 3.999
   const a = stops[Math.floor(at)]!,
     b = stops[Math.floor(at) + 1]!
@@ -49,9 +51,17 @@ export function gazeAt(seconds: number, motion: boolean): { x: number; y: number
   return { x: a[0]! + (b[0]! - a[0]!) * ease, y: a[1]! + (b[1]! - a[1]!) * ease }
 }
 /** Pointed lids, an oval pupil, radial fibres and uneven tongues of fire. */
-export function drawEye(width: number, height: number, seconds = 0, motion = true): Drawing {
-  const gaze = gazeAt(seconds, motion)
-  const time = motion ? seconds : 0
+export type EyeStatus = 'offline' | 'starting' | 'ready' | 'busy' | 'overloaded' | 'error' | 'stopping'
+export function drawEye(
+  width: number,
+  height: number,
+  seconds = 0,
+  motion = true,
+  status: EyeStatus = 'ready'
+): Drawing {
+  const speed = status === 'starting' ? 4.5 : status === 'overloaded' ? 3.3 : status === 'busy' ? 1.8 : 1
+  const gaze = gazeAt(seconds * speed, motion)
+  const time = motion ? seconds * speed : 0
   const breath = Math.sin(time * 0.9)
   const compact = height <= 5
   const density = '.:;=+*xX#%@'
@@ -70,7 +80,8 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
         1.45
       const tongue = 0.045 + 0.11 * (0.5 + 0.5 * Math.sin(x * 82 + Math.sin(x * 29 - time * 0.6) * 5))
       const dist = Math.abs(y) - lid
-      if (Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
+      const aperture = status === 'offline' ? 0.14 : status === 'stopping' ? 0.38 : 1
+      if (Math.abs(y) > aperture || Math.abs(x) > 0.96 || dist > tongue) return EMPTY()
       const pupil = Math.max(
         compact ? 1.05 / width : 0,
         0.24 * (1 + breath * 0.1) * Math.sqrt(Math.max(0, 1 - (dy / 0.78) ** 2))
@@ -84,7 +95,8 @@ export function drawEye(width: number, height: number, seconds = 0, motion = tru
       )
       if (dist > 0 && heat < 0.18) return EMPTY()
       const char = density[Math.min(density.length - 1, Math.floor(heat * density.length))]!
-      return { char, color: glow(heat) }
+      const dim = status === 'offline' ? 0.3 : status === 'error' ? 0.55 + Math.sin(time * 2.5) * 0.3 : 1
+      return { char, color: glow(heat * dim, status === 'overloaded' || status === 'error') }
     })
   )
 }

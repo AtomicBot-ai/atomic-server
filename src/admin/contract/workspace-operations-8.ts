@@ -1,0 +1,67 @@
+import type { WorkspaceOperation } from './workspace.js'
+export const OPERATIONS_8: readonly WorkspaceOperation[] = [
+  {
+    name: 'settings.update',
+    title: 'Save engine settings',
+    group: 'settings',
+    description: 'Save engine settings',
+    mutates: true,
+    effect: 'configure',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        provider: { type: 'string' },
+        values: { type: 'object' },
+        expected_revision: { type: 'number' },
+      },
+      required: ['provider', 'values'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'logs.read',
+    title: 'Server logs',
+    group: 'logs',
+    description: 'Server logs',
+    mutates: false,
+    effect: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { lines: { type: 'integer', minimum: 1, maximum: 1000 } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'hardware.info',
+    title: 'Hardware',
+    group: 'hardware',
+    description: 'Hardware',
+    mutates: false,
+    effect: 'read',
+    inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'hardware.refresh',
+    title: 'Refresh hardware',
+    group: 'hardware',
+    description: 'Refresh hardware',
+    mutates: true,
+    effect: 'configure',
+    inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'hardware.devices',
+    title: 'Engine devices',
+    group: 'hardware',
+    description: 'Engine devices',
+    mutates: false,
+    effect: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { provider: { type: 'string' } },
+      required: [],
+      additionalProperties: false,
+    },
+  },
+]

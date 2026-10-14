@@ -16,13 +16,13 @@ describe('runCli', () => {
     expect(sub.out.join('')).toContain('Usage: atc models pull <model>')
   })
 
-  it('reports unknown commands and stubs with their exit codes, as JSON when asked', async () => {
+  it('reports unknown commands and malformed operation input as JSON', async () => {
     const bad = recordingIo()
     expect(await runCli(['bogus'], bad)).toBe(2)
     expect(bad.err.join('')).toContain('Unexpected argument: bogus')
     const stub = recordingIo()
-    expect(await runCli(['models', 'pull', 'x', '--json'], stub)).toBe(3)
-    expect(JSON.parse(stub.err.join(''))).toMatchObject({ error: { code: 'ATC_NOT_IMPLEMENTED' } })
+    expect(await runCli(['control', 'call', 'api.ping', '--input', '[]', '--json'], stub)).toBe(2)
+    expect(JSON.parse(stub.err.join(''))).toMatchObject({ error: { code: 'ATC_USAGE' } })
     expect(stub.out).toEqual([])
   })
 

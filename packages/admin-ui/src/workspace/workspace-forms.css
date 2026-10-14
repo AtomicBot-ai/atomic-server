@@ -1,0 +1,281 @@
+.ew-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid #35413f;
+  background: #202829;
+  color: #e4eeeb;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ew-button:hover {
+  background: #2a3935;
+  border-color: #617e75;
+}
+.ew-button.primary {
+  background: #8ce4d8;
+  color: #102c28;
+  border-color: #8ce4d8;
+  font-weight: 650;
+}
+.ew-button.primary:hover {
+  background: #aff2e0;
+}
+.ew-button.danger {
+  color: #eeafa7;
+}
+.action-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 100%;
+}
+.inline-error {
+  color: #efa99d;
+  font-size: 12px;
+  white-space: normal;
+  max-width: 440px;
+  display: block;
+}
+.ew-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ew-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+.ew-field > span {
+  font-size: 11px;
+  color: #a8b9b3;
+  text-transform: none;
+  font-weight: 550;
+}
+.ew-field small {
+  font-size: 11px;
+  color: #7a9088;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+}
+.eye-workspace input,
+.eye-workspace select,
+.eye-workspace textarea {
+  background: #0d1314;
+  color: #eaf3ef;
+  border: 1px solid #35433d;
+  border-radius: 6px;
+  padding: 9px 11px;
+  font: 13px/1.45 inherit;
+  min-height: 37px;
+  max-width: 100%;
+  min-width: 0;
+}
+.eye-workspace select {
+  cursor: pointer;
+}
+.eye-workspace textarea {
+  min-height: 86px;
+  resize: vertical;
+  width: 100%;
+}
+.eye-workspace input::placeholder,
+.eye-workspace textarea::placeholder {
+  color: #71827b;
+}
+.eye-workspace .code-input {
+  font:
+    12px/1.7 ui-monospace,
+    monospace;
+  min-height: 110px;
+}
+.ew-panel {
+  padding: 22px 24px;
+  background: #141a1b;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ew-panel .panel-heading h2 {
+  color: #dfe9e5;
+}
+.ew-muted,
+.ew-empty {
+  color: #8da198;
+  font-size: 13px;
+}
+.ew-empty {
+  padding: 24px 0;
+}
+.ew-error {
+  background: #452b262e;
+  color: #f5b4a5;
+  border: 1px solid #72453a;
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin: 12px 0;
+}
+.notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: #283d333d;
+  color: #b2d6c1;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 15px 0;
+  font-size: 12px;
+}
+.eye-workspace details {
+  margin: 14px 0;
+}
+.eye-workspace summary {
+  cursor: pointer;
+  color: #a2b9af;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.json-result {
+  max-height: 340px;
+  overflow: auto;
+  background: #090e10;
+  padding: 14px;
+  border-radius: 6px;
+  color: #b4d5c2;
+}
+.eye-workspace table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  text-align: left;
+}
+.eye-workspace td,
+.eye-workspace th {
+  padding: 11px 10px;
+  border-bottom: 1px solid #27372e;
+  vertical-align: middle;
+}
+.eye-workspace th {
+  font-size: 10px;
+  font-weight: 500;
+  color: #8aa897;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.table-scroll {
+  overflow: auto;
+}
+.connect-address {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 20px;
+}
+.connect-address code {
+  font-size: 20px;
+  color: #bcf4d8;
+}
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.inline-field select {
+  flex: 1;
+}
+.agent-connect {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  margin-top: 15px;
+}
+.agent-connect > .ew-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+.agent-result {
+  padding: 16px;
+  background: #1b3030;
+  border-radius: 6px;
+  margin-top: 18px;
+}
+.key-create {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.key-create input {
+  flex: 1;
+  max-width: 340px;
+}
+.request-example pre {
+  padding: 16px;
+  background: #090e10;
+  border-radius: 6px;
+}
+.request-example small {
+  font-size: 11px;
+  color: #869b8e;
+}
+.operation-form > p {
+  font-size: 12px;
+  margin-bottom: 18px;
+}
+.eyebrow {
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #89ba9d;
+}
+@media (max-width: 760px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .ew-panel {
+    padding: 18px;
+  }
+  .connect-address {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .connect-address code {
+    font-size: 16px;
+  }
+  .inline-field {
+    flex-wrap: wrap;
+  }
+  .agent-connect {
+    flex-wrap: wrap;
+  }
+  .eyeworkspace td {
+    padding: 8px;
+  }
+  .ew-button {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}

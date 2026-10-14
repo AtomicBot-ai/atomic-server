@@ -2,6 +2,8 @@ import { defineCommand, AtcError } from '../cli/index.js'
 import type { CommandRun } from '../cli/index.js'
 import { ClientKeys } from '../terminal-data/index.js'
 import { startApi, streamChat, listChatModels } from '../terminal-service/index.js'
+import { workspace } from './control.js'
+import { defaultConfig } from '../config/index.js'
 export const apiStart: CommandRun = async (inv, ctx) => {
   const config = structuredClone((await ctx.config()).values)
   if (typeof inv.values['host'] === 'string') config.api.host = inv.values['host']
@@ -64,9 +66,27 @@ export const chatCommand = defineCommand({
   },
   examples: ['atc chat --model my-model Hello'],
   run: async (inv, ctx) => {
-    const config = await ctx.config(),
-      endpoint = String(inv.values['endpoint'] ?? config.values.tui.endpoint),
-      key = ctx.io.env['ATC_CHAT_API_KEY'] ?? ctx.io.env['ATC_API_KEY'] ?? ''
+    const config = await ctx.config()
+    const local = await workspace(ctx, false)
+      .then((service) => service.snapshot())
+      .catch(() => null)
+    // Config edits serialize defaults too; a saved default is still the local-server shortcut.
+    const useLocal =
+      inv.values['endpoint'] === undefined &&
+      config.sources['tui.endpoint'] !== 'env' &&
+      config.values.tui.endpoint === defaultConfig().tui.endpoint
+    const endpoint = String(
+      inv.values['endpoint'] ?? (useLocal && local ? local.api.endpoint : config.values.tui.endpoint)
+    )
+    if (useLocal && local && !local.api.running)
+      throw new AtcError('ATC_USAGE', 'Start the API before chatting.', { hint: 'atc api start' })
+    // A local client key must never be sent to an explicitly configured remote service.
+    const key =
+      ctx.io.env['ATC_CHAT_API_KEY'] ??
+      ctx.io.env['ATC_API_KEY'] ??
+      (local?.api.running && endpoint === local.api.endpoint
+        ? await new ClientKeys(ctx.paths.atcDir).get()
+        : '')
     const model =
       String(inv.values['model'] ?? config.values.tui.model) ||
       (await listChatModels(endpoint, ctx.io.fetch, key))[0]

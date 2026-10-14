@@ -1,0 +1,153 @@
+import type { WorkspaceOperation } from './workspace.js'
+export const OPERATIONS_11: readonly WorkspaceOperation[] = [
+  {
+    name: 'media.files',
+    title: 'Files',
+    group: 'media',
+    description: 'Files',
+    mutates: false,
+    effect: 'read',
+    inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  },
+  {
+    name: 'media.configure',
+    title: 'Configure',
+    group: 'media',
+    description:
+      'Configure Request fields: dataFolder, outputDir, videoOutputDir, idleUnloadSecs. Engine capability limits apply.',
+    mutates: true,
+    effect: 'configure',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        request: {
+          type: 'object',
+          properties: {
+            dataFolder: {},
+            outputDir: {},
+            videoOutputDir: {},
+            idleUnloadSecs: { type: 'integer', minimum: 0 },
+          },
+          required: [],
+          additionalProperties: true,
+        },
+      },
+      required: ['request'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'media.load',
+    title: 'Load',
+    group: 'media',
+    description:
+      'Load Request fields: modelId, family, modality, displayName, files, defaults, ranges, offload, offloadFallback, engine, threads, startupTimeoutSecs. Engine capability limits apply.',
+    mutates: true,
+    effect: 'load',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        request: {
+          type: 'object',
+          properties: {
+            modelId: {},
+            family: {},
+            modality: { type: 'string', enum: ['image', 'video'] },
+            displayName: {},
+            files: { type: 'object' },
+            defaults: { type: 'object' },
+            ranges: { type: 'object' },
+            offload: { type: 'string', enum: ['none', 'group', 'model'] },
+            offloadFallback: { type: 'string', enum: ['none', 'group', 'model'] },
+            engine: { type: 'string', enum: ['sd-cpp'] },
+            threads: { type: 'integer', minimum: 0 },
+            startupTimeoutSecs: { type: 'integer', minimum: 1 },
+          },
+          required: [
+            'modelId',
+            'family',
+            'modality',
+            'displayName',
+            'files',
+            'defaults',
+            'ranges',
+            'offload',
+          ],
+          additionalProperties: true,
+        },
+      },
+      required: ['request'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'media.embedding.configure',
+    title: 'Embedding Configure',
+    group: 'media',
+    description:
+      'Embedding Configure Request fields: enabled, model_path, mmproj_path, model_id, ctx_size, pooling, image_max_tokens, threads, idle_unload_secs, startup_timeout_secs, engine_path. Engine capability limits apply.',
+    mutates: true,
+    effect: 'configure',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        request: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            model_path: {},
+            mmproj_path: {},
+            model_id: {},
+            ctx_size: { type: 'integer', minimum: 0 },
+            pooling: { type: 'string', enum: ['', 'mean', 'cls', 'last'] },
+            image_max_tokens: { type: 'integer', minimum: 0 },
+            threads: { type: 'integer', minimum: 0 },
+            idle_unload_secs: { type: 'integer', minimum: 0 },
+            startup_timeout_secs: { type: 'integer', minimum: 1 },
+            engine_path: {},
+          },
+          required: [],
+          additionalProperties: true,
+        },
+      },
+      required: ['request'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'media.decision.configure',
+    title: 'Decision Configure',
+    group: 'media',
+    description:
+      'Decision Configure Request fields: enabled, model_path, mmproj_path, model_id, ctx_size, spec_path, threads, timeout_ms, idle_unload_secs, startup_timeout_secs, allow_uncalibrated, engine_path, convert_type. Engine capability limits apply.',
+    mutates: true,
+    effect: 'configure',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        request: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            model_path: {},
+            mmproj_path: {},
+            model_id: {},
+            ctx_size: { type: 'integer', minimum: 0 },
+            spec_path: {},
+            threads: { type: 'integer', minimum: 0 },
+            timeout_ms: { type: 'integer', minimum: 1 },
+            idle_unload_secs: { type: 'integer', minimum: 0 },
+            startup_timeout_secs: { type: 'integer', minimum: 1 },
+            allow_uncalibrated: { type: 'boolean' },
+            engine_path: {},
+            convert_type: { type: 'string', enum: ['f16', 'f32'] },
+          },
+          required: [],
+          additionalProperties: true,
+        },
+      },
+      required: ['request'],
+      additionalProperties: false,
+    },
+  },
+]

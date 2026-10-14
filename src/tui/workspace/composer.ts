@@ -88,10 +88,20 @@ export function drawComposer(
     'choose-model',
     x + engineWidth + 4,
     y + 4,
-    Math.min(64, width - engineWidth - 7),
+    Math.min(64, width - engineWidth - 18),
     s.model ? `Model: ${s.model} ▾` : 'Model ▾',
     s.model ? `${s.model} | Choose a model` : 'Choose a model from your library or endpoint',
     COLORS.modelButton,
     COLORS.composerInk
+  )
+  control(
+    'images',
+    x + width - 12,
+    y + 4,
+    9,
+    s.images.length ? `Images ${s.images.length}` : '+ Image',
+    'Attach a local image | Requires a vision model',
+    COLORS.engineButton,
+    COLORS.composer
   )
 }

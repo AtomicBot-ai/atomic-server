@@ -1,7 +1,16 @@
 /** Public OpenAI-compatible calls shared by the terminal and plain chat command. */
+export type ChatContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } }
+export type ChatContent = string | ChatContentPart[]
+export function messageText(content: ChatContent): string {
+  return typeof content === 'string'
+    ? content
+    : content.map((p) => (p.type === 'text' ? p.text : '[Image]')).join('\n')
+}
 export interface ChatMessage {
   role: 'user' | 'assistant'
-  content: string
+  content: ChatContent
 }
 export function endpointUrl(value: string): string {
   const url = new URL(value)

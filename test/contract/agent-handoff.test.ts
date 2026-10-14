@@ -48,7 +48,7 @@ it('releases mouse capture before handing off and returns to Server without stop
     },
   })
   try {
-    await eventually(() => terminal.stdout.text().includes('YOUR SERVER IS ONLINE'))
+    await eventually(() => terminal.stdout.text().includes('Copy address'))
     const target = workspaceFrame(createWorkspace('server'), 100, 30, 0).targets.find(
       (t) => t.id === 'agent:atomic-agent'
     )!

@@ -71,3 +71,24 @@ it('orders chats by message activity across selection, rename, streaming and res
     await rm(folder, { recursive: true, force: true })
   }
 })
+
+it('preserves image content parts through a save and reopen', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-vision-history-'))
+  try {
+    const history = new ChatHistory(folder),
+      chat = history.create('http://localhost:1337/v1', 'vision', '/')
+    chat.messages = [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'What is here?' },
+          { type: 'image_url', image_url: { url: 'data:image/png;base64,cGl4ZWxz' } },
+        ],
+      },
+    ]
+    await history.save(chat)
+    expect((await new ChatHistory(folder).load(chat.id))?.messages).toEqual(chat.messages)
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})

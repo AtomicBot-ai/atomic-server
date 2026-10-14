@@ -74,7 +74,7 @@ export function createContext(deps: ContextDeps): CommandContext {
   const { io, flags } = deps
   const colors = colorsFor(colorEnabled({ isTTY: io.isTTY.stderr, env: io.env, noColor: flags.noColor }))
   const log = createLogger(stderrSink(io, { json: flags.json, colors }), { level: levelFromFlags(flags) })
-  const paths = deps.paths ?? resolveAtcPaths(nodeDataFolderEnv(io.env), flags.dataFolder)
+  const paths = deps.paths ?? resolveAtcPaths(nodeDataFolderEnv(io.env), flags.dataFolder, io.cwd)
   const host = deps.host ?? nodeHostServices(io)
   const pid = deps.pid ?? process.pid
   let config: Promise<ResolvedConfig> | undefined

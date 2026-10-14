@@ -55,38 +55,44 @@ export function drawWelcome(
   top: number,
   bottom: number
 ) {
-  const narrow = c.width < 78,
-    slabHeight = narrow ? 5 : c.height >= 35 ? 7 : 5
-  const blockHeight = narrow ? slabHeight * 2 + 1 : slabHeight
-  const plateY = bottom - blockHeight + 1
+  const narrow = c.width < 88,
+    slabHeight = 5
+  const plateY = Math.max(top + 4, bottom - (narrow ? 12 : 7))
   eyeArtwork(c, 4, top, c.width - 8, Math.max(3, plateY - top - 1), seconds, motion)
-  const title = 'Choose your workspace',
-    ty = plateY - 1
-  text(c, Math.floor((c.width - title.length) / 2), ty, title, COLORS.gold)
   const w = narrow ? c.width - 8 : Math.min(48, Math.floor((c.width - 10) / 2)),
     sx = narrow ? 4 : Math.floor((c.width - w * 2 - 3) / 2)
   stonePlate(
     c,
-    'personal',
+    'hosting',
     sx,
-    ty + 1,
+    plateY,
     w,
     slabHeight,
-    '[1] PERSONAL TERMINAL',
-    'Think, write and build.\nYour models. Your workspace.',
+    '[1] SET UP SERVER',
+    'Choose your goal. Review and install.',
     focus
   )
   stonePlate(
     c,
-    'hosting',
+    'setup-manual',
     narrow ? sx : sx + w + 3,
-    ty + 1 + (narrow ? slabHeight + 1 : 0),
+    plateY + (narrow ? slabHeight + 1 : 0),
     w,
     slabHeight,
-    '[2] SERVER CONSOLE',
-    'Serve models. Connect apps.\nYour API, under your control.',
+    '[2] SET UP MANUALLY',
+    'Open the workspace. Install later.',
     focus
   )
+  const label = '[3] Set up with an agent'
+  text(c, sx, bottom, label, focus === 'agent-setup' ? COLORS.gold : COLORS.muted)
+  c.targets.push({
+    id: 'agent-setup',
+    x: sx,
+    y: bottom,
+    width: label.length,
+    height: 1,
+    hint: 'Copy agent setup instructions and MCP configuration',
+  })
 }
 /** One crossing per minute, starting after the first minute; no timer or I/O in the art. */
 export function drawRider(c: Canvas, y: number, elapsed: number, motion: boolean, compact = false) {

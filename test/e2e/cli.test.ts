@@ -36,11 +36,11 @@ describe(`atc (${command.join(' ')})`, () => {
     expect(atc('').code).toBe(2)
   })
 
-  it('exits 2 for unknown commands and 3 for stubs', () => {
+  it('rejects unknown commands and malformed operation inputs', () => {
     expect(atc('bogus').code).toBe(2)
-    const stub = atc('models', 'pull', 'x', '--json')
-    expect(stub.code).toBe(3)
-    expect(JSON.parse(stub.err)).toMatchObject({ error: { code: 'ATC_NOT_IMPLEMENTED' } })
+    const stub = atc('control', 'call', 'api.start', '--input', '[]', '--json')
+    expect(stub.code).toBe(2)
+    expect(JSON.parse(stub.err)).toMatchObject({ error: { code: 'ATC_USAGE' } })
   })
 
   it('starts a daemon, serves and stops its public API, then stops the owner', async () => {
@@ -54,6 +54,36 @@ describe(`atc (${command.join(' ')})`, () => {
     expect(body.admin_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/)
     const admin = atc('admin', 'status', '--json')
     expect(JSON.parse(admin.out)).toMatchObject({ running: true, admin_url: body.admin_url })
+    const operations = atc('control', 'list', '--json')
+    expect(operations.code, operations.err).toBe(0)
+    expect(JSON.parse(operations.out).operations).toContainEqual(
+      expect.objectContaining({ name: 'models.plan' })
+    )
+    const manual = atc('setup', 'manual', '--json')
+    expect(manual.code, manual.err).toBe(0)
+    const watch = atc('control', 'watch', '--count', '1')
+    expect(watch.code, watch.err).toBe(0)
+    expect(JSON.parse(watch.out).snapshot.setup).toMatchObject({ mode: 'manual' })
+    const [mcpExe, ...mcpPrefix] = command
+    const mcp = spawnSync(mcpExe!, [...mcpPrefix, 'mcp', '--data-folder', dataFolder], {
+      encoding: 'utf8',
+      timeout: 10000,
+      input:
+        [
+          { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
+          { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+        ]
+          .map((v) => JSON.stringify(v))
+          .join('\n') + '\n',
+    })
+    expect(mcp.status, mcp.stderr).toBe(0)
+    const replies = mcp.stdout
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line))
+    expect(replies.find((r) => r.id === 2).result.tools).toContainEqual(
+      expect.objectContaining({ name: 'api_ping' })
+    )
     const again = atc('start', '--json')
     expect(JSON.parse(again.out)).toMatchObject({ started: false })
     expect(atc('config', 'set', 'api.port', '0').code).toBe(0)

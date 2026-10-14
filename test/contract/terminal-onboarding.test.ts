@@ -58,6 +58,18 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     if (path === '/model-setups') return { setups: jobs } as T
     return {} as T
   }
+  const load = link.models.load
+  link.models.load = async (provider, model) => {
+    const result = await load(provider, model)
+    link.snapshotValue.sessions = [{ ...result, provider, state: 'ready' } as never]
+    return result
+  }
+  const start = link.server.start
+  link.server.start = async (body) => {
+    const result = await start(body)
+    link.snapshotValue.server = result
+    return result
+  }
   const deps: WorkspaceDeps = {
     apiKey: '',
     chatKey: '',
@@ -93,7 +105,7 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     terminal.stdin.press(`\u001b[<0;${t.x + 2};${t.y + 2}M`)
   }
   try {
-    await sees('Choose your workspace')
+    await sees('SET UP SERVER')
     click('hosting')
     await sees('Choose models >')
     terminal.stdin.press('\r')
@@ -109,11 +121,9 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
     ui.unmount()
     jobs[0]!.stage = 'ready'
     ui = mount()
-    await sees('YOUR SERVER IS READY TO START')
+    await sees('Copy address')
     expect(link.calls.some((c) => c.path === '/models/llamacpp-upstream/fixture/model/load')).toBe(true)
-    expect(link.calls.some((c) => c.path === '/server/start')).toBe(false)
-    terminal.stdin.press('\r')
-    await eventually(() => link.calls.some((c) => c.path === '/server/start'), 'explicit server launch')
+    expect(link.calls.some((c) => c.path === '/server/start')).toBe(true)
     terminal.stdin.press('\u0011')
     await ui.waitUntilExit()
   } finally {

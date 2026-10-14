@@ -1,0 +1,73 @@
+import type { WorkspaceOperation } from './workspace.js'
+export const OPERATIONS_4: readonly WorkspaceOperation[] = [
+  {
+    name: 'models.unload',
+    title: 'Unload model',
+    group: 'models',
+    description: 'Unload model',
+    mutates: true,
+    effect: 'interrupt',
+    inputSchema: {
+      type: 'object',
+      properties: { provider: { type: 'string' }, model_id: { type: 'string' } },
+      required: ['provider', 'model_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'models.cancel',
+    title: 'Cancel model',
+    group: 'models',
+    description: 'Cancel model',
+    mutates: true,
+    effect: 'interrupt',
+    inputSchema: {
+      type: 'object',
+      properties: { provider: { type: 'string' }, model_id: { type: 'string' } },
+      required: ['provider', 'model_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'models.info',
+    title: 'Info model',
+    group: 'models',
+    description: 'Info model',
+    mutates: false,
+    effect: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { provider: { type: 'string' }, model_id: { type: 'string' } },
+      required: ['provider', 'model_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'models.logs',
+    title: 'Logs model',
+    group: 'models',
+    description: 'Logs model',
+    mutates: false,
+    effect: 'read',
+    inputSchema: {
+      type: 'object',
+      properties: { provider: { type: 'string' }, model_id: { type: 'string' } },
+      required: ['provider', 'model_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'models.remove',
+    title: 'Remove managed model',
+    group: 'models',
+    description: 'Remove a managed-engine model through Core; loaded-model protection applies.',
+    mutates: true,
+    effect: 'configure',
+    inputSchema: {
+      type: 'object',
+      properties: { model_id: { type: 'string' } },
+      required: ['model_id'],
+      additionalProperties: false,
+    },
+  },
+]

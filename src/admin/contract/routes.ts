@@ -1,6 +1,8 @@
 /** Paths the SPA calls, in one place on both sides. */
 export const ADMIN_API = {
   status: '/api/status',
+  workspace: '/api/workspace',
+  workspaceExecute: '/api/workspace/execute',
   session: '/api/session',
   config: '/api/config',
   events: '/api/events',

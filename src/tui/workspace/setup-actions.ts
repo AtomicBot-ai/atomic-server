@@ -75,10 +75,15 @@ export async function setupAction(
     return true
   }
   if (id === 'setup-engine-info') {
+    await c.runtime.execute('setup.manual')
     update((s) => ({
       ...s,
-      message:
-        'MLX and Apple Intelligence require desktop-supplied runtimes; this terminal installer supports GGUF engines.',
+      setupComplete: true,
+      setup: null,
+      page: 'models',
+      libraryView: 'installed',
+      focus: 'library:catalog',
+      message: 'Choose Catalog for all workloads or Engines to install a runtime.',
     }))
     return true
   }
@@ -119,10 +124,6 @@ export async function setupAction(
       patch({ catalogs, engine: view.engine || `${first.provider}|${build.version}|${build.backend}` })
       if (!operation.signal.aborted)
         focus(`setup-engine:${view.engine || `${first.provider}|${build.version}|${build.backend}`}`)
-      if (get().setupComplete && !operation.signal.aborted) {
-        patch({ busy: false })
-        return setupAction('setup-models', ctx)
-      }
     } else if (id.startsWith('setup-engine:')) {
       patch({ engine: id.slice(13), busy: false })
       return setupAction('setup-models', ctx)
@@ -194,6 +195,8 @@ export async function setupAction(
         focus('setup-cancel')
         const selection = await wait(c.setup.plan(pending))
         let engine = view.engine
+        if (selection.plan.provider === 'atomic-prism' && !engine.startsWith('atomic-prism|'))
+          throw new Error('This model requires Atomic Prism. Go back to Engines and choose it explicitly.')
         if (selection.plan.engine) {
           const e = selection.plan.engine
           engine = `${e.provider}|${e.version}|${e.backend}`
@@ -201,13 +204,16 @@ export async function setupAction(
           throw new Error('This model needs llama.cpp or TurboQuant. Go back to Engines and choose one.')
         }
         if (operation.signal.aborted) return true
-        patch({ selections: [selection], engine })
-        // Preflight is cancellable; Core owns durable transfers from this point onward.
-        patch({ preparing: false })
-        focus('setup-pause')
-        const progress = await wait(c.setup.begin(view.mode, engine, [selection]))
-        patch({ progress, pending: null, startedAt: progress.manifest.startedAt })
+        patch({ selections: [selection], engine, preparing: false, stage: 'review' })
+        focus('setup-install')
       }
+    } else if (id === 'setup-install' && view.stage === 'review' && view.selections.length) {
+      const plan = view.selections[0]!.plan as unknown as Record<string, unknown>
+      if (Array.isArray(plan['blockers']) && plan['blockers'].length)
+        throw new Error('Resolve the compatibility blockers before downloading.')
+      const progress = await wait(c.setup.begin(view.mode, view.engine, view.selections))
+      patch({ stage: 'download', progress, pending: null, startedAt: progress.manifest.startedAt })
+      focus('setup-pause')
     } else if (id === 'setup-pause') {
       await wait(c.setup.pause())
       patch({ error: 'Downloads paused. Resume whenever you are ready.' })
@@ -221,8 +227,9 @@ export async function setupAction(
       const engine = manifest.engine
       const engineId = `${engine.provider}|${engine.version}|${engine.backend}`
       await c.engineSelection.remember(engineId)
-      if (manifest.mode === 'personal') await wait(c.api(true, false))
+      await wait(c.api(true, false))
       const model = manifest.selections[0]!.plan.model_id
+      await wait(c.runtime.execute('setup.complete', { model_id: model }))
       const endpoint = await c.localEndpoint()
       await c.save('tui.endpoint', endpoint)
       await c.save('tui.model', model)
@@ -247,9 +254,7 @@ export async function setupAction(
             : page === 'chat'
               ? 'composer'
               : 'api-toggle',
-        message: get().setupComplete
-          ? 'Model installed. Ready to use.'
-          : 'Everything is installed. Your workspace is ready.',
+        message: 'Model loaded. API ready.',
       }))
     }
   } catch (e) {

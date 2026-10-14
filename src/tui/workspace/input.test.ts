@@ -68,15 +68,16 @@ describe('keyboard and mouse controls', () => {
     const f = workspaceFrame(s, 54, 24, 0)
     expect(f.targets.some((t) => t.id === s.focus)).toBe(true)
     for (const t of f.targets) {
-      expect(t.y + t.height).toBeLessThanOrEqual(21)
+      expect(t.y + t.height).toBeLessThanOrEqual(t.y === 23 ? 24 : 21)
       expect(t.x + t.width).toBeLessThanOrEqual(54)
     }
   })
 })
 
 it.each([
-  ['1', 'personal'],
-  ['2', 'hosting'],
+  ['1', 'hosting'],
+  ['2', 'setup-manual'],
+  ['3', 'agent-setup'],
 ])('opens the intro choice with %s, regardless of focus', (input, action) => {
   const s = createWorkspace('welcome')
   for (const focus of ['personal', 'hosting', 'composer', '']) {

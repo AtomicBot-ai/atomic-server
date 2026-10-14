@@ -43,3 +43,7 @@ add a new one that says which record it supersedes.
 - **2026-10-09** — [Build natively, sign, then smoke the draft before publishing](2026-10-09-build-natively-sign-then-smoke-the-draft.md).
 - **2026-10-09** — [Run host steps through the core executor](2026-10-09-run-host-steps-through-the-core-executor.md).
 - **2026-10-13** — [Ship Linux packages from our own repository and the AUR](2026-10-13-ship-linux-packages-from-our-own-repository-and-aur.md).
+- **2026-10-13** — [Shared server workspaces and agent controls](2026-10-13-shared-server-workspaces.md) — daemon-owned operations, three workspaces, manual setup, CLI and permission-scoped MCP.
+- [2026-10-14: Goal-based setup and explicit download review](2026-10-14-goal-based-setup.md)
+| [Agent and command setup](2026-10-14-agent-and-command-setup.md) | 2026-10-14 | Agent-focused default, command-focused technical setup, engine before model and progressive details. |
+| [Playground workflows](2026-10-14-playground-workflows.md) | 2026-10-14 | Cancellable generation, conversation branches and transfer, browser preferences and grouped engine settings. |

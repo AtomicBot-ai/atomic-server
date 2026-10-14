@@ -83,3 +83,27 @@ describe('OpenAI-compatible terminal client', () => {
     ).rejects.toThrow('HTTP 401')
   })
 })
+
+it('sends vision content parts unchanged and renders attachment labels without exposing base64', async () => {
+  const { messageText } = await import('./client.js')
+  const content = [
+    { type: 'text' as const, text: 'Describe this' },
+    { type: 'image_url' as const, image_url: { url: 'data:image/png;base64,cGl4ZWxz' } },
+  ]
+  const request = vi.fn(async () => new Response('data: [DONE]\n\n'))
+  await streamChat({
+    endpoint: 'http://host/v1',
+    model: 'vision',
+    messages: [{ role: 'user', content }],
+    request: request as typeof fetch,
+    signal: new AbortController().signal,
+    onText: () => undefined,
+  })
+  expect(request).toHaveBeenCalledWith(
+    'http://host/v1/chat/completions',
+    expect.objectContaining({
+      body: JSON.stringify({ model: 'vision', messages: [{ role: 'user', content }], stream: true }),
+    })
+  )
+  expect(messageText(content)).toBe('Describe this\n[Image]')
+})

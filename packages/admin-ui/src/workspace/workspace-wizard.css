@@ -1,0 +1,228 @@
+.wizard-overlay {
+  position: fixed;
+  inset: 0;
+  background: #070c0eee;
+  backdrop-filter: blur(12px);
+  z-index: 60;
+  overflow: auto;
+  padding: 35px 20px;
+}
+.wizard {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 25px 35px 35px;
+  background: #101718;
+  border: 1px solid #244a46;
+  border-radius: 14px;
+  position: relative;
+  box-shadow: 0 30px 150px #0009;
+}
+.wizard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+.wizard-top strong {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #88b7aa;
+}
+.wizard-title {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  margin-bottom: 25px;
+}
+.wizard-title > .server-eye {
+  width: 115px;
+  flex-shrink: 0;
+}
+.wizard-title .server-eye pre {
+  font-size: 4.6px;
+  line-height: 5px;
+}
+.wizard h1 {
+  font-size: 27px;
+}
+.wizard-steps {
+  display: flex;
+  gap: 15px;
+  padding: 0;
+  margin: 13px 0 0;
+  list-style: none;
+  flex-wrap: wrap;
+}
+.wizard-steps li {
+  font-size: 11px;
+  color: #496b68;
+}
+.wizard-steps li.current {
+  font-weight: 800;
+  color: #ceefe9;
+}
+.wizard-steps li.done {
+  color: #72a576;
+}
+.wizard .subnav {
+  margin-top: 20px;
+}
+.wizard select[size] {
+  margin-top: 8px;
+  min-height: 165px;
+}
+.wizard select[size] option {
+  padding: 11px;
+  font-size: 12px;
+}
+.wizard-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 24px 0 8px;
+}
+.copy-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  background: #09250e;
+  padding: 12px 15px;
+  margin: 15px 0;
+  border-radius: 6px;
+}
+.agent-prompt {
+  padding: 15px;
+  background: #0b1213;
+  border-radius: 6px;
+  color: #a3caa8;
+}
+.wizard > small {
+  display: block;
+  margin-top: 20px;
+  color: #719878;
+  font-size: 11px;
+}
+.ready-card {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 18px;
+  margin: 25px 0 30px;
+}
+.ready-card strong {
+  font-size: 20px;
+  color: #a3ebdf;
+}
+.rider-track {
+  height: 42px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 25px;
+  opacity: 0.45;
+}
+.rider-track span {
+  font:
+    8px/9px ui-monospace,
+    monospace;
+  color: #80be81;
+  position: absolute;
+  left: -80px;
+  animation: rider 60s linear infinite;
+  white-space: pre;
+}
+@keyframes rider {
+  0%,
+  90% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(850px);
+  }
+}
+@media (max-width: 760px) {
+  .wizard-overlay {
+    padding: 12px;
+  }
+  .wizard {
+    padding: 20px;
+  }
+  .wizard h1 {
+    font-size: 22px;
+  }
+  .wizard-title {
+    gap: 16px;
+  }
+  .wizard-title > .server-eye {
+    width: 70px;
+  }
+  .wizard-title .server-eye pre {
+    font-size: 2.8px;
+    line-height: 3.5px;
+  }
+  .wizard-steps {
+    gap: 8px;
+  }
+  .wizard-steps li {
+    font-size: 9px;
+  }
+  .copy-line {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.setup-guidance {
+  color: #b2c9c5;
+  line-height: 1.6;
+  margin: 14px 0 22px;
+}
+.setup-access,
+.setup-resume {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid #244a46;
+  border-radius: 8px;
+}
+.setup-access summary,
+.setup-resume summary {
+  cursor: pointer;
+  color: #b2c9c5;
+}
+.setup-access .ew-field {
+  margin-top: 12px;
+}
+.wizard :focus-visible,
+.ew-modal :focus-visible {
+  outline: 2px solid #83dfcf;
+  outline-offset: 3px;
+}
+.wizard select,
+.wizard input {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rider-track span {
+    animation: none;
+  }
+}
+
+.connection-steps {
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  background: #0b2020;
+  border-radius: 8px;
+}
+.connection-steps ol {
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+}
+.connection-steps li .action-wrap {
+  margin-left: 10px;
+}
+.connection-steps small {
+  color: #9abbb4;
+}
