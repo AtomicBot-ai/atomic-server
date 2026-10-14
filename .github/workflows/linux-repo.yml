@@ -1,8 +1,8 @@
 name: linux-repo
 
-# The apt/dnf repository (scripts/linux-repo.mjs) follows published releases. Runs when a release is
-# published by a person (`release: published`), when release.yml has published one itself (it calls
-# this workflow: a release published with GITHUB_TOKEN starts no other workflow), or by hand for a tag:
+# The apt/dnf repository (scripts/linux-repo.mjs) follows published releases. Runs when a release is published by a person (`release: published`), when release.yml has
+# published one itself (it calls this workflow: a release published with GITHUB_TOKEN starts no other
+# workflow), or by hand for a tag:
 #
 #   gh workflow run linux-repo.yml --ref vX.Y.Z    # on the tag: the environment admits tags only
 #
