@@ -9,9 +9,9 @@ name: release
 #         → draft (SHA256SUMS over the signed binaries and the packages, provenance attestations, a draft)
 #         → smoke (each runner installs the draft's assets with the installer and runs them) and
 #           smoke-packages (each distro installs the packages the way README.md says, from a repository
-#           of the draft served on loopback)
+#           of the draft served on loopback; Arch builds the AUR PKGBUILD)
 #         → publish (the draft becomes the release; a version with "-" is a pre-release)
-#         → linux-repo (linux-repo.yml: the apt/dnf repository follows the published release;
+#         → linux-repo (linux-repo.yml: the apt/dnf repository and the AUR follow the published release;
 #           a stable release from a tag only)
 #
 # A published version is never replaced: the updater and the installer pin checksums. A run by hand
@@ -62,8 +62,8 @@ jobs:
             echo "::error::release $tag already exists"; exit 1
           fi
           case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
-          # The package repository carries stable releases from a tag only (the environment holding its
-          # credentials admits tags only). Job-level `if:` cannot read env, hence an output.
+          # The package repository and the AUR carry stable releases from a tag only (the environment
+          # holding their credentials admits tags only). Job-level `if:` cannot read env, hence an output.
           publish_packages=false
           if [ "$prerelease" = false ] && [ "$GITHUB_REF_TYPE" = tag ]; then publish_packages=true; fi
           {
@@ -286,7 +286,7 @@ jobs:
             if (missing.length) { console.error('::error::missing packages: ' + missing.join(', ')); process.exit(1) }"
           cp scripts/install.sh scripts/install.ps1 LICENSE NOTICE THIRD_PARTY_NOTICES.md release/
           cd release
-          # The license files too: an AUR PKGBUILD (packaging/PKGBUILD.in) pins their checksums from here.
+          # The license files too: the AUR PKGBUILD downloads them and pins their checksums.
           sha256sum atc-* atc_* install.sh install.ps1 LICENSE NOTICE THIRD_PARTY_NOTICES.md > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
@@ -395,8 +395,8 @@ jobs:
 
   # Each package of the draft, installed the way README.md says in a clean container of the distro: apt
   # and dnf from a repository of the draft served on loopback (its metadata signed with a throwaway key;
-  # the rpm signatures checked against packaging/atomic-chat.asc). scripts/smoke-linux-package.sh holds
-  # the checks.
+  # the rpm signatures checked against packaging/atomic-chat.asc), Arch by building the AUR PKGBUILD
+  # against the draft's files. scripts/smoke-linux-package.sh holds the checks.
   smoke-packages:
     needs: [version, draft]
     # A draft and its assets are visible only with write access.
@@ -410,6 +410,7 @@ jobs:
           - { runner: ubuntu-latest, image: 'ubuntu:24.04', manager: apt }
           - { runner: ubuntu-latest, image: 'fedora:44', manager: dnf }
           - { runner: ubuntu-latest, image: 'rockylinux/rockylinux:9', manager: dnf }
+          - { runner: ubuntu-latest, image: 'archlinux:latest', manager: pacman }
           - { runner: ubuntu-24.04-arm, image: 'debian:12', manager: apt }
           - { runner: ubuntu-24.04-arm, image: 'fedora:44', manager: dnf }
     runs-on: ${{ matrix.runner }}
@@ -426,6 +427,7 @@ jobs:
       - name: Fetch the draft's assets
         run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dl
       - name: Serve a repository of the draft's packages on loopback
+        if: matrix.manager != 'pacman'
         run: |
           set -euo pipefail
           sudo apt-get update -qq
@@ -446,11 +448,15 @@ jobs:
           node scripts/linux-repo.mjs readme --block "$MANAGER" --base-url http://127.0.0.1:8766 > install-commands.sh
           python3 -m http.server 8766 --bind 127.0.0.1 --directory site >/dev/null 2>&1 &
           sleep 2
+      - name: Render the AUR PKGBUILD against the draft's files
+        if: matrix.manager == 'pacman'
+        run: node scripts/linux-packages.mjs pkgbuild --version "$VERSION" --sums dl/SHA256SUMS --source-base file:///w/dl --out aur
       - name: Install and check in the container
         run: |
           set -euo pipefail
-          docker run --rm --network host -v "$PWD:/w:ro" "$IMAGE" \
-            sh /w/scripts/smoke-linux-package.sh "$MANAGER" "$VERSION" /w/install-commands.sh
+          input=/w/install-commands.sh
+          if [ "$MANAGER" = pacman ]; then input=/w/aur; fi
+          docker run --rm --network host -v "$PWD:/w:ro" "$IMAGE" sh /w/scripts/smoke-linux-package.sh "$MANAGER" "$VERSION" "$input"
 
   publish:
     needs: [version, smoke, smoke-packages]
@@ -470,7 +476,7 @@ jobs:
           if [ "${{ needs.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release edit "${{ needs.version.outputs.tag }}" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
 
-  # The apt/dnf repository follows a published release: .github/workflows/linux-repo.yml.
+  # The apt/dnf repository and the AUR follow a published release: .github/workflows/linux-repo.yml.
   # It is called from here because a release published with GITHUB_TOKEN starts no `release: published`
   # workflow; a release published by a person does, and runs linux-repo.yml on its own.
   linux-repo:

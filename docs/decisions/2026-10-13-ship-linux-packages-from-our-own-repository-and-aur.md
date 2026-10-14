@@ -12,17 +12,17 @@ title: "Ship Linux packages from our own repository and the AUR"
 - **Decision:** Build a deb and an rpm per architecture with nfpm from the very binaries the release
   ships (x64 packages carry the baseline build: a package cannot pick by CPU), serve them from our own
   signed apt/dnf repository in a public Hetzner Object Storage bucket
-  (`https://atc-packages.fsn1.your-objectstorage.com`, rebuilt from the newest ten releases on every release), and publish `atc-bin` to the AUR once we have
-  an AUR account (until then the PKGBUILD template and its rendering ship unused). A packaged install carries
+  (`https://atc-packages.fsn1.your-objectstorage.com`, rebuilt from the newest ten releases on every release), and publish `atc-bin` to the AUR. A packaged install carries
   `/usr/lib/atc/install-source`; with the binary at `/usr/bin/atc`, `atc update` refuses and names the
   package manager. One RSA key (`packaging/atomic-chat.asc`) signs the repository metadata and the rpms.
-- **Consequences:** `apt upgrade` / `dnf upgrade` update `atc`; the repository costs Hetzner
+- **Consequences:** `apt upgrade` / `dnf upgrade` / `yay -Syu` update `atc`; the repository costs Hetzner
   Object Storage's base fee (storage and egress quota included), its URL is Hetzner's host rather than
   ours (HTTPS on a domain of ours would need a proxy), and GitHub Releases stay the source of truth (the bucket is a mirror
   any re-run rebuilds). The README's install commands are what the release smoke runs, before publishing
   against the draft on loopback and after against the live repository. We now hold a signing key whose
   expiry or leak affects every user (renewal and rotation in `docs/release.md`); the repository keeps ten
-  versions; `repo` is the only step that runs after a release is public, so it is idempotent.
+  versions; `repo` and `aur` are the only steps that run after a release is public, so they are
+  idempotent.
 - **Alternatives:** Cloudflare R2 behind `packages.atomic.chat` — first choice (no egress fees, our
   domain), but the Cloudflare account was not available to this project. Cloudsmith — its free open-source plan is granted by hand and may be refused to a
   company; the free Core plan (500 MB / 1 GB) is too small. openSUSE OBS — builds from source without

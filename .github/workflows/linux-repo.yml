@@ -1,6 +1,7 @@
 name: linux-repo
 
-# The apt/dnf repository (scripts/linux-repo.mjs) follows published releases. Runs when a release is published by a person (`release: published`), when release.yml has
+# The apt/dnf repository (scripts/linux-repo.mjs) and the AUR package atc-bin follow published
+# releases. Runs when a release is published by a person (`release: published`), when release.yml has
 # published one itself (it calls this workflow: a release published with GITHUB_TOKEN starts no other
 # workflow), or by hand for a tag:
 #
@@ -124,3 +125,51 @@ jobs:
           node scripts/linux-repo.mjs readme --block "$MANAGER" > install-commands.sh
           docker run --rm -v "$PWD:/w:ro" "$IMAGE" \
             sh /w/scripts/smoke-linux-package.sh "$MANAGER" "$VERSION" /w/install-commands.sh
+
+  # atc-bin on the AUR: the PKGBUILD downloads this release's public assets. Only the latest release goes
+  # there (publishing an older one later must not downgrade it), and a re-run finds the AUR already at
+  # this version and does nothing.
+  aur:
+    needs: release
+    if: needs.release.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment: packages
+    env:
+      TAG: ${{ needs.release.outputs.tag }}
+      VERSION: ${{ needs.release.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22 }
+      - name: Render the PKGBUILD for the published release
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS --dir release
+          node scripts/linux-packages.mjs pkgbuild --version "$VERSION" --sums release/SHA256SUMS --out aur
+      - name: Skip unless this is the latest release and the AUR does not have it yet
+        id: aur
+        run: |
+          set -euo pipefail
+          latest="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+          if [ "$latest" != "$TAG" ]; then
+            echo "::notice::$TAG is not the latest release ($latest); the AUR stays as it is"
+            echo "push=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          current="$(curl -fsSL --globoff 'https://aur.archlinux.org/rpc/v5/info?arg[]=atc-bin' | jq -r '.results[0].Version // ""')"
+          want="$(node --input-type=module -e "
+            import { archPkgver } from './scripts/linux-packaging.mjs'
+            console.log(archPkgver(process.env.VERSION) + '-1')")"
+          echo "the AUR has '$current'; this release is $want"
+          if [ "$current" = "$want" ]; then echo "push=false" >> "$GITHUB_OUTPUT"; else echo "push=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: KSXGitHub/github-actions-deploy-aur@084b0d9b15415bf9cdb65d44dad1efe37a354050 # v4.2.0
+        if: steps.aur.outputs.push == 'true'
+        with:
+          pkgname: atc-bin
+          pkgbuild: aur/PKGBUILD
+          commit_username: Atomic Chat
+          commit_email: support@atomic.chat
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: atc ${{ needs.release.outputs.version }}
+          # Builds the package from the PKGBUILD (downloads, checksums, package()) before pushing.
+          test: true
