@@ -11,8 +11,8 @@ name: release
 #           smoke-packages (each distro installs the packages the way README.md says, from a repository
 #           of the draft served on loopback; Arch builds the AUR PKGBUILD)
 #         → publish (the draft becomes the release; a version with "-" is a pre-release)
-#         → repo (the apt/dnf repository rebuilt from the newest releases, mirrored to its bucket) → smoke-repo,
-#           and aur (atc-bin pushed to the AUR); both only for a stable release from a tag
+#         → linux-repo (linux-repo.yml: the apt/dnf repository and the AUR follow the published release;
+#           a stable release from a tag only)
 #
 # A published version is never replaced: the updater and the installer pin checksums. A run by hand
 # (workflow_dispatch) on a branch may set allow_unsigned for a dry run without the signing secrets; a
@@ -476,112 +476,13 @@ jobs:
           if [ "${{ needs.version.outputs.prerelease }}" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release edit "${{ needs.version.outputs.tag }}" --repo "$GITHUB_REPOSITORY" "${flags[@]}"
 
-  # The apt/dnf repository: rebuilt from scratch out of the newest stable releases (this one now among
-  # them, so after publish: the repository lists public assets only), signed, mirrored to its public
-  # bucket on Hetzner Object Storage (REPOSITORY in scripts/linux-packaging.mjs).
-  # Nothing to repair after a failure: re-running the job rebuilds the same repository.
-  repo:
+  # The apt/dnf repository and the AUR follow a published release: .github/workflows/linux-repo.yml.
+  # It is called from here because a release published with GITHUB_TOKEN starts no `release: published`
+  # workflow; a release published by a person does, and runs linux-repo.yml on its own.
+  linux-repo:
     needs: [version, publish]
     if: needs.version.outputs.publish_packages == 'true'
-    runs-on: ubuntu-latest
-    environment: packages
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with: { node-version: 22 }
-      - name: Install the repository tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq dpkg-dev apt-utils createrepo-c >/dev/null
-      - name: Import the packages key (must be packaging/atomic-chat.asc)
-        env:
-          KEY: ${{ secrets.LINUX_PACKAGES_GPG_KEY }}
-        run: |
-          set -euo pipefail
-          expected="$(gpg --show-keys --with-colons packaging/atomic-chat.asc | awk -F: '/^fpr:/ {print $10; exit}')"
-          printf '%s\n' "$KEY" | gpg --batch --import
-          if ! gpg --list-secret-keys "$expected" >/dev/null 2>&1; then
-            echo "::error::LINUX_PACKAGES_GPG_KEY is not the key in packaging/atomic-chat.asc"; exit 1
-          fi
-          echo "PACKAGES_KEY=$expected" >> "$GITHUB_ENV"
-      - name: Fetch the packages of the newest releases, checked against their SHA256SUMS
-        run: node scripts/linux-repo.mjs fetch --out dl
-      - name: Build the repository
-        env:
-          LINUX_PACKAGES_GPG_PASSPHRASE: ${{ secrets.LINUX_PACKAGES_GPG_PASSPHRASE }}
-        run: node scripts/linux-repo.mjs build --assets dl --key "$PACKAGES_KEY" --out site
-      - name: Mirror it to the bucket
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.PACKAGES_S3_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.PACKAGES_S3_SECRET_ACCESS_KEY }}
-        run: node scripts/linux-repo.mjs sync --site site
-
-  # The live repository, the way README.md tells users to add it: catches what the loopback smoke cannot
-  # (the domain, the cache, the published key).
-  smoke-repo:
-    needs: [version, repo]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { image: 'debian:12', manager: apt }
-          - { image: 'fedora:44', manager: dnf }
-    runs-on: ubuntu-latest
-    env:
-      VERSION: ${{ needs.version.outputs.version }}
-      IMAGE: ${{ matrix.image }}
-      MANAGER: ${{ matrix.manager }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with: { node-version: 22 }
-      - name: Install from the published repository and check
-        run: |
-          set -euo pipefail
-          node scripts/linux-repo.mjs readme --block "$MANAGER" > install-commands.sh
-          docker run --rm -v "$PWD:/w:ro" "$IMAGE" \
-            sh /w/scripts/smoke-linux-package.sh "$MANAGER" "$VERSION" /w/install-commands.sh
-
-  # atc-bin on the AUR: the PKGBUILD downloads this release's public assets, so after publish. A re-run
-  # finds the AUR already at this version and does nothing.
-  aur:
-    needs: [version, publish]
-    if: needs.version.outputs.publish_packages == 'true'
-    runs-on: ubuntu-latest
-    environment: packages
-    env:
-      TAG: ${{ needs.version.outputs.tag }}
-      VERSION: ${{ needs.version.outputs.version }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with: { node-version: 22 }
-      - name: Render the PKGBUILD for the published release
-        run: |
-          set -euo pipefail
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS --dir release
-          node scripts/linux-packages.mjs pkgbuild --version "$VERSION" --sums release/SHA256SUMS --out aur
-      - name: Skip when the AUR already has this version
-        id: aur
-        run: |
-          set -euo pipefail
-          current="$(curl -fsSL --globoff 'https://aur.archlinux.org/rpc/v5/info?arg[]=atc-bin' | jq -r '.results[0].Version // ""')"
-          want="$(node --input-type=module -e "
-            import { archPkgver } from './scripts/linux-packaging.mjs'
-            console.log(archPkgver(process.env.VERSION) + '-1')")"
-          echo "the AUR has '$current'; this release is $want"
-          if [ "$current" = "$want" ]; then echo "push=false" >> "$GITHUB_OUTPUT"; else echo "push=true" >> "$GITHUB_OUTPUT"; fi
-      - uses: KSXGitHub/github-actions-deploy-aur@084b0d9b15415bf9cdb65d44dad1efe37a354050 # v4.2.0
-        if: steps.aur.outputs.push == 'true'
-        with:
-          pkgname: atc-bin
-          pkgbuild: aur/PKGBUILD
-          commit_username: Atomic Chat
-          commit_email: support@atomic.chat
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: atc ${{ needs.version.outputs.version }}
-          # Builds the package from the PKGBUILD (downloads, checksums, package()) before pushing.
-          test: true
+    uses: ./.github/workflows/linux-repo.yml
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+    secrets: inherit

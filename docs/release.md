@@ -60,16 +60,29 @@ branch. One run at a time (`concurrency: release`):
    update` refuses and names the package manager, the completions, a server that starts and stops, and
    that removing the package removes `/usr/bin/atc`.
 10. **publish** — the draft becomes the release (`--latest`, or `--prerelease`).
-11. **repo** — stable releases from a tag only: rebuilds the repository from the newest ten releases'
-    packages, signs it and mirrors it to the public Hetzner Object Storage bucket `atc-packages` in `fsn1`
-    (environment `packages`). **smoke-repo** then installs from the live repository in Debian and Fedora.
-12. **aur** — stable releases from a tag only: renders `packaging/PKGBUILD.in` with this release's
-    checksums and pushes it to the AUR as `atc-bin` (KSXGitHub/github-actions-deploy-aur, which builds it
-    first). It does nothing when the AUR already has this version.
+11. **linux-repo** — stable releases from a tag only: calls `.github/workflows/linux-repo.yml`, below.
 
-`repo` and `aur` run after the release is public (they download its assets by their public URLs); they are
-the only steps that can fail after publishing, and both are safe to re-run: `repo` rebuilds the same
-repository from scratch, `aur` skips a version already pushed.
+### After publishing: the repository and the AUR (`.github/workflows/linux-repo.yml`)
+
+The apt/dnf repository and the AUR package follow **published** releases, however they were published:
+`release.yml` calls this workflow after its `publish` (a release published with `GITHUB_TOKEN` starts no
+other workflow), a release published by a person (the GitHub UI, `gh release edit --draft=false`) starts
+it through `release: published`, and it runs by hand on a tag (`gh workflow run linux-repo.yml --ref
+vX.Y.Z`; the `packages` environment admits tags only). Drafts, pre-releases and releases without packages
+change nothing.
+
+1. **release** — resolves the tag and whether it qualifies.
+2. **repo** — rebuilds the repository from the newest ten published stable releases' packages, signs it
+   and mirrors it to the public Hetzner Object Storage bucket `atc-packages` in `fsn1` (environment
+   `packages`; one run at a time). **smoke-repo** then installs from it in Debian and Fedora with the
+   README's commands.
+3. **aur** — renders `packaging/PKGBUILD.in` with the release's checksums and pushes it to the AUR as
+   `atc-bin` (KSXGitHub/github-actions-deploy-aur, which builds it first). Only the latest release goes
+   there, so publishing an older one later never downgrades it; a version the AUR already has is skipped.
+
+These are the only steps that run after a release is public (they download its assets by their public
+URLs), and each is safe to re-run: `repo` rebuilds the same repository from scratch, `aur` skips a version
+already pushed.
 
 Secrets (the names atomic-agent uses): `MACOS_CSC_LINK`, `MACOS_CSC_KEY_PASSWORD`, optional
 `MACOS_CSC_NAME`, `NOTARYTOOL_KEY` (the `.p8` contents), `NOTARYTOOL_KEY_ID`, `NOTARYTOOL_ISSUER`;
