@@ -367,7 +367,11 @@ jobs:
             codesign --verify --strict --verbose=2 "$bin"
             if [ "$ATC_ALLOW_UNSIGNED" != 1 ]; then
               codesign -dv "$bin" 2>&1 | grep -q '^TeamIdentifier=[A-Z0-9]\{10\}$'
-              spctl --assess --type execute --verbose "$bin"
+              # `--type execute` assesses app bundles only and rejects any bare binary ("does not seem
+              # to be an app"); a command-line tool is assessed as Gatekeeper opens it.
+              gatekeeper="$(spctl --assess --type open --context context:primary-signature --verbose=2 "$bin" 2>&1)"
+              echo "$gatekeeper"
+              echo "$gatekeeper" | grep -q '^source=Notarized Developer ID$'
             fi
           done
           # The Intel build, under Rosetta.
