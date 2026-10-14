@@ -10,6 +10,8 @@ import { basename, dirname, join } from 'node:path'
 import { AtcError } from '../errors/index.js'
 import type { ExecFn } from '../host/index.js'
 import { parseSha256Sums } from './checksums.js'
+import { installLabel, packageUpgradeHint } from './install-source.js'
+import type { InstallSource } from './install-source.js'
 import { fetchRelease } from './release.js'
 import type { ReleaseInfo, ReleaseQuery } from './release.js'
 import { assetNameFor, planReplace } from './replace-plan.js'
@@ -36,6 +38,8 @@ export interface ApplyDeps {
   execPath: string
   /** The triple baked into this binary; undefined when it runs from source. */
   builtFor: string | undefined
+  /** The package that installed this binary (`readInstallSource`); its package manager updates it. */
+  installSource?: InstallSource | undefined
   currentVersion: string
   now: () => Date
 }
@@ -89,6 +93,12 @@ export async function applyUpdate(
       {
         hint: 'use a released binary (the installer) to get updates with `atc update`',
       }
+    )
+  if (deps.installSource)
+    throw new AtcError(
+      'ATC_UPDATE_FAILED',
+      `This atc was installed by ${installLabel(deps.installSource)}; its package manager updates it.`,
+      { hint: packageUpgradeHint(deps.installSource) }
     )
   const release = await fetchRelease(deps.fetch, query)
   const result = (updated: boolean): ApplyResult => ({

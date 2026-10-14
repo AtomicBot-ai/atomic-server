@@ -1,5 +1,7 @@
 import { defineCommand } from '../cli/index.js'
 import { CHECKS, runChecks, worstStatus } from '../doctor/index.js'
+import { detectInstall } from '../update/index.js'
+import { ATC_TARGET } from '../version.js'
 
 export const doctorCommand = defineCommand({
   name: 'doctor',
@@ -13,6 +15,12 @@ export const doctorCommand = defineCommand({
       env: ctx.io.env,
       apiPort: config.values.api.port,
       adminPort: config.values.admin.port,
+      install: await detectInstall(
+        ctx.io.readFile,
+        ctx.host.facts.platform,
+        ctx.host.selfCommand[0] ?? process.execPath,
+        ATC_TARGET
+      ),
     })
     const worst = worstStatus(results)
     ctx.out.result({ status: worst, checks: results }, () => {

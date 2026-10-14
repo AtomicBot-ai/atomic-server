@@ -1273,7 +1273,7 @@ Global options:
 ```
 Usage: atc update [options]
 
-Downloads the release for this machine, checks it against SHA256SUMS and against the signature of the installed atc, replaces this binary, and restarts the server (or the service) on the new one.
+Downloads the release for this machine, checks it against SHA256SUMS and against the signature of the installed atc, replaces this binary, and restarts the server (or the service) on the new one. An atc installed by a deb, rpm or AUR package is updated by the package manager instead.
 
 Options:
       --check            Only report whether a newer release exists

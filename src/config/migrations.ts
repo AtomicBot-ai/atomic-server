@@ -50,7 +50,7 @@ export function migrateConfig(raw: Record<string, unknown>): {
       'ATC_CONFIG_INVALID',
       `The config file is version ${version}; this atc understands ${CONFIG_VERSION}.`,
       {
-        hint: 'update atc (`atc update`) or move the file aside',
+        hint: 'update atc (`atc update`, or the package manager that installed it) or move the file aside',
       }
     )
   }

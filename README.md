@@ -58,13 +58,50 @@ cannot), puts it in `~/.local/bin/atc` (`%LOCALAPPDATA%\atc\atc.exe` on Windows)
 defaults. The macOS and Windows binaries are signed (Developer ID with notarisation, Authenticode), and every
 binary carries a build provenance attestation (`gh attestation verify atc-… -R AtomicBot-ai/eye-cli`).
 
+### Linux packages
+
+On Debian, Ubuntu, Fedora, RHEL-compatible systems and Arch, `atc` also comes as a package, and the package
+manager then updates it with the rest of the system. A package carries the same binary as the release (on
+x86-64 the baseline build, so it runs on any x86-64 CPU) and the shell completions. The repository and the
+rpm packages are signed with the Atomic Chat packages key in
+[`packaging/atomic-chat.asc`](packaging/atomic-chat.asc), fingerprint
+`1047 F119 58C6 442D D472  E497 E4C3 D361 FB7F F123`.
+
+Debian, Ubuntu (x86-64, arm64):
+
+<!-- install:apt -->
+
+```sh
+curl -fsSL https://atc-packages.fsn1.your-objectstorage.com/atomic-chat.gpg | sudo tee /usr/share/keyrings/atomic-chat.gpg >/dev/null
+echo "deb [signed-by=/usr/share/keyrings/atomic-chat.gpg] https://atc-packages.fsn1.your-objectstorage.com/deb stable main" \
+  | sudo tee /etc/apt/sources.list.d/atomic-chat.list
+sudo apt update && sudo apt install atc
+```
+
+Fedora, RHEL, Rocky, Alma (x86-64, aarch64):
+
+<!-- install:dnf -->
+
+```sh
+sudo curl -fsSL -o /etc/yum.repos.d/atomic-chat.repo https://atc-packages.fsn1.your-objectstorage.com/rpm/atc.repo
+sudo dnf install atc
+```
+
+Arch Linux: `yay -S atc-bin`, or any other AUR helper.
+
+Updates come with `sudo apt upgrade`, `sudo dnf upgrade` or `yay -Syu`; `atc update` refuses on a packaged
+install and names the command to use. After an upgrade, `atc restart` (or `atc service restart`) moves a
+running server onto the new binary. `sudo apt remove atc`, `sudo dnf remove atc` or `sudo pacman -R atc-bin`
+removes it and leaves the data folder. The repository keeps the last ten releases; older ones are on the
+[releases page](https://github.com/AtomicBot-ai/eye-cli/releases) as `.deb` and `.rpm` files.
+
 ```sh
 atc                  # on a terminal: the terminal UI — choose a workspace, install an engine and a model
 atc service install  # keep the server running: systemd, launchd or a scheduled task; back after a crash
 atc status           # pid, versions, API endpoint, running models, admin URL   (--json for one document)
 atc api start        # the OpenAI-compatible API; every client needs a key from atc/client-keys.json
 atc admin            # prints http://127.0.0.1:1338/#token=… and opens a browser
-atc update           # the next release: checked against SHA256SUMS and the installed signature
+atc update           # the next release, checked against SHA256SUMS and the signature (packages: apt/dnf/yay)
 atc doctor           # versions, data folder, config, ports 1337/1338, PATH, GPU driver
 ```
 
@@ -90,7 +127,7 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | System | `atc config get\|set\|unset\|list\|path` | `atc` settings | works (`engine.*` keys are a stub) |
 | System | `atc doctor` | Diagnostic table with hints | works (GPU: NVIDIA only; Docker check skipped) |
 | System | `atc service install\|uninstall\|status\|start\|stop\|restart` | The server as an OS service (systemd, launchd, Task Scheduler) | works |
-| System | `atc update` | Self-update from GitHub Releases: checksum and signature checked, the server restarted onto it | works |
+| System | `atc update` | Self-update from GitHub Releases: checksum and signature checked, the server restarted onto it; a deb, rpm or AUR install is left to its package manager | works |
 | System | `atc version`, `atc completion <shell>` | Versions; bash/zsh/fish/powershell completion | works |
 
 Hidden: `atc daemon` (the server process itself, which `start` spawns) and `atc host-step exec

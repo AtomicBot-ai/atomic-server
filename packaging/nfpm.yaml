@@ -1,0 +1,80 @@
+# The atc deb and rpm. scripts/linux-packages.mjs runs nfpm once per format and architecture and sets
+# the ${...} values: VERSION (package.json), ARCH (amd64 | arm64), BINARY (the release binary), GLIBC
+# (the newest glibc version the binary requires, read from it), STAGE (completions and the
+# install-source marker it wrote) and RPM_SIGNING_KEY_FILE (empty: unsigned).
+name: atc
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+release: '1'
+section: utils
+priority: optional
+maintainer: Atomic Chat <support@atomic.chat>
+vendor: Atomic Chat
+homepage: https://github.com/AtomicBot-ai/eye-cli
+license: Apache-2.0
+description: |-
+  Local model server with an OpenAI-compatible API (Atomic Server)
+  atc installs an inference engine, pulls a model, serves it over an OpenAI-compatible
+  API, and manages it from a terminal UI or a local web admin.
+
+contents:
+  - src: ${BINARY}
+    dst: /usr/bin/atc
+    expand: true
+    file_info:
+      mode: 0755
+  # Tells `atc update` that the package manager owns /usr/bin/atc (src/update/install-source.ts).
+  - src: ${STAGE}/install-source
+    dst: /usr/lib/atc/install-source
+    expand: true
+    file_info:
+      mode: 0644
+  - src: ${STAGE}/completions/atc.bash
+    dst: /usr/share/bash-completion/completions/atc
+    expand: true
+    file_info:
+      mode: 0644
+  - src: ${STAGE}/completions/_atc
+    dst: /usr/share/zsh/site-functions/_atc
+    expand: true
+    file_info:
+      mode: 0644
+  - src: ${STAGE}/completions/atc.fish
+    dst: /usr/share/fish/vendor_completions.d/atc.fish
+    expand: true
+    file_info:
+      mode: 0644
+  - src: ./LICENSE
+    dst: /usr/share/licenses/atc/LICENSE
+    file_info:
+      mode: 0644
+  - src: ./NOTICE
+    dst: /usr/share/licenses/atc/NOTICE
+    file_info:
+      mode: 0644
+  - src: ./THIRD_PARTY_NOTICES.md
+    dst: /usr/share/licenses/atc/THIRD_PARTY_NOTICES.md
+    file_info:
+      mode: 0644
+
+scripts:
+  postinstall: ./packaging/postinstall.sh
+
+# The glibc the binary requires (its GLIBC_ version references), so a package never installs where
+# the binary cannot start.
+overrides:
+  deb:
+    depends:
+      - libc6 (>= ${GLIBC})
+  rpm:
+    depends:
+      - glibc >= ${GLIBC}
+
+deb:
+  compression: xz
+
+rpm:
+  compression: xz
+  signature:
+    key_file: ${RPM_SIGNING_KEY_FILE}

@@ -1,13 +1,19 @@
 /**
  * `atc update`: replace this binary with a release (`src/update/apply.ts`), then restart what runs the
  * old one — the OS service when one is installed, otherwise the background server — so the new version
- * is what answers. `--check` only reports.
+ * is what answers. `--check` only reports. A packaged atc (deb, rpm, AUR) is left to its package manager.
  */
 
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import { attachIfRunning } from '../core-link/index.js'
-import { applyUpdate, checkForUpdate, nodeUpdateFiles } from '../update/index.js'
+import {
+  applyUpdate,
+  checkForUpdate,
+  nodeUpdateFiles,
+  packageUpgradeHint,
+  readInstallSource,
+} from '../update/index.js'
 import { ATC_TARGET, ATC_VERSION } from '../version.js'
 import { startServer, stopServer } from './lifecycle.js'
 
@@ -45,7 +51,7 @@ export const updateCommand = defineCommand({
   summary: 'Update atc to the latest release',
   group: 'system',
   description:
-    'Downloads the release for this machine, checks it against SHA256SUMS and against the signature of the installed atc, replaces this binary, and restarts the server (or the service) on the new one.',
+    'Downloads the release for this machine, checks it against SHA256SUMS and against the signature of the installed atc, replaces this binary, and restarts the server (or the service) on the new one. An atc installed by a deb, rpm or AUR package is updated by the package manager instead.',
   options: {
     check: { type: 'boolean', description: 'Only report whether a newer release exists' },
     version: {
@@ -60,14 +66,18 @@ export const updateCommand = defineCommand({
   },
   run: async (inv, ctx) => {
     const api = ctx.io.env['ATC_GITHUB_API']
+    const execPath = ctx.host.selfCommand[0] ?? process.execPath
+    const installSource = await readInstallSource(ctx.io.readFile, ctx.host.facts.platform, execPath)
     if (inv.values['check'] === true) {
       const result = await checkForUpdate(ctx.io.fetch, ATC_VERSION, undefined, api)
-      ctx.out.result(result, () => {
+      ctx.out.result({ ...result, ...(installSource ? { managedBy: installSource } : {}) }, () => {
         ctx.out.line(
           result.available
             ? `atc ${result.latest} is available (you have ${result.current}): ${result.url}`
             : `atc ${result.current} is the latest`
         )
+        if (result.available && installSource)
+          ctx.out.note(`update with: ${packageUpgradeHint(installSource)}`)
       })
       return 0
     }
@@ -80,8 +90,9 @@ export const updateCommand = defineCommand({
         files: nodeUpdateFiles(ctx.io.fetch),
         platform: ctx.host.facts.platform,
         arch: ctx.host.facts.arch,
-        execPath: ctx.host.selfCommand[0] ?? process.execPath,
+        execPath,
         builtFor: ATC_TARGET,
+        installSource,
         currentVersion: ATC_VERSION,
         now: ctx.now,
       },

@@ -1,7 +1,8 @@
 # Releasing
 
-One command tags a release; the pushed tag builds every binary, checksums them and publishes a GitHub
-release with the installers as assets. A published version is never replaced.
+One command tags a release; the pushed tag builds every binary and the Linux packages, checksums them,
+publishes a GitHub release with the installers as assets, and then brings the apt/dnf repository
+(`https://atc-packages.fsn1.your-objectstorage.com`) and the AUR package `atc-bin` up to it. A published version is never replaced.
 
 ## The command
 
@@ -37,21 +38,59 @@ branch. One run at a time (`concurrency: release`):
    checks the ticket online on first run.
 5. **sign-windows** — `scripts/sign-windows-binary.ps1`: DigiCert KeyLocker (`smctl`), then `signtool sign`
    with a DigiCert timestamp and `signtool verify /pa`, for the x64 and arm64 executables.
-6. **draft** — names the assets, writes `SHA256SUMS` **after** signing (over the binaries and the
-   installers), attests build provenance for every binary (`gh attestation verify <file> -R
-   AtomicBot-ai/eye-cli` checks it), attaches `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`, and creates a
-   draft release.
-7. **smoke** — on each native runner: downloads the draft's assets, serves them on loopback, installs with
+6. **packages** — the deb and rpm of the Linux binaries `build` uploaded (`scripts/linux-packages.mjs`,
+   `packaging/nfpm.yaml`, nfpm pinned by checksum): x64 packages carry the baseline build, arm64 the glibc
+   build. Each package depends on the glibc its binary requires, read from the binary (`readelf`). The job
+   signs the rpm with the packages key (after checking the secret is the key in `packaging/atomic-chat.asc`)
+   and checks the signatures. See [Linux packages](#linux-packages-and-the-repository).
+7. **draft** — names the assets, writes `SHA256SUMS` **after** signing (over the binaries, the packages,
+   the installers and the license files), attests build provenance for every binary and package (`gh
+   attestation verify <file> -R AtomicBot-ai/eye-cli` checks it), attaches `LICENSE`, `NOTICE`,
+   `THIRD_PARTY_NOTICES.md`, and creates a draft release.
+8. **smoke** — on each native runner: downloads the draft's assets, serves them on loopback, installs with
    the real installer (`ATC_DOWNLOAD_BASE`), checks `--version`, starts, queries and stops a server, and
    checks the signatures (`codesign --verify`, the team id, `spctl --assess`; `Get-AuthenticodeSignature`
    is `Valid`). The musl builds run in Alpine, the baseline build and the Intel macOS build (Rosetta) run
    `--version`.
-8. **publish** — the draft becomes the release (`--latest`, or `--prerelease`).
+9. **smoke-packages** — in clean containers (Debian 12, Ubuntu 24.04, Fedora 44, Rocky 9 on x64; Debian 12
+   and Fedora 44 on arm64; Arch on x64): a repository built from the draft's packages is served on
+   loopback, signed with a throwaway key, and the README's own install commands (`<!-- install:apt -->`,
+   `<!-- install:dnf -->`) add it and install `atc`; Arch builds the AUR PKGBUILD against the draft's
+   files. `scripts/smoke-linux-package.sh` then checks the version, the install-source marker, that `atc
+   update` refuses and names the package manager, the completions, a server that starts and stops, and
+   that removing the package removes `/usr/bin/atc`.
+10. **publish** — the draft becomes the release (`--latest`, or `--prerelease`).
+11. **linux-repo** — stable releases from a tag only: calls `.github/workflows/linux-repo.yml`, below.
+
+### After publishing: the repository and the AUR (`.github/workflows/linux-repo.yml`)
+
+The apt/dnf repository and the AUR package follow **published** releases, however they were published:
+`release.yml` calls this workflow after its `publish` (a release published with `GITHUB_TOKEN` starts no
+other workflow), a release published by a person (the GitHub UI, `gh release edit --draft=false`) starts
+it through `release: published`, and it runs by hand on a tag (`gh workflow run linux-repo.yml --ref
+vX.Y.Z`; the `packages` environment admits tags only). Drafts, pre-releases and releases without packages
+change nothing.
+
+1. **release** — resolves the tag and whether it qualifies.
+2. **repo** — rebuilds the repository from the newest ten published stable releases' packages, signs it
+   and mirrors it to the Hetzner Object Storage bucket `atc-packages` in `fsn1`, each file `public-read` (environment
+   `packages`; one run at a time). **smoke-repo** then installs from it in Debian and Fedora with the
+   README's commands.
+3. **aur** — renders `packaging/PKGBUILD.in` with the release's checksums and pushes it to the AUR as
+   `atc-bin` (KSXGitHub/github-actions-deploy-aur, which builds it first). Only the latest release goes
+   there, so publishing an older one later never downgrades it; a version the AUR already has is skipped.
+
+These are the only steps that run after a release is public (they download its assets by their public
+URLs), and each is safe to re-run: `repo` rebuilds the same repository from scratch, `aur` skips a version
+already pushed.
 
 Secrets (the names atomic-agent uses): `MACOS_CSC_LINK`, `MACOS_CSC_KEY_PASSWORD`, optional
 `MACOS_CSC_NAME`, `NOTARYTOOL_KEY` (the `.p8` contents), `NOTARYTOOL_KEY_ID`, `NOTARYTOOL_ISSUER`;
-`SM_API_KEY`, `SM_CLIENT_CERT_FILE_B64`, `SM_CLIENT_CERT_PASSWORD`, `SM_CODE_SIGNING_CERT_SHA1_HASH`. A
-missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
+`SM_API_KEY`, `SM_CLIENT_CERT_FILE_B64`, `SM_CLIENT_CERT_PASSWORD`, `SM_CODE_SIGNING_CERT_SHA1_HASH`;
+`LINUX_PACKAGES_GPG_KEY` (the armored private packages key) and `LINUX_PACKAGES_GPG_PASSPHRASE`. In the
+environment `packages` (deployment tags `v*` only): `PACKAGES_S3_ACCESS_KEY_ID`, `PACKAGES_S3_SECRET_ACCESS_KEY`
+(Hetzner Object Storage S3 credentials) and `AUR_SSH_PRIVATE_KEY` (the key registered on the AUR
+account). A missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
 draft is never published. Actions are pinned to commits; Dependabot (`.github/dependabot.yml`) moves them.
 
 ## Assets
@@ -59,7 +98,8 @@ draft is never published. Actions are pinned to commits; Dependabot (`.github/de
 | Asset | From |
 | --- | --- |
 | `atc-<version>-<triple>[.exe]` × 10 | `dist/bin/atc-<triple>` renamed with the version. The table is `scripts/targets.mjs` (mirrored by `src/update/targets.ts`, a test keeps them equal): macOS arm64 and x64; Linux x64 and arm64 on glibc, the same on musl (`…-unknown-linux-musl`, Alpine), and x64 for CPUs without AVX2 (`…-unknown-linux-gnu-baseline`); Windows x64, x64 baseline (`…-pc-windows-msvc-baseline.exe`) and arm64. |
-| `SHA256SUMS` | `sha256sum atc-*` over the renamed binaries. The installers and the updater verify against it. |
+| `atc_<version>_<amd64\|arm64>.deb`, `atc_<version>_<x86_64\|aarch64>.rpm` | `dist/pkg/`, from the `packages` job. Named `atc_…` so no `atc-*` glob (the workflow's count of binaries, the installers) picks them up. |
+| `SHA256SUMS` | `sha256sum` over the renamed binaries, the packages, the installers and the license files. The installers and the updater verify against it; the AUR PKGBUILD pins its checksums from it. |
 | `install.sh`, `install.ps1` | Copied from `scripts/`; served at `releases/latest/download/install.sh` so the one-liner in the README works. |
 
 Binaries are built with `--production --keep-names --sourcemap` (identifiers kept, so stack traces name
@@ -83,6 +123,48 @@ the next install. Defaults: `~/.local/bin/atc` and `%LOCALAPPDATA%\atc\atc.exe`.
 added to `PATH` (rc file with the marker `# added by atc installer`, or the user PATH on Windows) unless
 `ATC_NO_PATH=1`. `ATC_INSTALL_DIR` and `ATC_REPO` override the location and the repository.
 
+## Linux packages and the repository
+
+A package installs the release binary as `/usr/bin/atc`, the bash, zsh and fish completions, the license
+files under `/usr/share/licenses/atc/`, and `/usr/lib/atc/install-source` holding `deb`, `rpm` or `aur`.
+That marker, together with the binary being `/usr/bin/atc`, is what makes `atc update` leave the update to
+the package manager (`src/update/install-source.ts`): renaming over a file dpkg or rpm owns would make
+their database disagree with the disk. An `install.sh` copy elsewhere on the same machine stays
+self-updating; `install.sh` warns that it shadows the package. After an upgrade a running server keeps
+the old binary until `atc restart` (the package's post-install script says so). No systemd unit ships in
+the package: `atc service install` writes one pointing at `/usr/bin/atc`.
+
+**The repository** (`scripts/linux-repo.mjs`, pure parts in `scripts/linux-packaging.mjs`, whose
+`REPOSITORY` names the bucket and its URL) is the bucket `atc-packages` on Hetzner Object Storage in
+Falkenstein; the bucket is private and every object is uploaded `public-read`, so anyone can download a
+file but nobody can list or write without the keys. It is served at `https://atc-packages.fsn1.your-objectstorage.com`: Hetzner terminates HTTPS only
+on its own host, so a domain of ours would need a proxy in front. GitHub Releases are the source of truth
+and the bucket is a mirror rebuilt from scratch on every release: the
+newest ten stable releases that carry packages, each package checked against its release's
+`SHA256SUMS`. Layout: `deb/dists/stable/…` and `deb/pool/main/a/atc/` (apt; `InRelease` and `Release.gpg`
+signed), `rpm/packages/` and `rpm/repodata/` (dnf; gzip metadata for RHEL 8, `repomd.xml.asc` signed, rpms
+signed too), `rpm/atc.repo`, and the public key as `atomic-chat.asc` and `atomic-chat.gpg`. The upload
+puts new packages first, then the indexes, then `Release`/`InRelease`/`repomd.xml` and the keys, and
+deletes what dropped out of the window last, so a client never sees an index naming a missing file.
+Packages are cached for a year (their names are never reused), everything else is `no-cache`. Releases
+older than the window stay downloadable from GitHub as `.deb` and `.rpm`.
+
+**The packages key** lives in `packaging/atomic-chat.asc` (public) and in `LINUX_PACKAGES_GPG_KEY`
+(private, RSA 4096: EdDSA rpm signatures are not readable everywhere). The workflow refuses a secret that
+is not that key. It expires after five years; extend it well before
+(`gpg --quick-set-expire <fingerprint> 5y`, commit the re-exported `packaging/atomic-chat.asc`, update the
+secret, release; the fingerprint stays the same): an expired key makes `apt update` fail for every user. If the private key leaks, make a
+new one, publish it the same way (and its fingerprint in README.md), and tell users to re-run the README's key line; apt and dnf trust only
+the keyring file the README writes.
+
+**Testing locally** (Docker): build `dist/bin/atc-x86_64-unknown-linux-gnu-baseline` and
+`dist/bin/atc-aarch64-unknown-linux-gnu`, then in a Linux container with nfpm, `dpkg-dev`, `apt-utils`,
+`createrepo-c` and `gnupg`: `node scripts/linux-packages.mjs build`, a throwaway key, `node
+scripts/linux-repo.mjs build --assets dist/pkg --key <fpr> --out dist/site --base-url
+http://127.0.0.1:8766 --unsigned-packages`, serve `dist/site`, and run `scripts/smoke-linux-package.sh` in
+a distro container sharing that network with the commands from `node scripts/linux-repo.mjs readme
+--block apt|dnf --base-url http://127.0.0.1:8766`.
+
 ## Self-update
 
 `atc update [--version x.y.z] [--force]` (`src/update/apply.ts`, `src/commands/update.ts`):
@@ -90,7 +172,9 @@ added to `PATH` (rc file with the marker `# added by atc installer`, or the user
 1. Finds the release (`/releases/latest`, or `/releases/tags/vX.Y.Z`; `ATC_GITHUB_API` points at a mirror
    or the e2e's stand-in). Without `--version` or `--force`, an older or equal release is a no-op.
 2. Picks the asset of this binary's own triple (`ATC_TARGET`, baked in at build time), so a baseline or
-   musl install stays one. A binary run from source refuses: it updates with git.
+   musl install stays one. A binary run from source refuses: it updates with git. So does a packaged
+   install (`/usr/bin/atc` with the deb, rpm or AUR marker): the hint names `apt`, `dnf` or the AUR
+   helper, and `--check` prints the same command.
 3. Downloads it beside the executable (same file system, so the swap is a rename), hashing as it streams,
    and compares with `SHA256SUMS`.
 4. Checks the signature: never less trusted than the installed binary (`src/update/trust.ts`). A binary
