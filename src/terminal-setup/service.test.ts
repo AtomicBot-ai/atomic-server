@@ -113,3 +113,17 @@ it('requests every installable GGUF engine from the shared live advisor', async 
     await rm(folder, { recursive: true, force: true })
   }
 })
+
+it('reports why the engine check failed when every catalog request fails', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-engines-')),
+    link = fakeCoreLink()
+  link.request = async () => {
+    throw new Error('connect ECONNREFUSED 127.0.0.1:53890')
+  }
+  try {
+    const service = new TerminalSetup(folder, async () => link)
+    await expect(service.catalogs()).rejects.toThrow('ECONNREFUSED')
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})

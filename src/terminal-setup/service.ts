@@ -42,6 +42,9 @@ export class TerminalSetup {
     const catalogs = outcomes.flatMap((r) =>
       r.status === 'fulfilled' && r.value.available.length ? [r.value] : []
     )
+    // Every request failing is a failed check (the server went away), not a machine without engines.
+    const failure = outcomes.every((r) => r.status === 'rejected') ? outcomes[0] : undefined
+    if (failure?.status === 'rejected') throw failure.reason
     if (!catalogs.length)
       throw new Error('No compatible engine could be found. Check your connection and retry.')
     return catalogs

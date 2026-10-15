@@ -55,6 +55,12 @@ export function oneLine(error: unknown): string {
   return body.hint ? `${body.message} — ${body.hint}` : body.message
 }
 
+/** An error over several lines: the message, its details (a failed start's own log lines) and the hint. */
+export function explained(error: unknown): string {
+  const body = errorBody(error)
+  return [body.message, body.details, body.hint && `Hint: ${body.hint}`].filter(Boolean).join('\n')
+}
+
 export class TuiController implements TuiControllerLike {
   private readonly abort = new AbortController()
   private readonly log: Logger

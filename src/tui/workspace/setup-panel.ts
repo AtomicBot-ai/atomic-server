@@ -3,7 +3,7 @@ import type { Canvas } from './canvas.js'
 import { eyeArtwork, drawRider } from './fortress.js'
 import type { WorkspaceState } from './state.js'
 import { computeRowWindow } from '../row-window.js'
-import { drawSetupBrowser } from './setup-browser.js'
+import { drawSetupBrowser, engineCheckFailed } from './setup-browser.js'
 export function bytes(n: number): string {
   if (!n) return 'size unknown'
   return n >= 1024 ** 3
@@ -219,7 +219,9 @@ export function drawSetup(
     }
   }
   const error = v.error || v.progress?.error
-  if (error) text(c, x, bottom - 1, error, COLORS.red, width)
+  // The engine screen shows a failed check in full; elsewhere one line fits above the buttons.
+  if (engineCheckFailed(v)) return
+  if (error) text(c, x, bottom - 1, error.split('\n')[0]!, COLORS.red, width)
   else if (v.busy)
     text(
       c,

@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest'
 import { setupAction } from './setup-actions.js'
 import { createWorkspace } from './state.js'
 import { newSetup } from '../../terminal-setup/index.js'
+import { AtcError } from '../../errors/index.js'
 import type { SetupSelection } from '../../terminal-setup/index.js'
 import type { ActionContext } from './actions.js'
 import type { WorkspaceController } from './controller.js'
@@ -91,4 +92,30 @@ it('confirms an engine into models and confirms a model directly into installati
   await setupAction('setup-repo:0', ctx)
   expect(ctx.get().setup?.stage).toBe('download')
   expect(begin).toHaveBeenCalledOnce()
+})
+it('keeps the reason and hint when the server does not start for the engine check', async () => {
+  let state = createWorkspace('setup')
+  state.setup = { ...newSetup('server'), busy: true }
+  const failure = new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
+    details: 'error: The admin could not listen on 127.0.0.1:1338.\n  the port is in use',
+    hint: 'see `atc logs`',
+  })
+  const ctx: ActionContext = {
+    get: () => state,
+    update: (fn) => {
+      state = fn(state)
+    },
+    controller: {
+      initializeKeys: async () => undefined,
+      setup: { catalogs: vi.fn(async () => Promise.reject(failure)) },
+    } as unknown as WorkspaceController,
+    send: vi.fn(),
+    cancel: vi.fn(),
+    copy: vi.fn(),
+  }
+  await setupAction('setup-refresh', ctx)
+  expect(state.setup).toMatchObject({ busy: false, catalogs: [] })
+  expect(state.setup!.error).toBe(
+    'The server did not start.\nerror: The admin could not listen on 127.0.0.1:1338.\n  the port is in use\nHint: see `atc logs`'
+  )
 })

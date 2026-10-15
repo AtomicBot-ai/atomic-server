@@ -1,12 +1,17 @@
-import { button, COLORS, text } from './canvas.js'
+import { button, COLORS, text, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 import type { WorkspaceState } from './state.js'
+import type { SetupView } from '../../terminal-setup/index.js'
 import { computeRowWindow } from '../row-window.js'
 const engines = [
   ['llamacpp-upstream', 'llama.cpp', 'Standard GGUF models'],
   ['llamacpp', 'llama.cpp TurboQuant', 'Atomic Chat’s TurboQuant engine'],
   ['atomic-prism', 'Atomic Prism', 'Bonsai models'],
 ] as const
+/** No catalogs and an error: the check itself failed (say, the server did not start), not every engine. */
+export function engineCheckFailed(v: SetupView): boolean {
+  return v.stage === 'engine' && !v.busy && !v.catalogs.length && v.error !== ''
+}
 export function drawSetupBrowser(
   c: Canvas,
   s: WorkspaceState,
@@ -22,6 +27,15 @@ export function drawSetupBrowser(
   }
   const b = (id: string, row: number, label: string, hint: string, selected = false) =>
     button(c, id, x, y + row, label.slice(0, width - 2), hint, focus, selected)
+  if (engineCheckFailed(v)) {
+    put(3, 'Engines could not be checked.', COLORS.text)
+    let row = 5
+    for (const [i, line] of v.error.split('\n').entries())
+      for (const part of wrap(line, width)) put(row++, part, i === 0 ? COLORS.red : COLORS.text)
+    put(row + 1, 'Fix the cause above, then choose Refresh.')
+    button(c, 'setup-refresh', x, bottom, 'Refresh', 'Retry live engine detection.', focus)
+    return
+  }
   if (v.stage === 'engine') {
     put(3, v.busy ? 'Finding compatible builds...' : 'Choose your inference engine.', COLORS.text)
     let row = 5

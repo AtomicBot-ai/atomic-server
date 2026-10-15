@@ -73,10 +73,7 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
       // A server that dies while starting (a busy admin port, a broken config) leaves its reason in
       // the log, not in the lock; "cannot reach the core" alone sends people looking elsewhere.
       if (!spawned || !(failure instanceof AtomicCoreError)) throw failure
-      throw new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
-        details: (await logTail(paths.daemonOutLog)) ?? (await logTail(paths.daemonLog)) ?? failure.message,
-        hint: 'see `atc logs`',
-      })
+      throw await startFailed(paths, failure.message)
     }
   }
   const record = await waitForDaemonRecord(
@@ -85,6 +82,8 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
     DAEMON_RECORD_TIMEOUT_MS
   )
   if (!record) {
+    if (options.launch && !processAlive(owner.record.pid))
+      throw await startFailed(paths, 'it exited while starting')
     throw new AtcError(
       'ATC_DAEMON_FOREIGN',
       'The data folder is owned by a core that is not Atomic Server.',
@@ -94,6 +93,8 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
       }
     )
   }
+  // Whoever spawned it, a caller that asked for a running server waits until it really runs.
+  if (options.launch) await confirmDaemonStart(paths, record)
   return new HttpCoreLink({
     endpoint: {
       baseUrl: `http://${owner.record.control_host}:${owner.record.control_port}`,
@@ -106,6 +107,49 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
     pid: options.pid,
     log: (m) => log.debug(m),
   })
+}
+
+/**
+ * A daemon writes its `starting` record before its last step, the admin listener, and can
+ * still die there (a busy port); a caller handed that link fails later with a bare connection error.
+ * Wait for `ready`, and report a daemon that exits first like one that never came up. A slow start
+ * (the hardware probe on Windows) runs out the wait and carries on with the link, as before.
+ */
+export async function confirmDaemonStart(
+  paths: Pick<AtcPaths, 'daemonRecord' | 'daemonOutLog' | 'daemonLog'>,
+  started: Pick<DaemonRecord, 'instance_id' | 'pid'>,
+  alive: (pid: number) => boolean = processAlive,
+  timeoutMs = DAEMON_READY_TIMEOUT_MS
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const record = await readDaemonRecord(paths.daemonRecord)
+    if (record?.instance_id === started.instance_id && record.state === 'ready') return
+    if (!alive(started.pid)) throw await startFailed(paths, 'it exited while starting')
+    if (Date.now() >= deadline) return
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+}
+
+/** A server that dies while starting (a busy admin port, a broken config) leaves its reason in its log. */
+async function startFailed(
+  paths: Pick<AtcPaths, 'daemonOutLog' | 'daemonLog'>,
+  fallback: string
+): Promise<AtcError> {
+  return new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
+    details: (await logTail(paths.daemonOutLog)) ?? (await logTail(paths.daemonLog)) ?? fallback,
+    hint: 'see `atc logs`',
+  })
+}
+
+function processAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    // EPERM: the process exists but belongs to someone else.
+    return (error as NodeJS.ErrnoException).code === 'EPERM'
+  }
 }
 
 /** The last few lines of the daemon log, or undefined when there is none. */
