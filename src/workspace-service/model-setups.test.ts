@@ -245,6 +245,17 @@ describe('ModelSetups', () => {
     expect(f.hub.ranges).toEqual([`bytes=${weights.length / 2}-`])
   })
 
+  it('returns the running setup of the same model instead of starting a second writer', async () => {
+    const f = fixture()
+    f.hub.hold = true
+    const setups = f.make()
+    const first = await install(setups, 'owner/repo', 'model.Q4_K_M.gguf', 'req-1')
+    const second = await install(setups, 'owner/repo', 'model.Q4_K_M.gguf', 'req-2')
+    expect(second.setup_id).toBe(first.setup_id)
+    expect(await setups.list()).toHaveLength(1)
+    await setups.cancel(first.setup_id)
+  })
+
   it('refuses an install whose plan was not reviewed here', async () => {
     const f = fixture()
     await expect(

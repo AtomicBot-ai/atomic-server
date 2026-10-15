@@ -3,9 +3,17 @@
 
 import { realpath, statfs } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import { diskErrToString } from './disk.js'
 import { sidecarPath } from './protocol.js'
 
 export const DOWNLOAD_CANCELLED = 'Download cancelled'
+
+/** An fs error as the tagged `Error: [disk_*] …` the app's telemetry reads. */
+export const diskError = (e: unknown) => new Error(diskErrToString(e))
+
+/** A cancel or a disk error: retrying the stream does not help. */
+export const isFinalError = (e: unknown) =>
+  e instanceof Error && (e.message === DOWNLOAD_CANCELLED || e.message.startsWith('Error: ['))
 
 /** The partial file, the URL it came from, and the state of its parallel ranges. */
 export function sidecars(savePath: string) {

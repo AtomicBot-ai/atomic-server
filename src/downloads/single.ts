@@ -8,8 +8,7 @@
 import { mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { diskErrToString } from './disk.js'
-import { DOWNLOAD_CANCELLED, sidecars } from './local.js'
+import { DOWNLOAD_CANCELLED, diskError, isFinalError, sidecars } from './local.js'
 import {
   DownloadRequestError,
   MAX_STREAM_RETRIES,
@@ -18,10 +17,6 @@ import {
 } from './protocol.js'
 import { plainError, requestBytes, requestWithRetry } from './request.js'
 import type { FileJob } from './request.js'
-
-const disk = (e: unknown) => new Error(diskErrToString(e))
-const isFinal = (e: unknown) =>
-  e instanceof Error && (e.message === DOWNLOAD_CANCELLED || e.message.startsWith('Error: ['))
 
 /** Bytes in the partial when it belongs to this URL, `undefined` otherwise. */
 export async function partialBytes(savePath: string, url: string): Promise<number | undefined> {
@@ -40,7 +35,7 @@ export async function partialBytes(savePath: string, url: string): Promise<numbe
 export async function downloadSingle(job: FileJob, initial?: Response): Promise<void> {
   const s = sidecars(job.savePath)
   await mkdir(dirname(job.savePath), { recursive: true }).catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   let from = 0
   if (!initial && job.resume) {
@@ -54,7 +49,7 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   await rm(s.ranges, { force: true })
   await rm(s.rangesNext, { force: true })
   await writeFile(s.url, job.url).catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   let res: Response
   if (initial) res = initial
@@ -73,10 +68,10 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   // Append mode, so a later truncate(0) (a server that cannot resume) puts the next byte at 0.
   if (from === 0)
     await writeFile(s.tmp, new Uint8Array()).catch((e) => {
-      throw disk(e)
+      throw diskError(e)
     })
   const handle = await open(s.tmp, 'a').catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   let written = from
   try {
@@ -87,7 +82,7 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   }
   const persisted = (
     await stat(s.tmp).catch((e) => {
-      throw disk(e)
+      throw diskError(e)
     })
   ).size
   if (persisted !== written)
@@ -116,7 +111,7 @@ async function pump(job: FileJob, handle: FileHandle, first: Response, from: num
         if (done) break
         if (job.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
         await handle.write(value).catch((e) => {
-          throw disk(e)
+          throw diskError(e)
         })
         written += value.byteLength
         sinceReset += value.byteLength
@@ -127,7 +122,7 @@ async function pump(job: FileJob, handle: FileHandle, first: Response, from: num
         job.report(written)
       }
     } catch (e) {
-      if (isFinal(e)) throw e
+      if (isFinalError(e)) throw e
       if (job.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
       streamError = (e as Error).message
     } finally {
@@ -162,7 +157,7 @@ async function pump(job: FileJob, handle: FileHandle, first: Response, from: num
             throw plainError(e2)
           }
           await handle.truncate(0).catch((e3) => {
-            throw disk(e3)
+            throw diskError(e3)
           })
           written = 0
           sinceReset = 0

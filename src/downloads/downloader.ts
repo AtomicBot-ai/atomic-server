@@ -171,31 +171,46 @@ export class Downloader {
         this.deps.onProgress?.({ ...task.progress })
       }
     }
-    await Promise.all(
-      items.map(async (item, i) => {
-        const job: FileJob = {
-          fetch: fetchOf(item),
-          url: item.url,
-          headers,
-          signal,
-          sleep,
-          retryBaseMs,
-          log,
-          savePath: savePaths[i] as string,
-          size: sizes[i] ?? 0,
-          resume,
-          report: (bytes) => {
-            done.set(i, bytes)
-            publish(false)
-          },
-        }
-        if (ranged[i]) {
-          const outcome = await downloadRanged(job, streams)
-          if (outcome.kind === 'single') await downloadSingle({ ...job, resume: false }, outcome.initial)
-        } else await downloadSingle(job)
-        publish(true)
-      })
+    // The first file that fails stops the others: none may keep writing once the task has ended.
+    let failure: { error: unknown } | undefined
+    const settled = await Promise.allSettled(
+      items
+        .map(async (item, i) => {
+          const job: FileJob = {
+            fetch: fetchOf(item),
+            url: item.url,
+            headers,
+            signal,
+            sleep,
+            retryBaseMs,
+            log,
+            savePath: savePaths[i] as string,
+            size: sizes[i] ?? 0,
+            resume,
+            report: (bytes) => {
+              done.set(i, bytes)
+              publish(false)
+            },
+          }
+          if (ranged[i]) {
+            const outcome = await downloadRanged(job, streams)
+            if (outcome.kind === 'single') await downloadSingle({ ...job, resume: false }, outcome.initial)
+          } else await downloadSingle(job)
+          publish(true)
+        })
+        .map((work) =>
+          work.catch((error: unknown) => {
+            if (!signal.aborted) {
+              failure ??= { error }
+              task.controller.abort()
+            }
+            throw error
+          })
+        )
     )
+    if (failure) throw failure.error
+    const rejected = settled.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+    if (rejected) throw rejected.reason
 
     const verify = this.deps.verify ?? defaultVerifyDeps
     for (const [i, item] of items.entries()) {

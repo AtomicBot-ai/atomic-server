@@ -8,8 +8,7 @@
 
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { diskErrToString } from './disk.js'
-import { DOWNLOAD_CANCELLED, sidecars } from './local.js'
+import { DOWNLOAD_CANCELLED, diskError, isFinalError, sidecars } from './local.js'
 import { MAX_STREAM_RETRIES, RETRY_RESET_PROGRESS_BYTES, retryDelayMs } from './protocol.js'
 import { plainError, requestWithRetry } from './request.js'
 import type { FileJob } from './request.js'
@@ -31,10 +30,6 @@ export type RangedOutcome = { kind: 'done' } | { kind: 'single'; initial?: Respo
 
 /** Sync and record progress after this many bytes have arrived since the last record. */
 export const PERSIST_EVERY_BYTES = 8 * 1024 * 1024
-
-const disk = (e: unknown) => new Error(diskErrToString(e))
-const isFinal = (e: unknown) =>
-  e instanceof Error && (e.message === DOWNLOAD_CANCELLED || e.message.startsWith('Error: ['))
 
 /** `[0, prefix)` as one finished span, the rest in up to `streams` equal spans. */
 export function planRanges(size: number, streams: number, prefix = 0): ByteSpan[] {
@@ -75,17 +70,17 @@ export async function readRangeState(savePath: string, url: string, size: number
 async function record(savePath: string, state: RangeState): Promise<void> {
   const s = sidecars(savePath)
   await writeFile(s.rangesNext, JSON.stringify(state)).catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   await rename(s.rangesNext, s.ranges).catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
 }
 
 export async function downloadRanged(job: FileJob, streams: number): Promise<RangedOutcome> {
   const s = sidecars(job.savePath)
   await mkdir(dirname(job.savePath), { recursive: true }).catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   let state = job.resume ? await readRangeState(job.savePath, job.url, job.size) : undefined
   let fresh = false
@@ -102,7 +97,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
   }
   await rm(s.rangesNext, { force: true })
   await writeFile(s.url, job.url).catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   await record(job.savePath, state)
   const ranges = state.ranges
@@ -111,7 +106,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
   if (!pending.length) return { kind: 'done' }
 
   const handle = await open(s.tmp, fresh ? 'w+' : 'r+').catch((e) => {
-    throw disk(e)
+    throw diskError(e)
   })
   const inner = new AbortController()
   const ctx = { ...job, signal: AbortSignal.any([job.signal, inner.signal]) }
@@ -143,7 +138,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
           if (ctx.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
           const take = Math.min(value.byteLength, span.end + 1 - span.next)
           await handle.write(value, 0, take, span.next).catch((e) => {
-            throw disk(e)
+            throw diskError(e)
           })
           span.next += take
           sinceReset += take
@@ -159,7 +154,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
           }
         }
       } catch (e) {
-        if (isFinal(e)) throw e
+        if (isFinalError(e)) throw e
         if (ctx.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
         streamError = (e as Error).message
       } finally {

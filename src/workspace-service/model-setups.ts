@@ -127,6 +127,11 @@ export class ModelSetups {
         )
       const blocker = reviewed.plan.blockers[0]
       if (blocker) throw new AtcError('ATC_USAGE', blocker.message)
+      // One writer per model: its files have one path, whichever request asked for them.
+      const active = (await this.list()).find(
+        (r) => r.plan.model_id === reviewed.plan.model_id && this.runs.has(r.setup_id)
+      )
+      if (active) return active
       const setupId = (this.deps.newId ?? randomUUID)()
       const now = Date.now()
       const record: ModelSetup = {
@@ -203,7 +208,9 @@ export class ModelSetups {
       await runSetup(this.deps, await this.get(id), signal, enter, (engine, taskId) =>
         this.install1(engine, taskId)
       )
-      await enter('ready')
+      // Registered and accepted: a cancel arriving now changes nothing on disk, so it is ignored.
+      stage = 'ready'
+      await this.writes.run(id, () => this.commit(id, { stage: 'ready' }))
     } catch (error) {
       const cancelled =
         signal.aborted || error instanceof SetupCancelled || String(error).includes('Download cancelled')

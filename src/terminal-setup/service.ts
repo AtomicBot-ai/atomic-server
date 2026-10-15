@@ -16,7 +16,7 @@ import type {
 /** The server's workspace, where setups run and their downloads are reported. */
 export interface SetupWorkspace {
   execute(operation: string, input?: Record<string, unknown>): Promise<unknown>
-  snapshot(): Promise<{ downloads: unknown[] }>
+  snapshot(): Promise<{ downloads: unknown[]; setups: unknown[] }>
 }
 /** The request a setup plan takes, without what earlier versions stored beside it (a proxy). */
 function planInput(request: ModelSetupPlanRequest): ModelSetupPlanRequest {
@@ -174,14 +174,15 @@ export class TerminalSetup {
         restart: true,
       }
     const link = await this.attach(false)
-    const [list, packs, snapshot] = await Promise.all([
-      this.workspace.execute('setup.status') as Promise<{ setups: ModelSetup[] }>,
+    // One snapshot carries both the setup records and their transfers.
+    const [packs, snapshot] = await Promise.all([
       link.request<{ backends: { version: string; backend: string }[] }>(
         'GET',
         `/backends/${manifest.engine.provider}`
       ),
       this.workspace.snapshot(),
     ])
+    const list = { setups: snapshot.setups as ModelSetup[] }
     const engineReady = packs.backends.some(
       (p) => p.version === manifest.engine.version && p.backend === manifest.engine.backend
     )
@@ -235,11 +236,14 @@ export class TerminalSetup {
         .filter((j) => j.stage !== 'ready')
         .map((j) => this.workspace.execute('setup.cancel', { setup_id: j.setup_id }))
     )
-    // A PrismML build is the setup records' to install, and cancelling them stops waiting on it.
-    if (!progress.engineReady && progress.manifest.engine.provider !== 'atomic-prism') {
-      const link = await this.attach(false)
-      await link.request('POST', `/downloads/${encodeURIComponent(progress.manifest.engine.taskId)}/cancel`)
-    }
+    if (progress.engineReady) return
+    // A PrismML build downloads under the setup records' engine task; any other under the manifest's.
+    const tasks =
+      progress.manifest.engine.provider === 'atomic-prism'
+        ? [...new Set(progress.jobs.flatMap((j) => (j.task_ids.engine ? [j.task_ids.engine] : [])))]
+        : [progress.manifest.engine.taskId]
+    const link = await this.attach(false)
+    for (const task of tasks) await link.request('POST', `/downloads/${encodeURIComponent(task)}/cancel`)
   }
   async finish(): Promise<SetupManifest> {
     const progress = await this.progress()

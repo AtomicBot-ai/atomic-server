@@ -133,4 +133,24 @@ describe('Downloader, one stream', () => {
     expect((await readFile(out)).equals(body)).toBe(true)
     expect(server.requests.filter((r) => r.range)).toEqual([])
   })
+
+  it('stops the other files of a task when one fails, so none keeps writing after it', async () => {
+    server.files.set('/ok.bin', { body, holdAfterBytes: 1024 })
+    const { dl, dataFolder } = await make()
+    const other = { ...item('/ok.bin'), save_path: 'llamacpp/models/m/other.gguf' }
+    await expect(
+      dl.download('t', [other, { url: server.url('/missing.bin'), save_path: SAVE, size: 10 }])
+    ).rejects.toThrow('404')
+    const size = () =>
+      stat(join(dataFolder, 'llamacpp/models/m/other.gguf.tmp')).then(
+        (st) => st.size,
+        () => 0
+      )
+    const atEnd = await size()
+    server.release()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(atEnd).toBeLessThanOrEqual(1024)
+    expect(await size()).toBe(atEnd)
+    expect(dl.active()).toEqual([])
+  })
 })

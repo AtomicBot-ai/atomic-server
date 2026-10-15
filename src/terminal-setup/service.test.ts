@@ -48,7 +48,7 @@ function workspace() {
       }
       return {}
     },
-    snapshot: async () => ({ downloads }),
+    snapshot: async () => ({ downloads, setups: jobs }),
   }
   return { ws, jobs, calls, downloads }
 }
@@ -95,7 +95,7 @@ it.each(['llamacpp-upstream', 'llamacpp'])(
   }
 )
 
-it('leaves the PrismML build to the setup record and cancels unfinished setups on pause', async () => {
+it('leaves the PrismML build to the setup record, and pause cancels the setups and that build download', async () => {
   const dir = await folder(),
     link = fakeCoreLink(),
     w = workspace()
@@ -108,9 +108,12 @@ it('leaves the PrismML build to the setup record and cancels unfinished setups o
     await service.plan({ repo: 'o/r', file: 'm.gguf' }),
   ])
   expect(link.calls.some((c) => c.path.endsWith('/install'))).toBe(false)
+  w.jobs[0]!.task_ids.engine = 'atomic-prism-backend-prism-b3-abcdef0-cpu'
   await service.pause()
   expect(w.calls).toContainEqual({ name: 'setup.cancel', input: { setup_id: 'setup-1' } })
-  expect(link.calls.some((c) => c.path.startsWith('/downloads/'))).toBe(false)
+  expect(link.calls.filter((c) => c.path.startsWith('/downloads/')).map((c) => c.path)).toEqual([
+    '/downloads/atomic-prism-backend-prism-b3-abcdef0-cpu/cancel',
+  ])
 })
 
 it('shows an installation an earlier version started as one to start again, then restarts it', async () => {
