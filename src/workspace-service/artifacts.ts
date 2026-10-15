@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { readdir } from 'node:fs/promises'
 import { ModelRegistry } from '@atomic-chat/core/models'
-import { Downloader } from '@atomic-chat/core/downloads'
+import { Downloader } from '../downloads/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import { AtcError } from '../errors/index.js'
@@ -32,8 +32,6 @@ export class ArtifactService {
       dataFolder: options.paths.dataFolder,
       platform: options.platform ?? process.platform,
       fetch: request,
-      streams: 4,
-      emit: () => {},
       availableSpace: async (path) => (await options.link.disk.available(path)) ?? undefined,
     })
   }

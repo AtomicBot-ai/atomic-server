@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import type { DownloadItem } from '@atomic-chat/core/downloads'
+import type { DownloadItem } from '../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
 import { object } from './validation.js'
 export interface ArtifactPlan {
