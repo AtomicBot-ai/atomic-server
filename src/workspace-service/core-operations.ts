@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { installEngine, ensureArtifactEngine } from './engine-install.js'
 import type { CoreLink } from '../core-link/index.js'
-import type { WorkspaceInput } from '../admin/contract/index.js'
+import type { WorkspaceInput } from '../contract/index.js'
 import { object, segment } from './validation.js'
 export const NOT_CORE = Symbol('not-core')
 export async function coreOperation(link: CoreLink, name: string, input: WorkspaceInput): Promise<unknown> {

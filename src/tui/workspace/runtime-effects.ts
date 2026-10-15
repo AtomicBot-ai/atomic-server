@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import type { RefObject } from 'react'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
-import { WORKSPACE_OPERATIONS } from '../../admin/contract/index.js'
+import { WORKSPACE_OPERATIONS } from '../../contract/index.js'
 export function useRuntimeData(
   ready: boolean,
   controller: RefObject<WorkspaceController | undefined>,

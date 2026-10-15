@@ -5,7 +5,7 @@
  * so the screen never offers what a command cannot do. Everything it learns becomes an action.
  */
 
-import { STATUS_EVENTS } from '../admin/contract/index.js'
+import { STATUS_EVENTS } from '../contract/index.js'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { setConfigValue, unsetConfigValue } from '../config/index.js'
 import type { CoreLink, DaemonWatchState } from '../core-link/index.js'
@@ -21,10 +21,22 @@ import type { CheckResult } from '../doctor/index.js'
 import { errorBody } from '../errors/index.js'
 import type { Logger } from '../output/index.js'
 import { createLogger } from '../output/index.js'
-import type { TuiCommand } from './keys.js'
 import { configRows, describeEdit } from './model.js'
 import type { Level, PendingHostStep, TuiAction } from './state.js'
 import { MAX_LOG_LINES } from './state.js'
+
+/** What the terminal UI asks the controller to do; the controller is its only side effect. */
+export type TuiCommand =
+  | { name: 'quit' }
+  | { name: 'start' }
+  | { name: 'stop' }
+  | { name: 'restart' }
+  | { name: 'refresh' }
+  | { name: 'admin-link' }
+  | { name: 'open-url'; url: string }
+  | { name: 'config-set'; key: string; raw: string }
+  | { name: 'config-unset'; key: string }
+  | { name: 'doctor' }
 
 export interface TuiDeps {
   paths: Pick<AtcPaths, 'daemonRecord' | 'daemonLog' | 'configFile' | 'layout'>

@@ -1,4 +1,4 @@
-import type { WorkspaceInput } from '../admin/contract/index.js'
+import type { WorkspaceInput } from '../contract/index.js'
 import type { Conversation, ChatHistory, ClientKeys } from '../terminal-data/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceServiceOptions } from './service.js'

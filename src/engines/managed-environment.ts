@@ -4,8 +4,8 @@
  * phases. Pure transitions, table-tested; wiring to the core's `/environments` is iteration 4.
  */
 
-import type { SetupState } from '../admin/contract/index.js'
-import type { ManagedPhase } from '../host/managed-types.js'
+import type { SetupState } from '../contract/index.js'
+import type { ManagedPhase } from '../host/index.js'
 
 export type SetupEvent =
   | { type: 'probe'; availability: 'supported' | 'setup-required' | 'prerequisite-blocked' | 'unsupported' }

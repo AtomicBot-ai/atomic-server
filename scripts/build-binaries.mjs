@@ -8,7 +8,7 @@
 //
 // Run `npm run embed:ui` first (the npm scripts do): the admin SPA is a generated module.
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TARGETS } from './targets.mjs'
@@ -48,6 +48,10 @@ if (targets.length === 0) {
   console.error(`no target ${only}; known: ${TARGETS.map((t) => t.triple).join(', ')}`)
   process.exit(1)
 }
+function bunTempFiles() {
+  return readdirSync(ROOT).filter((name) => name.endsWith('.bun-build'))
+}
+
 mkdirSync(OUT_DIR, { recursive: true })
 
 for (const { bun: target, triple, platform } of targets) {
@@ -83,7 +87,11 @@ for (const { bun: target, triple, platform } of targets) {
     outfile,
   ]
   console.log(`bun ${args.join(' ')}`)
+  const before = new Set(bunTempFiles())
   const res = spawnSync('bun', args, { stdio: 'inherit', cwd: ROOT })
+  // `bun build --compile` can leave its 60 MB working copy (`.<hash>.bun-build`) in the cwd; remove the
+  // ones this run created, never older ones.
+  for (const name of bunTempFiles()) if (!before.has(name)) rmSync(join(ROOT, name), { force: true })
   if (res.status !== 0) {
     console.error(`build failed for ${target}`)
     process.exit(res.status ?? 1)

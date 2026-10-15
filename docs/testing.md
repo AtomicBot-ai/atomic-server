@@ -16,7 +16,7 @@ loopback stands in for GitHub wherever downloading is under test.
 | `ui` | `packages/admin-ui` (its own vitest, jsdom) | `npm run test:ui` | Components and hooks of the SPA against a fake hub; see `docs/admin-ui.md`. | — |
 
 `npm run test:coverage` runs unit + contract with v8 coverage over `src/**/*.{ts,tsx}`, excluding tests,
-`index.ts` files, `src/admin/contract/`, `src/bin.ts` and generated files. Coverage floors are iteration 6.
+`index.ts` files, `src/contract/`, `src/bin.ts` and generated files. Coverage floors are iteration 6.
 
 Beyond those rows: `test/contract/daemon-upgrade.test.ts` (a server of another build, faked by
 `helpers/fake-old-owner.ts`: status, stop, start, restart reach it), `service.test.ts` (`atc service` against a

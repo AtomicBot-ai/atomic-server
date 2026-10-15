@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import type { AtcPaths } from '../config/index.js'
-import type { WorkspaceSnapshot } from '../admin/contract/index.js'
+import type { WorkspaceSnapshot } from '../contract/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 export function readWorkspaceSetup(paths: AtcPaths): Promise<WorkspaceSnapshot['setup']> {
   return readDocument(join(paths.atcDir, 'workspace-setup.json'), null)

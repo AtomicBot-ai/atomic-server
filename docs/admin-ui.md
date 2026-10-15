@@ -6,7 +6,7 @@ page covers the stack, where the code comes from, how it talks to the daemon, an
 
 ## Stack
 
-React 19, Vite 6, TanStack Router (file-based routes, `routeTree.gen.ts` generated), Zustand 5, Tailwind 4,
+React 19, Vite 6, Zustand 5, Tailwind 4,
 shadcn-style components (`@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge`,
 `lucide-react`). Tests: vitest with jsdom and Testing Library. Scripts in `packages/admin-ui/package.json`:
 `dev`, `build` (`tsc -b && vite build`), `preview`, `typecheck`, `lint` (its own browser/React eslint
@@ -57,7 +57,7 @@ answers the three commands the app's core runtime uses:
 `services/atomic-core-runtime.ts` is a verbatim copy of the app's
 `extensions/shared/atomicCoreRuntime.ts` — `createCoreRuntime(provider, invoke)` builds every request the
 UI makes, parameterised by the `invoke` function and importing nothing. Wire types come from
-`src/admin/contract` (the browser-safe folder of the root package: `AdminStatus`, `AdminConfigView`,
+`src/contract` (the browser-safe folder of the root package: `AdminStatus`, `AdminConfigView`,
 `SetupState`, `ADMIN_API`, `ADMIN_HEADER`, `SESSION_COOKIE`) and from `@atomic-chat/core/contracts`. The
 control token never reaches the page; the page never knows the core's port.
 
@@ -101,24 +101,14 @@ and `build:bin` never need Vite. The generated file is gitignored. See ADR 2026-
 UI as a generated module".
 
 Serving (`src/admin/static.ts`): hashed asset names get `cache-control: immutable`, everything else
-`no-cache`; any path that is not a file gets `index.html`, so the router owns the URL space; CSP
+`no-cache`; any path that is not a file gets `index.html`; CSP
 `default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'`.
 
-## Pages
+## The workspace
 
-In order of value on a server. The scaffold ships the shell (root layout, sidebar, theme) and the
-Dashboard; the other pages exist as routes with placeholder cards and lifted containers on fixtures.
-
-| # | Page | Shows | Status |
-| --- | --- | --- | --- |
-| 1 | Dashboard | `/api/status` (versions, daemon, API endpoint, sessions, pending host steps), the snapshot, live events | works |
-| 2 | API Server | Start/stop the `/v1` server, host/port/key, CORS, trusted hosts (lifted `containers/api/*`, `useLocalApiServer`) | iteration 5 |
-| 3 | Models | Installed, hub search, downloads with progress and cancel (`POST /api/downloads/:id/cancel`) | iteration 5 |
-| 4 | Engines / Backends | Installed packs, the optimal one, install/update | iteration 5 |
-| 5 | Managed Environment wizard | `SetupState`: `not-installed → consent → elevating → installing → relogin-required / reboot-required → ready / failed`; the manual `sudo atc host-step exec …` command when the daemon cannot elevate | iteration 7 |
-| 6 | Logs | `GET /api/logs`, live `atc:log` | iteration 7 |
-| 7 | Settings | `atc` config (`PATCH /api/config`), proxy, privacy/telemetry, tokens; engine settings from `GET /api/engines/:p/schema` | iteration 7 (schemas: iteration 5) |
-| 8 | Hardware | GPUs, VRAM, driver, compute capability, CPU extensions, what was pushed to the core | iteration 7 |
-
-The corresponding BFF routes answer 501 with `ATC_NOT_IMPLEMENTED` until their iteration; the pages
-render that as "not yet in this build" rather than an error.
+`main.tsx` renders `containers/AdminRoot.tsx`: it trades the `#token=` fragment for a session, shows
+`SignIn` on a 401 and otherwise the workspace in `src/workspace/` — the same Playground, Server and
+Engines & Models sections as the terminal UI, in the order `src/contract` sets
+(ADR 2026-10-13 "Shared server workspaces and agent controls"). There is no URL router: navigation is
+workspace state, as in the terminal (ADR 2026-10-15 "Retire the pre-workspace screens"). Every action is a
+workspace operation from the shared registry, called through `workspace/workspace-api.ts`.

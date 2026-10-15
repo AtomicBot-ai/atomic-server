@@ -254,9 +254,11 @@ S stop  R restart  a admin link  r refresh  ←→ screens  ? help  q quit
 
 ### How it is built
 
-- `src/tui/`: `state.ts` (one reducer), `keys.ts` (one key table that feeds the footer, the help and the
-  handlers), `controller.ts` (the only side effects), `components/`, `screens/` (one per tab), `app.tsx`,
-  `run-tui.tsx`. The command loads it with a dynamic `import()`, so plain commands never load React.
+- `src/tui/`: `run-tui.tsx` renders `workspace/WorkspaceApp.tsx`; `state.ts` (the server reducer) and
+  `controller.ts` (the only side effects) sit under it. `workspace/` keeps the shell at its root (state,
+  controller, frame, input, actions) and one folder per area: `draw/`, `chat/`, `setup/`, `library/`,
+  `operations/`, `server/`. The command loads it with a dynamic `import()`, so plain commands never load
+  React.
 - Data: `watchDaemon` (`src/core-link/watch.ts`) attaches when a server runs, follows its events
   (snapshot first; `STATUS_EVENTS` refetch), and attaches again after a restart, found by `health()`.
   Actions go through the functions the commands use: `startDaemon`/`stopDaemon`, `setConfigValue`,

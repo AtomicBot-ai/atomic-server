@@ -1,5 +1,5 @@
 import { AtcError } from '../errors/index.js'
-import type { WorkspaceInput, WorkspaceOperation, WorkspaceField } from '../admin/contract/index.js'
+import type { WorkspaceInput, WorkspaceOperation, WorkspaceField } from '../contract/index.js'
 export function inputFor(operation: WorkspaceOperation, raw: unknown): WorkspaceInput {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw))
     throw new AtcError('ATC_USAGE', 'Input must be an object.')

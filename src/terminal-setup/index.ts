@@ -1,3 +1,4 @@
+/** Guided model setup: engine choice, the curated catalog, durable setup records and bounded UI waits. */
 export * from './types.js'
 export * from './catalog.js'
 export * from './service.js'

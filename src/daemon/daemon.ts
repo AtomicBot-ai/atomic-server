@@ -11,8 +11,8 @@ import { ClientKeys } from '../terminal-data/index.js'
 import { telemetryConsent } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
 import { CoreClient } from '@atomic-chat/core/client'
-import { AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
-import type { AdminConfigView, AdminStatus } from '../admin/index.js'
+import { ADMIN_BUILD_ID, AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
+import type { AdminConfigView, AdminStatus } from '../contract/index.js'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { FIELDS, getAt } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
@@ -28,7 +28,6 @@ import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
 import { ATC_BUILD_DATE, ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
-import { ADMIN_BUILD_ID } from '../admin/static.js'
 
 export interface DaemonOptions {
   paths: AtcPaths

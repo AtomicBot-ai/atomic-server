@@ -1,4 +1,4 @@
-.PHONY: install build ui bin test verify release
+.PHONY: install build ui bin test fast verify release
 
 install: ## install dependencies
 	bun install
@@ -14,6 +14,9 @@ bin: ## compile the single binary for this machine
 
 test: ## unit + contract tests
 	npm test
+
+fast: ## lint, typecheck and the unit + contract tests touched by uncommitted changes
+	npm run verify:fast
 
 verify: ## every gate, as CI runs them
 	npm run verify

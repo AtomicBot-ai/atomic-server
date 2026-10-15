@@ -1,4 +1,4 @@
-import type { WorkspaceOperation } from '../admin/contract/index.js'
+import type { WorkspaceOperation } from '../contract/index.js'
 
 interface McpOptions {
   operations: readonly WorkspaceOperation[]

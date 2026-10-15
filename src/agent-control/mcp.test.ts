@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { WorkspaceOperation } from '../admin/contract/index.js'
+import type { WorkspaceOperation } from '../contract/index.js'
 import { McpSession } from './mcp.js'
 const operations: WorkspaceOperation[] = [
   {

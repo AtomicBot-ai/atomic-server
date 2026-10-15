@@ -1,14 +1,14 @@
-import { drawInstallReview } from './library-panel.js'
-import { drawGoalSetup } from './goal-setup.js'
-import { drawOperationOverlay } from './operation-panel.js'
+import { drawInstallReview } from './library/library-panel.js'
+import { drawGoalSetup } from './setup/goal-setup.js'
+import { drawOperationOverlay } from './operations/operation-panel.js'
 import { AGENTS } from '../../agent-launch/index.js'
-import { button, COLORS, text, wrap } from './canvas.js'
-import type { Canvas } from './canvas.js'
+import { button, COLORS, text, wrap } from './draw/canvas.js'
+import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { helpLines } from '../command-list.js'
 import { example } from './actions.js'
-import { tooltip } from './tooltip.js'
+import { tooltip } from './draw/tooltip.js'
 const ms = (v: number | null) => (v === null ? 'Not available' : `${Math.round(v)} ms`)
 export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
   if (s.overlay === 'setup-goal') {

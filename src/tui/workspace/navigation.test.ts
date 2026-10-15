@@ -4,11 +4,11 @@ import {
   SERVER_SECTIONS,
   PLAYGROUND_TASKS,
   LIBRARY_SECTIONS,
-} from '../../admin/contract/index.js'
+} from '../../contract/index.js'
 import { createWorkspace, PAGES } from './state.js'
 import { workspaceFrame } from './frame.js'
 import { activate } from './actions.js'
-import { operationChoices } from './operation-model.js'
+import { operationChoices } from './operations/operation-model.js'
 import { playgroundTask, serverSection, workspacePage } from './navigation.js'
 import type { ActionContext } from './actions.js'
 import type { WorkspaceController } from './controller.js'

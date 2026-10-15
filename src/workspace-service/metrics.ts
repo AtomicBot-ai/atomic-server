@@ -1,4 +1,4 @@
-import type { WorkspaceRequest, WorkspaceSnapshot } from '../admin/contract/index.js'
+import type { WorkspaceRequest, WorkspaceSnapshot } from '../contract/index.js'
 import { object } from './validation.js'
 const number = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
 export class WorkspaceMetrics {

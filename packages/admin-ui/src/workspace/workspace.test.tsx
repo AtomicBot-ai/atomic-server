@@ -1,13 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { WORKSPACE_OPERATIONS } from '@contract'
 import type { WorkspaceSnapshot } from '@contract'
 import { OperationForm } from './OperationForm'
-import { Server } from './Server'
-import { SetupWizard } from './SetupWizard'
-import { ModelInstall } from './ModelInstall'
-import { Chat } from './Chat'
+import { Server } from './server/Server'
+import { SetupWizard } from './setup/SetupWizard'
+import { ModelInstall } from './library/ModelInstall'
+import { Chat } from './chat/Chat'
 import { workspaceApi } from './workspace-api'
 import type { Workspace } from './useWorkspace'
 import type { Execute } from './types'
@@ -63,7 +63,10 @@ function workspace(execute: ReturnType<typeof vi.fn>): Workspace {
     refresh: vi.fn(),
   }
 }
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
 describe('real workspace controls', () => {
   it('sends operations through authenticated BFF requests', async () => {
@@ -112,8 +115,8 @@ describe('real workspace controls', () => {
   it('can leave first-run setup without any downloads or model loads', async () => {
     const execute = vi.fn().mockResolvedValue({ rows: [{ id: 'AtomicChat/model', name: 'Model' }] })
     const close = vi.fn()
-    render(<SetupWizard workspace={workspace(execute)} onClose={close} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Set up manually' }))
+    render(<SetupWizard workspace={workspace(execute)} onClose={close} onOpenGoal={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Explore without installing' }))
     await waitFor(() => expect(close).toHaveBeenCalled())
     expect(execute).toHaveBeenCalledWith('setup.manual')
     expect(
@@ -157,41 +160,53 @@ describe('real workspace controls', () => {
     expect(started).toHaveBeenCalled()
   })
   it('keeps a reopened chat in its position and Shift+Enter never sends', async () => {
-    const execute = vi.fn().mockImplementation(async (name: string) =>
-      name === 'history.list'
-        ? [
-            { id: 'second', title: 'Latest' },
-            { id: 'first', title: 'Earlier' },
-          ]
-        : name === 'history.load'
-          ? {
-              id: 'first',
-              model: 'chat-model',
-              messages: [
-                { role: 'user', content: 'Earlier message' },
-                { role: 'assistant', content: 'Earlier reply' },
-              ],
-            }
-          : { choices: [{ message: { role: 'assistant', content: 'New reply' } }], conversation_id: 'first' }
-    )
-    render(<Chat workspace={workspace(execute)} onCatalog={vi.fn()} />)
+    const reply = { role: 'assistant', content: 'New reply' }
+    const conversation = {
+      id: 'first',
+      model: 'chat-model',
+      messages: [
+        { role: 'user', content: 'Earlier message' },
+        { role: 'assistant', content: 'Earlier reply' },
+      ] as unknown[],
+    }
+    const job = { id: 'job-1', conversation_id: 'first', model: 'chat-model', message: reply }
+    // Chat streams through server-owned jobs: chat.start, then chat.progress polling.
+    const execute = vi.spyOn(workspaceApi, 'execute').mockImplementation((async (
+      name: string,
+      input: { request?: { messages?: unknown[] } } = {}
+    ) => {
+      if (name === 'history.list')
+        return [
+          { id: 'second', title: 'Latest' },
+          { id: 'first', title: 'Earlier' },
+        ]
+      if (name === 'history.load') return conversation
+      if (name === 'chat.start') {
+        conversation.messages = [...(input.request?.messages ?? []), reply]
+        return { ...job, state: 'preparing', message: {} }
+      }
+      if (name === 'chat.progress') return { ...job, state: 'complete' }
+      return {}
+    }) as typeof workspaceApi.execute)
+    render(<Chat workspace={workspace(vi.fn())} onCatalog={vi.fn()} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Earlier' }))
     await screen.findByText('Earlier reply')
     const input = screen.getByLabelText('Message')
     fireEvent.change(input, { target: { value: 'Next question' } })
     fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
-    expect(execute).not.toHaveBeenCalledWith('chat.complete', expect.anything())
+    expect(execute).not.toHaveBeenCalledWith('chat.start', expect.anything())
     fireEvent.keyDown(input, { key: 'Enter' })
     await screen.findByText('New reply')
     expect(execute).toHaveBeenCalledWith(
-      'chat.complete',
+      'chat.start',
       expect.objectContaining({
         conversation_id: 'first',
+        provider: 'llamacpp-upstream',
         request: expect.objectContaining({ model: 'chat-model' }),
       })
     )
     expect(
-      screen
+      within(screen.getByRole('complementary'))
         .getAllByRole('button')
         .filter((button) => ['Latest', 'Earlier'].includes(button.textContent ?? ''))
         .map((button) => button.textContent)

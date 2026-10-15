@@ -1,6 +1,6 @@
 import type { CoreLink } from '../core-link/index.js'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
-import type { WorkspaceSnapshot, WorkspaceServiceRow } from '../admin/contract/index.js'
+import type { WorkspaceSnapshot, WorkspaceServiceRow } from '../contract/index.js'
 import type { ClientKeys } from '../terminal-data/index.js'
 import { object, sanitized } from './validation.js'
 import { readWorkspaceSetup } from './state.js'

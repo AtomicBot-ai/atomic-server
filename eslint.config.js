@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs'
 import js from '@eslint/js'
 import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
@@ -28,6 +29,21 @@ const NODE_BUILTINS = [
   'zlib',
 ]
 
+const NODE_PREFIX_PATHS = NODE_BUILTINS.map((name) => ({
+  name,
+  message: `Import '${name}' as 'node:${name}'.`,
+}))
+const NO_BUN = { group: ['bun', 'bun:*'], message: 'atc code must stay Node-compatible.' }
+// `../<module>/<file>` reaches past a sibling module's index.ts. Modules are the folders of `src/`;
+// folders inside a module (`src/tui/workspace/chat/`) are its own business.
+const MODULES = readdirSync(new URL('./src', import.meta.url), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+const THROUGH_INDEX = {
+  regex: `^(\\.\\./)+(${MODULES.join('|')})/(?!index(\\.js)?$)`,
+  message: 'Import sibling modules through their index.ts only.',
+}
+
 export default tseslint.config(
   {
     ignores: [
@@ -51,22 +67,7 @@ export default tseslint.config(
         'error',
         { name: 'Bun', message: 'atc code must stay Node-compatible. Use node:* APIs.' },
       ],
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: NODE_BUILTINS.map((name) => ({
-            name,
-            message: `Import '${name}' as 'node:${name}'.`,
-          })),
-          patterns: [
-            { group: ['bun', 'bun:*'], message: 'atc code must stay Node-compatible.' },
-            {
-              group: ['../*/!(index)', '../*/!(index).js'],
-              message: 'Import sibling modules through their index.ts only.',
-            },
-          ],
-        },
-      ],
+      'no-restricted-imports': ['error', { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN] }],
       'no-restricted-syntax': [
         'error',
         {
@@ -77,6 +78,14 @@ export default tseslint.config(
       ],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      // AGENTS.md rule 7: split a file before it crosses 300 lines.
+      'max-lines': ['error', { max: 300 }],
+    },
+  },
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN, THROUGH_INDEX] }],
     },
   },
   {
@@ -87,12 +96,12 @@ export default tseslint.config(
   },
   {
     // The admin wire contract is shared with the browser: no node:* at all.
-    files: ['src/admin/contract/**/*.ts'],
+    files: ['src/contract/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
-          patterns: [{ group: ['node:*'], message: 'src/admin/contract must stay browser-safe.' }],
+          patterns: [{ group: ['node:*'], message: 'src/contract must stay browser-safe.' }, THROUGH_INDEX],
         },
       ],
     },

@@ -5,7 +5,7 @@
  */
 
 import type { IncomingMessage } from 'node:http'
-import { ADMIN_HEADER } from './contract/index.js'
+import { ADMIN_HEADER } from '../contract/index.js'
 
 export const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1'])
 

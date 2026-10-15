@@ -1,5 +1,5 @@
-import { text, textWidth, COLORS } from './canvas.js'
-import type { Canvas } from './canvas.js'
+import { text, textWidth, COLORS } from './draw/canvas.js'
+import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 /** One clickable target per footer command, using the same action as its shortcut. */
 export function drawFooter(c: Canvas, s: WorkspaceState, focus: string) {

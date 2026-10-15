@@ -1,6 +1,6 @@
-import { WORKSPACE_OPERATIONS, PLAYGROUND_TASKS } from '../../admin/contract/index.js'
+import { WORKSPACE_OPERATIONS, PLAYGROUND_TASKS } from '../../contract/index.js'
 import type { ActionContext } from './actions.js'
-import { defaultInput, operationFields } from './operation-model.js'
+import { defaultInput, operationFields } from './operations/operation-model.js'
 import { PAGE_FOCUS } from './state.js'
 import { SERVER_PAGES } from './navigation.js'
 

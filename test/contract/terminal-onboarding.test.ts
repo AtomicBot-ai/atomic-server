@@ -107,10 +107,15 @@ it('walks first-run setup with mouse and keyboard, gates access, and recovers ba
   try {
     await sees('SET UP SERVER')
     click('hosting')
+    // A goal comes first; the text goals continue into the engine-first setup.
+    await sees('What will you use it for?')
+    terminal.stdin.press('\r')
     await sees('Choose models >')
     terminal.stdin.press('\r')
     await sees('fixture/repo')
-    // The first curated model has focus; searching is optional.
+    // The first curated model has focus; searching is optional. Its plan is reviewed before downloading.
+    terminal.stdin.press('\r')
+    await sees('Review before downloading')
     terminal.stdin.press('\r')
     await sees('BUILDING YOUR LOCAL WORKSPACE')
     terminal.stdin.press('\u0007')

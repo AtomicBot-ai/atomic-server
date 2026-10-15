@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { WorkspaceInput } from '../admin/contract/index.js'
+import type { WorkspaceInput } from '../contract/index.js'
 import type { ChatHistory, ClientKeys, Conversation } from '../terminal-data/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceServiceOptions } from './service.js'

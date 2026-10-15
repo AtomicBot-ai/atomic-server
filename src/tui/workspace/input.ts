@@ -1,11 +1,11 @@
 import { downloadRows } from '../../workspace-view/index.js'
-import { operationFields } from './operation-model.js'
+import { operationFields } from './operations/operation-model.js'
 import type { Key } from 'ink'
-import type { Canvas } from './canvas.js'
-import { graphemes, hit } from './canvas.js'
+import type { Canvas } from './draw/canvas.js'
+import { graphemes, hit } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
-import { isPicker, pickerRows } from './picker.js'
+import { isPicker, pickerRows } from './chat/picker.js'
 export interface InputResult {
   patch?: Partial<WorkspaceState>
   action?: string | undefined

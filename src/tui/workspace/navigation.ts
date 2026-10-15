@@ -1,6 +1,6 @@
-import { LIBRARY_SECTIONS, PLAYGROUND_TASKS, SERVER_SECTIONS } from '../../admin/contract/index.js'
-import type { Canvas } from './canvas.js'
-import { button, textWidth } from './canvas.js'
+import { LIBRARY_SECTIONS, PLAYGROUND_TASKS, SERVER_SECTIONS } from '../../contract/index.js'
+import type { Canvas } from './draw/canvas.js'
+import { button, textWidth } from './draw/canvas.js'
 import type { Page, WorkspaceState } from './state.js'
 
 export function workspacePage(s: WorkspaceState): 'chat' | 'server' | 'models' {

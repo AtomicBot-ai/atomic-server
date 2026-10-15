@@ -56,7 +56,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.{ts,tsx}',
         'src/**/index.ts',
-        'src/admin/contract/**',
+        'src/contract/**',
         'src/bin.ts',
         'src/**/*.generated.ts',
       ],

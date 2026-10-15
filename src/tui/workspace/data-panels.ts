@@ -1,5 +1,5 @@
-import { button, COLORS, text } from './canvas.js'
-import type { Canvas } from './canvas.js'
+import { button, COLORS, text } from './draw/canvas.js'
+import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { computeRowWindow } from '../row-window.js'
 export function drawDataPanel(

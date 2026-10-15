@@ -5,7 +5,7 @@
  */
 
 import type { CoreSnapshot } from '@atomic-chat/core/client'
-import type { AtcPaths } from '../config/paths.js'
+import type { AtcPaths } from '../config/index.js'
 import { AtcError } from '../errors/index.js'
 import { readDaemonRecord } from './daemon-record.js'
 import type { DaemonRecord } from './daemon-record.js'

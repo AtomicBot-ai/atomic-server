@@ -1,7 +1,7 @@
 import type { CoreLink } from '../core-link/index.js'
 import type { AtcConfig } from '../config/index.js'
 import type { ClientKeys } from '../terminal-data/index.js'
-import type { WorkspaceServiceRow } from '../admin/contract/index.js'
+import type { WorkspaceServiceRow } from '../contract/index.js'
 import { AtcError } from '../errors/index.js'
 import { callPublic } from './public-api.js'
 import { object } from './validation.js'

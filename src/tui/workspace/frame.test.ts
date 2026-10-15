@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { drawEye, gateRows, gazeAt, ORNAMENT_STYLES } from './art.js'
-import { canvas, button, hit, text, textWidth, cleanText, wrap, art, rule, graphemes } from './canvas.js'
+import { drawEye, gateRows, gazeAt, ORNAMENT_STYLES } from './draw/art.js'
+import { canvas, button, hit, text, textWidth, cleanText, wrap, art, rule, graphemes } from './draw/canvas.js'
 import { workspaceFrame } from './frame.js'
-import { workspaceLayout } from './layout.js'
+import { workspaceLayout } from './draw/layout.js'
 import { createWorkspace } from './state.js'
 import type { Page } from './state.js'
 const pages: Page[] = [

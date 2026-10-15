@@ -8,7 +8,7 @@ import type { HardwareOverrideInput, LocalApiServerState, SessionInfo, UnloadRes
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { CoreClient, CoreEventMessage, CoreSnapshot } from '@atomic-chat/core/client'
 import { AtcError } from '../errors/index.js'
-import type { ManagedHostReceipt } from '../host/managed-types.js'
+import type { ManagedHostReceipt } from '../host/index.js'
 
 export interface CoreEndpoint {
   baseUrl: string

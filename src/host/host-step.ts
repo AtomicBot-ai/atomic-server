@@ -8,7 +8,7 @@
 
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { Logger } from '../output/logger.js'
+import type { Logger } from '../output/index.js'
 import type { ElevationContext, Elevator, HostStepRequestFile, HostStepResultFile } from './elevator.js'
 import { resultPathFor } from './helper.js'
 import { MANAGED_HOST_ACTIONS } from './managed-types.js'
