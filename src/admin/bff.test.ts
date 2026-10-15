@@ -32,6 +32,11 @@ describe('proxyAllowed', () => {
     ['POST', '/settings/llamacpp/acknowledge', false],
     ['POST', '/environments/operations/op1/host-step-result', false],
     ['POST', '/environments/operations/op1/resume', true],
+    // Model setups are atc's own workspace operations; the core has no such routes any more.
+    ['POST', '/models/setup-plan', false],
+    ['POST', '/model-setups', false],
+    ['GET', '/model-setups', false],
+    ['POST', '/models/compatibility', true],
   ])('%s %s → %s', (method, path, expected) => {
     expect(proxyAllowed(method, path)).toBe(expected)
   })

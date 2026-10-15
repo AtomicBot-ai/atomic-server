@@ -59,8 +59,8 @@ The product's promise. **Goal:** on a clean server, `atc engines install`, `atc 
 - `ModelResolver`: `owner/repo`, `owner/repo:file.gguf`, catalog alias, `auto` by VRAM tier; `--quant`.
   GGUF only: a repository with no GGUF files is refused with a hint at `--engine tensorrt-llm`, whose
   models the core resolves and downloads itself (iteration 4b).
-- `ModelInstaller` on the core's `Downloader` and `ModelRegistry` (`@atomic-chat/core/models`,
-  `/downloads`): disk preflight through `POST /disk/available`, resume, sha256, `model.yml`, optional
+- `ModelInstaller` on atc's own downloader (`src/downloads/`) and the core's `ModelRegistry`
+  (`@atomic-chat/core/models`): disk preflight through `POST /disk/available`, resume, sha256, `model.yml`, optional
   `mmproj`; progress on the terminal and as `atc:download` events for the admin and the TUI.
 - `models search|pull|list|rm|info`; `api key show|set|rotate|clear` (the key is the core's
   `server.api_key` setting; a non-loopback API without a key is refused unless `--insecure-no-key`).

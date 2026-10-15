@@ -22,7 +22,10 @@ import { engineSettingsSchema, workspaceConfig, updateWorkspaceConfig } from './
 import { verifyWorkload } from './readiness.js'
 import { callPublic } from './public-api.js'
 import { completeChat } from './chat-complete.js'
-import { ArtifactService } from './artifacts.js'
+import type { ArtifactService } from './artifacts.js'
+import type { ModelSetups } from './model-setups.js'
+import type { Downloader } from '../downloads/index.js'
+import { modelDownloads } from './model-downloads.js'
 import { ChatJobs } from './chat-jobs.js'
 import { importConversations } from './history-transfer.js'
 export interface WorkspaceServiceOptions {
@@ -32,6 +35,8 @@ export interface WorkspaceServiceOptions {
   fetch?: typeof fetch
   platform?: NodeJS.Platform
   selfCommand?: readonly string[]
+  /** The server's environment: `HF_TOKEN` for gated model downloads. */
+  env?: NodeJS.ProcessEnv
 }
 export class WorkspaceService {
   readonly metrics = new WorkspaceMetrics()
@@ -40,6 +45,9 @@ export class WorkspaceService {
   private request: typeof fetch
   private catalog: WorkspaceCatalog
   private artifacts: ArtifactService
+  private setups: ModelSetups
+  /** Every model download of this server: GGUF setups, media and MLX. */
+  private downloader: Downloader
   private chats: ChatJobs
   constructor(private options: WorkspaceServiceOptions) {
     this.keys = new ClientKeys(options.paths.atcDir)
@@ -47,7 +55,10 @@ export class WorkspaceService {
     this.chats = new ChatJobs(options, this.keys, this.history)
     this.request = options.fetch ?? fetch
     this.catalog = new WorkspaceCatalog(options.paths, this.request)
-    this.artifacts = new ArtifactService(options, this.catalog, this.request)
+    const downloads = modelDownloads(options, this.catalog, this.request)
+    this.downloader = downloads.downloader
+    this.artifacts = downloads.artifacts
+    this.setups = downloads.setups
   }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
@@ -60,8 +71,9 @@ export class WorkspaceService {
       this.keys,
       this.metrics
     )
-    result.downloads.push(...this.artifacts.downloads())
-    result.setups.push(...(await this.artifacts.list()))
+    // The core's own downloads are engine builds; every model transfer is this server's.
+    result.downloads.push(...this.downloader.snapshot())
+    result.setups.push(...(await this.setups.list()), ...(await this.artifacts.list()))
     return result
   }
   async execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
@@ -249,6 +261,12 @@ export class WorkspaceService {
         return importConversations(this.history, input['conversations'])
       case 'chat.complete':
         return completeChat(this.options, this.keys, this.history, this.request, input)
+      case 'models.plan':
+      case 'models.install':
+      case 'setup.status':
+      case 'setup.resume':
+      case 'setup.cancel':
+        return this.setups.operation(operation, input)
       case 'artifacts.plan':
         return this.artifacts.plan(input)
       case 'artifacts.install':

@@ -49,7 +49,6 @@ export const WRITE_ROUTES: ReadonlyArray<readonly [string, string]> = [
   ['POST', '/models/:provider/*model/unload'],
   ['POST', '/models/:provider/check'],
   ['POST', '/models/compatibility'],
-  ['POST', '/models/setup-plan'],
   ['POST', '/server/start'],
   ['POST', '/server/stop'],
   ['PUT', '/server/inspector'],

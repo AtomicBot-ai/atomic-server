@@ -104,7 +104,7 @@ export async function workspaceSnapshot(
               : 'ready',
     services,
     downloads: sanitized(snap.downloads) as unknown[],
-    setups: sanitized(snap.model_setups ?? []) as unknown[],
+    setups: [],
     setup: await readWorkspaceSetup(paths),
     keys: await keys.list(),
     ...statistics,

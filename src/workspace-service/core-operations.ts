@@ -12,14 +12,6 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
   const get = (path: string) => link.request('GET', path),
     post = (path: string, body: unknown = {}) => link.request('POST', path, body)
   switch (name) {
-    case 'models.plan':
-      return post('/models/setup-plan', input)
-    case 'models.install':
-      return post('/model-setups', {
-        ...request,
-        plan_digest: input['plan_digest'],
-        request_id: input['request_id'],
-      })
     case 'models.load':
       if (['llamacpp-upstream', 'llamacpp', 'atomic-prism'].includes(String(input['provider'])))
         await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`)
@@ -37,12 +29,6 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
         'DELETE',
         `/managed-models/${String(input['model_id']).split('/').map(segment).join('/')}`
       )
-    case 'setup.status':
-      return get('/model-setups')
-    case 'setup.resume':
-      return post(`/model-setups/${segment(input['setup_id'])}/resume`)
-    case 'setup.cancel':
-      return post(`/model-setups/${segment(input['setup_id'])}/cancel`)
     case 'engines.list':
       return post('/engines/versions', input)
     case 'engines.catalog': {

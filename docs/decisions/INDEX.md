@@ -52,3 +52,4 @@ add a new one that says which record it supersedes.
 - **2026-10-15** — [Describe every workspace operation](2026-10-15-describe-every-workspace-operation.md) — the `operation()` builder and real MCP tool descriptions.
 - **2026-10-15** — [Enforce the module rules in lint](2026-10-15-enforce-the-module-rules-in-lint.md) — deep imports, 300 lines, the generated module map, `verify:fast`.
 - **2026-10-15** — [Group workspace files by area](2026-10-15-group-workspace-files-by-area.md) — one folder per area in both workspaces.
+- **2026-10-15** — [atc downloads its own models](2026-10-15-atc-downloads-its-own-models.md) — `src/downloads/` and atc-owned GGUF setups on core 0.17.0; ranges written in place; supersedes the core-owned downloads of the 2026-10-08 gate record.

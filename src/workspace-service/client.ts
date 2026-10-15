@@ -66,8 +66,9 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
   return {
     snapshot: () => service.snapshot(),
     execute: async (operation, input = {}) => {
-      if (['artifacts.install', 'artifacts.resume'].includes(operation))
-        throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading media models.', {
+      // Downloads run in the server process; this one may exit before they finish.
+      if (['artifacts.install', 'artifacts.resume', 'models.install', 'setup.resume'].includes(operation))
+        throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading models.', {
           hint: 'atc config set admin.autoStart true, then restart the server.',
         })
       return service.execute(operation, input)

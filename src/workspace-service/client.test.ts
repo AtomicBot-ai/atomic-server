@@ -36,15 +36,16 @@ it('sends operations to the matching daemon without disclosing its token in URLs
     'x-atc-admin': '1',
   })
 })
-it('does not start ephemeral media downloads when the admin is disabled', async () => {
+it.each([
+  ['artifacts.install', { plan_digest: 'one', request_id: 'job' }],
+  ['artifacts.resume', { id: 'job' }],
+  ['models.install', { request: { repo: 'o/r', file: 'm.gguf' }, plan_digest: 'one', request_id: 'job' }],
+  ['setup.resume', { setup_id: 'job' }],
+])('does not start %s in a process that may exit when the admin is disabled', async (operation, input) => {
   const tmp = tmpDataFolder()
   cleanup.push(tmp.cleanup)
-  const client = await createWorkspaceClient({
-    link: fakeCoreLink(),
-    paths: tmp.paths,
-    config: defaultConfig(),
-  })
-  await expect(
-    client.execute('artifacts.install', { plan_digest: 'one', request_id: 'job' })
-  ).rejects.toThrow('Enable the web admin')
+  const link = fakeCoreLink()
+  const client = await createWorkspaceClient({ link, paths: tmp.paths, config: defaultConfig() })
+  await expect(client.execute(operation, input)).rejects.toThrow('Enable the web admin')
+  expect(link.calls).toEqual([])
 })

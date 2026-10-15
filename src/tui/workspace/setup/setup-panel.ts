@@ -107,7 +107,9 @@ export function drawSetup(
         ? 'Download verified. Loading the model into memory...'
         : v.preparing
           ? 'Checking model requirements before downloading.'
-          : 'Leave this terminal open, or close it and return later. Downloads continue.',
+          : progress?.restart
+            ? 'An earlier version started this installation. Retry starts it again; downloaded files are reused.'
+            : 'Leave this terminal open, or close it and return later. Downloads continue.',
       COLORS.muted
     )
     row++

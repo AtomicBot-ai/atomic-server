@@ -81,8 +81,6 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     // The keyring, read on every public request: one of its keys is required, a revoked one is refused
     // at once (`[]` refuses everyone). The core's own `server.api_key` does not apply.
     publicApiKeys: () => keys.current(),
-    // Model files of 32 MiB and more come over four byte-range streams.
-    downloadStreams: 4,
     // A model check gives up reading a remote GGUF header after 20 s instead of hanging on a slow mirror.
     remoteGgufTimeoutMs: 20_000,
     ownerScope: 'cli',
@@ -129,6 +127,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     fetch: io.fetch,
     platform: host.facts.platform,
     selfCommand: host.selfCommand,
+    // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
+    env: io.env,
   })
   const hostSteps = new HostStepExecutor({
     hostStepsDir: paths.hostStepsDir,

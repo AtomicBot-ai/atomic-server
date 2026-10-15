@@ -255,7 +255,7 @@ contract types are the core's (`src/host/managed-types.ts` re-exports them).
 | Concern | The core (`atomic-chat-core`) | `atc` |
 | --- | --- | --- |
 | Engines | Engine builds: catalog, hardware tiers, install, update, the optimal-build choice; starting each engine the way it runs (a process, or a container for a managed engine). | Asks (`atc engines`, iterations 2 and 4); pushes hardware facts until the core probes them itself. No engine ships in the binary. |
-| Models | `model.yml`, registry, GGUF metadata, sessions, load/unload; the downloader and HF helpers as a library. | Installs models on the client side like the desktop app does: resolve, disk check, download, `model.yml` (iteration 3, over `@atomic-chat/core/models` and `/downloads`). |
+| Models | `model.yml`, registry, GGUF metadata, sessions, load/unload; HF catalog helpers; compatibility verdicts and Bonsai families. It downloads no model files (0.17.0). | Downloads every model itself (`src/downloads/`) and runs GGUF setups in the server's workspace (`<atc>/model-setups/`): plan, PrismML build through the core, download, `model.yml`, verdict by `model_id`. |
 | Public API | The `/v1` server, its settings (`server.api_key`, `enable_on_startup`). | Where and how to expose it: `api.*` config, `atc api` (iteration 2). |
 | Environments | The managed-runtime state machine, store, image pulls, WSL import, recovery. | Consent UI and the privileged step (above). |
 | Settings | Engine parameters (`GET/PATCH /settings/:provider`), telemetry consent. | `atc`'s own `config.json`; `config set telemetry.enabled` also reaches a running core (`PUT /telemetry`). |

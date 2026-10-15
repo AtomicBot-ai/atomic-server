@@ -1,8 +1,8 @@
 /**
  * Installing a model is the client's job (the desktop app does it in Rust): resolve, check disk
  * through the core, download with resume and sha256, write `model.yml`, report progress. The
- * implementation reuses the core's `Downloader` and `downloadHfModel` (`atomic-chat-core/models`,
- * `atomic-chat-core/downloads`) in iteration 3; this is the seam commands and the admin call.
+ * implementation uses atc's own downloader (`src/downloads/`; the core downloads no model files since
+ * 0.17.0) in iteration 3; this is the seam commands and the admin call.
  */
 
 import { AtcError } from '../errors/index.js'

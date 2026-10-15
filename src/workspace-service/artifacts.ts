@@ -12,6 +12,7 @@ import { artifactPlan } from './artifact-plan.js'
 import type { ArtifactJob, ArtifactPlan } from './artifact-plan.js'
 import { mlxPlan } from './mlx-plan.js'
 import { SerialWork } from './serial.js'
+import { downloadProxy } from './download-proxy.js'
 interface Worker {
   cancelled: boolean
   done: Promise<void>
@@ -25,18 +26,18 @@ export class ArtifactService {
   constructor(
     private options: WorkspaceServiceOptions,
     private catalog: WorkspaceCatalog,
-    private request: typeof fetch
+    private request: typeof fetch,
+    downloader?: Downloader
   ) {
     this.directory = join(options.paths.atcDir, 'media-installations')
-    this.downloader = new Downloader({
-      dataFolder: options.paths.dataFolder,
-      platform: options.platform ?? process.platform,
-      fetch: request,
-      availableSpace: async (path) => (await options.link.disk.available(path)) ?? undefined,
-    })
-  }
-  downloads() {
-    return this.downloader.snapshot()
+    this.downloader =
+      downloader ??
+      new Downloader({
+        dataFolder: options.paths.dataFolder,
+        platform: options.platform ?? process.platform,
+        fetch: request,
+        availableSpace: async (path) => (await options.link.disk.available(path)) ?? undefined,
+      })
   }
   private path(id: string) {
     if (!/^[\w-]{1,120}$/.test(id))
@@ -162,7 +163,12 @@ export class ArtifactService {
       }
       await this.persist(job, worker, 'downloading')
       if (worker.cancelled) return
-      await this.downloader.download(job.id, job.plan.files, { resume: true })
+      const proxy = downloadProxy(this.options.config)
+      await this.downloader.download(
+        job.id,
+        job.plan.files.map((file) => (proxy ? { ...file, proxy } : file)),
+        { resume: true }
+      )
       await this.persist(job, worker, 'ready')
     } catch (error) {
       await this.persist(

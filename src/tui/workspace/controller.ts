@@ -58,7 +58,11 @@ export class WorkspaceController {
     const directory = dirname(deps.base.paths.configFile)
     this.keys = new ClientKeys(directory)
     this.history = new ChatHistory(directory)
-    this.setup = new TerminalSetup(directory, (launch) => deps.base.attach({ launch, log: this.log }))
+    this.setup = new TerminalSetup(
+      directory,
+      (launch) => deps.base.attach({ launch, log: this.log }),
+      this.runtime
+    )
     this.engineSelection = new EngineSelection(directory, () =>
       deps.base.attach({ launch: true, log: this.log })
     )

@@ -13,6 +13,23 @@ import type {
   SetupSelection,
   Transfer,
 } from './types.js'
+/** The server's workspace, where setups run and their downloads are reported. */
+export interface SetupWorkspace {
+  execute(operation: string, input?: Record<string, unknown>): Promise<unknown>
+  snapshot(): Promise<{ downloads: unknown[] }>
+}
+/** The request a setup plan takes, without what earlier versions stored beside it (a proxy). */
+function planInput(request: ModelSetupPlanRequest): ModelSetupPlanRequest {
+  const { repo, file, revision, model_id, include_projector } = request
+  return {
+    repo,
+    file,
+    ...(revision !== undefined ? { revision } : {}),
+    ...(model_id !== undefined ? { model_id } : {}),
+    ...(include_projector !== undefined ? { include_projector } : {}),
+  }
+}
+const legacy = (manifest: SetupManifest) => manifest.version !== 2 && !manifest.complete
 export class TerminalSetup {
   private samples = new Map<string, { bytes: number; at: number; speed: number }>()
   private path: string
@@ -21,7 +38,8 @@ export class TerminalSetup {
   private transfers = new Map<string, Transfer>()
   constructor(
     directory: string,
-    private attach: (launch: boolean) => Promise<CoreLink>
+    private attach: (launch: boolean) => Promise<CoreLink>,
+    private workspace: SetupWorkspace
   ) {
     this.path = join(directory, 'setup.json')
   }
@@ -46,11 +64,11 @@ export class TerminalSetup {
       throw new Error('No compatible engine could be found. Check your connection and retry.')
     return catalogs
   }
-  async plan(request: ModelSetupPlanRequest): Promise<SetupSelection> {
-    const link = await this.attach(true)
-    const plan = await link.request<ModelSetupPlan>('POST', '/models/setup-plan', request)
+  async plan(request: ModelSetupPlanRequest, requestId: string = randomUUID()): Promise<SetupSelection> {
+    const input = planInput(request)
+    const plan = (await this.workspace.execute('models.plan', { ...input })) as ModelSetupPlan
     if (plan.blockers.length) throw new Error(plan.blockers.map((b) => b.message).join(' '))
-    return { request, plan, requestId: randomUUID() }
+    return { request: input, plan, requestId }
   }
   event(name: string, raw: unknown): void {
     if (name !== 'download:progress') return
@@ -82,6 +100,7 @@ export class TerminalSetup {
     if (
       previous &&
       !previous.complete &&
+      previous.version === 2 &&
       `${previous.engine.provider}|${previous.engine.version}|${previous.engine.backend}` === engine &&
       previous.selections.length === selections.length &&
       previous.selections.every(
@@ -93,7 +112,7 @@ export class TerminalSetup {
     const [provider, version, ...backend] = engine.split('|')
     if (!provider || !version || !backend.length) throw new Error('Choose an engine build.')
     const manifest: SetupManifest = {
-      version: 1,
+      version: 2,
       mode,
       startedAt: Date.now(),
       complete: false,
@@ -111,38 +130,57 @@ export class TerminalSetup {
     await writeDocument(this.path, manifest)
     return this.resume()
   }
-  /** Core owns every transfer; losing this HTTP client does not stop a background download. */
+  /** The server owns every transfer; losing this client does not stop a background download. */
   async resume(): Promise<SetupProgress> {
-    const manifest = await this.read()
+    let manifest = await this.read()
     if (!manifest) throw new Error('Choose your engine and models first.')
+    if (legacy(manifest)) {
+      // An earlier version's core ran these setups and no longer can: plan them again under the
+      // same request ids. The partial files stay where they were and the downloads continue them.
+      const selections = await Promise.all(manifest.selections.map((s) => this.plan(s.request, s.requestId)))
+      manifest = { ...manifest, version: 2, selections }
+      await writeDocument(this.path, manifest)
+    }
     const link = await this.attach(true)
     this.engineError = ''
     await this.ensureEngine(link, manifest)
-    const { setups } = await link.request<{ setups: ModelSetup[] }>('GET', '/model-setups')
+    const { setups } = (await this.workspace.execute('setup.status')) as { setups: ModelSetup[] }
     for (const item of manifest.selections) {
       const existing = setups.find((s) => s.request_id === item.requestId)
       if (!existing)
-        await link.request('POST', '/model-setups', {
-          ...item.request,
-          request_id: item.requestId,
+        await this.workspace.execute('models.install', {
+          request: item.request,
           plan_digest: item.plan.digest,
+          request_id: item.requestId,
         })
       else if (['failed', 'cancelled', 'interrupted'].includes(existing.stage))
-        await link.request('POST', `/model-setups/${existing.setup_id}/resume`, {})
+        await this.workspace.execute('setup.resume', { setup_id: existing.setup_id })
     }
     return this.progress()
   }
   async progress(): Promise<SetupProgress> {
     const manifest = await this.read()
     if (!manifest) throw new Error('No installation is in progress.')
+    if (legacy(manifest))
+      return {
+        manifest,
+        jobs: [],
+        engineReady: false,
+        speed: 0,
+        eta: null,
+        transfers: [],
+        error: '',
+        ready: false,
+        restart: true,
+      }
     const link = await this.attach(false)
     const [list, packs, snapshot] = await Promise.all([
-      link.request<{ setups: ModelSetup[] }>('GET', '/model-setups'),
+      this.workspace.execute('setup.status') as Promise<{ setups: ModelSetup[] }>,
       link.request<{ backends: { version: string; backend: string }[] }>(
         'GET',
         `/backends/${manifest.engine.provider}`
       ),
-      link.snapshot(),
+      this.workspace.snapshot(),
     ])
     const engineReady = packs.backends.some(
       (p) => p.version === manifest.engine.version && p.backend === manifest.engine.backend
@@ -154,7 +192,10 @@ export class TerminalSetup {
       if (t.progress) this.event('download:progress', { ...t.progress, taskId: t.taskId })
       else this.event('download:progress', t)
     }
-    const ids = new Set([manifest.engine.taskId, ...jobs.flatMap((j) => Object.values(j.task_ids))])
+    const ids = new Set([
+      manifest.engine.taskId,
+      ...jobs.flatMap((j) => Object.values(j.task_ids).filter((id): id is string => !!id)),
+    ])
     const ready =
       engineReady && jobs.length === manifest.selections.length && jobs.every((j) => j.stage === 'ready')
     const speed = [...this.samples.entries()]
@@ -169,8 +210,8 @@ export class TerminalSetup {
     const remaining = manifest.selections.reduce((sum, selection) => {
       const job = jobs.find((j) => j.request_id === selection.requestId)
       if (job?.stage === 'ready') return sum
-      const downloaded = Object.values(job?.task_ids ?? {}).reduce(
-        (n, id) => n + (this.transfers.get(id)?.transferred ?? 0),
+      const downloaded = Object.values(job?.task_ids ?? {}).reduce<number>(
+        (n, id) => n + (id ? (this.transfers.get(id)?.transferred ?? 0) : 0),
         0
       )
       return sum + Math.max(0, selection.plan.total_download_bytes - downloaded)
@@ -188,15 +229,17 @@ export class TerminalSetup {
     }
   }
   async pause(): Promise<void> {
-    const progress = await this.progress(),
-      link = await this.attach(false)
+    const progress = await this.progress()
     await Promise.all(
       progress.jobs
         .filter((j) => j.stage !== 'ready')
-        .map((j) => link.request('POST', `/model-setups/${j.setup_id}/cancel`))
+        .map((j) => this.workspace.execute('setup.cancel', { setup_id: j.setup_id }))
     )
-    if (!progress.engineReady)
+    // A PrismML build is the setup records' to install, and cancelling them stops waiting on it.
+    if (!progress.engineReady && progress.manifest.engine.provider !== 'atomic-prism') {
+      const link = await this.attach(false)
       await link.request('POST', `/downloads/${encodeURIComponent(progress.manifest.engine.taskId)}/cancel`)
+    }
   }
   async finish(): Promise<SetupManifest> {
     const progress = await this.progress()
@@ -217,6 +260,8 @@ export class TerminalSetup {
   }
   private async ensureEngine(link: CoreLink, manifest: SetupManifest) {
     const engine = manifest.engine
+    // The setup that needs a PrismML build installs and activates it; a second install is refused.
+    if (engine.provider === 'atomic-prism') return
     const { backends } = await link.request<{ backends: { version: string; backend: string }[] }>(
       'GET',
       `/backends/${engine.provider}`

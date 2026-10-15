@@ -37,21 +37,57 @@ describe('workspace operations', () => {
     await expect(service.execute('models.import', { path: './model.gguf' })).rejects.toThrow('absolute path')
     expect(link.calls).toEqual([])
   })
-  it('passes the reviewed plan and idempotency key without replanning', async () => {
+  it('installs only a plan reviewed on this server, without asking the core to download', async () => {
     const { service, link } = context()
-    const request = { repo: 'AtomicChat/example', file: 'model.gguf' }
-    await service.execute('models.install', {
-      request,
-      plan_digest: 'sha256:reviewed',
-      request_id: 'same-request',
-    })
-    expect(link.calls).toEqual([
-      {
-        method: 'POST',
-        path: '/model-setups',
-        body: { ...request, plan_digest: 'sha256:reviewed', request_id: 'same-request' },
-      },
+    await expect(
+      service.execute('models.install', {
+        request: { repo: 'AtomicChat/example', file: 'model.gguf' },
+        plan_digest: 'a'.repeat(64),
+        request_id: 'same-request',
+      })
+    ).rejects.toThrow('models.plan')
+    expect(link.calls).toEqual([])
+    expect(await service.execute('setup.status')).toEqual({ setups: [] })
+  })
+  it('reports model downloads from its own downloader beside the core engine installs', async () => {
+    const request = vi.fn<typeof fetch>(async (input, init) =>
+      String(input).includes('/resolve/')
+        ? new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(new Uint8Array(400))
+                init?.signal?.addEventListener('abort', () => controller.error(new Error('aborted')))
+              },
+            }),
+            { headers: { 'content-length': '1000' } }
+          )
+        : Response.json({ siblings: [{ rfilename: 'm.gguf', size: 1000 }] })
+    )
+    const { service, link } = context(request)
+    link.snapshotValue.downloads = [{ taskId: 'engine-build', transferred: 1, total: 2, percent: 50 }]
+    link.request = async <T>(_method: string, path: string) =>
+      (path === '/models/compatibility'
+        ? { outcome: 'compatible', provider: null, requires: [], reason: 'stock' }
+        : { families: [] }) as T
+    const plan = (await service.execute('models.plan', { repo: 'o/r', file: 'm.gguf' })) as { digest: string }
+    const started = (await service.execute('models.install', {
+      request: { repo: 'o/r', file: 'm.gguf' },
+      plan_digest: plan.digest,
+      request_id: 'one',
+    })) as { setup_id: string; task_ids: { model: string } }
+    await vi.waitFor(async () =>
+      expect((await service.snapshot()).downloads).toEqual([
+        { taskId: 'engine-build', transferred: 1, total: 2, percent: 50 },
+        { taskId: started.task_ids.model, transferred: 400, total: 1000, percent: 40 },
+      ])
+    )
+    expect((await service.snapshot()).setups).toMatchObject([
+      { request_id: 'one', stage: 'downloading_model' },
     ])
+    expect(await service.execute('setup.cancel', { setup_id: started.setup_id })).toMatchObject({
+      stage: 'cancelled',
+    })
+    expect((await service.snapshot()).downloads).toHaveLength(1)
   })
   it('does not disclose keys in snapshots and persists manual setup independently of Core', async () => {
     const { service, paths } = context()
