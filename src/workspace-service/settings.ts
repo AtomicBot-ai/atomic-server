@@ -1,11 +1,7 @@
-/** Published descriptor assets from the exact pinned @atomic-chat/core version; no local schema fork. */
-import llama from '../../node_modules/@atomic-chat/core/src/settings/schema/llamacpp-upstream.json' with { type: 'json' }
-import turbo from '../../node_modules/@atomic-chat/core/src/settings/schema/llamacpp.json' with { type: 'json' }
-import prism from '../../node_modules/@atomic-chat/core/src/settings/schema/atomic-prism.json' with { type: 'json' }
-import mlx from '../../node_modules/@atomic-chat/core/src/settings/schema/mlx.json' with { type: 'json' }
-import tensor from '../../node_modules/@atomic-chat/core/src/settings/schema/tensorrt-llm.json' with { type: 'json' }
-import vllm from '../../node_modules/@atomic-chat/core/src/settings/schema/vllm.json' with { type: 'json' }
-import foundation from '../../node_modules/@atomic-chat/core/src/settings/schema/foundation-models.json' with { type: 'json' }
+/** Provider settings come from the embedded core (`@atomic-chat/core/settings`); config settings are atc's own. */
+import { CORE_VERSION } from '@atomic-chat/core'
+import type { LocalProviderId } from '@atomic-chat/core/contracts'
+import { LOCAL_PROVIDER_IDS, settingsSchema } from '@atomic-chat/core/settings'
 import {
   FIELDS,
   checkValue,
@@ -17,19 +13,12 @@ import {
 } from '../config/index.js'
 import type { AtcPaths, AtcConfig } from '../config/index.js'
 import { AtcError } from '../errors/index.js'
-const schemas: Record<string, unknown[]> = {
-  'llamacpp-upstream': llama,
-  'llamacpp': turbo,
-  'atomic-prism': prism,
-  mlx,
-  'tensorrt-llm': tensor,
-  vllm,
-  'foundation-models': foundation,
-}
+const isLocalProvider = (provider: string): provider is LocalProviderId =>
+  (LOCAL_PROVIDER_IDS as readonly string[]).includes(provider)
 export function engineSettingsSchema(provider: string) {
-  if (!schemas[provider])
+  if (!isLocalProvider(provider))
     throw new AtcError('ATC_USAGE', 'This engine uses its task configuration instead of provider settings.')
-  return { provider, core_version: '0.13.6', descriptors: structuredClone(schemas[provider]) }
+  return { provider, core_version: CORE_VERSION, descriptors: settingsSchema(provider) }
 }
 export function workspaceConfig(config: AtcConfig) {
   return { values: config, fields: FIELDS.filter((f) => f.path !== 'api.cors') }
