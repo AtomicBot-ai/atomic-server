@@ -55,6 +55,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     patch({
       conversation: chat,
       messages: chat.messages,
+      images: [],
       endpoint: chat.endpoint,
       model: chat.model,
       page: 'chat',

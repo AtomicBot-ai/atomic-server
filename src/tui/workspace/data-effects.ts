@@ -3,7 +3,7 @@ import type { RefObject } from 'react'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { persistConversation } from './data-actions.js'
-import { setupAction } from './setup-actions.js'
+import { setupAction } from './setup/setup-actions.js'
 import { setupWait } from '../../terminal-setup/index.js'
 type Update = (fn: (s: WorkspaceState) => WorkspaceState) => void
 export function useWorkspaceData(

@@ -1,6 +1,9 @@
+import { messageText } from '../../terminal-service/index.js'
+import type { ChatMessage } from '../../terminal-service/index.js'
+import { useRuntimeData } from './runtime-effects.js'
 import { persistConversation } from './data-actions.js'
 import { startup } from './startup.js'
-import { isPicker } from './picker.js'
+import { isPicker } from './chat/picker.js'
 import { useWorkspaceData } from './data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
@@ -18,8 +21,8 @@ import type { Page, WorkspaceState } from './state.js'
 import { workspaceFrame } from './frame.js'
 import { workspaceInput } from './input.js'
 import { activate } from './actions.js'
-import { COLORS } from './canvas.js'
-import type { Cell } from './canvas.js'
+import { COLORS } from './draw/canvas.js'
+import type { Cell } from './draw/canvas.js'
 const lightSurfaces = new Set([
   COLORS.text,
   COLORS.composer,
@@ -145,13 +148,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     void controller.current?.observe(instance)
   }, [instance])
   useEffect(() => {
-    if (
-      !state.motion ||
-      !['welcome', 'chat', 'setup'].includes(state.page) ||
-      (state.page === 'chat' && state.messages.length) ||
-      state.overlay
-    )
-      return
+    if (!state.motion) return
     const start = Date.now()
     const timer = setInterval(() => setSeconds((Date.now() - start) / 1000), 140)
     return () => clearInterval(timer)
@@ -160,6 +157,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     write(state.mouse ? '\u001b[?1000h\u001b[?1003h\u001b[?1006h' : '\u001b[?1000l\u001b[?1003l\u001b[?1006l')
   }, [state.mouse, write])
   useWorkspaceData(state, latest, controller, update)
+  useRuntimeData(state.ready, controller, update)
   const frame = workspaceFrame(state, columns, rows, seconds)
   function cancel() {
     epoch.current++
@@ -174,7 +172,16 @@ export function WorkspaceApp(props: WorkspaceProps) {
       patch({ message: 'Choose a model before sending your message.' })
       return
     }
-    const messages = [...s.messages, { role: 'user' as const, content: s.draft.trim() }],
+    const message: ChatMessage = {
+      role: 'user',
+      content: s.images.length
+        ? [
+            { type: 'text', text: s.draft.trim() },
+            ...s.images.map((image) => ({ type: 'image_url' as const, image_url: { url: image.url } })),
+          ]
+        : s.draft.trim(),
+    }
+    const messages = [...s.messages, message],
       id = ++epoch.current
     patch({
       conversation: s.conversation ?? {
@@ -183,6 +190,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
       },
       messages: [...messages, { role: 'assistant', content: '' }],
       draft: '',
+      images: [],
       cursor: 0,
       generating: true,
       message: '',
@@ -194,7 +202,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
           update((v) => ({
             ...v,
             messages: v.messages.map((m, i) =>
-              i === v.messages.length - 1 ? { ...m, content: m.content + token } : m
+              i === v.messages.length - 1 ? { ...m, content: messageText(m.content) + token } : m
             ),
           }))
       })
@@ -243,7 +251,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     if (result.leader !== undefined) leader.current = result.leader
     else if (leader.current) leader.current = false
     if (result.patch) patch(result.patch)
-    if (result.quit) {
+    if (result.quit || result.action === 'quit') {
       const current = controller.current
       if (current)
         void persistConversation({ get: () => latest.current, controller: current }).then(

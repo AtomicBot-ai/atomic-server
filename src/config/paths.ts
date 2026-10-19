@@ -57,9 +57,11 @@ export function atcPathsFor(dataFolder: string, platform: NodeJS.Platform = proc
 }
 
 /** `--data-folder` > `ATC_DATA_FOLDER` > the core's CLI default; the app's folder is refused. */
-export function resolveAtcPaths(env: DataFolderEnv, override?: string): AtcPaths {
+export function resolveAtcPaths(env: DataFolderEnv, override?: string, cwd?: string): AtcPaths {
   const fromEnv = env.env[ATC_DATA_FOLDER_ENV]
-  const folder = override ?? (fromEnv && fromEnv.trim() !== '' ? fromEnv : resolveCliDataFolder(env))
+  const selected = override ?? (fromEnv && fromEnv.trim() !== '' ? fromEnv : resolveCliDataFolder(env))
+  // Resolve once at CLI entry, before the server or an engine changes its working directory.
+  const folder = cwd ? (env.platform === 'win32' ? win32 : posix).resolve(cwd, selected) : selected
   try {
     assertCliDataFolder(folder, env)
   } catch (error) {

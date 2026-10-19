@@ -6,7 +6,7 @@ import { join, relative } from 'node:path'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const SRC = join(ROOT, 'src')
-const BROWSER_SAFE = ['src/admin/contract']
+const BROWSER_SAFE = ['src/contract']
 const BUILTINS = [
   'assert',
   'buffer',

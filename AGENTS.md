@@ -1,4 +1,4 @@
-# AGENTS.md — atomic-chat-cli (`atc`)
+# AGENTS.md — Atomic Server (`atc`, repository `eye-cli`)
 
 Operating instructions for AI agents and humans working in this repository. Everything here applies to
 every task. Anything that applies only sometimes lives behind a link.
@@ -36,33 +36,55 @@ apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). The remainin
 
 ## 2. Repository map
 
-| Path                    | What lives there                                                                                    |
-| ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `src/bin.ts`            | The only file with side effects on import: real I/O, the daemon spawner, `process.exit`.            |
-| `src/main.ts`, `src/io.ts` | `runCli(argv, io, deps)`; `AtcIo` (real or recording) — nothing else touches `process.stdout`.   |
-| `src/cli/`              | Command framework: specs, `parseArgs` parsing, help, completion, context, the stub registry.         |
-| `src/commands/`         | The command tree (`ROOT`); one file per command or group; stubs in `stubs.ts`.                      |
-| `src/config/`           | `AtcPaths`, the config field table (`schema.ts`), parsers, migrations, layered resolution, files.   |
-| `src/errors/`           | `AtcError`, its codes, exit codes, the one rendering of any failure. Depends on nothing.            |
-| `src/output/`           | Printer (human/JSON), tables, progress, prompts, logger, colours.                                    |
-| `src/core-link/`        | The only place with a core URL or token: attach-or-spawn, `HttpCoreLink`, SSE and in-process events, `daemon.json`. |
-| `src/daemon/`           | The long-lived process: core in-process, admin, hardware push, host-step loop, run record; the spawner. |
-| `src/host/`             | `exec`, host facts, elevation strategies, host-step executor and helper, hardware prober, service templates, ports. |
-| `src/admin/`            | The admin BFF: gates, token, sessions, allowlisted proxy, SSE relay, embedded SPA. `contract/` is browser-safe. |
-| `src/tui/`              | The terminal UI (Ink, `.tsx`): one reducer, one key table, a controller that is its only side effect, a screen per tab. Loaded lazily by `atc tui`. |
-| `src/models/` `src/engines/` `src/update/` `src/doctor/` | Interfaces, pure parsers and tables for later iterations; the doctor's check table. |
-| `packages/admin-ui/`    | The web admin SPA (React, Vite, Tailwind), copied and adapted from the desktop `web-app`.           |
-| `test/`                 | `contract/` (fake core and real core), `e2e/` (the built program), `runtime-compat/`, `helpers/`, `setup.ts`. |
-| `scripts/`              | Core preparation, binary build, SPA embedding, release, installers, Linux packages and their repository, gates, docs generation. |
-| `packaging/`            | The deb/rpm definition (nfpm), the AUR PKGBUILD template, the packages' public signing key.       |
-| `docs/`                 | Architecture, testing, release, admin UI, generated `commands.md`, `decisions/` (ADRs).             |
+Entry points and everything outside `src/`:
+
+| Path | What lives there |
+| --- | --- |
+| `src/bin.ts` | The only file with side effects on import: real I/O, the daemon spawner, `process.exit`. |
+| `src/main.ts`, `src/io.ts` | `runCli(argv, io, deps)`; `AtcIo` (real or recording) — nothing else touches `process.stdout`. |
+| `packages/admin-ui/` | The web admin SPA (React, Vite, Tailwind): the same workspace as the terminal UI, in a browser. |
+| `test/` | `contract/` (fake core and real core), `e2e/` (the built program), `runtime-compat/`, `installers/`, `scripts/`, `helpers/`. |
+| `scripts/` | Binary build, SPA embedding, release, installers, Linux packages and their repository, gates, generated docs. |
+| `packaging/` | The deb/rpm definition (nfpm), the AUR PKGBUILD template, the packages' public signing key. |
+| `docs/` | Architecture, testing, release, admin UI, generated `commands.md`, `decisions/` (ADRs). |
+
+Every module under `src/`, from the comment that opens its `index.ts` (`npm run docs:modules`; lint fails
+when this table is stale or a module's `index.ts` has no comment):
+
+<!-- module-map:start -->
+| Module | What it is |
+| --- | --- |
+| `src/admin/` | The web admin: BFF routes, sessions, gates, the event relay, the embedded SPA and the listener. |
+| `src/agent-control/` | Agents driving the workspace operations: the `atc mcp` stdio session and `atc control` input. |
+| `src/agent-launch/` | Connecting coding agents: the supported agents, their profiles in the data folder, launching. |
+| `src/cli/` | The command framework: specs, resolution and parsing, help, completion, the error/exit-code convention and the context every command runs against. |
+| `src/commands/` | The command tree. Order here is the order in `atc --help`. |
+| `src/config/` | Paths, the config field table, parsing, migrations, files and the resolved (layered) config. |
+| `src/contract/` | The browser-safe wire contract every client shares: the admin BFF's routes and types, the workspace operation registry, navigation and setup goals. The daemon, CLI, MCP, terminal UI and web admin import it; it imports only types from the rest of atc. No `node:*` here. |
+| `src/core-link/` | Finding, starting and talking to the core: the daemon record, attach-or-spawn, `CoreLink`, events. |
+| `src/daemon/` | The daemon process: spawning it detached, and running it (core + admin + host agent). |
+| `src/doctor/` | `atc doctor`: the check table and its runner. |
+| `src/downloads/` | Model downloads: resumable, verified, parallel byte ranges written in place, proxies and progress. |
+| `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
+| `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
+| `src/output/` | Everything a command prints: colours, tables, the printer, progress, prompts and the logger. |
+| `src/telemetry/` | Error reports: what the core is told, and the one-time notice. |
+| `src/terminal-data/` | Client documents in the data folder: the cross-process store, API keys and chat history. |
+| `src/terminal-service/` | Public OpenAI-compatible calls for the terminal UI and `atc chat`: models, streamed chat, images. |
+| `src/terminal-setup/` | Guided model setup: engine choice, the curated catalog, durable setup records and bounded UI waits. |
+| `src/tui/` | The terminal UI (`atc tui`, and bare `atc` on a terminal): an Ink app over the daemon. Loaded lazily by the command, so plain commands never pay for React and Ink. |
+| `src/update/` | Self-update: the release lookup, checksums, signatures, the replace plan and applying it. |
+| `src/workspace-service/` | The daemon-owned workspace: operation dispatch to the core, snapshots, jobs and its client. |
+| `src/workspace-view/` | Browser-safe view selectors shared with the terminal. |
+<!-- module-map:end -->
 
 ---
 
 ## 3. Code rules
 
-1. **One module = one folder with `index.ts` as the only public entry.** A sibling module is imported
-   only through its `index.ts` (eslint `no-restricted-imports` pattern `../*/!(index)`). Export deliberately.
+1. **One module = one folder with `index.ts` as the only public entry**, opened by a one-line doc comment
+   (it becomes the module's row in §2). A sibling module is imported only through its `index.ts`; eslint
+   fails `../<module>/<file>` in `src/`. Export deliberately.
 2. **Policy is pure, I/O is separate.** Parsers, selectors, tables and plans take data and return data;
    `fs`, `child_process`, `net`, `fetch` live in a few named files. `env`, `fetch`, `exec`, `now`,
    `platform` are injected through options or `AtcIo`; never read `process.platform` inside policy code.
@@ -73,11 +95,11 @@ apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). The remainin
 4. **Errors** are `AtcError { code, message, details?, hint? }`; codes in `src/errors/errors.ts`. The
    core's `AtomicCoreError` passes through unchanged. Exit codes: `0` ok, `1` error, `2` usage, `3`
    `ATC_NOT_IMPLEMENTED`, `130` interrupted. `--json`: one document on stdout, errors as JSON on stderr.
-5. **`src/admin/contract/` is browser-safe:** types and string constants only, no `node:*`, only type
+5. **`src/contract/` is browser-safe:** types and string constants only, no `node:*`, only type
    imports from the rest of `atc`; core shapes come from `@atomic-chat/core/contracts`.
 6. **Naming.** Files `kebab-case.ts`; React components `PascalCase.tsx`; classes `PascalCase`, functions
    `camelCase`. Wire fields `snake_case` as the core spells them.
-7. **300 lines per file.** Split before you cross it.
+7. **300 lines per file.** Split before you cross it; eslint `max-lines` enforces it.
 8. **Tests next to the source** (`foo.ts` ↔ `foo.test.ts`), table-driven for policy code.
 9. **Lifted admin files keep their provenance header** (`// Lifted from Atomic-Chat/web-app/src/<path> @
    <commit>; adapted: …`) and a line in `packages/admin-ui/LIFTED.md`.
@@ -98,8 +120,10 @@ npm run lint && npm run typecheck && npm run format:check
 npm test                        # unit + contract on Node
 npm run build                   # dist/ (needed by e2e from source and by docs:commands)
 npm run docs:commands           # regenerate docs/commands.md (CI checks it is current)
+npm run docs:modules            # regenerate the module table in §2 (lint checks it is current)
 npm run build:ui && npm run embed:ui && npm run build:bin   # SPA → generated module → dist/bin/atc-<triple>
 npm run test:e2e && npm run test:runtime-compat && bun test test/runtime-compat
+npm run verify:fast             # lint, typecheck, unit + contract tests touched by uncommitted changes
 npm run verify                  # every gate, as CI runs them — run before finishing
 ```
 
@@ -149,9 +173,9 @@ Six layers (`vitest.config.ts`, details in `docs/testing.md`):
 engine, or reaches the network. Helpers: `testRun()` (recording I/O + fake core + fake host),
 `fakeCoreLink()`, `fakeHost()`, `fakeCoreFactory()`.
 
-Every exported function has a unit test; every user-visible flow has a contract test and, once it works in
-the binary, an e2e test. Verify before finishing: `npm run verify`; for `src/daemon/` or `src/host/`
-changes also say which OS you ran e2e on.
+New or changed exported functions get a unit test; every user-visible flow has a contract test and, once
+it works in the binary, an e2e test. While iterating run `npm run verify:fast`; before finishing run
+`npm run verify`, and for `src/daemon/` or `src/host/` changes also say which OS you ran e2e on.
 
 ---
 
@@ -167,7 +191,14 @@ docs:commands`; e2e case when it works in the binary.
 case; the env name derives from the path (`api.port` → `ATC_API_PORT`); `config list`, `config set` and
 `GET /api/config` pick it up. A schema change bumps `CONFIG_VERSION` and adds a `MIGRATIONS` step.
 
-**Add an admin route.** Path constant in `src/admin/contract/routes.ts`, wire types in `contract/api.ts`
+**Add a module.** A folder under `src/` with an `index.ts` that opens with a one-line `/** … */` comment
+and exports deliberately; `npm run docs:modules`; tests next to the code.
+
+**Add a workspace operation.** One `operation(name, title, effect, description, input)` line in the
+section file under `src/contract/operations/`; the description says what it does, since agents see it as
+the MCP tool description; dispatch in `src/workspace-service/` (`core-operations.ts` for a core call).
+
+**Add an admin route.** Path constant in `src/contract/routes.ts`, wire types in `contract/api.ts`
 (browser-safe); handler in `src/admin/bff.ts` behind the session check; for a core passthrough, extend
 `READ_ALLOW`/`WRITE_ALLOW` instead — never `/shutdown`, `/clients`, telemetry consent or cloud keys; a
 `bff.test.ts` case and a `test/contract/daemon.test.ts` request; the SPA service that calls it.
@@ -184,18 +215,19 @@ The core (`@atomic-chat/core`, repo `atomic-chat-core`) is embedded at an exact 
 | `atomic-chat-core`           | `AtomicCore.create` in the daemon, `AtomicCoreError`, `CORE_VERSION`, hardware/session types.    |
 | `@atomic-chat/core/host`      | Data-folder rules (`resolveCliDataFolder`, `assertCliDataFolder`, `dataLayout`), the lock read side (`inspectLock`, `waitForPublishedOwner`), `attachToOwner`, `selfCommand`, `openInBrowser`. |
 | `@atomic-chat/core/client`    | `CoreClient` (control API, SSE `events`, `request`), `CoreSnapshot`, `CoreEventMessage`.          |
-| `@atomic-chat/core/contracts` | Browser-safe wire types for `src/admin/contract` and the SPA.                                    |
-| `@atomic-chat/core/models`, `/downloads` | Reserved for iteration 3 (`ModelInstaller` over `Downloader` and `downloadHfModel`). |
+| `@atomic-chat/core/contracts` | Browser-safe wire types for `src/contract` and the SPA.                                          |
+| `@atomic-chat/core/models`    | `ModelRegistry`, the Hub helpers (`fetchHfGgufFiles`, `looksLikeHfRepo`, `parseGgufShard`) and the load gate's rule (`gateDecision`). Model files are downloaded by `src/downloads/`. |
 
-Rule: **never copy core logic — request an export.** Lock semantics, attach, downloads, `model.yml` and
-engine selection belong to the core; a missing export is a change in the core branch (plan §9), not a copy
-here. The one deliberate mirror is `src/host/managed-types.ts` (types from the core's `feat/tenzor-rt`
-branch), which becomes re-exports once that branch lands. The core never probes GPUs itself; the daemon
-pushes `PUT /hardware/override` after start.
+Rule: **never copy core logic — request an export.** Lock semantics, attach, engine builds (install,
+activation, the default build), hardware facts, `model.yml` and compatibility belong to the core; model
+files are the client's to download (`src/downloads/`); a missing export is a change in the core branch (plan §9), not a copy
+here. `src/host/managed-types.ts` re-exports the managed-runtime contract and keeps only the slice of an
+operation the host-step executor reads. The core probes the hardware itself and is the
+only source of hardware facts; `atc` never sends `PUT /hardware/override`.
 
 ---
 
 ## 9. Keeping this file small
 
-Target ≤ 200 lines. No decision log here — one ADR per file under `docs/decisions/`. No duplication with
+Target ≤ 200 lines, not counting the generated module table. No decision log here — one ADR per file under `docs/decisions/`. No duplication with
 `docs/`; link instead. When they disagree, the linked doc wins and this file gets fixed.

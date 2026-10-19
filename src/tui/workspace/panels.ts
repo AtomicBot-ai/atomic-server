@@ -1,6 +1,8 @@
-import { drawServer } from './server-panel.js'
-import type { Canvas } from './canvas.js'
-import { button, COLORS, text, wrap } from './canvas.js'
+import { drawLibrary } from './library/library-panel.js'
+import { drawOperationPanel } from './operations/operation-panel.js'
+import { drawServer } from './server/server-panel.js'
+import type { Canvas } from './draw/canvas.js'
+import { button, COLORS, text, wrap } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { drawReference } from './reference.js'
 import { computeRowWindow } from '../row-window.js'
@@ -13,26 +15,16 @@ interface Bounds {
 }
 export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: string): void {
   const { x, y, width, bottom } = b
-  if (['server', 'requests', 'access'].includes(s.page)) {
-    let bx = x
-    if (s.page !== 'server')
-      for (const [id, label] of [
-        ['server', 'Overview'],
-        ['requests', 'Requests'],
-        ['access', 'Access'],
-      ])
-        bx +=
-          button(c, `page:${id}`, bx, y, label!, `Open ${label?.toLowerCase()}.`, focus, s.page === id) + 2
+  if (s.page === 'tools') {
+    drawOperationPanel(c, s, x, y, width, bottom, focus)
+  } else if (['server', 'requests', 'access'].includes(s.page)) {
     if (s.page === 'server') {
       drawServer(c, s, x, y, width, bottom, focus)
     } else if (s.page === 'requests') {
-      text(c, x, y + 2, 'RECENT REQUESTS', COLORS.gold)
+      text(c, x, y, 'Recent requests', COLORS.gold)
       if (!s.requests.length)
-        wrap(
-          'No requests yet. Calls appear here while the console is connected. Prompt and reply content are not recorded.',
-          width
-        ).forEach((r, i) => text(c, x, y + 4 + i, r, COLORS.muted, width))
-      const win = computeRowWindow(s.requests.length, s.selected, bottom - y - 5)
+        wrap('No requests yet.', width).forEach((r, i) => text(c, x, y + 2 + i, r, COLORS.muted, width))
+      const win = computeRowWindow(s.requests.length, s.selected, bottom - y - 3)
       s.requests
         .slice(win.start, win.start + win.count)
         .forEach((r, i) =>
@@ -40,7 +32,7 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
             c,
             `request:${win.start + i}`,
             x,
-            y + 4 + i,
+            y + 2 + i,
             `${r.status.padEnd(5)} ${r.model.slice(0, Math.max(10, width - 26)).padEnd(Math.max(10, width - 26))} ${r.duration === null ? '--' : Math.round(r.duration) + ' ms'}`,
             'Open request details. Up/Down moves through requests.',
             focus,
@@ -49,64 +41,37 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
         )
       button(c, 'refresh', x, bottom, 'Refresh', 'Refresh server status.', focus)
     } else {
-      text(c, x, y + 2, 'Connection settings', COLORS.gold)
-      const rows = s.base.config.rows.filter(
-        (r) => r.path.startsWith('api.') && !['api.cors', 'api.autoStart'].includes(r.path)
-      )
+      let bx = x
+      for (const [id, label] of [
+        ['tools:runtime', 'All runtime controls ▾'],
+        ['open-operation:settings.get', 'Engine settings'],
+        ['open-operation:environments.list', 'Environments'],
+      ]) {
+        if (bx + label!.length + 2 > x + width) break
+        bx += button(c, id!, bx, y, label!, `Open ${label}`, focus) + 1
+      }
+      const rows = s.base.config.rows.filter((r) => r.path.startsWith('api.'))
+      const win = computeRowWindow(rows.length, s.selected, Math.max(1, bottom - y - 2))
       rows
-        .slice(0, bottom - y - 4)
+        .slice(win.start, win.start + win.count)
         .forEach((r, i) =>
           button(
             c,
             `setting:${r.path}`,
             x,
-            y + 4 + i,
+            y + 2 + i,
             `${r.path.replace('api.', '').padEnd(15)} ${r.value}`.slice(0, width - 2),
-            `${r.description}. Changes apply on the next API start.`,
+            `${r.description} | Restart API to apply`,
             focus
           )
         )
-      button(c, 'page:keys', x, bottom, 'Manage API keys', 'Create and revoke keys for your apps.', focus)
+      button(c, 'scroll-up', x, bottom, '↑', 'Earlier settings', focus)
+      button(c, 'scroll-down', x + 4, bottom, '↓', 'Later settings', focus)
     }
   } else if (s.page === 'models') {
-    text(c, x, y, 'Your model library', COLORS.gold)
-    text(
-      c,
-      x,
-      y + 2,
-      s.modelsError || `Live endpoint / refreshed every 5 seconds / ${s.endpoint}`,
-      COLORS.muted,
-      width
-    )
-    const rows = [
-      ...s.installed.map((m, i) => ({
-        id: `installed:${i}`,
-        label: `${s.models.includes(m.id) ? '[loaded]' : '[local] '} ${m.id}`,
-        hint: 'Load this installed model and make it available to chat and the API.',
-      })),
-      ...s.models
-        .filter((m) => !s.installed.some((i) => i.id === m))
-        .map((m) => ({
-          id: `model:${s.models.indexOf(m)}`,
-          label: `[remote] ${m}`,
-          hint: 'Use this live model in chat.',
-        })),
-    ]
-    const win = computeRowWindow(rows.length, s.selected, Math.max(1, bottom - y - 5))
-    rows
-      .slice(win.start, win.start + win.count)
-      .forEach((r, i) => button(c, r.id, x, y + 4 + i, r.label.slice(0, width - 3), r.hint, focus))
-    if (!rows.length)
-      text(c, x, y + 4, 'Install a model, or connect an endpoint with models available.', COLORS.muted, width)
-    let bx = x
-    for (const [id, label, hint] of [
-      ['install-models', '+ Add models', 'Browse live models and install them.'],
-      ['refresh-models', 'Refresh', 'Refresh installed and served models now.'],
-      ['endpoint', 'Connection', 'Change the chat endpoint.'],
-    ])
-      bx += button(c, id!, bx, bottom, label!, hint!, focus) + 1
+    drawLibrary(c, s, x, y, width, bottom, focus)
   } else if (s.page === 'settings') {
-    text(c, x, y, 'Make yourself at home', COLORS.gold)
+    text(c, x, y, 'Preferences', COLORS.gold)
     let row = y + 2
     for (const [id, label, hint] of [
       ['endpoint', 'Connection', 'Change the chat endpoint.'],

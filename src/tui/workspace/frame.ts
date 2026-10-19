@@ -1,25 +1,28 @@
-import { fill, drawWelcome, eyeArtwork } from './fortress.js'
-import { drawSetup } from './setup-panel.js'
+import { drawSections, workspacePage } from './navigation.js'
+import { messageText } from '../../terminal-service/index.js'
+import { fill, drawWelcome } from './draw/fortress.js'
+import { drawCockpit } from './server/cockpit.js'
+import { drawFooter } from './footer.js'
+import { drawSetup } from './setup/setup-panel.js'
 import { drawDataPanel } from './data-panels.js'
-import { gateRows } from './art.js'
-import type { OrnamentStyle } from './art.js'
-import { button, canvas, COLORS, text, wrap } from './canvas.js'
-import type { Canvas } from './canvas.js'
-import { workspaceLayout } from './layout.js'
+import type { OrnamentStyle } from './draw/art.js'
+import { button, canvas, COLORS, text, wrap } from './draw/canvas.js'
+import type { Canvas } from './draw/canvas.js'
+import { workspaceLayout } from './draw/layout.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { drawPanels } from './panels.js'
 import { drawOverlay } from './overlay.js'
-import { tooltip } from './tooltip.js'
-import { COMPOSER_HEIGHT, drawComposer } from './composer.js'
-import { newChatButton } from './chat-navigation.js'
-import { drawPicker, isPicker } from './picker.js'
+import { tooltip } from './draw/tooltip.js'
+import { COMPOSER_HEIGHT, drawComposer } from './chat/composer.js'
+import { newChatButton } from './chat/chat-navigation.js'
+import { drawPicker, isPicker } from './chat/picker.js'
 export function workspaceFrame(
   s: WorkspaceState,
   width: number,
   height: number,
   seconds: number,
-  ornament: OrnamentStyle = 'fangs'
+  _ornament: OrnamentStyle = 'fangs'
 ): Canvas {
   const c = canvas(width, height),
     l = workspaceLayout(width, height)
@@ -31,42 +34,17 @@ export function workspaceFrame(
     )
     return c
   }
-  gateRows(width, l.gate, ornament).forEach((r, y) =>
-    text(c, 0, y, r, y === l.gate - 1 ? COLORS.muted : COLORS.stone)
-  )
-  text(c, l.inset, l.gate + 1, '<|>', COLORS.red)
-  text(c, l.inset + 5, l.gate + 1, 'ATOMIC CHAT', COLORS.text, width - l.inset - 5, undefined, true)
-  let nx = l.inset
-  if (s.page !== 'welcome') {
-    fill(c, 0, l.gate + 3, width, 3, COLORS.header)
-  }
-  fill(c, 0, l.gate + 2, width, 1, COLORS.ground)
-  if (s.page === 'setup')
-    text(
-      c,
-      l.inset,
-      l.gate + 4,
-      'PREPARE YOUR WORKSPACE',
-      COLORS.gold,
-      width - l.inset * 2,
-      COLORS.header,
-      true
-    )
-  if (s.page !== 'welcome' && s.page !== 'setup')
+  const onboarding = s.page === 'welcome' || s.page === 'setup'
+  const menuY = l.gate + 2
+  if (onboarding) text(c, l.inset, 1, 'ATOMIC CHAT', COLORS.text, width - 4, undefined, true)
+  else {
+    drawCockpit(c, s, l.gate, seconds, focus)
+    fill(c, 0, menuY, width, 2, COLORS.header)
+    let nx = l.inset
     PAGES.forEach((p) => {
-      nx +=
-        button(
-          c,
-          `page:${p.id}`,
-          nx,
-          l.gate + 4,
-          p.name,
-          p.hint,
-          focus,
-          s.page === p.id || (p.id === 'server' && ['requests', 'access'].includes(s.page)),
-          true
-        ) + 2
+      nx += button(c, `page:${p.id}`, nx, menuY, p.name, p.hint, focus, workspacePage(s) === p.id, true) + 1
     })
+  }
   let x = l.inset + l.sidebar,
     y = l.top + 2,
     bodyWidth = width - x - l.inset
@@ -91,34 +69,31 @@ export function workspaceFrame(
     x = l.inset
     bodyWidth = width - x - l.inset
   }
+  if (!onboarding) y = drawSections(c, s, x, y, bodyWidth, focus)
   if (s.page === 'welcome') {
-    drawWelcome(c, focus, seconds, s.motion, l.gate + 3, l.bottom)
+    drawWelcome(c, focus, seconds, s.motion, 3, l.bottom)
   } else if (s.page === 'setup' || (s.page === 'models' && s.setup)) {
     drawSetup(c, s, x, y, bodyWidth, l.bottom, focus, seconds)
   } else if (drawDataPanel(c, s, x, y, bodyWidth, l.bottom, focus)) {
     // History and key management share the same responsive content bounds.
   } else if (s.page === 'chat') {
     if (!l.sidebar) {
-      newChatButton(c, x, y, 16, focus)
-      y += 2
+      newChatButton(c, x + bodyWidth - 17, y, 16, focus)
+      y++
     }
     const composerY = l.bottom - COMPOSER_HEIGHT + 1
     if (!s.messages.length) {
-      const eye = eyeArtwork(c, x, y, bodyWidth, Math.max(3, composerY - y - 2), seconds, s.motion)
-      const line = s.model ? 'What would you like to explore?' : 'Your next idea starts here.'
-      text(
-        c,
-        x + Math.max(0, Math.floor((bodyWidth - line.length) / 2)),
-        Math.min(composerY - 1, eye.y + eye.height + 1),
-        line,
-        COLORS.muted
-      )
+      text(c, x, y, s.model ? s.model : 'Choose a model below', COLORS.muted, bodyWidth)
     } else {
       const rows = s.messages.flatMap((m) => [
         m.role === 'user' ? 'YOU' : 'ATOMIC',
-        ...wrap(m.content || (s.generating ? 'Thinking...' : 'No text returned.'), bodyWidth - 2),
+        ...wrap(
+          messageText(m.content) || (s.generating ? 'Generating…' : 'No text returned.'),
+          bodyWidth - 2
+        ),
         '',
       ])
+      if (rows.at(-1) === '') rows.pop()
       const available = Math.max(1, composerY - y - 1),
         end = Math.max(available, rows.length - s.scroll)
       rows
@@ -156,15 +131,7 @@ export function workspaceFrame(
       active?.hint || 'Tab Focus | Enter Open | Esc Back | Ctrl+G Menu',
       width - l.inset * 2
     )
-  const footer =
-    s.page === 'welcome'
-      ? '1 Personal | 2 Server | Enter Choose | Ctrl+Q Quit'
-      : width < 80
-        ? 'Ctrl+K Help | Ctrl+G Menu | Ctrl+Q Quit'
-        : s.mouse
-          ? 'Ctrl+K Help | Ctrl+G Menu | Ctrl+X Select text | Ctrl+Q Quit'
-          : 'Ctrl+K Help | Ctrl+G Menu | Ctrl+X Enable mouse | Ctrl+Q Quit'
-  tooltip(c, l.inset, height - 1, footer, width - l.inset * 2)
+  drawFooter(c, s, focus)
   // Never register invisible controls on an unusually narrow viewport.
   c.targets = c.targets.filter((t) => t.width > 0 && t.y >= 0 && t.y < height && t.x < width)
   return c

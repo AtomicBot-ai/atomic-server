@@ -4,7 +4,7 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"],
-      "@contract": ["../../src/admin/contract/index.ts"]
+      "@contract": ["../../src/contract/index.ts"]
     }
   }
 }

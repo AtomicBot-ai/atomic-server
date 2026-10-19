@@ -13,6 +13,12 @@ export const AGENTS = [
     docs: 'https://code.claude.com/docs/en/llm-gateway-connect',
   },
   {
+    id: 'codex',
+    name: 'Codex',
+    bins: ['codex'],
+    docs: 'https://learn.chatgpt.com/docs/cli',
+  },
+  {
     id: 'opencode',
     name: 'OpenCode',
     bins: ['opencode'],
@@ -44,6 +50,32 @@ export function agentProfile(
   const base = endpointUrl(endpoint),
     credential = key || 'atomic-local'
   if (!model.trim()) throw new Error('Choose a model before opening an agent.')
+  if (id === 'codex') {
+    const fields = {
+      name: 'Atomic Chat',
+      base_url: base,
+      env_key: 'ATC_AGENT_API_KEY',
+      wire_api: 'responses',
+      requires_openai_auth: false,
+      supports_websockets: false,
+    }
+    // One-run TOML overrides retain the user's home, settings, sandbox and approval policy.
+    // Replace this provider table as a whole so an existing auth helper cannot take precedence.
+    const provider = Object.entries(fields)
+      .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
+      .join(',')
+    return {
+      args: [
+        '--model',
+        model,
+        '-c',
+        'model_provider="atomic_chat"',
+        '-c',
+        `model_providers.atomic_chat={${provider}}`,
+      ],
+      env: { ATC_AGENT_API_KEY: credential },
+    }
+  }
   if (id === 'atomic-agent')
     return {
       args: [],

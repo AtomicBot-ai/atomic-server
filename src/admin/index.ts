@@ -1,5 +1,4 @@
 /** The web admin: BFF routes, sessions, gates, the event relay, the embedded SPA and the listener. */
-export * from './contract/index.js'
 export * from './token.js'
 export * from './auth.js'
 export * from './gates.js'

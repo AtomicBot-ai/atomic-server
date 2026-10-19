@@ -3,7 +3,10 @@
  * major, Bun release) shows up here first. Runs under vitest and under `bun test`.
  */
 import { spawn } from 'node:child_process'
+import { mkdtemp, open, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer, get } from 'node:http'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 
@@ -45,5 +48,31 @@ describe('runtime behaviours', () => {
     expect(chunks.length).toBeGreaterThanOrEqual(2)
     expect(chunks.join('')).toContain('event: x')
     await new Promise<void>((r) => server.close(() => r()))
+  })
+
+  it('writes byte ranges at their offsets in one file and writes at 0 after a truncate (the downloader)', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'atc-compat-'))
+    const path = join(dir, 'model.gguf.tmp')
+    try {
+      const ranged = await open(path, 'w+')
+      await Promise.all([
+        ranged.write(Buffer.from('cd'), 0, 2, 2),
+        ranged.write(Buffer.from('ab'), 0, 2, 0),
+        ranged.write(Buffer.from('efXX'), 0, 2, 4),
+      ])
+      await ranged.datasync()
+      await ranged.close()
+      expect(await readFile(path, 'utf8')).toBe('abcdef')
+      await writeFile(path, 'stale')
+      // One stream writes at explicit positions through a read-write handle: Windows refuses
+      // truncate on an append handle, and a restart needs truncate(0) then the next byte at 0.
+      const single = await open(path, 'r+')
+      await single.truncate(0)
+      await single.write(Buffer.from('fresh'), 0, 5, 0)
+      await single.close()
+      expect(await readFile(path, 'utf8')).toBe('fresh')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })

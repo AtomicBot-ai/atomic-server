@@ -1,5 +1,5 @@
 import { defineCommand } from '../cli/index.js'
-import { ADMIN_BUILD_ID } from '../admin/static.js'
+import { ADMIN_BUILD_ID } from '../admin/index.js'
 import { ATC_BUILD_DATE, ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
 
 export const versionCommand = defineCommand({

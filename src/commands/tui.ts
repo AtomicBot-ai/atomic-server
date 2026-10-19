@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { adminLoginUrl, ensureAdminToken } from '../admin/index.js'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { readTextFile, resolveConfig } from '../config/index.js'
-import { CHECKS, runChecks } from '../doctor/index.js'
+import { CHECKS, coreHardware, runChecks } from '../doctor/index.js'
 import { HostStepJournal } from '../host/index.js'
 import { colorEnabled } from '../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../telemetry/index.js'
@@ -57,7 +57,7 @@ export const tuiCommand = defineCommand({
     const { paths, io } = ctx
     const loadConfig = async () =>
       resolveConfig({ fileText: await readTextFile(paths.configFile), env: io.env })
-    const { runTui } = await import('../tui/index.js')
+    const { runTui } = await importProductionTui()
     const notice = await takeTelemetryNotice({ config: await ctx.config(), paths, env: io.env })
     return runTui({
       terminal,
@@ -96,6 +96,7 @@ export const tuiCommand = defineCommand({
               ctx.host.selfCommand[0] ?? process.execPath,
               ATC_TARGET
             ),
+            hardware: coreHardware((o) => ctx.core.attach(o)),
           })
         },
         pendingHostSteps: async () =>
@@ -113,3 +114,19 @@ export const tuiCommand = defineCommand({
     })
   },
 })
+
+/**
+ * Load React's production build, as the release binaries do (`bun build --production`). React picks its
+ * build from NODE_ENV once, at load; its development build records a performance measure on every render
+ * that Node never releases, so a source run (`node dist/bin.js`) grew until the heap ran out. The previous
+ * value is restored so agents launched from the terminal UI keep the user's environment.
+ */
+async function importProductionTui() {
+  const previous = process.env['NODE_ENV']
+  process.env['NODE_ENV'] ??= 'production'
+  try {
+    return await import('../tui/index.js')
+  } finally {
+    if (previous === undefined) delete process.env['NODE_ENV']
+  }
+}

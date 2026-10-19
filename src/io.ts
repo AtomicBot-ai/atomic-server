@@ -23,6 +23,8 @@ export interface TerminalStreams {
 }
 
 export interface AtcIo {
+  /** Line-delimited machine protocol input; absent in tests unless supplied. */
+  inputLines?: () => AsyncIterable<string>
   stdout: (text: string) => void
   stderr: (text: string) => void
   env: NodeJS.ProcessEnv
@@ -48,6 +50,7 @@ export function nodeIo(): AtcIo {
     ...(interactive
       ? { terminal: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr } }
       : {}),
+    inputLines: () => createInterface({ input: process.stdin, crlfDelay: Infinity }),
     stdout: (text) => process.stdout.write(text),
     stderr: (text) => process.stderr.write(text),
     env: process.env,

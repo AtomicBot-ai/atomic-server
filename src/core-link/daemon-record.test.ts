@@ -41,3 +41,29 @@ describe('daemon record', () => {
     expect((await readDaemonRecord(path))?.state).toBe('ready')
   })
 })
+
+// Clients read the record every 100 ms while the server starts; on Windows the server's rename over it
+// then fails for a moment with EPERM. The write retries instead of failing the start.
+it('writes the record over a reader Windows still has open', async () => {
+  const { mkdtemp, rename, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const { join } = await import('node:path')
+  const dir = await mkdtemp(join(tmpdir(), 'atc-record-'))
+  try {
+    let refusals = 2
+    let attempts = 0
+    const path = join(dir, 'daemon.json')
+    const record = { schema_version: 1, pid: 1, instance_id: 'i', state: 'ready' } as never
+    await writeDaemonRecord(path, record, {
+      rename: async (from, to) => {
+        attempts++
+        if (refusals-- > 0) throw Object.assign(new Error('EPERM'), { code: 'EPERM' })
+        await rename(from, to)
+      },
+    })
+    expect(attempts).toBe(3)
+    expect(await readDaemonRecord(path)).toMatchObject({ instance_id: 'i', state: 'ready' })
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

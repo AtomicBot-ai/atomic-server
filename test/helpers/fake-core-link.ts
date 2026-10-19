@@ -1,5 +1,6 @@
 /** An in-memory `CoreLink`: records calls, answers from a scripted snapshot, emits what a test says. */
 import type { CoreEventMessage, CoreSnapshot } from '@atomic-chat/core/client'
+import type { HardwareInfoResponse } from '@atomic-chat/core/contracts'
 import type { CoreEventHandler, CoreLink } from '../../src/core-link/index.js'
 
 export interface FakeCoreLink extends CoreLink {
@@ -7,6 +8,22 @@ export interface FakeCoreLink extends CoreLink {
   snapshotValue: CoreSnapshot
   emit(message: CoreEventMessage): void
   shutdowns: number
+  /** What `request` answers for `"<METHOD> <path>"`, as the real core would; anything else gets `{}`. */
+  responses: Record<string, unknown>
+}
+
+/** A machine without a GPU, as the core's own probe describes it (`GET /hardware/info`). */
+export const FAKE_HARDWARE: HardwareInfoResponse = {
+  info: {
+    cpu: { name: 'Fake CPU', core_count: 8, arch: 'aarch64', extensions: [], extensions_known: true },
+    os_type: 'macos',
+    os_name: 'macOS',
+    total_memory: 16384,
+    gpus: [],
+  },
+  source: 'probe',
+  probed_at: 0,
+  warnings: [],
 }
 
 export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
@@ -36,6 +53,7 @@ export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
     calls: [],
     snapshotValue: snapshot,
     shutdowns: 0,
+    responses: { 'GET /hardware/info': FAKE_HARDWARE },
     endpoint: {
       baseUrl: 'http://127.0.0.1:0',
       instanceId: snapshot.instance_id,
@@ -52,7 +70,7 @@ export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
     snapshot: async () => link.snapshotValue,
     request: async <T>(method: string, path: string, body?: unknown) => {
       link.calls.push({ method, path, body })
-      return {} as T
+      return (link.responses[`${method} ${path}`] ?? {}) as T
     },
     models: {
       load: async (provider, modelId) => {
@@ -80,12 +98,6 @@ export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
         return { ...link.snapshotValue.server, running: true }
       },
       stop: async () => ({ ...link.snapshotValue.server, running: false }),
-    },
-    hardware: {
-      set: async (input) => {
-        link.calls.push({ method: 'PUT', path: '/hardware/override', body: input })
-      },
-      clear: async () => true,
     },
     disk: { available: async () => 10 * 1024 ** 3 },
     environments: {

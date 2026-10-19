@@ -5,5 +5,4 @@
 export { runTui } from './run-tui.js'
 export type { RunTuiOptions } from './run-tui.js'
 export type { TuiDeps } from './controller.js'
-export { TABS } from './state.js'
 export type { TabId, PendingHostStep } from './state.js'

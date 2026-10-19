@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { drawEye, gateRows, gazeAt, ORNAMENT_STYLES } from './art.js'
-import { canvas, button, hit, text, textWidth, cleanText, wrap, art, rule, graphemes } from './canvas.js'
+import { drawEye, gateRows, gazeAt, ORNAMENT_STYLES } from './draw/art.js'
+import { canvas, button, hit, text, textWidth, cleanText, wrap, art, rule, graphemes } from './draw/canvas.js'
 import { workspaceFrame } from './frame.js'
-import { workspaceLayout } from './layout.js'
+import { workspaceLayout } from './draw/layout.js'
 import { createWorkspace } from './state.js'
 import type { Page } from './state.js'
 const pages: Page[] = [
@@ -35,7 +35,7 @@ describe('responsive terminal artwork and layout', () => {
       for (const t of f.targets) {
         expect(t.hint.length).toBeGreaterThan(0)
         expect(t.x + t.width).toBeLessThanOrEqual(w)
-        expect(t.y + t.height).toBeLessThanOrEqual(h - 3)
+        expect(t.y + t.height).toBeLessThanOrEqual(t.y === h - 1 ? h : h - 3)
       }
     }
   })
@@ -59,7 +59,7 @@ describe('responsive terminal artwork and layout', () => {
     const s = createWorkspace('chat')
     s.overlay = 'stop'
     const f = workspaceFrame(s, 80, 24, 0)
-    expect(f.targets.map((t) => t.id)).toEqual(['stop-confirm', 'close'])
+    expect(f.targets.filter((t) => t.y < f.height - 1).map((t) => t.id)).toEqual(['stop-confirm', 'close'])
     const c = f.targets[1]!
     expect(hit(f, c.x, c.y)?.id).toBe('close')
   })
@@ -80,7 +80,7 @@ describe('responsive terminal artwork and layout', () => {
 })
 
 it('makes the complete stone inscription clickable and reverses its colours on hover', () => {
-  const s = createWorkspace('welcome'),
+  const s = { ...createWorkspace('welcome'), focus: 'setup-manual' },
     normal = workspaceFrame(s, 120, 36, 0)
   const plate = normal.targets.find((t) => t.id === 'hosting')!
   expect(plate.height).toBeGreaterThan(3)

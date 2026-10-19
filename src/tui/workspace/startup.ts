@@ -3,16 +3,18 @@ import type { WorkspaceController } from './controller.js'
 import { PAGE_FOCUS } from './state.js'
 import type { Page, WorkspaceState } from './state.js'
 export async function startup(c: WorkspaceController, initialPage?: Page): Promise<Partial<WorkspaceState>> {
-  const [config, manifest, history, selectedEngine] = await Promise.all([
+  const [config, manifest, history, selectedEngine, setupState] = await Promise.all([
     c.config(),
     c.setup.read(),
     c.history.list(),
     c.engineSelection.read(),
+    c.runtime?.setup() ?? Promise.resolve(null),
   ])
   const ui = config.values.tui
-  const complete = manifest?.complete === true || manifest?.onboarded === true
+  const complete =
+    setupState?.complete === true || manifest?.complete === true || manifest?.onboarded === true
   const setup =
-    manifest && !manifest.complete
+    manifest && !manifest.complete && !setupState?.complete
       ? {
           ...newSetup(manifest.mode),
           stage: 'download' as const,

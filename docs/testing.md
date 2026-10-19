@@ -16,7 +16,7 @@ loopback stands in for GitHub wherever downloading is under test.
 | `ui` | `packages/admin-ui` (its own vitest, jsdom) | `npm run test:ui` | Components and hooks of the SPA against a fake hub; see `docs/admin-ui.md`. | — |
 
 `npm run test:coverage` runs unit + contract with v8 coverage over `src/**/*.{ts,tsx}`, excluding tests,
-`index.ts` files, `src/admin/contract/`, `src/bin.ts` and generated files. Coverage floors are iteration 6.
+`index.ts` files, `src/contract/`, `src/bin.ts` and generated files. Coverage floors are iteration 6.
 
 Beyond those rows: `test/contract/daemon-upgrade.test.ts` (a server of another build, faked by
 `helpers/fake-old-owner.ts`: status, stop, start, restart reach it), `service.test.ts` (`atc service` against a
@@ -53,9 +53,8 @@ folder from these, so a test can never touch `~/.local/share/atomic-chat-cli` or
 | `deps.ts` | Type re-exports (`CoreLinkFactory`, `RunCliDeps`) so helpers import from one place. |
 | `src/io.ts` — `recordingIo()` | The `AtcIo` tests use; lives in `src/` because commands are typed against it. |
 
-The daemon contract test builds the real thing with `startDaemon({ …, host: fakeHost(), probeHardware:
-false, admin: { enabled: true, host: '127.0.0.1', port: 0 }, telemetry: false })`: no `nvidia-smi`
-spawn, a random admin port, and telemetry off.
+The daemon contract test builds the real thing with `startDaemon({ …, host: fakeHost(), admin: { enabled:
+true, host: '127.0.0.1', port: 0 }, telemetry: false })`: a random admin port and telemetry off.
 
 ## Running one project
 

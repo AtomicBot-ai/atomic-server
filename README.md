@@ -229,7 +229,8 @@ npm package `@atomic-chat/core`, pinned to an exact version (`docs/release.md`, 
 bun install                  # the pinned core and the admin-ui workspace
 npm test                     # unit + contract projects on Node
 npm run build:bin            # embeds the admin SPA (or the placeholder) and compiles dist/bin/atc-<triple>
-npm run verify               # lint, typecheck, format, tests, build, UI, binary, e2e, runtime-compat
+npm run verify:fast          # lint, typecheck and the tests touched by uncommitted changes
+npm run verify               # lint, typecheck, format, tests, UI tests, build, UI, binary, e2e, runtime-compat
 ```
 
 To develop against a local core checkout, build it there (`npm run build`), run `bun link` in it and

@@ -1,10 +1,10 @@
 # atc admin UI
 
-The web admin the `atc` daemon serves at `http://127.0.0.1:1338/`. A React 19 SPA on Vite, TanStack Router
-(file-based routes, `src/routeTree.gen.ts` is generated and committed), Zustand, Tailwind 4 and shadcn-style
-`components/ui` — the same stack and layout as `Atomic-Chat/web-app/src`, so files lift 1:1 (see `LIFTED.md`).
+The web admin the `atc` daemon serves at `http://127.0.0.1:1338/`. A React 19 SPA on Vite, Zustand, Tailwind 4 and
+shadcn-style `components/ui`. Files taken from `Atomic-Chat/web-app/src` keep their provenance (see
+`LIFTED.md`); the workspace in `src/workspace/` is written for atc and mirrors the terminal UI.
 
-The daemon's BFF is under `/api/*`; its wire types and route constants come from `src/admin/contract` in the
+The daemon's BFF is under `/api/*`; its wire types and route constants come from `src/contract` in the
 repo root through the `@contract` alias. That folder is the only thing the SPA imports from the CLI.
 
 ## Signing in

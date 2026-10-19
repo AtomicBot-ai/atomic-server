@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveConfig } from '../config/index.js'
-import { configRows, describeEdit, editFor, formatConfigValue, logLevelOf } from './model.js'
+import { configRows, describeEdit, formatConfigValue } from './model.js'
 import { computeRowWindow } from './row-window.js'
-import type { ConfigRow } from './state.js'
 
 describe('config rows', () => {
   it('lists every field with its effective value and source', () => {
@@ -20,32 +19,9 @@ describe('config rows', () => {
     [{ a: 1 }, '{"a":1}'],
     [1337, '1337'],
   ])('formats %j as %j', (value, text) => expect(formatConfigValue(value)).toBe(text))
-
-  const row = (over: Partial<ConfigRow>): ConfigRow => ({
-    path: 'k',
-    type: 'string',
-    value: 'x',
-    source: 'default',
-    description: '',
-    values: undefined,
-    ...over,
-  })
-  it.each([
-    ['flips a boolean', row({ type: 'boolean', value: 'true' }), { set: 'false' }],
-    ['moves an enum on, wrapping', row({ type: 'enum', value: 'c', values: ['a', 'b', 'c'] }), { set: 'a' }],
-    ['edits a number as text', row({ type: 'number', value: '1337' }), { edit: '1337' }],
-    ['edits a list as a comma list', row({ type: 'string[]', value: 'a,b' }), { edit: 'a,b' }],
-  ])('Enter %s', (_name, r, expected) => expect(editFor(r)).toEqual(expected))
 })
 
 describe('helpers', () => {
-  it.each([
-    ['[warn] atc: slow', 'warn'],
-    ['[error] boom', 'error'],
-    ['[debug] x', 'debug'],
-    ['{"ready":true}', undefined],
-  ])('the level of %j is %j', (line, level) => expect(logLevelOf(line)).toBe(level))
-
   it('describes a saved edit', () => {
     expect(describeEdit('api.port', 1338)).toBe('api.port = 1338')
     expect(describeEdit('managed.image', undefined)).toBe('managed.image = null')

@@ -5,11 +5,11 @@
  */
 
 import type { CoreSnapshot } from '@atomic-chat/core/client'
-import type { AtcPaths } from '../config/paths.js'
+import type { AtcPaths } from '../config/index.js'
 import { AtcError } from '../errors/index.js'
 import { readDaemonRecord } from './daemon-record.js'
 import type { DaemonRecord } from './daemon-record.js'
-import { waitForDaemonReady } from './attach.js'
+import { logTail, waitForDaemonReady } from './attach.js'
 import type { CoreLink } from './link.js'
 import { waitForRelease } from './stale-owner.js'
 
@@ -76,11 +76,17 @@ export async function describeDaemon(
 /** Start a daemon (or find the one starting) and wait until its record says `ready`. */
 export async function startDaemon(
   attach: AttachFn,
-  paths: Pick<AtcPaths, 'daemonRecord'>,
+  paths: Pick<AtcPaths, 'daemonRecord' | 'daemonOutLog' | 'daemonLog'>,
   daemonArgs: readonly string[] = []
 ): Promise<CoreLink> {
   const link = await attach({ launch: true, daemonArgs })
-  await waitForDaemonReady(paths.daemonRecord, link.endpoint.instanceId)
+  const ready = await waitForDaemonReady(paths.daemonRecord, link.endpoint.instanceId)
+  if (ready?.state !== 'ready')
+    throw new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
+      details:
+        (await logTail(paths.daemonOutLog)) ?? (await logTail(paths.daemonLog)) ?? 'it never reported ready',
+      hint: 'see `atc logs`',
+    })
   return link
 }
 

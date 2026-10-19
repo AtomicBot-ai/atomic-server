@@ -3,7 +3,7 @@
  * reconnecting page can resume with `Last-Event-ID`. A small ring; anything older gets a `resync`.
  */
 
-import type { AdminEvent } from './contract/index.js'
+import type { AdminEvent } from '../contract/index.js'
 
 export type RelayListener = (event: AdminEvent) => void
 

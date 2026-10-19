@@ -1,9 +1,5 @@
-import type {
-  BackendCatalogResponse,
-  ModelSetup,
-  ModelSetupPlan,
-  ModelSetupPlanRequest,
-} from '@atomic-chat/core'
+import type { BackendCatalogResponse } from '@atomic-chat/core'
+import type { ModelSetup, ModelSetupPlan, ModelSetupPlanRequest } from '../contract/index.js'
 export type { BackendCatalogResponse, ModelSetup, ModelSetupPlan, ModelSetupPlanRequest }
 export interface SetupSelection {
   request: ModelSetupPlanRequest
@@ -11,7 +7,8 @@ export interface SetupSelection {
   requestId: string
 }
 export interface SetupManifest {
-  version: 1
+  /** 2: the setups are atc's own. 1: an earlier atc's, run by the core; started again on resume. */
+  version: 1 | 2
   mode: 'personal' | 'server'
   startedAt: number
   complete: boolean
@@ -35,6 +32,8 @@ export interface SetupProgress {
   transfers: Transfer[]
   error: string
   ready: boolean
+  /** The installation was started by an earlier version; resuming starts it again, reusing files. */
+  restart?: boolean
 }
 export interface HubRepository {
   id: string

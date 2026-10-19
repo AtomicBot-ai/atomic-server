@@ -12,10 +12,6 @@ import { executeHostStep, nodeHostStepDeps, windowsHostStepDeps } from '@atomic-
 import type { HostStepExecutorDeps, HostStepResult } from '@atomic-chat/core/host'
 import { AtcError } from '../errors/index.js'
 
-export function resultPathFor(requestPath: string): string {
-  return requestPath.replace(/\.request\.json$/, '.result.json')
-}
-
 export interface HelperOptions {
   platform: NodeJS.Platform
   env: NodeJS.ProcessEnv

@@ -11,17 +11,16 @@ Menlo Research, as the rest of this repository; the attribution is in the root `
 | `src/components/ui/button.tsx`        | `web-app/src/components/ui/button.tsx`        | none (formatted with this repo's prettier)                               |
 | `src/components/ui/card.tsx`          | `web-app/src/components/ui/card.tsx`          | none (formatted with this repo's prettier)                               |
 | `src/components/ui/input.tsx`         | `web-app/src/components/ui/input.tsx`         | none (formatted with this repo's prettier)                               |
-| `src/components/ui/skeleton.tsx`      | `web-app/src/components/ui/skeleton.tsx`      | none (formatted with this repo's prettier)                               |
 | `src/index.css`                       | `web-app/src/index.css`                       | theme tokens and the base layer only; no fonts, markdown, katex, animations |
 | `src/hooks/useServiceHub.ts`          | `web-app/src/hooks/useServiceHub.ts`          | `ServiceHub` is a type-only import                                       |
 | `src/services/atomic-core-runtime.ts` | `extensions/shared/atomicCoreRuntime.ts`      | none, verbatim (prettier skips it: `requirePragma` override in `.prettierrc`) |
-| `src/main.tsx`                        | `web-app/src/main.tsx`                        | router setup only; no Sentry, migrations, mobile or zoom handling         |
+| `src/main.tsx`                        | `web-app/src/main.tsx`                        | renders the admin root, no router; no Sentry, migrations, mobile or zoom handling |
 | `tsconfig.app.json`, `tsconfig.node.json` | `web-app/tsconfig.*.json`                 | `lib` ES2023 / target ES2022 (the contract's type imports reach Node code); `@contract` path |
-| `eslint.config.js`                    | `web-app/eslint.config.js`                    | tests linted, `routeTree.gen.ts` ignored, `components/ui` may export variants |
+| `eslint.config.js`                    | `web-app/eslint.config.js`                    | tests linted, `components/ui` may export variants                        |
 
 Mirrored in shape, not copied: `src/services/index.ts` (the `ServiceHub` name and the getter shape),
-`src/routes/*` (TanStack file routes with `createFileRoute`), `src/stores/*` (zustand `create`).
+`src/stores/*` (zustand `create`).
 
-Written for the admin (no counterpart in the app): `src/components/ui/badge.tsx` (shadcn's badge),
-`src/components/{StatusCard,PageHeader,PlaceholderPage}.tsx`, `src/containers/*`, `src/services/{admin-api,core-bridge,events,session}.ts`,
-`src/stores/status-store.ts`, `src/hooks/{useAdminStatus,useTheme,useNow}.ts`, `src/lib/format.ts`.
+Written for the admin (no counterpart in the app): `src/containers/*`, `src/workspace/*`,
+`src/services/{admin-api,core-bridge,events,session}.ts`, `src/stores/status-store.ts`,
+`src/hooks/{useAdminStatus,useTheme}.ts`.

@@ -60,13 +60,20 @@ function mount() {
     request,
     sees,
     press: (s: string) => terminal.stdin.press(s),
+    click: async (label: string) => {
+      await sees(label)
+      const lines = terminal.stdout.lastFrame().split('\n'),
+        y = lines.findIndex((line) => line.includes(label))
+      const x = lines[y]!.indexOf(label)
+      terminal.stdin.press(`\u001b[<0;${x + 1};${y + 1}M`)
+    },
     paths: tmp.paths,
   }
 }
 describe('working terminal workspace', () => {
   it('keeps recent chats in message order when an older chat is clicked and saved', async () => {
     const t = mount()
-    await t.sees('Your next idea starts here.')
+    await t.sees('Choose a model below')
     const history = new ChatHistory(dirname(t.paths.configFile))
     const older = history.create('http://localhost:1337/v1', 'local-model', '/project')
     older.title = 'Older chat'
@@ -87,11 +94,10 @@ describe('working terminal workspace', () => {
     t.press('\u0007')
     t.press('c')
     await t.sees('Recents')
-    // The older conversation is the second sidebar row, at x=2,y=15.
-    t.press('\u001b[<0;4;16M')
+    await t.click('Older chat')
     await t.sees('The earlier response')
     t.press('\u000e')
-    await t.sees('What would you like to explore?')
+    await t.sees('Write a message')
     const frame = t.terminal.stdout.lastFrame()
     expect(frame.indexOf('Latest chat')).toBeLessThan(frame.indexOf('Older chat'))
     t.press('\u0010')
@@ -105,12 +111,11 @@ describe('working terminal workspace', () => {
   })
   it('chooses personal mode, selects a discovered model, edits and sends a message, then resizes', async () => {
     const t = mount()
-    await t.sees('Your next idea starts here.')
+    await t.sees('Choose a model below')
     t.press('\u0007')
     t.press('m')
     await t.sees('local-model')
-    // The model row is a mouse target at x=2,y=12 in the compact layout.
-    t.press('\u001b[<0;4;13M')
+    await t.click('● local-model')
     await t.sees('Model: local-model')
     t.press('Hello worl')
     t.press('d')
@@ -130,7 +135,7 @@ describe('working terminal workspace', () => {
     await t.sees('Recents')
     expect(t.attach.mock.calls.every((c) => !(c[0] as { launch?: boolean } | undefined)?.launch)).toBe(true)
     t.press('\u000e')
-    await t.sees('What would you like to explore?')
+    await t.sees('Write a message')
     t.press('\u0011')
     await t.ui.waitUntilExit()
     expect(t.link.shutdowns).toBe(0)
@@ -138,18 +143,17 @@ describe('working terminal workspace', () => {
   })
   it('opens help through a global shortcut and supports mouse navigation after resize', async () => {
     const t = mount()
-    await t.sees('Your next idea starts here.')
+    await t.sees('Choose a model below')
     t.press('\u0007')
     t.press('s')
-    await t.sees('YOUR SERVER IS READY TO START')
+    await t.sees('Copy address')
     t.press('\u000b')
-    await t.sees('A few keys, anywhere')
+    await t.sees('Keyboard shortcuts')
     t.press(KEYS.escape)
     t.terminal.stdout.resize(120, 36)
-    await t.sees('YOUR SERVER IS READY TO START')
-    // The standard menu is on row 7, below its blank header-coloured row.
-    t.press('\u001b[<0;34;7M')
-    await t.sees('Make yourself at home')
+    await t.sees('Copy address')
+    await t.click('Engines & Models')
+    await t.sees('Installed')
     t.press('\u0011')
     await t.ui.waitUntilExit()
   })

@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
+import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { BackendCatalogResponse } from './types.js'
 
 export interface EngineChoice {
@@ -38,8 +39,10 @@ export class EngineSelection {
   remember(id: string): Promise<void> {
     return writeDocument(this.path, { id })
   }
+  /** Per engine: the builds on disk plus the one the core would install (`latest`), if any. */
   async list(catalogs: BackendCatalogResponse[]): Promise<EngineChoice[]> {
     const link = await this.attach()
+    const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
     return (
       await Promise.all(
         catalogs.map(async (catalog) => {
@@ -47,10 +50,11 @@ export class EngineSelection {
             'GET',
             `/backends/${catalog.provider}`
           )
-          const recommended =
-            catalog.available.find((b) => `${b.version}/${b.backend}` === catalog.recommended) ??
-            catalog.available[0]
-          const builds = [...backends, ...(recommended ? [recommended] : [])]
+          const latest = engines.find((e) => e.engine === catalog.provider)?.latest
+          const builds = [
+            ...backends,
+            ...(latest ? [{ version: latest.version, backend: latest.variant }] : []),
+          ]
           return builds
             .filter(
               (b, i) => builds.findIndex((v) => v.version === b.version && v.backend === b.backend) === i
@@ -66,17 +70,27 @@ export class EngineSelection {
       )
     ).flat()
   }
+  /** The core installs and activates: `version_backend` in the load queue's turn, old sessions unloaded. */
   async select(choice: EngineChoice): Promise<void> {
     const link = await this.attach()
-    if (!choice.installed)
-      await link.request('POST', `/backends/${choice.provider}/install`, {
-        version: choice.version,
-        backend: choice.backend,
+    if (choice.installed) await activateEngine(link, choice)
+    else
+      await link.request('POST', `/engines/${choice.provider}/update`, {
         task_id: `terminal-engine-${randomUUID()}`,
+        target: { version: choice.version, variant: choice.backend },
       })
-    await link.request('PATCH', `/settings/${choice.provider}`, {
-      values: { version_backend: `${choice.version}/${choice.backend}` },
-    })
     await this.remember(choice.id)
   }
+}
+
+/** Make an installed build the one the next load runs, through the core. */
+export function activateEngine(
+  link: CoreLink,
+  build: { provider: string; version: string; backend: string }
+) {
+  const segment = encodeURIComponent
+  return link.request(
+    'POST',
+    `/engines/${segment(build.provider)}/builds/${segment(build.version)}/${segment(build.backend)}/activate`
+  )
 }

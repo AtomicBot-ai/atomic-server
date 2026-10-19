@@ -1,9 +1,11 @@
+import { downloadRows } from '../../workspace-view/index.js'
+import { operationFields } from './operations/operation-model.js'
 import type { Key } from 'ink'
-import type { Canvas } from './canvas.js'
-import { graphemes, hit } from './canvas.js'
+import type { Canvas } from './draw/canvas.js'
+import { graphemes, hit } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
-import { isPicker, pickerRows } from './picker.js'
+import { isPicker, pickerRows } from './chat/picker.js'
 export interface InputResult {
   patch?: Partial<WorkspaceState>
   action?: string | undefined
@@ -37,6 +39,15 @@ export function workspaceInput(
   if (mouse) {
     if (!s.mouse) return {}
     if (mouse.code & 64) {
+      if (s.overlay === 'operation-choice') {
+        const at = Number(s.focus.replace('operation-choice:', '')) || 0
+        return {
+          patch: {
+            focus: `operation-choice:${Math.max(0, Math.min(s.operationChoices.length - 1, at + (mouse.code & 1 ? 1 : -1)))}`,
+            hover: '',
+          },
+        }
+      }
       if (isPicker(s.overlay)) {
         const rows = pickerRows(s),
           at = rows.findIndex((r) => r.id === s.focus)
@@ -74,6 +85,9 @@ export function workspaceInput(
     return { action: id, patch: { focus: id ?? '', hover: '' } }
   }
   if (input.startsWith('[<') || input.startsWith('\u001b[<')) return {}
+  if (key.meta && ['1', '2', '3'].includes(input))
+    return { action: `page:${['chat', 'server', 'models'][Number(input) - 1]}` }
+  if (input === '[S' || input === '\u001bOS') return { action: 'console' }
   if (key.ctrl && input === 'q') return { quit: true }
   if (key.ctrl && input === 'x') return { action: 'mouse' }
   if (key.ctrl && input === 'c')
@@ -90,10 +104,41 @@ export function workspaceInput(
     const delta = key.upArrow || key.pageUp || (key.tab && key.shift) ? -1 : 1
     return { patch: { focus: rows[(at + delta + rows.length) % rows.length]?.id ?? '', hover: '' } }
   }
+  if (s.overlay === 'operation-choice' && (key.upArrow || key.downArrow || key.pageUp || key.pageDown)) {
+    const at = Number(s.focus.replace('operation-choice:', '')) || 0
+    const delta = key.upArrow || key.pageUp ? -1 : 1
+    return {
+      patch: {
+        focus: `operation-choice:${Math.max(0, Math.min(s.operationChoices.length - 1, at + delta))}`,
+        hover: '',
+      },
+    }
+  }
+  if (
+    s.page === 'tools' &&
+    !s.overlay &&
+    s.focus.startsWith('operation-field:') &&
+    (key.upArrow || key.downArrow)
+  ) {
+    const op = s.operations.find((v) => v.name === s.operation),
+      fields = op ? operationFields(op) : []
+    const at = fields.findIndex((v) => `operation-field:${v.path}` === s.focus)
+    const next = Math.max(0, Math.min(fields.length - 1, at + (key.upArrow ? -1 : 1)))
+    return { patch: { focus: `operation-field:${fields[next]?.path ?? ''}`, selected: next, hover: '' } }
+  }
   if (key.tab) {
     const i = frame.targets.findIndex((t) => t.id === s.focus),
       next = (i + (key.shift ? -1 : 1) + frame.targets.length) % frame.targets.length
     return { patch: { focus: frame.targets[next]?.id ?? '', hover: '', message: '' } }
+  }
+  if (s.overlay === 'console' && s.focus === 'console-input') {
+    if (key.return) return { action: 'console-run' }
+    if (key.escape) return { action: 'close' }
+    if (key.backspace || key.delete)
+      return { patch: { consoleInput: graphemes(s.consoleInput).slice(0, -1).join('') } }
+    if (key.ctrl && input === 'u') return { patch: { consoleInput: '' } }
+    if (input && !key.ctrl && !key.meta)
+      return { patch: { consoleInput: s.consoleInput + input.replace(/\n/g, '') } }
   }
   if (s.overlay === 'endpoint') {
     if (key.escape) return { action: 'close' }
@@ -150,8 +195,8 @@ export function workspaceInput(
     }
     return {}
   }
-  if (s.page === 'welcome' && !key.ctrl && !key.meta && (input === '1' || input === '2'))
-    return { action: input === '1' ? 'personal' : 'hosting' }
+  if (s.page === 'welcome' && !key.ctrl && !key.meta && ['1', '2', '3'].includes(input))
+    return { action: input === '1' ? 'hosting' : input === '2' ? 'setup-manual' : 'agent-setup' }
   if ((key.upArrow || key.downArrow) && s.focus.startsWith('history:')) {
     const list = s.history.filter((h) =>
       `${h.title} ${h.model} ${h.workingDirectory}`.toLowerCase().includes(s.historyFilter.toLowerCase())
@@ -197,23 +242,29 @@ export function workspaceInput(
     'setup-repo:',
     'setup-file:',
     'setup-job:',
+    'library-row:',
+    'download-row:',
   ]
   const prefix = listPrefixes.find((p) => s.focus.startsWith(p))
   if ((key.upArrow || key.downArrow) && prefix) {
     const length =
-      prefix === 'model:'
-        ? s.models.length
-        : prefix === 'installed:'
-          ? s.installed.length
-          : prefix === 'request:'
-            ? s.requests.length
-            : prefix === 'command:'
-              ? s.commands.length
-              : prefix === 'setup-repo:'
-                ? (s.setup?.repositories.length ?? 0)
-                : prefix === 'setup-job:'
-                  ? (s.setup?.selections.length ?? 0)
-                  : (s.setup?.files.length ?? 0)
+      prefix === 'download-row:'
+        ? downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? []).length
+        : prefix === 'library-row:'
+          ? s.libraryRows.length
+          : prefix === 'model:'
+            ? s.models.length
+            : prefix === 'installed:'
+              ? s.installed.length
+              : prefix === 'request:'
+                ? s.requests.length
+                : prefix === 'command:'
+                  ? s.commands.length
+                  : prefix === 'setup-repo:'
+                    ? (s.setup?.repositories.length ?? 0)
+                    : prefix === 'setup-job:'
+                      ? (s.setup?.selections.length ?? 0)
+                      : (s.setup?.files.length ?? 0)
     const selected = Math.max(
       0,
       Math.min(length - 1, Number(s.focus.slice(prefix.length)) + (key.upArrow ? -1 : 1))

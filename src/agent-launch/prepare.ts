@@ -32,8 +32,8 @@ export async function prepareAgent(
     if (major > 2) throw new Error('This OpenCode version needs an updated connection adapter.')
   }
   const folder = join(host.folder, id)
-  await mkdir(folder, { recursive: true, mode: 0o700 })
   const profile = agentProfile(id, endpoint, model, key, folder, major)
+  if (profile.config || id === 'claude') await mkdir(folder, { recursive: true, mode: 0o700 })
   if (profile.config) {
     const path = join(folder, id === 'opencode' ? 'opencode.json' : 'config.json')
     let previous: Record<string, unknown> = {}

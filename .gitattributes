@@ -1,0 +1,4 @@
+# Scripts start with a shebang and several are imported by tests. Vitest strips the shebang with a
+# regex whose `.` stops at a CR, so a CRLF checkout (core.autocrlf=true on Windows) left `#!` in the
+# module and the importing test failed with a SyntaxError. LF on every checkout (as in the core).
+scripts/*.mjs text eol=lf

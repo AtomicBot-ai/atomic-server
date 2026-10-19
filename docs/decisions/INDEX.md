@@ -43,3 +43,16 @@ add a new one that says which record it supersedes.
 - **2026-10-09** — [Build natively, sign, then smoke the draft before publishing](2026-10-09-build-natively-sign-then-smoke-the-draft.md).
 - **2026-10-09** — [Run host steps through the core executor](2026-10-09-run-host-steps-through-the-core-executor.md).
 - **2026-10-13** — [Ship Linux packages from our own repository and the AUR](2026-10-13-ship-linux-packages-from-our-own-repository-and-aur.md).
+- **2026-10-13** — [Shared server workspaces and agent controls](2026-10-13-shared-server-workspaces.md) — daemon-owned operations, three workspaces, manual setup, CLI and permission-scoped MCP.
+- **2026-10-14** — [Goal-based setup and explicit download review](2026-10-14-goal-based-setup.md).
+- **2026-10-14** — [Agent and command setup](2026-10-14-agent-and-command-setup.md) — agent-focused default, command-focused technical setup, engine before model and progressive details.
+- **2026-10-14** — [Playground workflows](2026-10-14-playground-workflows.md) — cancellable generation, conversation branches and transfer, browser preferences and grouped engine settings.
+- **2026-10-15** — [Lift the wire contract out of the admin](2026-10-15-lift-the-wire-contract-out-of-the-admin.md) — `src/contract/`, shared by every client.
+- **2026-10-15** — [Retire the pre-workspace screens](2026-10-15-retire-the-pre-workspace-screens.md) — the old tab screens and the SPA router go.
+- **2026-10-15** — [Describe every workspace operation](2026-10-15-describe-every-workspace-operation.md) — the `operation()` builder and real MCP tool descriptions.
+- **2026-10-15** — [Enforce the module rules in lint](2026-10-15-enforce-the-module-rules-in-lint.md) — deep imports, 300 lines, the generated module map, `verify:fast`.
+- **2026-10-15** — [Group workspace files by area](2026-10-15-group-workspace-files-by-area.md) — one folder per area in both workspaces.
+- **2026-10-15** — [atc downloads its own models](2026-10-15-atc-downloads-its-own-models.md) — `src/downloads/` and atc-owned GGUF setups on core 0.17.0; ranges written in place; supersedes the core-owned downloads of the 2026-10-08 gate record.
+- **2026-10-19** — [Take hardware facts from the core](2026-10-19-take-hardware-facts-from-the-core.md) — the daemon no longer probes or pushes `PUT /hardware/override`; doctor shows the core's facts.
+- **2026-10-19** — [The core applies engine builds](2026-10-19-the-core-applies-engine-builds.md) — install, activate and the default build through `/engines/*`; `atc` never writes `version_backend`.
+- **2026-10-19** — [Keep media where the core lists it](2026-10-19-keep-media-where-the-core-lists-it.md) — image and video files in `diffusion/models`, moved from `workspace-models` on start.

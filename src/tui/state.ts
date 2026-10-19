@@ -13,14 +13,6 @@ import type { CheckResult } from '../doctor/index.js'
 export const TABS = ['overview', 'logs', 'config', 'doctor', 'commands'] as const
 export type TabId = (typeof TABS)[number]
 
-export const TAB_TITLES: Record<TabId, string> = {
-  overview: 'Overview',
-  logs: 'Logs',
-  config: 'Config',
-  doctor: 'Doctor',
-  commands: 'Commands',
-}
-
 /** Log lines kept in memory; older ones are still in the file. */
 export const MAX_LOG_LINES = 5000
 const MAX_ACTIVITY = 50

@@ -1,7 +1,10 @@
+import { WORKSPACE_NAVIGATION } from '../../contract/index.js'
+import type { LibraryRow, LibraryView } from './library/library-model.js'
+import type { WorkspaceSnapshot, WorkspaceOperation } from '../../contract/index.js'
 import type { Conversation, ConversationSummary, ClientKeyView } from '../../terminal-data/index.js'
 import type { SetupView, EngineChoice } from '../../terminal-setup/index.js'
 import type { AgentId } from '../../agent-launch/index.js'
-import type { ChatMessage, RequestRow } from '../../terminal-service/index.js'
+import type { ChatImage, ChatMessage, RequestRow } from '../../terminal-service/index.js'
 import type { CommandRow } from '../command-list.js'
 import type { TuiState } from '../state.js'
 import { initialState } from '../state.js'
@@ -19,22 +22,41 @@ export type Page =
   | 'logs'
   | 'checks'
   | 'commands'
+  | 'tools'
 export const PAGE_FOCUS: Record<Page, string> = {
-  welcome: 'personal',
+  welcome: 'hosting',
+  tools: 'operation-select',
   setup: 'setup-refresh',
   chat: 'composer',
   server: 'api-toggle',
-  models: 'install-models',
+  models: 'library:installed',
   settings: 'endpoint',
   history: 'history-search',
   keys: 'key-new',
   requests: 'refresh',
-  access: 'page:keys',
+  access: 'tools:runtime',
   logs: 'log-filter',
   checks: 'checks',
   commands: 'command:0',
 }
 export interface WorkspaceState {
+  setupGoal: string
+  libraryView: LibraryView
+  libraryCategory: string
+  libraryRows: LibraryRow[]
+  libraryQuery: string
+  libraryPlan: Record<string, unknown> | null
+  libraryRequest: Record<string, unknown>
+  workspace: WorkspaceSnapshot | null
+  operations: WorkspaceOperation[]
+  toolGroup: string
+  operation: string
+  operationInput: string
+  operationResult: string
+  operationChoices: string[]
+  operationField: string
+  operationReturn: Page
+  consoleInput: string
   setup: SetupView | null
   setupComplete: boolean
   conversation: Conversation | null
@@ -69,6 +91,12 @@ export interface WorkspaceState {
     | 'revoke-key'
     | 'delete-chat'
     | 'credential'
+    | 'operation-choice'
+    | 'console'
+    | 'agent-setup'
+    | 'install-review'
+    | 'images'
+    | 'setup-goal'
     | null
   focus: string
   hover: string
@@ -80,6 +108,7 @@ export interface WorkspaceState {
   endpoint: string
   model: string
   models: string[]
+  images: ChatImage[]
   messages: ChatMessage[]
   generating: boolean
   motion: boolean
@@ -92,6 +121,23 @@ export interface WorkspaceState {
 }
 export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
   return {
+    setupGoal: 'chat',
+    libraryView: 'installed',
+    libraryCategory: 'text',
+    libraryRows: [],
+    libraryQuery: '',
+    libraryPlan: null,
+    libraryRequest: {},
+    workspace: null,
+    operations: [],
+    toolGroup: 'server',
+    operation: '',
+    operationInput: '{}',
+    operationResult: '',
+    operationChoices: [],
+    operationField: '',
+    operationReturn: 'server',
+    consoleInput: '',
     setup: null,
     setupComplete: false,
     conversation: null,
@@ -123,6 +169,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     model: '',
     models: [],
     messages: [],
+    images: [],
     generating: false,
     motion: true,
     mouse: true,
@@ -133,19 +180,13 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     ready: false,
   }
 }
-export const PAGES: { id: Page; name: string; key: string; hint: string }[] = [
-  { id: 'chat', name: 'Chat', key: 'c', hint: 'Start a conversation. Ctrl+G then C' },
-  { id: 'server', name: 'Server', key: 's', hint: 'Manage the API and inspect requests. Ctrl+G then S' },
-  {
-    id: 'models',
-    name: 'Models',
-    key: 'm',
-    hint: 'Choose a model from the connected endpoint. Ctrl+G then M',
-  },
-  {
-    id: 'settings',
-    name: 'Settings',
-    key: ',',
-    hint: 'Connection, display, and server preferences. Ctrl+G then comma',
-  },
-]
+const PAGE_IDS = { playground: 'chat', server: 'server', catalog: 'models' } as const
+const PAGE_KEYS = { playground: 'c', server: 's', catalog: 'm' } as const
+export const PAGES: { id: Page; name: string; key: string; hint: string }[] = WORKSPACE_NAVIGATION.map(
+  (p, i) => ({
+    id: PAGE_IDS[p.id],
+    name: p.label,
+    key: PAGE_KEYS[p.id],
+    hint: `Alt+${i + 1} ${p.label}`,
+  })
+)

@@ -5,12 +5,13 @@
  * replacement of a server another `atc` build left running (`stale-owner.ts`).
  */
 
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { AtomicCoreError } from '@atomic-chat/core'
-import { attachToOwner, inspectLock, waitForPublishedOwner } from '@atomic-chat/core/host'
-import type { AtcPaths } from '../config/paths.js'
+import { attachToOwner, inspectLock, isProcessAlive, waitForPublishedOwner } from '@atomic-chat/core/host'
+import type { DataLayout } from '@atomic-chat/core/host'
+import type { AtcPaths } from '../config/index.js'
 import { AtcError } from '../errors/index.js'
-import type { Logger } from '../output/logger.js'
+import type { Logger } from '../output/index.js'
 import { readDaemonRecord } from './daemon-record.js'
 import type { DaemonRecord } from './daemon-record.js'
 import { SseEvents } from './events.js'
@@ -31,7 +32,8 @@ export interface AttachOptions {
   clientName: string
   pid: number
   log: Logger
-  spawnDaemon: () => Promise<void>
+  /** Start a daemon; with its pid, a daemon that exits while starting is reported at once. */
+  spawnDaemon: () => Promise<{ pid?: number | undefined } | void>
   timeoutMs?: number
 }
 
@@ -41,6 +43,28 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
   const timeoutMs = options.timeoutMs ?? DAEMON_START_TIMEOUT_MS
   const attach = () =>
     attachToOwner({ layout, clientName: options.clientName, launch: false, log: (m) => log.debug(m) })
+  // Start a server (or wait for the one starting) and attach to it once it has published its port.
+  const launchOwner = async () => {
+    const state = await inspectLock(layout)
+    const spawned = state.kind !== 'owned'
+    let pid: number | undefined
+    if (spawned) {
+      log.info('starting the server')
+      pid = (await options.spawnDaemon())?.pid
+    } else log.debug('a server is starting; waiting for it')
+    try {
+      await untilExit(waitForPublishedOwner(layout, { timeoutMs }), pid, layout)
+      return await attach()
+    } catch (failure) {
+      // A server that dies while starting (a busy admin port, a broken config) leaves its reason in
+      // the log, not in the lock; "cannot reach the core" alone sends people looking elsewhere.
+      if (!spawned || !(failure instanceof AtomicCoreError)) throw failure
+      throw new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
+        details: (await logTail(paths.daemonOutLog)) ?? (await logTail(paths.daemonLog)) ?? failure.message,
+        hint: 'see `atc logs`',
+      })
+    }
+  }
   let owner
   try {
     owner = await attach()
@@ -53,31 +77,24 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
       if (!options.launch) throw outdatedError(outdated)
       log.info(`replacing the server of another build (core ${outdated.lock.version})`)
       await stopOutdatedOwner({ paths, owner: outdated, force: false, kill: false, now: () => new Date() })
+      owner = await launchOwner()
     } else if (error.code !== 'CORE_NOT_RUNNING') throw error
     else if (!options.launch) {
-      throw new AtcError('ATC_DAEMON_NOT_RUNNING', 'Atomic Server is not running for this data folder.', {
-        details: paths.dataFolder,
-        hint: 'start it with `atc start`',
-      })
-    }
-    const state = await inspectLock(layout)
-    const spawned = state.kind !== 'owned'
-    if (spawned) {
-      log.info('starting the server')
-      await options.spawnDaemon()
-    } else log.debug('a server is starting; waiting for it')
-    try {
-      await waitForPublishedOwner(layout, { timeoutMs })
+      // A core holding the lock without a published port is starting: wait for it, don't call it gone.
+      if ((await inspectLock(layout)).kind !== 'owned')
+        throw new AtcError('ATC_DAEMON_NOT_RUNNING', 'Atomic Server is not running for this data folder.', {
+          details: paths.dataFolder,
+          hint: 'start it with `atc start`',
+        })
+      try {
+        await waitForPublishedOwner(layout, { timeoutMs })
+      } catch {
+        throw new AtcError('ATC_DAEMON_START_FAILED', 'The server is still starting.', {
+          hint: 'try again in a moment, or see `atc logs`',
+        })
+      }
       owner = await attach()
-    } catch (failure) {
-      // A server that dies while starting (a busy admin port, a broken config) leaves its reason in
-      // the log, not in the lock; "cannot reach the core" alone sends people looking elsewhere.
-      if (!spawned || !(failure instanceof AtomicCoreError)) throw failure
-      throw new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
-        details: (await logTail(paths.daemonOutLog)) ?? (await logTail(paths.daemonLog)) ?? failure.message,
-        hint: 'see `atc logs`',
-      })
-    }
+    } else owner = await launchOwner()
   }
   const record = await waitForDaemonRecord(
     paths.daemonRecord,
@@ -108,8 +125,31 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
   })
 }
 
+/**
+ * The wait, or an error as soon as the launched daemon is gone: one that fails while starting gives
+ * the folder back, and its owner would otherwise be waited for until the timeout.
+ */
+async function untilExit<T>(wait: Promise<T>, pid: number | undefined, layout: DataLayout): Promise<T> {
+  if (pid === undefined) return wait
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const exited = new Promise<never>((_, reject) => {
+    const check = async () => {
+      if (isProcessAlive(pid)) return void (timer = setTimeout(() => void check(), 100))
+      // Ours lost the folder to another starter (two `atc start` at once): wait for that owner.
+      if ((await inspectLock(layout)).kind === 'owned') return
+      reject(new AtomicCoreError('CORE_START_FAILED', 'The server exited while starting.'))
+    }
+    void check()
+  })
+  try {
+    return await Promise.race([wait, exited])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /** The last few lines of the daemon log, or undefined when there is none. */
-async function logTail(path: string, lines = 4): Promise<string | undefined> {
+export async function logTail(path: string, lines = 4): Promise<string | undefined> {
   const text = await readFile(path, 'utf8').catch(() => undefined)
   if (!text) return undefined
   return text.trimEnd().split(/\r?\n/).slice(-lines).join('\n')
@@ -130,16 +170,33 @@ export async function waitForDaemonRecord(
   }
 }
 
-/** The record once it says `ready`, or the latest one when that takes too long. */
+/**
+ * The record once it says `ready`, or the latest one when that takes too long; `undefined` as soon as
+ * a record seen for this instance is gone (a server that fails while starting removes it).
+ */
 export async function waitForDaemonReady(
   path: string,
   instanceId: string,
   timeoutMs = DAEMON_READY_TIMEOUT_MS
 ): Promise<DaemonRecord | undefined> {
   const deadline = Date.now() + timeoutMs
+  let seen = false
   for (;;) {
     const record = await readDaemonRecord(path)
-    if (record && record.instance_id === instanceId && record.state === 'ready') return record
+    const ours = record?.instance_id === instanceId
+    if (ours && record?.state === 'ready') return record
+    // Gone means no file, or another instance's: a record caught mid-write is read again.
+    if (
+      seen &&
+      !ours &&
+      (record ||
+        !(await access(path).then(
+          () => true,
+          () => false
+        )))
+    )
+      return undefined
+    seen ||= ours
     if (Date.now() >= deadline) return record
     await new Promise((resolve) => setTimeout(resolve, 100))
   }

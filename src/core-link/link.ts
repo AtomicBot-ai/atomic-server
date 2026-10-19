@@ -4,11 +4,11 @@
  * core's `CoreClient`; a fake in `test/helpers/` for everything above it.
  */
 
-import type { HardwareOverrideInput, LocalApiServerState, SessionInfo, UnloadResult } from '@atomic-chat/core'
+import type { LocalApiServerState, SessionInfo, UnloadResult } from '@atomic-chat/core'
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { CoreClient, CoreEventMessage, CoreSnapshot } from '@atomic-chat/core/client'
 import { AtcError } from '../errors/index.js'
-import type { ManagedHostReceipt } from '../host/managed-types.js'
+import type { ManagedHostReceipt } from '../host/index.js'
 
 export interface CoreEndpoint {
   baseUrl: string
@@ -57,10 +57,6 @@ export interface CoreLink {
     start(body: StartServerBody): Promise<LocalApiServerState>
     stop(): Promise<LocalApiServerState>
   }
-  hardware: {
-    set(input: HardwareOverrideInput): Promise<void>
-    clear(): Promise<boolean>
-  }
   disk: { available(path?: string): Promise<number | null> }
   environments: {
     list(): Promise<unknown[]>
@@ -85,7 +81,7 @@ export interface HttpCoreLinkOptions {
   log?: (message: string) => void
 }
 
-/** Managed environments are missing from the embedded core until the branch lands: say so. */
+/** A core build without the `/environments` routes answers "no such route": say so plainly. */
 function unavailable(error: unknown): never {
   if (
     error instanceof AtomicCoreError &&
@@ -104,7 +100,6 @@ export class HttpCoreLink implements CoreLink {
   readonly events: CoreEventSource
   readonly models: CoreLink['models']
   readonly server: CoreLink['server']
-  readonly hardware: CoreLink['hardware']
   readonly disk: CoreLink['disk']
   readonly environments: CoreLink['environments']
   private readonly client: CoreClient
@@ -128,15 +123,6 @@ export class HttpCoreLink implements CoreLink {
       status: () => c.serverStatus(),
       start: (body) => c.startServer(body),
       stop: () => c.stopServer(),
-    }
-    this.hardware = {
-      set: async (input) => {
-        await c.request('PUT', '/hardware/override', input)
-      },
-      clear: async () => {
-        const result = await c.request<{ cleared?: boolean }>('DELETE', '/hardware/override')
-        return result.cleared !== false
-      },
     }
     this.disk = { available: (path) => c.availableDiskSpace(path) }
     const env = <T>(p: Promise<T>) => p.catch(unavailable)

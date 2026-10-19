@@ -59,8 +59,8 @@ The product's promise. **Goal:** on a clean server, `atc engines install`, `atc 
 - `ModelResolver`: `owner/repo`, `owner/repo:file.gguf`, catalog alias, `auto` by VRAM tier; `--quant`.
   GGUF only: a repository with no GGUF files is refused with a hint at `--engine tensorrt-llm`, whose
   models the core resolves and downloads itself (iteration 4b).
-- `ModelInstaller` on the core's `Downloader` and `ModelRegistry` (`@atomic-chat/core/models`,
-  `/downloads`): disk preflight through `POST /disk/available`, resume, sha256, `model.yml`, optional
+- `ModelInstaller` on atc's own downloader (`src/downloads/`) and the core's `ModelRegistry`
+  (`@atomic-chat/core/models`): disk preflight through `POST /disk/available`, resume, sha256, `model.yml`, optional
   `mmproj`; progress on the terminal and as `atc:download` events for the admin and the TUI.
 - `models search|pull|list|rm|info`; `api key show|set|rotate|clear` (the key is the core's
   `server.api_key` setting; a non-loopback API without a key is refused unless `--insecure-no-key`).
@@ -169,7 +169,7 @@ Admin pages, lifted from the desktop web-app where possible (`docs/admin-ui.md`)
 
 ### Iteration 7 — the admin's engine install wizard, logs, settings, hardware
 
-- The managed-runtime wizard in the browser (`SetupState` stepper on live operations: requirements and
+- The managed-runtime wizard in the browser (a stepper over the core's live operations: requirements and
   system changes, authorization, sign-out or restart, image download, verification), a model picker with
   the core's compatibility verdict (curated tiers, a pasted repository), the server log with live tail,
   settings (proxy, telemetry, tokens), the hardware page with live GPU usage.
@@ -248,15 +248,17 @@ S stop  R restart  a admin link  r refresh  ←→ screens  ? help  q quit
 - **Downloads (iteration 3):** every transfer with progress, pause and cancel (`x`), errors with the same
   hints the CLI prints.
 - **Engines (iteration 4):** installed engines and builds, the running one, install and remove; an engine
-  that needs system changes shows the install as a stepper (the `SetupState` machine from
-  `src/engines/managed-environment.ts`); when a step needs elevation it shows the exact command to run in
+  that needs system changes shows the install as a stepper over the core's environment operation phases;
+  when a step needs elevation it shows the exact command to run in
   another shell and waits, exactly like the CLI's `manual` strategy.
 
 ### How it is built
 
-- `src/tui/`: `state.ts` (one reducer), `keys.ts` (one key table that feeds the footer, the help and the
-  handlers), `controller.ts` (the only side effects), `components/`, `screens/` (one per tab), `app.tsx`,
-  `run-tui.tsx`. The command loads it with a dynamic `import()`, so plain commands never load React.
+- `src/tui/`: `run-tui.tsx` renders `workspace/WorkspaceApp.tsx`; `state.ts` (the server reducer) and
+  `controller.ts` (the only side effects) sit under it. `workspace/` keeps the shell at its root (state,
+  controller, frame, input, actions) and one folder per area: `draw/`, `chat/`, `setup/`, `library/`,
+  `operations/`, `server/`. The command loads it with a dynamic `import()`, so plain commands never load
+  React.
 - Data: `watchDaemon` (`src/core-link/watch.ts`) attaches when a server runs, follows its events
   (snapshot first; `STATUS_EVENTS` refetch), and attaches again after a restart, found by `health()`.
   Actions go through the functions the commands use: `startDaemon`/`stopDaemon`, `setConfigValue`,

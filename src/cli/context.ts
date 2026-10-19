@@ -43,7 +43,12 @@ export interface ContextDeps {
   core?: CoreLinkFactory
   host?: HostServices
   /** How the context starts a daemon; the composition root supplies it (avoids a cli ↔ daemon cycle). */
-  spawnDaemon?: (paths: AtcPaths, log: Logger, args: readonly string[]) => Promise<void>
+  /** Start the daemon; its pid lets a launching client notice it exit while starting. */
+  spawnDaemon?: (
+    paths: AtcPaths,
+    log: Logger,
+    args: readonly string[]
+  ) => Promise<{ pid?: number | undefined }>
   /** The command tree, for completion and help from inside a command. */
   root?: CommandSpec
   now?: () => Date
@@ -74,7 +79,7 @@ export function createContext(deps: ContextDeps): CommandContext {
   const { io, flags } = deps
   const colors = colorsFor(colorEnabled({ isTTY: io.isTTY.stderr, env: io.env, noColor: flags.noColor }))
   const log = createLogger(stderrSink(io, { json: flags.json, colors }), { level: levelFromFlags(flags) })
-  const paths = deps.paths ?? resolveAtcPaths(nodeDataFolderEnv(io.env), flags.dataFolder)
+  const paths = deps.paths ?? resolveAtcPaths(nodeDataFolderEnv(io.env), flags.dataFolder, io.cwd)
   const host = deps.host ?? nodeHostServices(io)
   const pid = deps.pid ?? process.pid
   let config: Promise<ResolvedConfig> | undefined
@@ -96,7 +101,7 @@ export function createContext(deps: ContextDeps): CommandContext {
         log: options.log ?? log,
         spawnDaemon: async () => {
           if (!deps.spawnDaemon) throw new AtcError('ATC_INTERNAL', 'this context cannot start a daemon')
-          await deps.spawnDaemon(paths, options.log ?? log, options.daemonArgs ?? [])
+          return deps.spawnDaemon(paths, options.log ?? log, options.daemonArgs ?? [])
         },
       }),
   }

@@ -1,12 +1,19 @@
-import { setupAction } from './setup-actions.js'
+import { navigationAction } from './navigation-actions.js'
+import { goalSetupAction } from './setup/goal-setup.js'
+import { imageAction } from './chat/image-actions.js'
+import { libraryAction } from './library/library-actions.js'
+import { serverEndpoint, example } from './connection.js'
+export { serverEndpoint, example } from './connection.js'
+import { operationAction } from './operations/operation-actions.js'
+import { setupAction } from './setup/setup-actions.js'
 import { dataAction, persistConversation, saveDataEdit } from './data-actions.js'
 import type { AgentId, AgentLaunch } from '../../agent-launch/index.js'
 import { endpointUrl } from '../../terminal-service/index.js'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState, Page } from './state.js'
 import { PAGE_FOCUS } from './state.js'
-import { pickerAction } from './picker-actions.js'
-import { isPicker } from './picker.js'
+import { pickerAction } from './chat/picker-actions.js'
+import { isPicker } from './chat/picker.js'
 export interface ActionContext {
   handoff?: (launch: AgentLaunch) => void
   get: () => WorkspaceState
@@ -16,25 +23,15 @@ export interface ActionContext {
   copy: (text: string) => void
   cancel: () => void
 }
-export function serverEndpoint(s: WorkspaceState): string {
-  const api =
-    s.base.daemon.kind === 'up' && s.base.daemon.snapshot.server.running
-      ? s.base.daemon.snapshot.server
-      : undefined
-  const value = (key: string, fallback: string) =>
-    s.base.config.rows.find((r) => r.path === key)?.value ?? fallback
-  let host = api?.host ?? value('api.host', '127.0.0.1')
-  if (host === '0.0.0.0' || host === '::') host = '127.0.0.1'
-  return `http://${host.includes(':') ? '[' + host + ']' : host}:${api?.port ?? value('api.port', '1337')}${api?.prefix ?? value('api.prefix', '/v1')}`
-}
-export function example(s: WorkspaceState): string {
-  // Shell placeholders intentionally contain no model IDs or credentials from the server.
-  return `curl '${serverEndpoint(s).replaceAll("'", "'\\''")}'/chat/completions -H 'Content-Type: application/json' -H "Authorization: Bearer $ATC_API_KEY" -d '{"model":"MODEL_ID","messages":[{"role":"user","content":"Hello"}]}'`
-}
 export async function activate(id: string, ctx: ActionContext): Promise<void> {
   const { update, controller, get } = ctx,
     s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
+  if (await goalSetupAction(id, ctx)) return
+  if (await navigationAction(id, ctx)) return
+  if (await imageAction(id, ctx)) return
+  if (await operationAction(id, ctx)) return
+  if (await libraryAction(id, ctx)) return
   if (await pickerAction(id, ctx)) return
   if (await setupAction(id, ctx)) return
   if (!s.setupComplete && (id.startsWith('page:') || ['new', 'send', 'api-toggle'].includes(id))) return
@@ -117,6 +114,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     patch({
       page: 'chat',
       messages: [],
+      images: [],
       conversation: null,
       draft: '',
       cursor: 0,
@@ -206,7 +204,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   }
   if (id === 'api-toggle') {
     if (s.base.daemon.kind === 'up' && s.base.daemon.snapshot.server.running) {
-      patch({ overlay: 'stop', focus: 'close' })
+      patch({ overlay: 'stop', edit: '', focus: 'close' })
       return
     }
     patch({ busy: true, message: 'Starting the API...' })

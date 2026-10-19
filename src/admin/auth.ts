@@ -1,7 +1,7 @@
 /** Cookie sessions for the SPA: in memory, random ids, idle expiry. A restart logs everyone out. */
 
 import { randomBytes } from 'node:crypto'
-import { SESSION_COOKIE } from './contract/index.js'
+import { SESSION_COOKIE } from '../contract/index.js'
 
 export const SESSION_IDLE_MS = 24 * 60 * 60 * 1000
 

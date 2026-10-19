@@ -35,7 +35,6 @@ beforeAll(async () => {
     controlPort: 0,
     admin: { enabled: true, host: '127.0.0.1', port: 0 },
     telemetry: false,
-    probeHardware: false,
     createCore: (options) => {
       coreOptions = options
       return AtomicCore.create(options)
@@ -156,8 +155,9 @@ describe('the daemon owns the folder', () => {
     await writeDaemonRecord(paths.daemonRecord, record!)
   })
 
-  it('gives the core the keyring, four download streams and a 20 s limit on remote GGUF reads', () => {
-    expect(coreOptions).toMatchObject({ ownerScope: 'cli', downloadStreams: 4, remoteGgufTimeoutMs: 20_000 })
+  it('gives the core the keyring and a 20 s limit on remote GGUF reads, and no model download option', () => {
+    expect(coreOptions).toMatchObject({ ownerScope: 'cli', remoteGgufTimeoutMs: 20_000 })
+    expect(coreOptions).not.toHaveProperty('downloadStreams')
     expect(coreOptions?.publicApiKeys?.()).toEqual([expect.stringMatching(/^atc_[0-9a-f]{64}$/)])
   })
 

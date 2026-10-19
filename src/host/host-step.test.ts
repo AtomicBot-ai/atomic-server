@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { createLogger } from '../output/logger.js'
+import { createLogger } from '../output/index.js'
 import type { ElevationContext, Elevator, HostStepOutcome, HostStepResultFile } from './elevator.js'
 import { HostStepExecutor, HostStepJournal, receiptFor, validateHostStep } from './host-step.js'
 import type { EnvironmentOperationView, ManagedHostReceipt, ManagedHostStep } from './managed-types.js'
@@ -106,12 +106,12 @@ describe('HostStepExecutor', () => {
 
   it('runs, journals and posts the receipt, and treats a repeat as a duplicate', async () => {
     const { executor, posted } = make(
-      { kind: 'result', result: { ...completed, outcome: 'relogin-required' } },
+      { kind: 'result', result: { ...completed, outcome: 'reboot-required' } },
       'b'
     )
     expect(await executor.handle(operation)).toBe('posted')
     expect(posted).toEqual([
-      ['op-1', expect.objectContaining({ outcome: 'relogin-required', receipt_id: 'receipt-1' })],
+      ['op-1', expect.objectContaining({ outcome: 'reboot-required', receipt_id: 'receipt-1' })],
     ])
     expect(await executor.handle(operation)).toBe('duplicate')
   })

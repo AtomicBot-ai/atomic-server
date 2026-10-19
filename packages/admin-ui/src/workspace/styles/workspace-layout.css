@@ -1,0 +1,250 @@
+.eye-workspace {
+  --ew-bg: #0b0e0f;
+  --ew-panel: #14191a;
+  --ew-raised: #202829;
+  --ew-line: #303b3c;
+  --ew-muted: #9bacac;
+  --ew-teal: #73decb;
+  --ew-text: #eef4f3;
+  color-scheme: dark;
+  background: var(--ew-bg);
+  color: var(--ew-text);
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  font:
+    14px/1.5 Inter,
+    system-ui,
+    sans-serif;
+  overflow: hidden;
+}
+.eye-workspace * {
+  box-sizing: border-box;
+}
+.eye-workspace h1 {
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+.eye-workspace h2 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 0;
+}
+.eye-workspace h3 {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 0;
+}
+.eye-workspace button,
+.eye-workspace a,
+.eye-workspace input,
+.eye-workspace select,
+.eye-workspace textarea {
+  outline-offset: 3px;
+}
+.eye-workspace :focus-visible {
+  outline: 2px solid var(--ew-teal);
+}
+.eye-workspace button {
+  cursor: pointer;
+}
+.eye-workspace button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.eye-workspace pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    12px/1.65 ui-monospace,
+    monospace;
+  margin: 12px 0;
+}
+.eye-workspace code {
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+}
+.ew-cockpit {
+  display: grid;
+  grid-template-columns: 170px minmax(180px, 1fr) minmax(300px, 420px);
+  gap: 28px;
+  align-items: center;
+  padding: 20px 32px 22px;
+  flex-shrink: 0;
+  background: #0b1010;
+  max-height: 260px;
+  overflow: auto;
+}
+.ew-brand {
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.state-label {
+  font:
+    11px/1.4 ui-monospace,
+    monospace;
+  color: var(--ew-teal);
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.state-label:before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.state-error,
+.state-overloaded {
+  color: #f0a266;
+}
+.state-disconnected,
+.state-stopped {
+  color: #829391;
+}
+.server-eye {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  filter: drop-shadow(0 0 9px #35ac9624);
+}
+.server-eye pre {
+  font:
+    6.9px/7px ui-monospace,
+    Menlo,
+    monospace;
+  white-space: pre;
+  margin: 0;
+  letter-spacing: 0;
+}
+.eye-row {
+  display: block;
+  white-space: pre;
+}
+.eye-starting {
+  animation: eye-tremor 0.26s linear infinite;
+}
+.eye-busy {
+  animation: eye-pulse 1.4s ease-in-out infinite;
+}
+.eye-overloaded {
+  animation: eye-fire 0.38s linear infinite;
+  filter: hue-rotate(200deg) saturate(1.8);
+}
+.eye-error {
+  filter: hue-rotate(165deg);
+  opacity: 0.65;
+}
+.eye-disconnected {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+.eye-stopped {
+  opacity: 0.55;
+}
+@keyframes eye-tremor {
+  50% {
+    transform: translate(1px, -1px);
+  }
+}
+@keyframes eye-pulse {
+  50% {
+    filter: drop-shadow(0 0 15px #53d8b766);
+  }
+}
+@keyframes eye-fire {
+  50% {
+    filter: hue-rotate(220deg) saturate(2.8) drop-shadow(0 -4px 7px #f2833f55);
+    transform: translateY(-1px);
+  }
+}
+.endpoint-link {
+  display: block;
+  background: none;
+  border: 0;
+  color: var(--ew-muted);
+  font:
+    12px ui-monospace,
+    monospace;
+  padding: 8px 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.cockpit-services {
+  display: flex;
+  gap: 6px;
+  flex-direction: column;
+  max-height: 90px;
+  overflow: auto;
+}
+.service-chip {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  font-size: 11px;
+  background: none;
+  border: 0;
+  color: #c8d5d2;
+  padding: 3px 0;
+  max-width: 100%;
+}
+.service-chip span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.service-chip small {
+  margin-left: auto;
+  color: #6da597;
+  white-space: nowrap;
+}
+.service-chip b {
+  font-size: 10px;
+  flex-shrink: 0;
+  color: var(--ew-teal);
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.metric-grid strong {
+  display: block;
+  font:
+    500 19px/1.4 ui-monospace,
+    monospace;
+  white-space: nowrap;
+}
+.metric-grid span {
+  font-size: 10px;
+  color: var(--ew-muted);
+  display: block;
+  margin-top: 3px;
+  white-space: nowrap;
+}
+.core-caption {
+  display: block;
+  font-size: 10px;
+  color: #70807f;
+  margin-top: 9px;
+}

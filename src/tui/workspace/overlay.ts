@@ -1,18 +1,30 @@
+import { drawInstallReview } from './library/library-panel.js'
+import { drawGoalSetup } from './setup/goal-setup.js'
+import { drawOperationOverlay } from './operations/operation-panel.js'
 import { AGENTS } from '../../agent-launch/index.js'
-import { button, COLORS, text, wrap } from './canvas.js'
-import type { Canvas } from './canvas.js'
+import { button, COLORS, text, wrap } from './draw/canvas.js'
+import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { helpLines } from '../command-list.js'
 import { example } from './actions.js'
-import { tooltip } from './tooltip.js'
+import { tooltip } from './draw/tooltip.js'
 const ms = (v: number | null) => (v === null ? 'Not available' : `${Math.round(v)} ms`)
 export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
+  if (s.overlay === 'setup-goal') {
+    drawGoalSetup(c, focus)
+    return
+  }
   for (const row of c.cells)
     for (const cell of row) {
       cell.background = COLORS.ground
       cell.color = COLORS.stone
     }
+  if (s.overlay === 'install-review') {
+    drawInstallReview(c, s, focus)
+    return
+  }
+  if (drawOperationOverlay(c, s, focus)) return
   const x = 3,
     y = 3,
     w = c.width - 6,
@@ -23,7 +35,15 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     text(c, x + 2, y + row, v, color, w - 4, COLORS.header)
   const b = (id: string, row: number, label: string, hint: string) =>
     button(c, id, x + 2, y + row, label, hint, focus)
-  if (s.overlay === 'workspace') {
+  if (s.overlay === 'images') {
+    put(2, 'Attached images', COLORS.gold)
+    s.images.forEach((image, i) =>
+      b(`image-remove:${i}`, 4 + i, `${image.name}  ×`, 'Remove image from this message')
+    )
+    b('image-add', h - 3, '+ Image', 'Attach another image | Up to four, 8 MB each')
+    button(c, 'close', x + 16, y + h - 3, 'Done', 'Return to composer', focus)
+    return
+  } else if (s.overlay === 'workspace') {
     put(2, 'Starting workspace', COLORS.gold)
     put(4, 'Choose where Atomic Chat opens next time.', COLORS.muted)
     b('personal', 6, 'Personal terminal', 'Open directly into chat.')
@@ -85,13 +105,13 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
         .forEach((line, i) => put(4 + i, line))
     }
   } else if (s.overlay === 'help') {
-    put(2, 'A few keys, anywhere', COLORS.gold)
+    put(2, 'Keyboard shortcuts', COLORS.gold)
     ;[
       'Tab / Shift+Tab | Next / previous control',
       'Enter | Open or activate',
       'Esc | Close dialog or open menu',
-      'Ctrl+G then C/S/M/, | Chat / Server / Models / Settings',
-      'Ctrl+K | Keyboard shortcuts',
+      'Alt+1/2/3 | Playground / Server / Engines & Models',
+      'Ctrl+K Help | F4 Server console',
       'Ctrl+N / Ctrl+P | New chat / history',
       'Ctrl+X | Mouse / text selection',
       'Ctrl+C | Stop a response',
@@ -104,24 +124,35 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
   } else if (s.overlay === 'endpoint') {
     const titles: Record<string, string> = {
       'setup-query': 'Find a model',
+      'library-query': 'Search model catalog',
+      'image-path': 'Attach image',
       'history-search': 'Search your conversations',
       'key-name': 'Name this API key',
       'rename-chat': 'Rename conversation',
     }
     put(
       2,
-      titles[s.edit] ?? (s.edit.startsWith('setting:') ? 'Edit setting' : 'Connect a model endpoint'),
+      titles[s.edit] ??
+        (s.edit.startsWith('operation-')
+          ? s.edit === 'operation-json'
+            ? 'Request JSON'
+            : s.edit.slice(16).replace(/^request\./, '')
+          : s.edit.startsWith('setting:')
+            ? 'Edit setting'
+            : 'Connect a model endpoint'),
       COLORS.gold
     )
     put(
       4,
-      titles[s.edit]
-        ? s.edit === 'key-name'
-          ? 'For example: Atomic Agent, work laptop, or test app'
-          : 'Type a name or search term'
-        : s.edit.startsWith('setting:')
-          ? s.edit.slice(8)
-          : 'OpenAI-compatible base URL, including /v1',
+      s.edit.startsWith('operation-')
+        ? 'Enter a value. Leave empty to use the server default.'
+        : titles[s.edit]
+          ? s.edit === 'key-name'
+            ? 'For example: Atomic Agent, work laptop, or test app'
+            : 'Type a name or search term'
+          : s.edit.startsWith('setting:')
+            ? s.edit.slice(8)
+            : 'OpenAI-compatible base URL, including /v1',
       COLORS.muted
     )
     put(6, (s.editValue + '_').slice(-(w - 4)), COLORS.text)
@@ -130,12 +161,17 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     button(c, 'close', x + 12, y + h - 3, 'Cancel', 'Discard this edit.', focus)
     return
   } else if (s.overlay === 'stop') {
-    put(2, 'Stop accepting API requests?', COLORS.gold)
+    put(2, s.edit === 'api-restart' ? 'Restart API?' : 'Stop accepting API requests?', COLORS.gold)
     wrap(
       'Active requests may be interrupted. The background server and loaded models will remain available.',
       w - 4
     ).forEach((r, i) => put(4 + i, r))
-    b('stop-confirm', h - 3, 'Stop API', 'Stop the public listener now.')
+    b(
+      'stop-confirm',
+      h - 3,
+      s.edit === 'api-restart' ? 'Restart API' : 'Stop API',
+      'Active requests will be interrupted'
+    )
     button(c, 'close', x + 17, y + h - 3, 'Keep running', 'Close without changing the server.', focus)
     return
   } else if (s.overlay === 'detail') {
