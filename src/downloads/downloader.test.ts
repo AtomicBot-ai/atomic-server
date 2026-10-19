@@ -134,6 +134,18 @@ describe('Downloader, one stream', () => {
     expect(server.requests.filter((r) => r.range)).toEqual([])
   })
 
+  // atc 0.1.0 ran core 0.16, whose parallel downloads kept their parts in `<file>.segments/` and wrote
+  // `.tmp` only at the join. Nothing resumes them now; they would hold a model's size on disk forever.
+  it('removes the parts folder an earlier version left beside the file', async () => {
+    server.files.set('/ok.bin', { body })
+    const { dl, out } = await make()
+    await mkdir(`${out}.segments`, { recursive: true })
+    await writeFile(`${out}.segments/0.part`, Buffer.alloc(1024, 7))
+    await dl.download('t', [item('/ok.bin')], { resume: true })
+    expect((await readFile(out)).equals(body)).toBe(true)
+    expect(await exists(`${out}.segments`)).toBe(false)
+  })
+
   it('stops the other files of a task when one fails, so none keeps writing after it', async () => {
     server.files.set('/ok.bin', { body, holdAfterBytes: 1024 })
     const { dl, dataFolder } = await make()

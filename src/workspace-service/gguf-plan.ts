@@ -26,8 +26,8 @@ export interface GgufPlanInput {
   request: ModelSetupPlanRequest
   verdict: ModelCompatibilityResponse
   family?: { family: PrismFamily; file: PrismFamilyFile } | undefined
-  /** The Hub's facts for a file no family pins. */
-  hubFile?: { size: number; sha256?: string | undefined }
+  /** The Hub's facts for a file no family pins; `revision` the commit they were read at. */
+  hubFile?: { size: number; sha256?: string | undefined; revision?: string | undefined }
   /** `POST /backends/atomic-prism/catalog`, when the verdict involves PrismML. */
   prism?: BackendCatalogResponse | undefined
   freeBytes: number | null
@@ -105,7 +105,7 @@ function artifactsOf(input: GgufPlanInput) {
     const model: ModelSetupArtifact = {
       repo: request.repo,
       file: request.file,
-      revision: request.revision ?? 'main',
+      revision: request.revision ?? input.hubFile?.revision ?? 'main',
       ...(input.hubFile?.sha256 ? { sha256: input.hubFile.sha256 } : {}),
       size: input.hubFile?.size ?? 0,
     }

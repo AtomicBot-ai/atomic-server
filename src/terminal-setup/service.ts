@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import { activateEngine } from './engines.js'
+import { sameFiles } from './same-files.js'
 import { setupWait } from './wait.js'
 import type {
   BackendCatalogResponse,
@@ -104,9 +105,13 @@ export class TerminalSetup {
       previous.version === 2 &&
       `${previous.engine.provider}|${previous.engine.version}|${previous.engine.backend}` === engine &&
       previous.selections.length === selections.length &&
+      // The same files, by what the Hub says of them (size, hash): one it changed since gets its fresh
+      // plan installed; an engine installed in the meantime is not a change of file.
       previous.selections.every(
         (s, i) =>
-          s.request.repo === selections[i]?.request.repo && s.request.file === selections[i]?.request.file
+          s.request.repo === selections[i]?.request.repo &&
+          s.request.file === selections[i]?.request.file &&
+          sameFiles(s.plan, selections[i]?.plan)
       )
     )
       return this.resume()

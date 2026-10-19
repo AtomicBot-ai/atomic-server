@@ -150,6 +150,8 @@ export class Downloader {
       if (!isInside(await canonicalizeExistingPrefix(savePath), root))
         throw new Error(`Path ${savePath} is outside of the data folder ${dataFolder}`)
       savePaths.push(savePath)
+      // Core 0.16's parallel parts (atc 0.1.0): nothing resumes them, so they go before the space check.
+      await rm(`${savePath}.segments`, { recursive: true, force: true })
       if (!resume) continue
       const state = ranged[i] ? await readRangeState(savePath, item.url, sizes[i] ?? 0) : undefined
       partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, item.url)) ?? 0))

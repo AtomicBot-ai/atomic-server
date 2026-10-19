@@ -38,16 +38,19 @@ describe('planFor', () => {
   }
   const hub = (async () =>
     Response.json({
+      sha: 'c'.repeat(40),
       siblings: [{ rfilename: 'm.gguf', size: 70, lfs: { sha256: 'e'.repeat(64), size: 70 } }],
     })) as typeof fetch
 
   it('asks the core for the verdict with a remote header read, and the Hub for size and hash', async () => {
     const l = link()
     const plan = await planFor({ link: l, fetch: hub, env: {} }, { repo: 'o/r', file: 'm.gguf' })
+    // Pinned to the commit the Hub described: the URL then names exactly these bytes, and a file
+    // uploaded again later is a new URL, so a partial of the old one is never continued with it.
     expect(plan.model).toEqual({
       repo: 'o/r',
       file: 'm.gguf',
-      revision: 'main',
+      revision: 'c'.repeat(40),
       sha256: 'e'.repeat(64),
       size: 70,
     })
