@@ -65,12 +65,13 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
       })
     }
   }
-  // Append mode, so a later truncate(0) (a server that cannot resume) puts the next byte at 0.
+  // Read-write with explicit positions, not append: Windows refuses `truncate` on an append handle,
+  // and a server that cannot resume needs truncate(0) with the next byte written at 0.
   if (from === 0)
     await writeFile(s.tmp, new Uint8Array()).catch((e) => {
       throw diskError(e)
     })
-  const handle = await open(s.tmp, 'a').catch((e) => {
+  const handle = await open(s.tmp, 'r+').catch((e) => {
     throw diskError(e)
   })
   let written = from
@@ -110,7 +111,7 @@ async function pump(job: FileJob, handle: FileHandle, first: Response, from: num
         const { done, value } = await reader.read()
         if (done) break
         if (job.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
-        await handle.write(value).catch((e) => {
+        await handle.write(value, 0, value.byteLength, written).catch((e) => {
           throw diskError(e)
         })
         written += value.byteLength
