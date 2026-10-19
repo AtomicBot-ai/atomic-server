@@ -1,7 +1,14 @@
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fixture, install, settle, weights } from '../../test/helpers/model-setups-fixture.js'
+import {
+  cleanup,
+  fixture,
+  install,
+  outcome,
+  settle,
+  weights,
+} from '../../test/helpers/model-setups-fixture.js'
 import { waitFor } from '../../test/helpers/wait-for.js'
 
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()))
@@ -62,7 +69,7 @@ describe('ModelSetups checks and writers', () => {
     const f = fixture({ verdictAfter: 'inspection_required' })
     const setups = f.make()
     const started = await install(setups, 'owner/repo', 'model.Q4_K_M.gguf')
-    expect(await settle(setups, started.setup_id)).toMatchObject({ stage: 'ready' })
+    expect(outcome(await settle(setups, started.setup_id))).toEqual({ stage: 'ready', error: undefined })
   })
 
   it('unregisters but keeps the download when the check itself fails, then resumes without fetching again', async () => {
@@ -77,7 +84,7 @@ describe('ModelSetups checks and writers', () => {
     core.verdictAfter = 'compatible'
     const fetched = f.hub.ranges.length
     await setups.resume(started.setup_id)
-    expect(await settle(setups, started.setup_id)).toMatchObject({ stage: 'ready' })
+    expect(outcome(await settle(setups, started.setup_id))).toEqual({ stage: 'ready', error: undefined })
     expect(f.hub.ranges).toHaveLength(fetched)
   })
 

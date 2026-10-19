@@ -1,7 +1,14 @@
 import { readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, fixture, install, settle, weights } from '../../test/helpers/model-setups-fixture.js'
+import {
+  cleanup,
+  fixture,
+  install,
+  outcome,
+  settle,
+  weights,
+} from '../../test/helpers/model-setups-fixture.js'
 import { waitFor } from '../../test/helpers/wait-for.js'
 
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()))
@@ -39,7 +46,7 @@ describe('ModelSetups', () => {
     const setups = f.make()
     const started = await install(setups, 'prism-ml/Bonsai-gguf', 'Bonsai-Q1_0.gguf')
     expect(started.task_ids).toMatchObject({ engine: expect.any(String), projector: expect.any(String) })
-    expect(await settle(setups, started.setup_id)).toMatchObject({ stage: 'ready' })
+    expect(outcome(await settle(setups, started.setup_id))).toEqual({ stage: 'ready', error: undefined })
     const order = f.link.calls.map((c) => c.path)
     expect(order.indexOf('/backends/atomic-prism/install')).toBeLessThan(
       order.indexOf('/engines/atomic-prism/builds/prism-b3-abcdef0/cpu/activate')
@@ -72,7 +79,7 @@ describe('ModelSetups', () => {
     expect((await setups.cancel(started.setup_id)).stage).toBe('cancelled')
     f.hub.hold = false
     await setups.resume(started.setup_id)
-    expect(await settle(setups, started.setup_id)).toMatchObject({ stage: 'ready' })
+    expect(outcome(await settle(setups, started.setup_id))).toEqual({ stage: 'ready', error: undefined })
     expect(f.hub.ranges).toEqual([`bytes=${weights.length / 2}-`])
   })
 

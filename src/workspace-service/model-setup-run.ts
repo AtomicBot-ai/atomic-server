@@ -149,6 +149,8 @@ async function download(
   // A file this setup already finished (it failed later) is not fetched again.
   const done = await stat(join(deps.paths.dataFolder, savePath)).catch(() => undefined)
   if (done && artifact.size > 0 && done.size === artifact.size) return
+  // A cancel that came during the check above found no transfer to stop: the abort event is gone.
+  if (signal.aborted) throw new SetupCancelled()
   const token = hfToken(deps.env)
   const item: DownloadItem = {
     url: hfResolveUrl(artifact.repo, artifact.file, artifact.revision),
@@ -157,6 +159,7 @@ async function download(
     ...(artifact.size > 0 ? { size: artifact.size } : {}),
     ...(deps.proxy ? { proxy: deps.proxy } : {}),
   }
+  // From here to the downloader registering the task nothing awaits, so a later cancel always finds it.
   const abort = () => deps.downloader.cancel(taskId)
   signal.addEventListener('abort', abort, { once: true })
   try {

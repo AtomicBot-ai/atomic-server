@@ -139,12 +139,19 @@ export function fixture(core: { prism?: boolean; verdictAfter?: string } = {}) {
 }
 export const settle = async (setups: ModelSetups, id: string, stages = ['ready', 'failed', 'cancelled']) => {
   let record: ModelSetup | undefined
+  // Shorter than a test's own timeout, so a setup that never gets there says where it stopped and why.
   await waitFor(async () => {
     record = await setups.get(id)
     return stages.includes(record.stage)
+  }, 3500).catch(() => {
+    throw new Error(
+      `setup ${id} stayed '${record?.stage}' (stopped at ${record?.stopped_at ?? '-'}): ${record?.error?.message ?? 'no error recorded'}`
+    )
   })
   return record as ModelSetup
 }
+/** A finished setup's stage and error together, so a failed one shows why in the test's diff. */
+export const outcome = (record: ModelSetup) => ({ stage: record.stage, error: record.error?.message })
 export const install = async (setups: ModelSetups, repo: string, file: string, requestId = 'req-1') => {
   const plan = (await setups.plan({ repo, file })) as ModelSetupPlan
   return setups.install({ request: { repo, file }, plan_digest: plan.digest, request_id: requestId })
