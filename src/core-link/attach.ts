@@ -7,7 +7,8 @@
 
 import { access, readFile } from 'node:fs/promises'
 import { AtomicCoreError } from '@atomic-chat/core'
-import { attachToOwner, inspectLock, waitForPublishedOwner } from '@atomic-chat/core/host'
+import { attachToOwner, inspectLock, isProcessAlive, waitForPublishedOwner } from '@atomic-chat/core/host'
+import type { DataLayout } from '@atomic-chat/core/host'
 import type { AtcPaths } from '../config/index.js'
 import { AtcError } from '../errors/index.js'
 import type { Logger } from '../output/index.js'
@@ -31,7 +32,8 @@ export interface AttachOptions {
   clientName: string
   pid: number
   log: Logger
-  spawnDaemon: () => Promise<void>
+  /** Start a daemon; with its pid, a daemon that exits while starting is reported at once. */
+  spawnDaemon: () => Promise<{ pid?: number | undefined } | void>
   timeoutMs?: number
 }
 
@@ -45,12 +47,13 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
   const launchOwner = async () => {
     const state = await inspectLock(layout)
     const spawned = state.kind !== 'owned'
+    let pid: number | undefined
     if (spawned) {
       log.info('starting the server')
-      await options.spawnDaemon()
+      pid = (await options.spawnDaemon())?.pid
     } else log.debug('a server is starting; waiting for it')
     try {
-      await waitForPublishedOwner(layout, { timeoutMs })
+      await untilExit(waitForPublishedOwner(layout, { timeoutMs }), pid, layout)
       return await attach()
     } catch (failure) {
       // A server that dies while starting (a busy admin port, a broken config) leaves its reason in
@@ -120,6 +123,29 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
     pid: options.pid,
     log: (m) => log.debug(m),
   })
+}
+
+/**
+ * The wait, or an error as soon as the launched daemon is gone: one that fails while starting gives
+ * the folder back, and its owner would otherwise be waited for until the timeout.
+ */
+async function untilExit<T>(wait: Promise<T>, pid: number | undefined, layout: DataLayout): Promise<T> {
+  if (pid === undefined) return wait
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const exited = new Promise<never>((_, reject) => {
+    const check = async () => {
+      if (isProcessAlive(pid)) return void (timer = setTimeout(() => void check(), 100))
+      // Ours lost the folder to another starter (two `atc start` at once): wait for that owner.
+      if ((await inspectLock(layout)).kind === 'owned') return
+      reject(new AtomicCoreError('CORE_START_FAILED', 'The server exited while starting.'))
+    }
+    void check()
+  })
+  try {
+    return await Promise.race([wait, exited])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** The last few lines of the daemon log, or undefined when there is none. */

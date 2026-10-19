@@ -46,6 +46,7 @@ async function setup(options: Parameters<typeof fakeOldOwner>[1] = {}) {
           admin: { enabled: false },
           telemetry: false,
         })
+        return {} // in this process: no child to watch
       },
     })
     return { code, io, json: () => JSON.parse(io.out.join('')) }

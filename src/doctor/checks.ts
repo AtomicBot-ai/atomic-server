@@ -163,7 +163,7 @@ export const CHECKS: Check[] = [
       const gpus = hardware.info.gpus.map((g) =>
         g.driver_version ? `${g.name} (${g.vendor}, driver ${g.driver_version})` : `${g.name} (${g.vendor})`
       )
-      const message = gpus.length ? gpus.join('; ') : 'no GPU detected; engines run on the CPU'
+      const message = gpus.length ? gpus.join('; ') : 'the core lists no GPU'
       return hardware.warnings.length
         ? { status: 'warn', message, hint: hardware.warnings.join('; ') }
         : { status: 'ok', message }

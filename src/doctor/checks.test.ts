@@ -61,13 +61,13 @@ describe('gpu check', () => {
       info([gpu('Radeon RX 7900', 'AMD', ''), gpu('RTX 4090', 'NVIDIA', '581.42')]),
       { status: 'ok', message: 'Radeon RX 7900 (AMD); RTX 4090 (NVIDIA, driver 581.42)' },
     ],
-    ['no GPU', info([]), { status: 'ok', message: 'no GPU detected; engines run on the CPU' }],
+    ['no GPU', info([]), { status: 'ok', message: 'the core lists no GPU' }],
     [
       'what the probe could not read',
       info([], ['vulkaninfo not found']),
       {
         status: 'warn',
-        message: 'no GPU detected; engines run on the CPU',
+        message: 'the core lists no GPU',
         hint: 'vulkaninfo not found',
       },
     ],

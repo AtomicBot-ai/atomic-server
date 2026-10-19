@@ -7,9 +7,7 @@ import { runCli } from './main.js'
 
 const io = nodeIo()
 runCli(process.argv.slice(2), io, {
-  spawnDaemon: async (paths, log, args) => {
-    await spawnDaemon({ paths, selfCommand: selfCommand(), log, args })
-  },
+  spawnDaemon: (paths, log, args) => spawnDaemon({ paths, selfCommand: selfCommand(), log, args }),
 }).then(
   (code) => process.exit(code),
   (error: unknown) => {
