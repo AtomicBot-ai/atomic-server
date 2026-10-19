@@ -122,6 +122,14 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
     env: io.env,
   })
+  // A failed move leaves media where it was: its records still name those paths, so it still loads.
+  await workspace
+    .start()
+    .then(({ kept }) => {
+      for (const folder of kept)
+        log.warn(`media ${folder} stays in workspace-models: diffusion/models already has that family`)
+    })
+    .catch((e: unknown) => log.warn(`media folders were not moved: ${String(e)}`))
   const hostSteps = new HostStepExecutor({
     hostStepsDir: paths.hostStepsDir,
     journal: new HostStepJournal(paths.hostStepsJournal),

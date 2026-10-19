@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { WorkspaceMetrics } from './metrics.js'
 import { sanitized } from './validation.js'
-import { artifactPlan } from './artifact-plan.js'
+import { artifactPlan, destinationOf } from './artifact-plan.js'
 describe('workspace policies', () => {
   it('redacts credentials without stripping token usage or model metadata', () => {
     expect(
@@ -73,11 +73,30 @@ describe('workspace policies', () => {
     }
     const plan = artifactPlan(row, '/data')
     expect(plan.total_download_bytes).toBe(30)
+    // Where the core lists, loads and deletes diffusion files (`diffusion.modelsDir`), like the desktop app.
+    expect(plan.files.map((f) => f.save_path)).toEqual([
+      'diffusion/models/model/transformer/model.gguf',
+      'diffusion/models/model/clipL/clip.gguf',
+    ])
     expect(plan.load).toMatchObject({
-      files: { clipL: '/data/workspace-models/video/model/clipL/clip.gguf' },
+      files: { clipL: '/data/diffusion/models/model/clipL/clip.gguf' },
       ranges: { frames: [9, 121] },
     })
     expect(artifactPlan(row, '/data').digest).toBe(plan.digest)
     expect(() => artifactPlan({ ...row, id: '../escape' }, '/data')).toThrow('Invalid catalog identifier')
+  })
+})
+
+describe('destinationOf', () => {
+  // One writer per folder: image and video families of the same id share `diffusion/models/<id>`.
+  it('names the folder a plan writes into', () => {
+    const plan = (category: string, model_id: string, save_path: string) =>
+      ({ category, model_id, files: [{ save_path }] }) as never
+    expect(destinationOf(plan('image', 'flux:q4', 'diffusion/models/flux/transformer/a.gguf'))).toBe(
+      destinationOf(plan('video', 'flux:q8', 'diffusion/models/flux/vae/b.gguf'))
+    )
+    expect(destinationOf(plan('embedding', 'flux', 'workspace-models/embedding/flux/m.gguf'))).not.toBe(
+      destinationOf(plan('image', 'flux:q4', 'diffusion/models/flux/transformer/a.gguf'))
+    )
   })
 })

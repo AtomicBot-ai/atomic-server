@@ -60,6 +60,10 @@ export class WorkspaceService {
     this.artifacts = downloads.artifacts
     this.setups = downloads.setups
   }
+  /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
+  start(): Promise<{ kept: string[] }> {
+    return this.artifacts.migrate()
+  }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
   }

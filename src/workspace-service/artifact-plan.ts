@@ -33,11 +33,22 @@ function filePath(value: unknown): string {
     throw new Error('Invalid catalog file path.')
   return path
 }
+/**
+ * The folder a plan writes into (`diffusion/models/<id>`, `workspace-models/<category>/<id>`): one
+ * writer at a time per folder, so image and video families of one id never share a partial.
+ */
+export function destinationOf(plan: Pick<ArtifactPlan, 'category' | 'model_id' | 'files'>): string {
+  const first = plan.files[0]?.save_path
+  return first ? first.split('/').slice(0, 3).join('/') : `${plan.category}:${plan.model_id.split(':')[0]}`
+}
 export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string): ArtifactPlan {
   const r = row.source,
     files: DownloadItem[] = [],
     category = row.category,
-    root = `workspace-models/${category}/${safe(row.id)}`
+    // Image and video files go where the core lists, loads and deletes them (`diffusion.modelsDir`).
+    root = ['image', 'video'].includes(category)
+      ? `diffusion/models/${safe(row.id)}`
+      : `workspace-models/${category}/${safe(row.id)}`
   const add = (
     source: Record<string, unknown>,
     path: string,
