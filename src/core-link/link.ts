@@ -81,7 +81,7 @@ export interface HttpCoreLinkOptions {
   log?: (message: string) => void
 }
 
-/** Managed environments are missing from the embedded core until the branch lands: say so. */
+/** A core build without the `/environments` routes answers "no such route": say so plainly. */
 function unavailable(error: unknown): never {
   if (
     error instanceof AtomicCoreError &&

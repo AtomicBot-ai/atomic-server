@@ -58,7 +58,7 @@ answers the three commands the app's core runtime uses:
 `extensions/shared/atomicCoreRuntime.ts` — `createCoreRuntime(provider, invoke)` builds every request the
 UI makes, parameterised by the `invoke` function and importing nothing. Wire types come from
 `src/contract` (the browser-safe folder of the root package: `AdminStatus`, `AdminConfigView`,
-`SetupState`, `ADMIN_API`, `ADMIN_HEADER`, `SESSION_COOKIE`) and from `@atomic-chat/core/contracts`. The
+`ADMIN_API`, `ADMIN_HEADER`, `SESSION_COOKIE`) and from `@atomic-chat/core/contracts`. The
 control token never reaches the page; the page never knows the core's port.
 
 Login: the SPA reads `#token=…` from the URL once, posts it to `POST /api/session`, drops the fragment

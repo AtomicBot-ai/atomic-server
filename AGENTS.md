@@ -65,10 +65,8 @@ when this table is stale or a module's `index.ts` has no comment):
 | `src/daemon/` | The daemon process: spawning it detached, and running it (core + admin + host agent). |
 | `src/doctor/` | `atc doctor`: the check table and its runner. |
 | `src/downloads/` | Model downloads: resumable, verified, parallel byte ranges written in place, proxies and progress. |
-| `src/engines/` | Engines: backend packs (core-installed) and the managed container runtime state machine. |
 | `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
 | `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
-| `src/models/` | Model sources, spec parsing and the installer seam. |
 | `src/output/` | Everything a command prints: colours, tables, the printer, progress, prompts and the logger. |
 | `src/telemetry/` | Error reports: what the core is told, and the one-time notice. |
 | `src/terminal-data/` | Client documents in the data folder: the cross-process store, API keys and chat history. |
@@ -218,12 +216,13 @@ The core (`@atomic-chat/core`, repo `atomic-chat-core`) is embedded at an exact 
 | `@atomic-chat/core/host`      | Data-folder rules (`resolveCliDataFolder`, `assertCliDataFolder`, `dataLayout`), the lock read side (`inspectLock`, `waitForPublishedOwner`), `attachToOwner`, `selfCommand`, `openInBrowser`. |
 | `@atomic-chat/core/client`    | `CoreClient` (control API, SSE `events`, `request`), `CoreSnapshot`, `CoreEventMessage`.          |
 | `@atomic-chat/core/contracts` | Browser-safe wire types for `src/contract` and the SPA.                                          |
-| `@atomic-chat/core/models`, `/downloads` | `ModelRegistry` and `Downloader` for the workspace's installs (`src/workspace-service/`). |
+| `@atomic-chat/core/models`    | `ModelRegistry`, the Hub helpers (`fetchHfGgufFiles`, `looksLikeHfRepo`, `parseGgufShard`) and the load gate's rule (`gateDecision`). Model files are downloaded by `src/downloads/`. |
 
-Rule: **never copy core logic — request an export.** Lock semantics, attach, downloads, `model.yml` and
-engine selection belong to the core; a missing export is a change in the core branch (plan §9), not a copy
-here. The one deliberate mirror is `src/host/managed-types.ts` (types from the core's `feat/tenzor-rt`
-branch), which becomes re-exports once that branch lands. The core probes the hardware itself and is the
+Rule: **never copy core logic — request an export.** Lock semantics, attach, engine builds (install,
+activation, the default build), hardware facts, `model.yml` and compatibility belong to the core; model
+files are the client's to download (`src/downloads/`); a missing export is a change in the core branch (plan §9), not a copy
+here. `src/host/managed-types.ts` re-exports the managed-runtime contract and keeps only the slice of an
+operation the host-step executor reads. The core probes the hardware itself and is the
 only source of hardware facts; `atc` never sends `PUT /hardware/override`.
 
 ---
