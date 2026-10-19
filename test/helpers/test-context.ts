@@ -1,4 +1,5 @@
 /** Run a command in a test: recording I/O, a temporary data folder, and fakes for the core and host. */
+import { writeDaemonRecord } from '../../src/core-link/index.js'
 import { AtcError } from '../../src/errors/index.js'
 import type { CoreLinkFactory, RunCliDeps } from './deps.js'
 import { fakeCoreLink } from './fake-core-link.js'
@@ -48,10 +49,13 @@ export function fakeHost(over: Partial<HostServices> = {}): HostServices {
   }
 }
 
-/** A factory that answers a fake link, or `ATC_DAEMON_NOT_RUNNING` until `launch` is asked for. */
+/**
+ * A factory that answers a fake link, or `ATC_DAEMON_NOT_RUNNING` until `launch` is asked for. A
+ * launch writes the `ready` record a real server writes before its client attaches.
+ */
 export function fakeCoreFactory(
   link: FakeCoreLink,
-  options: { running: boolean } = { running: true }
+  options: { running: boolean; daemonRecord?: string } = { running: true }
 ): CoreLinkFactory & { launched: boolean } {
   const factory = {
     launched: false,
@@ -60,6 +64,18 @@ export function fakeCoreFactory(
       if (!o.launch)
         throw new AtcError('ATC_DAEMON_NOT_RUNNING', 'No atc daemon is running for this data folder.')
       factory.launched = true
+      if (options.daemonRecord)
+        await writeDaemonRecord(options.daemonRecord, {
+          schema_version: 1,
+          pid: link.endpoint.pid,
+          instance_id: link.endpoint.instanceId,
+          state: 'ready',
+          atc_version: 'test',
+          core_version: link.endpoint.version,
+          control_url: link.endpoint.baseUrl,
+          admin_url: null,
+          started_at: Date.now(),
+        })
       return link
     },
   }
@@ -74,7 +90,7 @@ export function testRun(
   const link = fakeCoreLink({ data_folder: paths.dataFolder })
   const deps: RunCliDeps = {
     paths,
-    core: fakeCoreFactory(link, { running: options.running ?? true }),
+    core: fakeCoreFactory(link, { running: options.running ?? true, daemonRecord: paths.daemonRecord }),
     host: fakeHost(),
     ...options.deps,
   }

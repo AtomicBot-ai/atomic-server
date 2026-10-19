@@ -39,7 +39,7 @@ export type TuiCommand =
   | { name: 'doctor' }
 
 export interface TuiDeps {
-  paths: Pick<AtcPaths, 'daemonRecord' | 'daemonLog' | 'configFile' | 'layout'>
+  paths: Pick<AtcPaths, 'daemonRecord' | 'daemonLog' | 'daemonOutLog' | 'configFile' | 'layout'>
   /** The command context's attach, with the TUI's own logger so nothing writes under the frame. */
   attach: (options: { launch: boolean; daemonArgs?: readonly string[]; log: Logger }) => Promise<CoreLink>
   /** A fresh read of the config file and environment (not the command's cached one). */
