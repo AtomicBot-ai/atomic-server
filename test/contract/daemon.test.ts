@@ -35,7 +35,6 @@ beforeAll(async () => {
     controlPort: 0,
     admin: { enabled: true, host: '127.0.0.1', port: 0 },
     telemetry: false,
-    probeHardware: false,
     createCore: (options) => {
       coreOptions = options
       return AtomicCore.create(options)

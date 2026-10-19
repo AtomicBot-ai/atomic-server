@@ -154,12 +154,9 @@ the foreground process, and changes nothing above:
    backends, disk or environments methods, so the daemon calls its own core over loopback for those.
 3. `HostStepExecutor` is wired: every core event is republished to the relay; `environment:operation`
    events go to the executor; a 2-second timer polls for results of manual steps.
-4. Hardware push: `probeHardware` (`nvidia-smi`, `/proc/cpuinfo` / `sysctl` / `Win32_VideoController`)
-   → `PUT /hardware/override { gpus, cpu_extensions, os_type, source: 'atc-prober' }`. The core never
-   probes GPUs itself and does not persist the override, so this runs on every start (and on
-   `atc hardware refresh`, iteration 4). A failed probe is a warning: the core will pick a CPU engine.
-   This is transitional: the hardware facts and the choice of engine build belong to the core, and a core
-   branch moves the probe there; `atc` then stops pushing and only shows what the core found.
+4. No hardware step: the core probes the machine itself (GPUs of every vendor, CPU flags) and is the
+   only source of hardware facts. `atc` never sends `PUT /hardware/override`; `atc hardware` and
+   `atc doctor` show what the core found (`docs/decisions/2026-10-19-take-hardware-facts-from-the-core.md`).
 5. Admin, unless `--no-admin` or `admin.autoStart=false`: `ensureAdminToken`, then `AdminServer.start` on
    `admin.host:admin.port`. A non-loopback host is refused (`ATC_ADMIN_BIND_FAILED`, iteration 5).
 6. `writeDaemonRecord(atc/run/daemon.json)` — from now on commands accept this owner as an `atc` daemon.

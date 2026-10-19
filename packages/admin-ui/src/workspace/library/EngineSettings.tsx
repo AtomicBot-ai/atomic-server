@@ -5,7 +5,7 @@ import { Action, Field } from '../Controls'
 import { describeError } from '@/services/admin-api'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
-import { SETTING_GROUPS, commonSetting, settingGroup } from './engine-setting-groups'
+import { SETTING_GROUPS, commonSetting, editableSetting, settingGroup } from './engine-setting-groups'
 import { EngineSettingField } from './EngineSettingField'
 import { downloadJson } from '../chat/chat-preferences'
 
@@ -55,14 +55,16 @@ export function EngineSettings({
       active = false
     }
   }, [provider, execute])
-  const fields: RecordValue[] = schema.length
-    ? schema
-    : Object.entries(saved).map(([key, value]) => ({
-        key,
-        title: key.replaceAll('_', ' '),
-        controllerType: typeof value === 'boolean' ? 'checkbox' : 'input',
-        controllerProps: { value, type: typeof value === 'number' ? 'number' : 'text' },
-      }))
+  const fields: RecordValue[] = (
+    schema.length
+      ? schema
+      : Object.entries(saved).map(([key, value]) => ({
+          key,
+          title: key.replaceAll('_', ' '),
+          controllerType: typeof value === 'boolean' ? 'checkbox' : 'input',
+          controllerProps: { value, type: typeof value === 'number' ? 'number' : 'text' },
+        }))
+  ).filter(editableSetting)
   const common = fields.some(commonSetting)
   const visible = fields.filter((field) => {
     const name = text(field.key),

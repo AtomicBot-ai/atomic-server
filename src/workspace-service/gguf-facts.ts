@@ -13,6 +13,7 @@ import type { CoreLink } from '../core-link/index.js'
 import type { ModelSetupPlan, ModelSetupPlanRequest } from '../contract/index.js'
 import { AtcError } from '../errors/index.js'
 import { matchFamily, planGgufSetup } from './gguf-plan.js'
+import type { GgufPlanInput } from './gguf-plan.js'
 
 export interface GgufFactsDeps {
   link: CoreLink
@@ -54,14 +55,32 @@ export async function planFor(deps: GgufFactsDeps, request: ModelSetupPlanReques
     }),
     link.disk.available().catch(() => null),
   ])
-  const family = matchFamily(families.families, request.repo, request.file)
-  let hubFile: { size: number; sha256?: string } | undefined
+  const family = matchFamily(families.families, verdict, request.file)
+  let hubFile: GgufPlanInput['hubFile']
   if (!family) {
     const token = hfToken(deps.env)
-    const files = await fetchHfGgufFiles(request.repo, { fetch: deps.fetch, ...(token ? { token } : {}) })
+    // The listing the core reads also names the repository's commit; the plan pins it, so the URL
+    // names exactly the bytes described here and a file uploaded again later is a different URL.
+    let commit: string | undefined
+    const files = await fetchHfGgufFiles(request.repo, {
+      fetch: async (input, init) => {
+        const response = await deps.fetch(input, init)
+        const body = (await response
+          .clone()
+          .json()
+          .catch(() => undefined)) as { sha?: unknown } | undefined
+        if (typeof body?.sha === 'string' && /^[0-9a-f]{40}$/.test(body.sha)) commit = body.sha
+        return response
+      },
+      ...(token ? { token } : {}),
+    })
     const found = files.find((f) => f.filename === request.file)
     if (!found) throw new AtcError('ATC_USAGE', `"${request.file}" is not a GGUF file of ${request.repo}.`)
-    hubFile = { size: found.size, ...(found.sha256 ? { sha256: found.sha256 } : {}) }
+    hubFile = {
+      size: found.size,
+      ...(found.sha256 ? { sha256: found.sha256 } : {}),
+      ...(commit ? { revision: commit } : {}),
+    }
   }
   const prism =
     verdict.provider === 'atomic-prism'

@@ -12,6 +12,7 @@ it('uses desktop staff-pick order and only offers installable formats', () => {
         { model_name: 'owner/first', order: 1, title: 'First' },
         { model_name: 'owner/mlx', format: 'mlx' },
         { model_name: 'owner/disabled', active: false },
+        { model_name: 'owner/..' },
       ],
     }).map((r) => r.id)
   ).toEqual(['owner/first', 'owner/second'])
@@ -76,6 +77,8 @@ it('reads actual GGUF variants and puts the balanced quant before larger files',
         { rfilename: 'model.Q8_0.gguf', size: 8000 },
         { rfilename: 'mmproj.gguf', size: 10 },
         { rfilename: 'model.Q4_K_M.gguf', size: 4000 },
+        { rfilename: 'big/model-00001-of-00002.gguf', size: 9000 },
+        { rfilename: 'big/model-00002-of-00002.gguf', size: 9000 },
       ],
     })) as typeof fetch
   expect((await modelFiles('owner/model', request)).map((f) => f.filename)).toEqual([

@@ -1,6 +1,6 @@
 /**
  * Host services: running programs, facts about the machine and session, elevation and the
- * host-step protocol, hardware probing, OS services, ports. `nodeHostServices` is the real one;
+ * host-step protocol, OS services, ports. `nodeHostServices` is the real one;
  * tests build the same shape from fakes.
  */
 import { access, mkdir, rm, writeFile } from 'node:fs/promises'
@@ -28,7 +28,6 @@ export * from './managed-types.js'
 export * from './elevator.js'
 export * from './helper.js'
 export * from './host-step.js'
-export * from './hardware-prober.js'
 export * from './service-manager.js'
 export * from './service-plans.js'
 

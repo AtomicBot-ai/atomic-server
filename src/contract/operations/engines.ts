@@ -69,7 +69,7 @@ export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
     'settings.update',
     'Save engine settings',
     'configure',
-    'Change provider settings; expected_revision refuses the change if another one landed first.',
+    'Change provider settings; expected_revision refuses the change if another one landed first. The engine build (version_backend) is not a setting here: choose it with engines.activate.',
     {
       properties: {
         provider: { type: 'string' },

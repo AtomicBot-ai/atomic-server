@@ -92,8 +92,66 @@ it.each(['llamacpp-upstream', 'llamacpp'])(
       expect.objectContaining({ path: `/models/${provider}/owner/model/load` })
     )
     expect(link.calls.some((c) => /model-setups|setup-plan/.test(c.path))).toBe(false)
+    // The chosen build is made active by the core, never by a settings write.
+    expect(link.calls).toContainEqual(
+      expect.objectContaining({ method: 'POST', path: `/engines/${provider}/builds/b1/cpu/activate` })
+    )
+    expect(link.calls.some((c) => c.method === 'PATCH')).toBe(false)
   }
 )
+
+// A file re-uploaded to the Hub gets a new plan (size, hash): the fresh plan is installed, never the
+// stale one again, which would fail the same way on every retry.
+it('installs the fresh plan when the file changed since the earlier attempt', async () => {
+  const dir = await folder(),
+    link = fakeCoreLink(),
+    w = workspace()
+  link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', backend: 'cpu' }] }
+  const service = new TerminalSetup(dir, async () => link, w.ws)
+  const first = await service.plan({ repo: 'owner/repo', file: 'model.gguf' })
+  await service.begin('server', 'llamacpp-upstream|b1|cpu', [first])
+  w.jobs[0]!.stage = 'failed'
+  const fresh = {
+    ...first,
+    requestId: 'after-reupload',
+    plan: {
+      ...first.plan,
+      digest: 'changed-on-hub',
+      model: { ...first.plan.model, size: 2000, sha256: 'f'.repeat(64) },
+    },
+  }
+  await service.begin('server', 'llamacpp-upstream|b1|cpu', [fresh])
+  expect(w.calls).toContainEqual({
+    name: 'models.install',
+    input: { request: fresh.request, plan_digest: 'changed-on-hub', request_id: 'after-reupload' },
+  })
+  expect(w.calls.some((c) => c.name === 'setup.resume')).toBe(false)
+})
+
+// What changed is the engine (installed by the first attempt), not the file: continue that setup.
+it('continues the earlier setup when only its engine got installed since', async () => {
+  const dir = await folder(),
+    link = fakeCoreLink(),
+    w = workspace()
+  link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', backend: 'cpu' }] }
+  const service = new TerminalSetup(dir, async () => link, w.ws)
+  const first = await service.plan({ repo: 'owner/repo', file: 'model.gguf' })
+  await service.begin('server', 'llamacpp-upstream|b1|cpu', [first])
+  w.jobs[0]!.stage = 'failed'
+  // A later commit to the repository (a README edit) moves the pinned revision, not the file's bytes.
+  const replanned = {
+    ...first,
+    requestId: 'replanned',
+    plan: {
+      ...first.plan,
+      digest: 'engine-now-installed',
+      model: { ...first.plan.model, revision: 'next-commit' },
+    },
+  }
+  await service.begin('server', 'llamacpp-upstream|b1|cpu', [replanned])
+  expect(w.calls.filter((c) => c.name === 'models.install')).toHaveLength(1)
+  expect(w.calls).toContainEqual({ name: 'setup.resume', input: { setup_id: 'setup-1' } })
+})
 
 it('leaves the PrismML build to the setup record, and pause cancels the setups and that build download', async () => {
   const dir = await folder(),

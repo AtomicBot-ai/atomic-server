@@ -169,7 +169,7 @@ Admin pages, lifted from the desktop web-app where possible (`docs/admin-ui.md`)
 
 ### Iteration 7 — the admin's engine install wizard, logs, settings, hardware
 
-- The managed-runtime wizard in the browser (`SetupState` stepper on live operations: requirements and
+- The managed-runtime wizard in the browser (a stepper over the core's live operations: requirements and
   system changes, authorization, sign-out or restart, image download, verification), a model picker with
   the core's compatibility verdict (curated tiers, a pasted repository), the server log with live tail,
   settings (proxy, telemetry, tokens), the hardware page with live GPU usage.
@@ -248,8 +248,8 @@ S stop  R restart  a admin link  r refresh  ←→ screens  ? help  q quit
 - **Downloads (iteration 3):** every transfer with progress, pause and cancel (`x`), errors with the same
   hints the CLI prints.
 - **Engines (iteration 4):** installed engines and builds, the running one, install and remove; an engine
-  that needs system changes shows the install as a stepper (the `SetupState` machine from
-  `src/engines/managed-environment.ts`); when a step needs elevation it shows the exact command to run in
+  that needs system changes shows the install as a stepper over the core's environment operation phases;
+  when a step needs elevation it shows the exact command to run in
   another shell and waits, exactly like the CLI's `manual` strategy.
 
 ### How it is built

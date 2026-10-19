@@ -3,6 +3,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { defaultConfig } from '../config/index.js'
+import { writeDaemonRecord } from '../core-link/index.js'
+import type { DaemonRecord } from '../core-link/index.js'
 import { createWorkspaceClient } from './client.js'
 const cleanup: Array<() => void> = []
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()))
@@ -48,4 +50,30 @@ it.each([
   const client = await createWorkspaceClient({ link, paths: tmp.paths, config: defaultConfig() })
   await expect(client.execute(operation, input)).rejects.toThrow('Enable the web admin')
   expect(link.calls).toEqual([])
+})
+// A client created while the server is still starting (its record says `starting`, no admin yet)
+// waits for it; falling back to a service in this process would stay that way for the server's life.
+it('waits for a starting server and then sends operations to its admin', async () => {
+  const tmp = tmpDataFolder()
+  cleanup.push(tmp.cleanup)
+  await mkdir(tmp.paths.runDir, { recursive: true })
+  const record = { schema_version: 1, instance_id: 'fake-instance', pid: 4242 }
+  await writeFile(tmp.paths.daemonRecord, JSON.stringify({ ...record, state: 'starting', admin_url: null }))
+  await writeFile(tmp.paths.adminToken, 'admin-private-token')
+  setTimeout(() => {
+    void writeDaemonRecord(tmp.paths.daemonRecord, {
+      ...record,
+      state: 'ready',
+      admin_url: 'http://127.0.0.1:15555',
+    } as DaemonRecord)
+  }, 200)
+  const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ id: 'job' })))
+  const client = await createWorkspaceClient({
+    link: fakeCoreLink(),
+    paths: tmp.paths,
+    config: defaultConfig(),
+    fetch: request,
+  })
+  await client.execute('models.install', { request: {}, plan_digest: 'one', request_id: 'job' })
+  expect(request.mock.calls[0]?.[0]).toBe('http://127.0.0.1:15555/api/workspace/execute')
 })

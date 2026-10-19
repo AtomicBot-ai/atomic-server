@@ -23,10 +23,9 @@ async function fixture() {
   link.request = async <T>(method: string, path: string, body?: unknown) => {
     link.calls.push({ method, path, body })
     if (path === '/backends/llamacpp-upstream') return { backends: [] } as T
-    if (path.endsWith('/catalog'))
+    if (path === '/engines/versions')
       return {
-        recommended: '1/cpu',
-        available: [{ version: '1', backend: 'cpu' }],
+        engines: [{ engine: 'llamacpp-upstream', active: null, latest: { version: '1', variant: 'cpu' } }],
       } as T
     if (path.endsWith('/update')) {
       installs++

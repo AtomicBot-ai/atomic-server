@@ -39,17 +39,6 @@ export interface SessionRequest {
   token: string
 }
 
-/** The managed-environment wizard's states, as the SPA renders them. */
-export type SetupState =
-  | 'not-installed'
-  | 'consent'
-  | 'elevating'
-  | 'installing'
-  | 'relogin-required'
-  | 'reboot-required'
-  | 'ready'
-  | 'failed'
-
 export interface AdminErrorBody {
   error: { code: string; message: string; details?: string; hint?: string }
 }

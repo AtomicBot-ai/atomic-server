@@ -1,11 +1,11 @@
 import { defineCommand } from '../cli/index.js'
-import { CHECKS, runChecks, worstStatus } from '../doctor/index.js'
+import { CHECKS, coreHardware, runChecks, worstStatus } from '../doctor/index.js'
 import { detectInstall } from '../update/index.js'
 import { ATC_TARGET } from '../version.js'
 
 export const doctorCommand = defineCommand({
   name: 'doctor',
-  summary: 'Check the installation: folders, config, ports, PATH, GPU driver',
+  summary: 'Check the installation: folders, config, ports, PATH, GPU',
   group: 'system',
   run: async (_inv, ctx) => {
     const config = await ctx.config()
@@ -21,6 +21,7 @@ export const doctorCommand = defineCommand({
         ctx.host.selfCommand[0] ?? process.execPath,
         ATC_TARGET
       ),
+      hardware: coreHardware((o) => ctx.core.attach(o)),
     })
     const worst = worstStatus(results)
     ctx.out.result({ status: worst, checks: results }, () => {

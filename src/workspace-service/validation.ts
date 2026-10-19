@@ -22,6 +22,23 @@ export function segment(value: unknown): string {
     throw new AtcError('ATC_USAGE', 'Invalid identifier.')
   return encodeURIComponent(text)
 }
+/**
+ * A model id as the rest of a core path: the core takes `*rest` segments as sent (it decodes only
+ * `:param` ones), so they go unencoded, as its own client sends them. A part that would change the
+ * path or end it (`..`, `?`, `#`, control characters) is refused.
+ */
+export function modelIdPath(value: unknown): string {
+  const parts = String(value ?? '').split('/')
+  if (parts.some((p) => !p || p === '.' || p === '..' || /[?#]/.test(p) || [...p].some((c) => c < ' ')))
+    throw new AtcError('ATC_USAGE', 'Invalid model identifier.')
+  return parts.join('/')
+}
+/** `imported/<file name>-<8 hex>`: a path segment the core reads as sent, so no character needs encoding. */
+export function importedModelId(path: string, uuid: string): string {
+  const name = (path.split(/[\\/]/).pop() ?? '').replace(/\.gguf$/i, '')
+  const slug = name.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'model'
+  return `imported/${slug}-${uuid.slice(0, 8)}`
+}
 /** Recursive redaction protects session keys and engine environments in read-only views. */
 export function sanitized(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sanitized)

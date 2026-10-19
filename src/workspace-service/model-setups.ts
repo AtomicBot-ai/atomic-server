@@ -128,9 +128,7 @@ export class ModelSetups {
       const blocker = reviewed.plan.blockers[0]
       if (blocker) throw new AtcError('ATC_USAGE', blocker.message)
       // One writer per model: its files have one path, whichever request asked for them.
-      const active = (await this.list()).find(
-        (r) => r.plan.model_id === reviewed.plan.model_id && this.runs.has(r.setup_id)
-      )
+      const active = await this.activeFor(reviewed.plan.model_id)
       if (active) return active
       const setupId = (this.deps.newId ?? randomUUID)()
       const now = Date.now()
@@ -150,6 +148,10 @@ export class ModelSetups {
     })
   }
 
+  private async activeFor(modelId: string): Promise<ModelSetup | undefined> {
+    return (await this.list()).find((r) => r.plan.model_id === modelId && this.runs.has(r.setup_id))
+  }
+
   /** Run a stopped setup again from the files already on disk. */
   async resume(id: string): Promise<ModelSetup> {
     // A cancelled run still releasing its files must end before a new one opens them.
@@ -158,6 +160,12 @@ export class ModelSetups {
     return this.writes.run(id, async () => {
       const record = await this.get(id)
       if (this.runs.has(id) || !RESUMABLE.includes(record.stage)) return record
+      // One writer per model, as in install: its files have one path, whichever setup asked for them.
+      const active = await this.activeFor(record.plan.model_id)
+      if (active)
+        throw new AtcError('ATC_USAGE', `Setup ${active.setup_id} is installing this model now.`, {
+          hint: 'Wait for it, or cancel it before resuming this one.',
+        })
       const next = await this.commit(id, { stage: 'queued' }, true)
       this.launch(id)
       return next
@@ -199,14 +207,19 @@ export class ModelSetups {
 
   private async run(id: string, signal: AbortSignal): Promise<void> {
     let stage: ModelSetupStage = 'queued'
-    const enter = async (next: ModelSetupStage) => {
+    const enter = async (next: ModelSetupStage, patch: Partial<ModelSetup> = {}) => {
       if (signal.aborted) throw new SetupCancelled()
       stage = next
-      await this.writes.run(id, () => this.commit(id, { stage: next }))
+      await this.writes.run(id, () => this.commit(id, { ...patch, stage: next }))
     }
     try {
-      await runSetup(this.deps, await this.get(id), signal, enter, (engine, taskId) =>
-        this.install1(engine, taskId)
+      await runSetup(
+        this.deps,
+        await this.get(id),
+        signal,
+        enter,
+        (engine, taskId) => this.install1(engine, taskId),
+        (patch) => this.writes.run(id, () => this.commit(id, patch)).then(() => undefined)
       )
       // Registered and accepted: a cancel arriving now changes nothing on disk, so it is ignored.
       stage = 'ready'

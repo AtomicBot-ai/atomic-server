@@ -8,8 +8,9 @@ import { AtcError } from '../errors/index.js'
 import { ensureArtifactEngine } from './engine-install.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import type { WorkspaceCatalog, CatalogCategory } from './catalog.js'
-import { artifactPlan } from './artifact-plan.js'
+import { artifactPlan, destinationOf } from './artifact-plan.js'
 import type { ArtifactJob, ArtifactPlan } from './artifact-plan.js'
+import { migrateMediaFolders } from './media-migration.js'
 import { mlxPlan } from './mlx-plan.js'
 import { SerialWork } from './serial.js'
 import { downloadProxy } from './download-proxy.js'
@@ -38,6 +39,10 @@ export class ArtifactService {
         fetch: request,
         availableSpace: async (path) => (await options.link.disk.available(path)) ?? undefined,
       })
+  }
+  /** Move what an earlier atc downloaded to where the core looks for it; before any job runs. */
+  migrate(): Promise<{ kept: string[] }> {
+    return migrateMediaFolders(this.options.paths.dataFolder, this.directory)
   }
   private path(id: string) {
     if (!/^[\w-]{1,120}$/.test(id))
@@ -128,9 +133,8 @@ export class ArtifactService {
       finished()
       throw error
     }
-    const family = `${job.plan.category}:${job.plan.model_id.split(':')[0]}`
     void this.destinations
-      .run(family, () => this.run(job, worker))
+      .run(destinationOf(job.plan), () => this.run(job, worker))
       .catch(() => {
         /* Failed persistence remains recoverable as an interrupted job. */
       })

@@ -33,3 +33,64 @@ describe('install check', () => {
     expect(await check.run({ install } as never)).toEqual({ status: 'ok', message })
   })
 })
+
+describe('gpu check', () => {
+  const gpu = (name: string, vendor: string, driver: string) => ({
+    name,
+    vendor,
+    driver_version: driver,
+    total_memory: 8192,
+    uuid: '',
+    nvidia_info: null,
+    vulkan_info: null,
+  })
+  const info = (gpus: ReturnType<typeof gpu>[], warnings: string[] = []) => ({
+    info: { gpus } as never,
+    source: 'probe' as const,
+    probed_at: 0,
+    warnings,
+  })
+  // The core is the only source of hardware facts; the check never measures the machine itself.
+  const host = new Proxy({}, { get: () => () => expect.fail('the gpu check must not probe the host') })
+  const run = (hardware: () => Promise<ReturnType<typeof info> | undefined>) =>
+    CHECKS.find((c) => c.id === 'gpu')!.run({ host, hardware } as never)
+
+  it.each([
+    [
+      'what the core detected, any vendor',
+      info([gpu('Radeon RX 7900', 'AMD', ''), gpu('RTX 4090', 'NVIDIA', '581.42')]),
+      { status: 'ok', message: 'Radeon RX 7900 (AMD); RTX 4090 (NVIDIA, driver 581.42)' },
+    ],
+    ['no GPU', info([]), { status: 'ok', message: 'the core lists no GPU' }],
+    [
+      'what the probe could not read',
+      info([], ['vulkaninfo not found']),
+      {
+        status: 'warn',
+        message: 'the core lists no GPU',
+        hint: 'vulkaninfo not found',
+      },
+    ],
+  ] as const)('reports %s', async (_name, answer, expected) => {
+    expect(await run(async () => answer)).toEqual(expected)
+  })
+
+  // A server of another build (after `atc update`) or a foreign owner: doctor still finishes.
+  it('warns when the server cannot answer', async () => {
+    expect(
+      await run(async () => {
+        throw new Error('The running server is from another build.')
+      })
+    ).toEqual({
+      status: 'warn',
+      message: 'could not ask the server: The running server is from another build.',
+    })
+  })
+
+  it('skips without a running server', async () => {
+    expect(await run(async () => undefined)).toEqual({
+      status: 'skip',
+      message: 'the server is not running; start it to see what the core detected',
+    })
+  })
+})

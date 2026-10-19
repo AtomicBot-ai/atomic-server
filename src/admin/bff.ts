@@ -36,7 +36,6 @@ export const READ_ALLOW = [
   '/environments',
   '/settings',
   '/telemetry',
-  '/disk',
 ]
 /**
  * Control routes a page may change, exactly: `:name` is one path segment, `*name` one or more (model
@@ -58,7 +57,6 @@ export const WRITE_ROUTES: ReadonlyArray<readonly [string, string]> = [
   ['POST', '/backends/:provider/updates'],
   ['PUT', '/backends/:provider/optimal'],
   ['DELETE', '/backends/:provider/:version/:backend'],
-  ['PUT', '/hardware/override'],
   ['DELETE', '/hardware/override'],
   ['PATCH', '/settings/:provider'],
   ['POST', '/environments/probe'],

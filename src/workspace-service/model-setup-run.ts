@@ -3,11 +3,11 @@
  * model and its projector with atc's downloader, `model.yml` in the shared GGUF tree, then the core's
  * verdict on the file on disk by `model_id`. A file the core does not accept is removed again.
  */
-import { stat } from 'node:fs/promises'
+import { rm, stat } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
-import type { ModelCompatibilityResponse } from '@atomic-chat/core/contracts'
+import type { LocalProviderId, ModelCompatibilityResponse } from '@atomic-chat/core/contracts'
 import { modelDirFromId } from '@atomic-chat/core/host'
-import { hfResolveUrl, hfToken, ModelRegistry } from '@atomic-chat/core/models'
+import { gateDecision, hfResolveUrl, hfToken, ModelRegistry } from '@atomic-chat/core/models'
 import type { AtcPaths } from '../config/index.js'
 import type { CoreLink } from '../core-link/index.js'
 import type {
@@ -47,8 +47,12 @@ export function setupTaskIds(setupId: string, plan: ModelSetupPlan): ModelSetup[
 }
 
 /** Data-folder-relative, `/`-separated: as the downloader takes them and `model.yml` stores them. */
+function modelDir(paths: AtcPaths, plan: ModelSetupPlan) {
+  return modelDirFromId(paths.layout.provider('llamacpp-upstream').modelsDir, plan.model_id)
+}
+
 function pathsOf(paths: AtcPaths, plan: ModelSetupPlan) {
-  const dir = modelDirFromId(paths.layout.provider('llamacpp-upstream').modelsDir, plan.model_id)
+  const dir = modelDir(paths, plan)
   const rel = (file: string) =>
     relative(paths.layout.root, join(dir, file.split('/').pop() ?? file))
       .split(sep)
@@ -69,8 +73,10 @@ export async function runSetup(
   deps: SetupRunDeps,
   record: ModelSetup,
   signal: AbortSignal,
-  enter: (stage: ModelSetupStage) => Promise<void>,
-  install: (engine: ModelSetupEngine, taskId: string) => Promise<void>
+  enter: (stage: ModelSetupStage, patch?: Pick<ModelSetup, 'registered_here'>) => Promise<void>,
+  install: (engine: ModelSetupEngine, taskId: string) => Promise<void>,
+  /** Save a field of the record without moving its stage (a cancel does not stop it). */
+  note: (patch: Pick<ModelSetup, 'registered_here'>) => Promise<void> = async () => {}
 ): Promise<void> {
   const { link, paths } = deps
   const { plan, task_ids } = record
@@ -93,17 +99,42 @@ export async function runSetup(
     await enter('downloading_projector')
     await download(deps, task_ids.projector, plan.projector, files.projector, signal)
   }
-  await enter('registering')
+  // The core checks a file on disk only by `model_id`, so it is registered first. What this setup
+  // registered it takes back; a model that was there before stays as it was. The mark is saved before
+  // the write, so a restart between the write and the verdict still knows whose registration it is.
   const registry = new ModelRegistry(paths.layout)
+  const yml = join(modelDir(paths, plan), 'model.yml')
+  const registeredBefore =
+    !record.registered_here &&
+    (await stat(yml).then(
+      () => true,
+      () => false
+    ))
+  await enter('registering', registeredBefore ? {} : { registered_here: true })
   await registry.write(plan.model_id, await modelYml(paths, plan, files))
-  await enter('verifying')
-  const verdict = await link.request<ModelCompatibilityResponse>('POST', '/models/compatibility', {
-    model_id: plan.model_id,
-    provider: plan.provider,
-  })
-  if (verdict.outcome !== 'compatible' || (verdict.provider !== null && verdict.provider !== plan.provider)) {
-    await registry.remove(plan.model_id)
-    throw Object.assign(new Error(verdict.reason), { code: 'MODEL_ENGINE_INCOMPATIBLE' })
+  let verdict: ModelCompatibilityResponse
+  try {
+    await enter('verifying')
+    verdict = await link.request<ModelCompatibilityResponse>('POST', '/models/compatibility', {
+      model_id: plan.model_id,
+      provider: plan.provider,
+    })
+  } catch (error) {
+    // No verdict: unregister, keep the bytes, so a resume checks again without fetching them.
+    if (!registeredBefore) {
+      await rm(yml, { force: true })
+      await note({ registered_here: false })
+    }
+    throw error
+  }
+  // The core's own load gate: it refuses only on evidence (legacy, unsupported, another provider).
+  const refusal = gateDecision(verdict, plan.provider as LocalProviderId)
+  if (refusal) {
+    if (!registeredBefore) {
+      await registry.remove(plan.model_id)
+      await note({ registered_here: false })
+    }
+    throw Object.assign(new Error(verdict.reason), { code: refusal.code })
   }
 }
 
@@ -118,6 +149,8 @@ async function download(
   // A file this setup already finished (it failed later) is not fetched again.
   const done = await stat(join(deps.paths.dataFolder, savePath)).catch(() => undefined)
   if (done && artifact.size > 0 && done.size === artifact.size) return
+  // A cancel that came during the check above found no transfer to stop: the abort event is gone.
+  if (signal.aborted) throw new SetupCancelled()
   const token = hfToken(deps.env)
   const item: DownloadItem = {
     url: hfResolveUrl(artifact.repo, artifact.file, artifact.revision),
@@ -126,6 +159,7 @@ async function download(
     ...(artifact.size > 0 ? { size: artifact.size } : {}),
     ...(deps.proxy ? { proxy: deps.proxy } : {}),
   }
+  // From here to the downloader registering the task nothing awaits, so a later cancel always finds it.
   const abort = () => deps.downloader.cancel(taskId)
   signal.addEventListener('abort', abort, { once: true })
   try {

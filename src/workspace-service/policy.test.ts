@@ -2,9 +2,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { WorkspaceMetrics } from './metrics.js'
 import { sanitized } from './validation.js'
-import { artifactPlan } from './artifact-plan.js'
-import { installEngine } from './engine-install.js'
-import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
+import { artifactPlan, destinationOf } from './artifact-plan.js'
 describe('workspace policies', () => {
   it('redacts credentials without stripping token usage or model metadata', () => {
     expect(
@@ -38,6 +36,18 @@ describe('workspace policies', () => {
     expect(result.metrics.active).toBeNull()
     expect(metrics.snapshot(now + 300001).metrics.requests).toBe(0)
   })
+  it('refuses a catalog repository the Hub would not name', () => {
+    const row = (repo: string) => ({
+      id: 'model',
+      name: 'Model',
+      description: '',
+      category: 'image' as const,
+      source: {
+        transformer: { repo, quants: [{ id: 'q4', filename: 'model.gguf', bytes: 10, recommended: true }] },
+      },
+    })
+    expect(() => artifactPlan(row('owner/..') as never, '/data')).toThrow('Invalid catalog repository')
+  })
   it('resolves catalog media dependencies, wire aliases and digest deterministically', () => {
     const row = {
       id: 'model',
@@ -64,30 +74,31 @@ describe('workspace policies', () => {
     }
     const plan = artifactPlan(row, '/data')
     expect(plan.total_download_bytes).toBe(30)
+    // Where the core lists, loads and deletes diffusion files (`diffusion.modelsDir`), like the desktop app.
+    expect(plan.files.map((f) => f.save_path)).toEqual([
+      'diffusion/models/model/transformer/model.gguf',
+      'diffusion/models/model/clipL/clip.gguf',
+    ])
     expect(plan.load).toMatchObject({
       // The load paths are this machine's (backslashes on Windows), built from the data folder.
-      files: { clipL: join('/data', 'workspace-models', 'video', 'model', 'clipL', 'clip.gguf') },
+      files: { clipL: join('/data', 'diffusion', 'models', 'model', 'clipL', 'clip.gguf') },
       ranges: { frames: [9, 121] },
     })
     expect(artifactPlan(row, '/data').digest).toBe(plan.digest)
     expect(() => artifactPlan({ ...row, id: '../escape' }, '/data')).toThrow('Invalid catalog identifier')
   })
-  it('selects a recommended target when installing a fresh llama engine', async () => {
-    const link = fakeCoreLink()
-    const original = link.request
-    link.request = async <T>(
-      method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-      path: string,
-      body?: unknown
-    ) => {
-      if (path.endsWith('/catalog'))
-        return { recommended: 'b100/metal', available: [{ version: 'b100', backend: 'metal' }] } as T
-      return original<T>(method, path, body)
-    }
-    await installEngine(link, 'llamacpp-upstream')
-    expect(link.calls[0]).toMatchObject({
-      path: '/engines/llamacpp-upstream/update',
-      body: { target: { version: 'b100', variant: 'metal' } },
-    })
+})
+
+describe('destinationOf', () => {
+  // One writer per folder: image and video families of the same id share `diffusion/models/<id>`.
+  it('names the folder a plan writes into', () => {
+    const plan = (category: string, model_id: string, save_path: string) =>
+      ({ category, model_id, files: [{ save_path }] }) as never
+    expect(destinationOf(plan('image', 'flux:q4', 'diffusion/models/flux/transformer/a.gguf'))).toBe(
+      destinationOf(plan('video', 'flux:q8', 'diffusion/models/flux/vae/b.gguf'))
+    )
+    expect(destinationOf(plan('embedding', 'flux', 'workspace-models/embedding/flux/m.gguf'))).not.toBe(
+      destinationOf(plan('image', 'flux:q4', 'diffusion/models/flux/transformer/a.gguf'))
+    )
   })
 })

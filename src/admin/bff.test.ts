@@ -12,8 +12,12 @@ describe('proxyAllowed', () => {
     ['POST', '/server/start', true],
     ['POST', '/shutdown', false],
     ['PUT', '/telemetry', false],
-    ['PUT', '/hardware/override', true],
+    // The core probes the machine; a page cannot replace its facts, only clear an override.
+    ['PUT', '/hardware/override', false],
+    ['DELETE', '/hardware/override', true],
     ['DELETE', '/clients/1', false],
+    // The core has no GET under /disk; free space is POST /disk/available, allowed exactly.
+    ['GET', '/disk/anything', false],
     ['POST', '/environments/default/operations', true],
     // Exact routes: a longer or shorter path under an allowed one is not allowed.
     ['POST', '/server/startX', false],

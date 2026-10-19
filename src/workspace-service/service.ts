@@ -11,7 +11,7 @@ import { ChatHistory, ClientKeys } from '../terminal-data/index.js'
 import { installedModels, modelFiles, searchHub } from '../terminal-setup/index.js'
 import { WORKSPACE_OPERATIONS } from '../contract/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
-import { inputFor, object, sanitized } from './validation.js'
+import { importedModelId, inputFor, object, sanitized } from './validation.js'
 import { WorkspaceMetrics } from './metrics.js'
 import { publicEndpoint, workspaceSnapshot } from './snapshot.js'
 import { saveWorkspaceSetup } from './state.js'
@@ -59,6 +59,10 @@ export class WorkspaceService {
     this.downloader = downloads.downloader
     this.artifacts = downloads.artifacts
     this.setups = downloads.setups
+  }
+  /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
+  start(): Promise<{ kept: string[] }> {
+    return this.artifacts.migrate()
   }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
@@ -199,7 +203,7 @@ export class WorkspaceService {
           })
         if (!validation.isValid)
           throw new AtcError('ATC_USAGE', validation.error ?? 'This file is not a GGUF model.')
-        const id = `imported/${basename(path, '.gguf')}-${randomUUID().slice(0, 8)}`
+        const id = importedModelId(path, randomUUID())
         await new ModelRegistry(paths.layout).write(id, { model_path: path, name: basename(path, '.gguf') })
         return { model_id: id, path }
       }

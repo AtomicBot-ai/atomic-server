@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
+import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import type { DownloadItem } from '../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
 import { object } from './validation.js'
@@ -32,11 +33,22 @@ function filePath(value: unknown): string {
     throw new Error('Invalid catalog file path.')
   return path
 }
+/**
+ * The folder a plan writes into (`diffusion/models/<id>`, `workspace-models/<category>/<id>`): one
+ * writer at a time per folder, so image and video families of one id never share a partial.
+ */
+export function destinationOf(plan: Pick<ArtifactPlan, 'category' | 'model_id' | 'files'>): string {
+  const first = plan.files[0]?.save_path
+  return first ? first.split('/').slice(0, 3).join('/') : `${plan.category}:${plan.model_id.split(':')[0]}`
+}
 export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string): ArtifactPlan {
   const r = row.source,
     files: DownloadItem[] = [],
     category = row.category,
-    root = `workspace-models/${category}/${safe(row.id)}`
+    // Image and video files go where the core lists, loads and deletes them (`diffusion.modelsDir`).
+    root = ['image', 'video'].includes(category)
+      ? `diffusion/models/${safe(row.id)}`
+      : `workspace-models/${category}/${safe(row.id)}`
   const add = (
     source: Record<string, unknown>,
     path: string,
@@ -45,7 +57,7 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
   ) => {
     const file = filePath(source['filename'] ?? source['path']),
       repoId = String(source['repo'] ?? repo)
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repoId)) throw new Error('Invalid catalog repository.')
+    if (!looksLikeHfRepo(repoId)) throw new Error('Invalid catalog repository.')
     const save_path = `${root}/${filePath(path)}`
     files.push({
       url: `https://huggingface.co/${repoId}/resolve/${encodeURIComponent(revision)}/${file.split('/').map(encodeURIComponent).join('/')}`,
