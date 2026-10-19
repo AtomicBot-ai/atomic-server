@@ -3,6 +3,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { defaultConfig } from '../config/index.js'
+import { writeDaemonRecord } from '../core-link/index.js'
+import type { DaemonRecord } from '../core-link/index.js'
 import { createWorkspaceClient } from './client.js'
 const cleanup: Array<() => void> = []
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()))
@@ -59,10 +61,11 @@ it('waits for a starting server and then sends operations to its admin', async (
   await writeFile(tmp.paths.daemonRecord, JSON.stringify({ ...record, state: 'starting', admin_url: null }))
   await writeFile(tmp.paths.adminToken, 'admin-private-token')
   setTimeout(() => {
-    void writeFile(
-      tmp.paths.daemonRecord,
-      JSON.stringify({ ...record, state: 'ready', admin_url: 'http://127.0.0.1:15555' })
-    )
+    void writeDaemonRecord(tmp.paths.daemonRecord, {
+      ...record,
+      state: 'ready',
+      admin_url: 'http://127.0.0.1:15555',
+    } as DaemonRecord)
   }, 200)
   const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ id: 'job' })))
   const client = await createWorkspaceClient({

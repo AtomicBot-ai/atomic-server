@@ -42,46 +42,75 @@ export class SseEvents implements CoreEventSource {
     this.log = options.log ?? (() => undefined)
   }
 
+  private delay(attempt: number): number {
+    return this.backoff[Math.min(attempt - 1, this.backoff.length - 1)] as number
+  }
+
   async subscribe(
     handler: CoreEventHandler,
     options: { signal: AbortSignal; onSnapshot?: (s: CoreSnapshot) => void }
   ): Promise<void> {
     const { signal } = options
     let failures = 0
+    // `resync` answers in a row, with no event between: a core whose ring keeps overflowing.
+    let resyncs = 0
     let instanceId: string | undefined
+    // The cursor survives a dropped socket: the core replays from it. Only `resync` (a cursor its ring
+    // no longer has, or another instance's) and the first connect take a snapshot.
+    let cursor: string | undefined
+    let fresh = true
     while (!signal.aborted) {
-      let cursor: string | undefined
+      // The core keeps the stream open after `resync`; this stream is ended here to snapshot again.
+      const stream = new AbortController()
+      const stop = () => stream.abort()
+      signal.addEventListener('abort', stop, { once: true })
       try {
-        const snapshot = await this.client.snapshot()
-        if (instanceId !== undefined && snapshot.instance_id !== instanceId) {
-          handler({ id: '', event: 'resync', data: { reason: 'instance-changed' } })
+        if (fresh) {
+          const snapshot = await this.client.snapshot()
+          if (instanceId !== undefined && snapshot.instance_id !== instanceId) {
+            handler({ id: '', event: 'resync', data: { reason: 'instance-changed' } })
+          }
+          instanceId = snapshot.instance_id
+          cursor = snapshot.cursor
+          options.onSnapshot?.(snapshot)
+          fresh = false
+          failures = 0
         }
-        instanceId = snapshot.instance_id
-        cursor = snapshot.cursor
-        options.onSnapshot?.(snapshot)
-        failures = 0
-        let resync = false
         await this.client.events(
           (message: CoreEventMessage) => {
             if (message.event === 'resync') {
-              resync = true
+              resyncs += 1
+              fresh = true
+              stream.abort()
               return
             }
+            failures = 0
+            resyncs = 0
             cursor = message.id
             handler(message)
           },
-          { ...(cursor ? { cursor } : {}), signal }
+          { ...(cursor ? { cursor } : {}), signal: stream.signal }
         )
-        if (signal.aborted) return
-        if (!resync) this.log('event stream ended; reconnecting')
+        if (signal.aborted) continue
+        // A stream that ended here for a snapshot, or by itself (a core going away, a proxy's idle
+        // timeout): the first time it reconnects at once, then it backs off like a failure, so a core
+        // that keeps answering `resync` or closing at once is not hammered in a tight loop.
+        throw new Error(fresh ? 'the core asked for a new snapshot' : 'the event stream ended')
       } catch (error) {
         if (signal.aborted) return
+        // Ended here on `resync`: the first snapshots at once, the next ones back off.
+        if (fresh && stream.signal.aborted) {
+          if (resyncs > 1) await this.wait(this.delay(resyncs - 1), signal)
+          continue
+        }
         failures += 1
-        const delay = this.backoff[Math.min(failures - 1, this.backoff.length - 1)] as number
+        const delay = this.delay(failures)
         this.log(
           `event stream failed (${String((error as Error).message ?? error)}); retrying in ${delay} ms`
         )
         await this.wait(delay, signal)
+      } finally {
+        signal.removeEventListener('abort', stop)
       }
     }
   }

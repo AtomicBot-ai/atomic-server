@@ -7,6 +7,7 @@ import type { DaemonWatchState } from './watch.js'
 /** Just enough of a link for the watcher: health, snapshot, a controllable event stream. */
 function stubLink(instanceId: string) {
   let alive = true
+  let frozen = false
   let snapshots = 0
   const handlers = new Set<CoreEventHandler>()
   const snapshot = (): CoreSnapshot =>
@@ -20,6 +21,8 @@ function stubLink(instanceId: string) {
   const link = {
     endpoint: { baseUrl: 'http://127.0.0.1:0', instanceId, version: '0.5.1', pid: 1 },
     health: async () => {
+      // A process stopped (SIGSTOP) or with a blocked event loop: the socket accepts, nothing answers.
+      if (frozen) await new Promise(() => {})
       if (!alive) throw new Error('connection refused')
       return { ok: true as const, pid: 1, version: '0.5.1', instance_id: instanceId, protocol: 1 }
     },
@@ -42,6 +45,7 @@ function stubLink(instanceId: string) {
   return {
     link,
     kill: () => (alive = false),
+    freeze: () => (frozen = true),
     emit: (message: CoreEventMessage) => handlers.forEach((h) => h(message)),
     get snapshots() {
       return snapshots
@@ -132,5 +136,26 @@ describe('watchDaemon', () => {
     controller.abort()
     await done
     expect(seen.slice(0, 4)).toEqual(['up:a', 'session:started', 'download:progress', 'up:a'])
+  })
+
+  it('goes down when the daemon stops answering its health check', async () => {
+    const stub = stubLink('i1')
+    const controller = new AbortController()
+    const states: string[] = []
+    let attached = 0
+    const watching = watchDaemon({
+      attach: async () => (attached++ === 0 ? stub.link : undefined),
+      signal: controller.signal,
+      onState: (s) => states.push(summary(s)),
+      refreshOn: [],
+      heartbeatMs: 5,
+      heartbeatTimeoutMs: 30,
+      retryMs: 5,
+    })
+    await until(() => states.includes('up:i1'))
+    stub.freeze()
+    await until(() => states.at(-1) === 'down')
+    controller.abort()
+    await watching
   })
 })

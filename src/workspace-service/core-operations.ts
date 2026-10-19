@@ -3,13 +3,12 @@ import { engineKind, installEngine, ensureArtifactEngine } from './engine-instal
 import type { CoreLink } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
-import { object, segment } from './validation.js'
+import { modelIdPath, object, segment } from './validation.js'
 export const NOT_CORE = Symbol('not-core')
 export async function coreOperation(link: CoreLink, name: string, input: WorkspaceInput): Promise<unknown> {
   const request = object(input['request']),
     id = () => segment(input['id']),
-    model = () =>
-      `/models/${segment(input['provider'])}/${String(input['model_id']).split('/').map(segment).join('/')}`
+    model = () => `/models/${segment(input['provider'])}/${modelIdPath(input['model_id'])}`
   const get = (path: string) => link.request('GET', path),
     post = (path: string, body: unknown = {}) => link.request('POST', path, body)
   switch (name) {
@@ -26,10 +25,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
     case 'models.logs':
       return get(`${model()}/logs`)
     case 'models.remove':
-      return link.request(
-        'DELETE',
-        `/managed-models/${String(input['model_id']).split('/').map(segment).join('/')}`
-      )
+      return link.request('DELETE', `/managed-models/${modelIdPath(input['model_id'])}`)
     case 'engines.list':
       return post('/engines/versions', input)
     case 'engines.catalog': {

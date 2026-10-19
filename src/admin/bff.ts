@@ -36,7 +36,6 @@ export const READ_ALLOW = [
   '/environments',
   '/settings',
   '/telemetry',
-  '/disk',
 ]
 /**
  * Control routes a page may change, exactly: `:name` is one path segment, `*name` one or more (model

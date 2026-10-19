@@ -37,6 +37,16 @@ describe('workspace operations', () => {
     await expect(service.execute('models.import', { path: './model.gguf' })).rejects.toThrow('absolute path')
     expect(link.calls).toEqual([])
   })
+  // The id becomes a URL path segment the core does not decode: a space in a file name would arrive
+  // as `%20` and name no model. The name keeps the file's own spelling.
+  it('imports a file under an id every route can carry', async () => {
+    const { service, link } = context()
+    link.responses['POST /gguf/validate'] = { isValid: true }
+    const imported = (await service.execute('models.import', { path: '/models/My Model (Q4).gguf' })) as {
+      model_id: string
+    }
+    expect(imported.model_id).toMatch(/^imported\/My-Model-Q4-[0-9a-f]{8}$/)
+  })
   it('installs only a plan reviewed on this server, without asking the core to download', async () => {
     const { service, link } = context()
     await expect(
@@ -172,7 +182,9 @@ describe('workspace operations', () => {
     link.request = async <T>(method: string, path: string, body?: unknown) => {
       link.calls.push({ method, path, body })
       if (path === '/decision/status') return { state: 'ready', model_path: '/models/decision.gguf' } as T
-      if (path === '/decision/config') return { model_id: 'selected-decision' } as T
+      // As the core answers it: `{ config, status }` (core routes/decision.ts).
+      if (path === '/decision/config')
+        return { config: { model_id: 'selected-decision' }, status: { state: 'ready' } } as T
       if (path === '/decision/decide') return { unavailable: false, result: {} } as T
       return {} as T
     }

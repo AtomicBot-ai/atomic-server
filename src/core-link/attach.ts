@@ -5,7 +5,7 @@
  * replacement of a server another `atc` build left running (`stale-owner.ts`).
  */
 
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { attachToOwner, inspectLock, waitForPublishedOwner } from '@atomic-chat/core/host'
 import type { AtcPaths } from '../config/index.js'
@@ -159,7 +159,17 @@ export async function waitForDaemonReady(
     const record = await readDaemonRecord(path)
     const ours = record?.instance_id === instanceId
     if (ours && record?.state === 'ready') return record
-    if (seen && !ours) return undefined
+    // Gone means no file, or another instance's: a record caught mid-write is read again.
+    if (
+      seen &&
+      !ours &&
+      (record ||
+        !(await access(path).then(
+          () => true,
+          () => false
+        )))
+    )
+      return undefined
     seen ||= ours
     if (Date.now() >= deadline) return record
     await new Promise((resolve) => setTimeout(resolve, 100))

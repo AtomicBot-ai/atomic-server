@@ -36,8 +36,8 @@ export async function workspaceSnapshot(
       const status = await link.request('GET', `/${kind}/status`)
       if (kind !== 'decision') return status
       // Core's decision status omits the public model ID; the module's config owns it.
-      const config = object(await link.request('GET', '/decision/config'))
-      return { ...object(status), model_id: config['model_id'] }
+      const answer = object(await link.request('GET', '/decision/config'))
+      return { ...object(status), model_id: object(answer['config'])['model_id'] }
     })
   )
   const services: WorkspaceServiceRow[] = snap.sessions.map((session) => {

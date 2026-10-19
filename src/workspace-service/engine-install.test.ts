@@ -86,3 +86,23 @@ describe('settings.update', () => {
     expect(link.calls).toEqual([])
   })
 })
+
+describe('model ids in paths', () => {
+  // The core decodes `:param` segments but takes `*rest` (a model id, slashes included) as sent, as
+  // its own client and the desktop app send it: percent-encoding here would name another model.
+  it.each([
+    ['models.info', '/models/llamacpp-upstream/owner/model+q4@v1/capabilities'],
+    ['models.logs', '/models/llamacpp-upstream/owner/model+q4@v1/logs'],
+    ['models.remove', '/managed-models/owner/model+q4@v1'],
+  ])('%s sends the id as the core reads it', async (operation, path) => {
+    const link = fakeCoreLink()
+    await coreOperation(link, operation, { provider: 'llamacpp-upstream', model_id: 'owner/model+q4@v1' })
+    expect(link.calls.at(-1)?.path).toBe(path)
+  })
+
+  it.each(['owner/../x', 'owner/a?b', 'owner/a#b', ''])('refuses %j as a model id', async (model_id) => {
+    await expect(
+      coreOperation(fakeCoreLink(), 'models.info', { provider: 'llamacpp-upstream', model_id })
+    ).rejects.toThrow('Invalid')
+  })
+})

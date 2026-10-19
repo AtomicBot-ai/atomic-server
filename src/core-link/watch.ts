@@ -25,6 +25,8 @@ export interface WatchDaemonOptions {
   /** Event names after which the snapshot is read again (`STATUS_EVENTS`). */
   refreshOn: readonly string[]
   heartbeatMs?: number
+  /** A health check that takes longer is a dead link (a stopped process, a blocked event loop). */
+  heartbeatTimeoutMs?: number
   retryMs?: number
   debounceMs?: number
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>
@@ -85,7 +87,8 @@ async function follow(
       await sleep(options.heartbeatMs ?? 2000, inner.signal)
       if (inner.signal.aborted) return
       try {
-        if ((await link.health()).instance_id !== instanceId) stop()
+        const health = await withTimeout(link.health(), options.heartbeatTimeoutMs ?? 5000)
+        if (health.instance_id !== instanceId) stop()
       } catch {
         stop()
       }
@@ -109,4 +112,12 @@ async function follow(
     options.signal.removeEventListener('abort', stop)
     await heartbeat
   }
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`no answer in ${ms} ms`)), ms)
+  })
+  return Promise.race([work, late]).finally(() => clearTimeout(timer))
 }
