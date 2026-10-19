@@ -11,6 +11,7 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   const fs = await importOriginal<typeof FsPromises>()
   const stat = (async (...args: Parameters<typeof fs.stat>) => {
     const result = fs.stat(...args) // usually ENOENT: the file is not there yet
+    result.catch(() => undefined) // the caller sees the rejection; it is not unhandled while we wait
     if (String(args[0]).endsWith('.gguf') && during.stat) {
       const hook = during.stat
       during.stat = undefined
