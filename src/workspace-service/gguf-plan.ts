@@ -39,13 +39,19 @@ export function defaultModelId(repo: string, file: string): string {
   return `${owner}/${(file.split('/').pop() ?? file).replace(/\.gguf$/i, '')}`
 }
 
-export function matchFamily(families: readonly PrismFamily[], repo: string, file: string) {
-  for (const family of families) {
-    if (family.repo.toLowerCase() !== repo.toLowerCase()) continue
-    const match = family.files.find((f) => f.file === file)
-    if (match) return { family, file: match }
-  }
-  return undefined
+/**
+ * The Bonsai family file the core's verdict names: the core matches by sha256, else by repository and
+ * file name (a file in a subfolder included). The family's entry gives size, hash and projectors.
+ */
+export function matchFamily(
+  families: readonly PrismFamily[],
+  verdict: Pick<ModelCompatibilityResponse, 'family'>,
+  file: string
+) {
+  const family = families.find((f) => f.id === verdict.family)
+  const name = file.split('/').pop()
+  const match = family?.files.find((f) => f.file === name)
+  return family && match ? { family, file: match } : undefined
 }
 
 const buildOf = (tag: string) => Number(/^prism-b(\d+)-/.exec(tag)?.[1] ?? Number.NaN)
@@ -108,7 +114,15 @@ function artifactsOf(input: GgufPlanInput) {
   const { repo, revision, projectors } = family.family
   const projector = request.include_projector === false ? undefined : projectors.find((p) => p.default)
   return {
-    model: { repo, file: family.file.file, revision, sha256: family.file.sha256, size: family.file.size },
+    // The family's own copy: a file in a subfolder of its repository keeps its path; a mirror the
+    // core matched by hash is fetched from the family, where the pinned revision describes it.
+    model: {
+      repo,
+      file: request.repo.toLowerCase() === repo.toLowerCase() ? request.file : family.file.file,
+      revision,
+      sha256: family.file.sha256,
+      size: family.file.size,
+    },
     projector: projector
       ? { repo, file: projector.file, revision, sha256: projector.sha256, size: projector.size }
       : null,

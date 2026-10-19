@@ -1,6 +1,6 @@
 import { AtomicCoreError } from '@atomic-chat/core'
 import { describe, expect, it } from 'vitest'
-import { resultPathFor, runHostStepHelper } from './helper.js'
+import { runHostStepHelper } from './helper.js'
 
 describe('host-step helper', () => {
   it('runs the core executor on the request and returns its result', async () => {
@@ -37,9 +37,5 @@ describe('host-step helper', () => {
         },
       })
     ).rejects.toMatchObject({ code: 'ATC_USAGE', hint: expect.stringContaining('sudo') })
-  })
-
-  it('names the result file beside the request', () => {
-    expect(resultPathFor('/x/s1.request.json')).toBe('/x/s1.result.json')
   })
 })

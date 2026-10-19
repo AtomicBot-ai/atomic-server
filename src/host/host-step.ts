@@ -8,9 +8,9 @@
 
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { resultPathFor } from '@atomic-chat/core/host'
 import type { Logger } from '../output/index.js'
 import type { ElevationContext, Elevator, HostStepRequestFile, HostStepResultFile } from './elevator.js'
-import { resultPathFor } from './helper.js'
 import { MANAGED_HOST_ACTIONS } from './managed-types.js'
 import type {
   EnvironmentOperationView,
@@ -134,7 +134,7 @@ export class HostStepExecutor {
       data_folder: this.deps.dataFolder,
       requested_at: this.now(),
       // Verbatim: the executor recomputes `parameters_digest` from them and refuses a mismatch.
-      parameters: step.parameters,
+      parameters: step.parameters as HostStepRequestFile['parameters'],
     }
     // The executor trusts only a folder its invoking user owns with mode 0700 and a request no one
     // else can write; the umask (a desktop's 002) must not decide that.
@@ -209,7 +209,8 @@ export class HostStepExecutor {
 
 export async function readResultFile(requestPath: string): Promise<HostStepResultFile | undefined> {
   try {
-    return JSON.parse(await readFile(resultPathFor(requestPath), 'utf8')) as HostStepResultFile
+    const path = resultPathFor(requestPath)
+    return path ? (JSON.parse(await readFile(path, 'utf8')) as HostStepResultFile) : undefined
   } catch {
     return undefined
   }

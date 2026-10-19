@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import baseline from './staff-picks.json' with { type: 'json' }
 import type { HubRepository } from './types.js'
@@ -20,7 +21,7 @@ export function staffPicks(raw: unknown): HubRepository[] {
       (p) =>
         p &&
         typeof p.model_name === 'string' &&
-        /^[\w.-]+\/[\w.-]+$/.test(p.model_name) &&
+        looksLikeHfRepo(p.model_name) &&
         p.format !== 'mlx' &&
         p.active !== false
     )

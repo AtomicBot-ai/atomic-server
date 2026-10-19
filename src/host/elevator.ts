@@ -8,13 +8,8 @@
  * the result file and exits. The unprivileged daemon turns the result into the receipt.
  */
 
+import type { HostStepRequest, HostStepResult } from '@atomic-chat/core/host'
 import type { ExecFn } from './exec.js'
-import type {
-  HostStepOutcomeKind,
-  ManagedHostAction,
-  ManagedHostStep,
-  Sha256Digest,
-} from './managed-types.js'
 
 export type ElevationStrategy = 'root' | 'sudo-tty' | 'pkexec' | 'windows-runas' | 'manual'
 
@@ -42,33 +37,22 @@ export function selectStrategy(ctx: ElevationContext): ElevationStrategy {
   return 'manual'
 }
 
-export interface HostStepRequestFile {
-  schema_version: 1
-  step_id: string
-  operation_id: string
-  action: ManagedHostAction
-  recipe_id: string
-  recipe_digest: Sha256Digest
-  parameters_digest: Sha256Digest
-  nonce: string
-  expected_operation_revision: number
-  data_folder: string
-  requested_at: number
-  /** The step's parameters, copied unchanged from `pending_host_step.parameters`. */
-  parameters: ManagedHostStep['parameters']
-}
+/** The request file the core's executor parses: its own type, so a field it needs cannot go missing. */
+export type HostStepRequestFile = HostStepRequest
 
-export interface HostStepResultFile {
-  schema_version: 1
-  step_id: string
-  outcome: HostStepOutcomeKind
-  exit_code: number | null
-  log_tail: string
-  finished_at: number
+/** The part of the executor's result file the daemon reads. */
+export type HostStepResultFile = Pick<
+  HostStepResult,
+  'schema_version' | 'step_id' | 'outcome' | 'exit_code' | 'log_tail' | 'finished_at'
+>
+
+/** The result file, or what the elevator saw without one: a declined prompt or a failed helper. */
+export type HostStepReport = Omit<HostStepResultFile, 'outcome'> & {
+  outcome: HostStepResultFile['outcome'] | 'declined'
 }
 
 export type HostStepOutcome =
-  { kind: 'result'; result: HostStepResultFile } | { kind: 'pending'; instructions: string }
+  { kind: 'result'; result: HostStepReport } | { kind: 'pending'; instructions: string }
 
 export interface Elevator {
   select(ctx: ElevationContext): ElevationStrategy

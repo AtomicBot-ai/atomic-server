@@ -91,7 +91,7 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       let request: Record<string, unknown>
       if (s.libraryCategory === 'text' && row.source?.['format'] !== 'mlx') {
         const files = await c.files(row.id),
-          file = files.find((f) => /Q4_K_M/i.test(f.filename)) ?? files[0]
+          file = files[0] // modelFiles puts the default quant first
         if (!file) throw new Error('No GGUF file found. Use engine-specific controls for this model format.')
         request = { repo: row.id, file: file.filename, include_projector: true }
       } else request = { category: s.libraryCategory, model_id: row.id }

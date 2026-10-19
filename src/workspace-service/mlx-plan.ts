@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
+import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import type { DownloadItem } from '../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
 import type { ArtifactPlan } from './artifact-plan.js'
@@ -9,7 +10,7 @@ export async function mlxPlan(
   dataFolder: string,
   request: typeof fetch
 ): Promise<ArtifactPlan> {
-  if (row.source['format'] !== 'mlx' || !/^[\w.-]+\/[\w.-]+$/.test(row.id))
+  if (row.source['format'] !== 'mlx' || !looksLikeHfRepo(row.id))
     throw new Error('Choose an MLX repository from the catalog.')
   const metadata = await request(`https://huggingface.co/api/models/${row.id}`, {
     signal: AbortSignal.timeout(15000),

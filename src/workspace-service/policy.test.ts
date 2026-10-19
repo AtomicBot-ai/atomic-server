@@ -35,6 +35,18 @@ describe('workspace policies', () => {
     expect(result.metrics.active).toBeNull()
     expect(metrics.snapshot(now + 300001).metrics.requests).toBe(0)
   })
+  it('refuses a catalog repository the Hub would not name', () => {
+    const row = (repo: string) => ({
+      id: 'model',
+      name: 'Model',
+      description: '',
+      category: 'image' as const,
+      source: {
+        transformer: { repo, quants: [{ id: 'q4', filename: 'model.gguf', bytes: 10, recommended: true }] },
+      },
+    })
+    expect(() => artifactPlan(row('owner/..') as never, '/data')).toThrow('Invalid catalog repository')
+  })
   it('resolves catalog media dependencies, wire aliases and digest deterministically', () => {
     const row = {
       id: 'model',

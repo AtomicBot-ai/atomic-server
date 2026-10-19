@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
+import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import type { DownloadItem } from '../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
 import { object } from './validation.js'
@@ -45,7 +46,7 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
   ) => {
     const file = filePath(source['filename'] ?? source['path']),
       repoId = String(source['repo'] ?? repo)
-    if (!/^[\w.-]+\/[\w.-]+$/.test(repoId)) throw new Error('Invalid catalog repository.')
+    if (!looksLikeHfRepo(repoId)) throw new Error('Invalid catalog repository.')
     const save_path = `${root}/${filePath(path)}`
     files.push({
       url: `https://huggingface.co/${repoId}/resolve/${encodeURIComponent(revision)}/${file.split('/').map(encodeURIComponent).join('/')}`,

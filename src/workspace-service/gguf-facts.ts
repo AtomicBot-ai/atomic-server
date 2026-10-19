@@ -54,7 +54,7 @@ export async function planFor(deps: GgufFactsDeps, request: ModelSetupPlanReques
     }),
     link.disk.available().catch(() => null),
   ])
-  const family = matchFamily(families.families, request.repo, request.file)
+  const family = matchFamily(families.families, verdict, request.file)
   let hubFile: { size: number; sha256?: string } | undefined
   if (!family) {
     const token = hfToken(deps.env)

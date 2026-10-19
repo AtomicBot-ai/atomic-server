@@ -47,13 +47,30 @@ const catalog = (over: Partial<BackendCatalogResponse> = {}) =>
 const bonsai = (over: Partial<GgufPlanInput> = {}): GgufPlanInput => ({
   request: { repo: family.repo, file: 'Bonsai-8B-Q1_0.gguf' },
   verdict: verdict({ outcome: 'engine_required', provider: 'atomic-prism', min_prism_build: 11 }),
-  family: matchFamily([family], family.repo, 'Bonsai-8B-Q1_0.gguf'),
+  family: matchFamily([family], { family: 'bonsai-8b' }, 'Bonsai-8B-Q1_0.gguf'),
   prism: catalog(),
   freeBytes: 10_000,
   ...over,
 })
 
 describe('planGgufSetup', () => {
+  // The core may name a family for a mirror (by sha256): download the family's own copy, which the
+  // pinned revision and hash describe, never the mirror's path inside the family's repository.
+  it.each([
+    [
+      'the family repository, file in a subfolder',
+      family.repo,
+      'sub/Bonsai-8B-Q1_0.gguf',
+      'sub/Bonsai-8B-Q1_0.gguf',
+    ],
+    ['a mirror the core matched by hash', 'someone/mirror', 'q/Bonsai-8B-Q1_0.gguf', 'Bonsai-8B-Q1_0.gguf'],
+  ])('downloads a family file from %s', (_name, repo, file, expected) => {
+    const plan = planGgufSetup(
+      bonsai({ request: { repo, file }, family: matchFamily([family], { family: 'bonsai-8b' }, file) })
+    )
+    expect(plan.model).toMatchObject({ repo: family.repo, file: expected, revision: 'abc123' })
+  })
+
   it('plans a stock file from the Hub facts for llama.cpp, with no engine', () => {
     const plan = planGgufSetup({
       request: { repo: 'owner/repo', file: 'dir/model.Q4_K_M.gguf' },
@@ -132,11 +149,10 @@ describe('choosePrismBuild', () => {
 })
 
 describe('matchFamily and defaultModelId', () => {
-  it('matches a family file by repository (any case) and exact file name', () => {
-    expect(matchFamily([family], 'Prism-ML/bonsai-8b-GGUF', 'Bonsai-8B-Q1_0.gguf')?.family.id).toBe(
-      'bonsai-8b'
-    )
-    expect(matchFamily([family], family.repo, 'other.gguf')).toBeUndefined()
+  it("takes the family the core's verdict names, and its file by name", () => {
+    expect(matchFamily([family], { family: 'bonsai-8b' }, 'sub/Bonsai-8B-Q1_0.gguf')?.file.size).toBe(1000)
+    expect(matchFamily([family], {}, 'Bonsai-8B-Q1_0.gguf')).toBeUndefined()
+    expect(matchFamily([family], { family: 'bonsai-8b' }, 'other.gguf')).toBeUndefined()
     expect(defaultModelId('owner/repo', 'sub/Model.gguf')).toBe('owner/Model')
   })
 })
