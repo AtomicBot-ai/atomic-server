@@ -36,7 +36,9 @@ it('gives up on a rename that keeps failing, and leaves no temporary file', asyn
   const dir = await mkdtemp(join(tmpdir(), 'atc-store-'))
   folders.push(dir)
   const r = failing('EPERM', 1000)
-  await expect(writeDocument(join(dir, 'record.json'), {}, { rename: r.fn })).rejects.toMatchObject({
+  await expect(
+    writeDocument(join(dir, 'record.json'), {}, { rename: r.fn, retryForMs: 300 })
+  ).rejects.toMatchObject({
     code: 'EPERM',
   })
   const { readdir } = await import('node:fs/promises')
@@ -67,3 +69,14 @@ it('reads a document again when Windows refuses the read for a moment', async ()
   expect(await readDocument(path, null, { readFile: read })).toEqual({ stage: 'ready' })
   expect(refusals).toBe(-1)
 })
+
+// On Windows a reader that has the file open leaves its name "delete pending": every rename over it
+// fails until the reader closes. Busy readers make that last longer than a second or two.
+it('keeps trying a refused rename for several seconds, not a fixed number of times', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'atc-store-'))
+  folders.push(dir)
+  const path = join(dir, 'record.json')
+  const r = failing('EPERM', 25) // ~2 s of refusals with the backoff below 100 ms
+  await writeDocument(path, { stage: 'ready' }, { rename: r.fn })
+  expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ stage: 'ready' })
+}, 15_000)
