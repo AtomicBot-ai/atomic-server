@@ -54,3 +54,4 @@ add a new one that says which record it supersedes.
 - **2026-10-15** — [Group workspace files by area](2026-10-15-group-workspace-files-by-area.md) — one folder per area in both workspaces.
 - **2026-10-15** — [atc downloads its own models](2026-10-15-atc-downloads-its-own-models.md) — `src/downloads/` and atc-owned GGUF setups on core 0.17.0; ranges written in place; supersedes the core-owned downloads of the 2026-10-08 gate record.
 - **2026-10-19** — [Take hardware facts from the core](2026-10-19-take-hardware-facts-from-the-core.md) — the daemon no longer probes or pushes `PUT /hardware/override`; doctor shows the core's facts.
+- **2026-10-19** — [The core applies engine builds](2026-10-19-the-core-applies-engine-builds.md) — install, activate and the default build through `/engines/*`; `atc` never writes `version_backend`.

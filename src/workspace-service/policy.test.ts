@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { WorkspaceMetrics } from './metrics.js'
 import { sanitized } from './validation.js'
 import { artifactPlan } from './artifact-plan.js'
-import { installEngine } from './engine-install.js'
-import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 describe('workspace policies', () => {
   it('redacts credentials without stripping token usage or model metadata', () => {
     expect(
@@ -69,23 +67,5 @@ describe('workspace policies', () => {
     })
     expect(artifactPlan(row, '/data').digest).toBe(plan.digest)
     expect(() => artifactPlan({ ...row, id: '../escape' }, '/data')).toThrow('Invalid catalog identifier')
-  })
-  it('selects a recommended target when installing a fresh llama engine', async () => {
-    const link = fakeCoreLink()
-    const original = link.request
-    link.request = async <T>(
-      method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-      path: string,
-      body?: unknown
-    ) => {
-      if (path.endsWith('/catalog'))
-        return { recommended: 'b100/metal', available: [{ version: 'b100', backend: 'metal' }] } as T
-      return original<T>(method, path, body)
-    }
-    await installEngine(link, 'llamacpp-upstream')
-    expect(link.calls[0]).toMatchObject({
-      path: '/engines/llamacpp-upstream/update',
-      body: { target: { version: 'b100', variant: 'metal' } },
-    })
   })
 })

@@ -17,8 +17,12 @@ export function settingGroup(field: RecordValue): string {
   if (/gpu|device|thread|flash|split|offload/.test(key)) return 'Hardware'
   return 'Advanced'
 }
+/** The engine build is chosen with engines.activate, which the core applies; never a plain setting. */
+export function editableSetting(field: RecordValue): boolean {
+  return text(field.key) !== 'version_backend'
+}
 export function commonSetting(field: RecordValue): boolean {
-  return /^(version_backend|ctx_size|context_size|fit|concurrent_mode|parallel|threads|gpu_layers|n_gpu_layers|flash_attn|max_tokens|num_ctx|temperature|memory_limit)$/.test(
+  return /^(ctx_size|context_size|fit|concurrent_mode|parallel|threads|gpu_layers|n_gpu_layers|flash_attn|max_tokens|num_ctx|temperature|memory_limit)$/.test(
     text(field.key)
   )
 }

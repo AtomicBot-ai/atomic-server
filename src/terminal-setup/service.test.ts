@@ -92,6 +92,11 @@ it.each(['llamacpp-upstream', 'llamacpp'])(
       expect.objectContaining({ path: `/models/${provider}/owner/model/load` })
     )
     expect(link.calls.some((c) => /model-setups|setup-plan/.test(c.path))).toBe(false)
+    // The chosen build is made active by the core, never by a settings write.
+    expect(link.calls).toContainEqual(
+      expect.objectContaining({ method: 'POST', path: `/engines/${provider}/builds/b1/cpu/activate` })
+    )
+    expect(link.calls.some((c) => c.method === 'PATCH')).toBe(false)
   }
 )
 

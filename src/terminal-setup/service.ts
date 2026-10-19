@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
+import { activateEngine } from './engines.js'
 import { setupWait } from './wait.js'
 import type {
   BackendCatalogResponse,
@@ -250,9 +251,7 @@ export class TerminalSetup {
     if (!progress.ready) throw new Error('Finish installing every selected component before continuing.')
     const link = await this.attach(false),
       manifest = progress.manifest
-    await link.request('PATCH', `/settings/${manifest.engine.provider}`, {
-      values: { version_backend: `${manifest.engine.version}/${manifest.engine.backend}` },
-    })
+    await activateEngine(link, manifest.engine)
     const first = manifest.selections[0]!.plan
     await link.models.load(
       first.provider === 'atomic-prism' ? first.provider : manifest.engine.provider,

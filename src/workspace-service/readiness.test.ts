@@ -33,17 +33,18 @@ describe('fresh workload readiness', () => {
     link.request = async <T>(method: string, path: string, body?: unknown) => {
       link.calls.push({ method, path, body })
       if (method === 'GET') return { backends: [] } as T
-      if (path.endsWith('/catalog'))
+      if (path === '/engines/versions')
         return {
-          recommended: 'b100/metal',
-          available: [{ version: 'b100', backend: 'metal' }],
+          engines: [
+            { engine: 'llamacpp-upstream', active: null, latest: { version: 'b100', variant: 'metal' } },
+          ],
         } as T
       return { success: true } as T
     }
     await coreOperation(link, 'models.load', { provider: 'llamacpp-upstream', model_id: 'owner/model' })
     expect(link.calls.map((call) => call.path)).toEqual([
       '/backends/llamacpp-upstream',
-      '/backends/llamacpp-upstream/catalog',
+      '/engines/versions',
       '/engines/llamacpp-upstream/update',
       '/models/llamacpp-upstream/owner/model/load',
     ])

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { installEngine, ensureArtifactEngine } from './engine-install.js'
+import { engineKind, installEngine, ensureArtifactEngine } from './engine-install.js'
 import type { CoreLink } from '../core-link/index.js'
+import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { object, segment } from './validation.js'
 export const NOT_CORE = Symbol('not-core')
@@ -13,7 +14,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
     post = (path: string, body: unknown = {}) => link.request('POST', path, body)
   switch (name) {
     case 'models.load':
-      if (['llamacpp-upstream', 'llamacpp', 'atomic-prism'].includes(String(input['provider'])))
+      if (engineKind(String(input['provider'])) === 'llamacpp')
         await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`)
       return link.models.load(String(input['provider']), String(input['model_id']), object(input['options']))
     case 'models.unload':
@@ -33,9 +34,10 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
       return post('/engines/versions', input)
     case 'engines.catalog': {
       const engine = String(input['engine'])
-      if (['tensorrt-llm', 'vllm'].includes(engine)) return link.environments.list()
+      const kind = engineKind(engine)
+      if (kind === 'managed') return link.environments.list()
       return post(
-        ['sd-cpp', 'mlx'].includes(engine)
+        kind === 'engine-build'
           ? `/engine-builds/${segment(engine)}/catalog`
           : `/backends/${segment(engine)}/catalog`,
         { ...(input['force'] !== undefined ? { force: input['force'] } : {}) }
@@ -55,6 +57,9 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
     case 'settings.get':
       return get(`/settings/${segment(input['provider'])}`)
     case 'settings.update':
+      // The core switches builds in the load queue's turn and unloads the old one's sessions.
+      if ('version_backend' in object(input['values']))
+        throw new AtcError('ATC_USAGE', 'Choose the engine build with engines.activate, not a setting.')
       return link.request('PATCH', `/settings/${segment(input['provider'])}`, {
         values: input['values'],
         ...(input['expected_revision'] !== undefined
