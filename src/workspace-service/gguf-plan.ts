@@ -28,8 +28,11 @@ export interface GgufPlanInput {
   family?: { family: PrismFamily; file: PrismFamilyFile } | undefined
   /** The Hub's facts for a file no family pins; `revision` the commit they were read at. */
   hubFile?: { size: number; sha256?: string | undefined; revision?: string | undefined }
-  /** `POST /backends/atomic-prism/catalog`, when the verdict involves PrismML. */
-  prism?: BackendCatalogResponse | undefined
+  /**
+   * `POST /backends/atomic-prism/catalog`, when the verdict involves PrismML; `null` when the core
+   * answered `BACKEND_BUILD_UNAVAILABLE`: no build this machine runs meets the file's requirements.
+   */
+  prism?: BackendCatalogResponse | null | undefined
   freeBytes: number | null
 }
 
@@ -54,27 +57,20 @@ export function matchFamily(
   return family && match ? { family, file: match } : undefined
 }
 
-const buildOf = (tag: string) => Number(/^prism-b(\d+)-/.exec(tag)?.[1] ?? Number.NaN)
-
 /**
- * The PrismML build to run on: the catalog's recommendation (already gated by this machine's
- * hardware) when it is at least `minBuild`, else the newest that is. `null` when none is.
+ * The PrismML build to run on: the catalog's `recommended`, which the core picked for this file's
+ * `requires`/`min_build` and this machine. Whether it is on disk and its size come from the catalog.
  */
-export function choosePrismBuild(
-  catalog: BackendCatalogResponse,
-  minBuild?: number
-): ModelSetupEngine | null {
-  const fits = catalog.available.filter((b) => minBuild === undefined || buildOf(b.version) >= minBuild)
-  const pick = fits.find((b) => `${b.version}/${b.backend}` === catalog.recommended) ?? fits[0]
-  if (!pick) return null
-  const installed = catalog.installed.some((b) => b.version === pick.version && b.backend === pick.backend)
+function recommendedBuild(catalog: BackendCatalogResponse): ModelSetupEngine | null {
+  const [version, backend] = (catalog.recommended ?? '').split('/')
+  if (!version || !backend) return null
+  const installed = catalog.installed.some((b) => b.version === version && b.backend === backend)
   const size =
-    catalog.releases?.find((r) => r.tag === pick.version)?.variants.find((v) => v.id === pick.backend)
-      ?.size ?? 0
+    catalog.releases?.find((r) => r.tag === version)?.variants.find((v) => v.id === backend)?.size ?? 0
   return {
     provider: 'atomic-prism',
-    version: pick.version,
-    backend: pick.backend,
+    version,
+    backend,
     installed,
     download_size: installed ? 0 : size,
   }
@@ -90,7 +86,7 @@ function engineOf(input: GgufPlanInput, blockers: ModelSetupBlocker[]): ModelSet
       : null
   }
   if (verdict.outcome !== 'engine_required' && verdict.outcome !== 'engine_update_required') return null
-  const build = prism ? choosePrismBuild(prism, verdict.min_prism_build) : null
+  const build = prism ? recommendedBuild(prism) : null
   if (!build)
     blockers.push({
       code: 'no_engine_build',

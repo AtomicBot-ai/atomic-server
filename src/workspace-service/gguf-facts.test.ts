@@ -1,3 +1,4 @@
+import { AtomicCoreError } from '@atomic-chat/core'
 import { describe, expect, it } from 'vitest'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { planFor, planRequest } from './gguf-facts.js'
@@ -105,5 +106,69 @@ describe('planFor', () => {
     )
     expect(plan.model).toMatchObject({ file: 'sub/Bonsai-8B-Q1_0.gguf', sha256: 'a'.repeat(64), size: 1000 })
     expect(plan.projector).toMatchObject({ file: 'mmproj.gguf' })
+  })
+
+  describe('the PrismML catalog', () => {
+    const prismLink = (outcome: string, extra: Record<string, unknown>, catalog: () => unknown) => {
+      const l = fakeCoreLink()
+      l.request = async <T>(method: string, path: string, body?: unknown) => {
+        l.calls.push({ method, path, body })
+        if (path === '/models/compatibility')
+          return { outcome, provider: 'atomic-prism', requires: [], reason: 'PrismML', ...extra } as T
+        if (path === '/backends/atomic-prism/catalog') return catalog() as T
+        return { families: [] } as T
+      }
+      return l
+    }
+    const catalog = () => ({
+      provider: 'atomic-prism',
+      available: [{ version: 'prism-b12-bbbbbbb', backend: 'cpu' }],
+      installed: [],
+      recommended: 'prism-b12-bbbbbbb/cpu',
+      recommended_installed: null,
+      releases: [{ tag: 'prism-b12-bbbbbbb', variants: [{ id: 'cpu', size: 300 }] }],
+    })
+    const catalogBody = (l: ReturnType<typeof fakeCoreLink>) =>
+      l.calls.find((c) => c.path === '/backends/atomic-prism/catalog')?.body
+
+    it.each([
+      [
+        'engine_required',
+        { requires: ['pq2_0'], min_prism_build: 12 },
+        { requires: ['pq2_0'], min_build: 12 },
+      ],
+      ['engine_update_required', { requires: ['pq2_0'] }, { requires: ['pq2_0'] }],
+      ['engine_required', {}, { requires: [] }],
+      ['compatible', { requires: ['pq2_0'], min_prism_build: 12 }, {}],
+    ])('asks the catalog for a %s verdict %j with %j', async (outcome, extra, body) => {
+      const l = prismLink(outcome, extra, catalog)
+      await planFor({ link: l, fetch: hub, env: {} }, { repo: 'o/r', file: 'm.gguf' })
+      expect(catalogBody(l)).toEqual(body)
+    })
+
+    it('plans the build the core recommends for the file', async () => {
+      const l = prismLink('engine_required', { requires: ['pq2_0'] }, catalog)
+      const plan = await planFor({ link: l, fetch: hub, env: {} }, { repo: 'o/r', file: 'm.gguf' })
+      expect(plan.engine).toMatchObject({ version: 'prism-b12-bbbbbbb', backend: 'cpu', download_size: 300 })
+      expect(plan.blockers).toEqual([])
+    })
+
+    it('turns BACKEND_BUILD_UNAVAILABLE into the no_engine_build blocker', async () => {
+      const l = prismLink('engine_required', { requires: ['pq2_0'], min_prism_build: 99 }, () => {
+        throw new AtomicCoreError('BACKEND_BUILD_UNAVAILABLE', 'No build meets the requirements.')
+      })
+      const plan = await planFor({ link: l, fetch: hub, env: {} }, { repo: 'o/r', file: 'm.gguf' })
+      expect(plan.engine).toBeNull()
+      expect(plan.blockers.map((b) => b.code)).toEqual(['no_engine_build'])
+    })
+
+    it('passes any other catalog failure on', async () => {
+      const l = prismLink('engine_required', { requires: ['pq2_0'] }, () => {
+        throw new AtomicCoreError('INVALID_ARGUMENT', 'bad requires')
+      })
+      await expect(
+        planFor({ link: l, fetch: hub, env: {} }, { repo: 'o/r', file: 'm.gguf' })
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' })
+    })
   })
 })
