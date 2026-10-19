@@ -7,8 +7,10 @@
  * `instance_id` differs from the lock's is stale.
  */
 
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { replaceFile } from '../terminal-data/index.js'
+import type { RenameFn } from '../terminal-data/index.js'
 
 export interface DaemonRecord {
   schema_version: 1
@@ -34,11 +36,16 @@ export async function readDaemonRecord(path: string): Promise<DaemonRecord | und
   }
 }
 
-export async function writeDaemonRecord(path: string, record: DaemonRecord): Promise<void> {
+export async function writeDaemonRecord(
+  path: string,
+  record: DaemonRecord,
+  deps: { rename?: RenameFn } = {}
+): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
   const tmp = `${path}.${record.pid}.tmp`
   await writeFile(tmp, `${JSON.stringify(record, null, 2)}\n`)
-  await rename(tmp, path)
+  // Clients poll this record while the server starts: on Windows the rename may meet an open reader.
+  await replaceFile(tmp, path, deps.rename)
 }
 
 export async function removeDaemonRecord(path: string, instanceId: string): Promise<void> {

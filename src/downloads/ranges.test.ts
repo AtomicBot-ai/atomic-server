@@ -46,9 +46,20 @@ async function make(over: Partial<DownloaderDeps> = {}) {
   })
   return { dl, out, peak: () => peak }
 }
+/**
+ * What the folder holds, file by file. Sizes, not `blocks`: on Windows Node derives `blocks` from what
+ * NTFS reserves while a file grows, which can be several times the data; a second copy of the file (the
+ * regression this guards) shows in the sizes on every platform.
+ */
 async function folderBytes(dir: string): Promise<number> {
   const names = await readdir(dir).catch(() => [] as string[])
-  const sizes = await Promise.all(names.map((n) => stat(join(dir, n)).then((s) => s.blocks * 512)))
+  const sizes = await Promise.all(
+    names.map((n) =>
+      stat(join(dir, n))
+        .then((s) => s.size)
+        .catch(() => 0)
+    )
+  )
   return sizes.reduce((a, b) => a + b, 0)
 }
 const item = (path: string) => ({ url: server.url(path), save_path: SAVE, sha256: sha, size: body.length })

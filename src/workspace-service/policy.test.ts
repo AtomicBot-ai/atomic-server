@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { WorkspaceMetrics } from './metrics.js'
 import { sanitized } from './validation.js'
@@ -79,7 +80,8 @@ describe('workspace policies', () => {
       'diffusion/models/model/clipL/clip.gguf',
     ])
     expect(plan.load).toMatchObject({
-      files: { clipL: '/data/diffusion/models/model/clipL/clip.gguf' },
+      // The load paths are this machine's (backslashes on Windows), built from the data folder.
+      files: { clipL: join('/data', 'diffusion', 'models', 'model', 'clipL', 'clip.gguf') },
       ranges: { frames: [9, 121] },
     })
     expect(artifactPlan(row, '/data').digest).toBe(plan.digest)

@@ -50,7 +50,7 @@ describe('runtime behaviours', () => {
     await new Promise<void>((r) => server.close(() => r()))
   })
 
-  it('writes byte ranges at their offsets in one file and appends at 0 after a truncate (the downloader)', async () => {
+  it('writes byte ranges at their offsets in one file and writes at 0 after a truncate (the downloader)', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'atc-compat-'))
     const path = join(dir, 'model.gguf.tmp')
     try {
@@ -64,9 +64,11 @@ describe('runtime behaviours', () => {
       await ranged.close()
       expect(await readFile(path, 'utf8')).toBe('abcdef')
       await writeFile(path, 'stale')
-      const single = await open(path, 'a')
+      // One stream writes at explicit positions through a read-write handle: Windows refuses
+      // truncate on an append handle, and a restart needs truncate(0) then the next byte at 0.
+      const single = await open(path, 'r+')
       await single.truncate(0)
-      await single.write(Buffer.from('fresh'))
+      await single.write(Buffer.from('fresh'), 0, 5, 0)
       await single.close()
       expect(await readFile(path, 'utf8')).toBe('fresh')
     } finally {
