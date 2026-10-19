@@ -58,7 +58,6 @@ export const WRITE_ROUTES: ReadonlyArray<readonly [string, string]> = [
   ['POST', '/backends/:provider/updates'],
   ['PUT', '/backends/:provider/optimal'],
   ['DELETE', '/backends/:provider/:version/:backend'],
-  ['PUT', '/hardware/override'],
   ['DELETE', '/hardware/override'],
   ['PATCH', '/settings/:provider'],
   ['POST', '/environments/probe'],

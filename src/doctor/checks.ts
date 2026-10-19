@@ -7,8 +7,9 @@ import { access, mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AtcPaths } from '../config/index.js'
 import { readTextFile, resolveConfig } from '../config/index.js'
-import type { DaemonRecord } from '../core-link/index.js'
-import { readDaemonRecord } from '../core-link/index.js'
+import type { HardwareInfoResponse } from '@atomic-chat/core/contracts'
+import type { AttachFn, DaemonRecord } from '../core-link/index.js'
+import { attachIfRunning, readDaemonRecord } from '../core-link/index.js'
 import type { HostServices } from '../host/index.js'
 import { installLabel } from '../update/index.js'
 import type { InstallInfo } from '../update/index.js'
@@ -31,6 +32,8 @@ export interface CheckContext {
   apiPort: number
   adminPort: number
   install: InstallInfo
+  /** What the running server's core detected; `undefined` when no server runs. */
+  hardware: () => Promise<HardwareInfoResponse | undefined>
 }
 
 export interface Check {
@@ -143,15 +146,27 @@ export const CHECKS: Check[] = [
   },
   {
     id: 'gpu',
-    title: 'GPU driver',
+    title: 'GPU',
+    // The core is the only source of hardware facts; measuring here could disagree with what it uses.
     run: async (ctx) => {
-      const smi = ctx.host.findOnPath('nvidia-smi')
-      if (!smi)
-        return { status: 'skip', message: 'nvidia-smi not found; AMD/Intel checks land in iteration 4' }
-      const result = await ctx.host.exec(smi, ['--query-gpu=name,driver_version', '--format=csv,noheader'])
-      return result.code === 0
-        ? { status: 'ok', message: result.stdout.trim().split('\n')[0] ?? '' }
-        : { status: 'warn', message: 'nvidia-smi failed', hint: 'check the NVIDIA driver' }
+      let hardware: HardwareInfoResponse | undefined
+      try {
+        hardware = await ctx.hardware()
+      } catch (error) {
+        return { status: 'warn', message: `could not ask the server: ${(error as Error).message}` }
+      }
+      if (!hardware)
+        return {
+          status: 'skip',
+          message: 'the server is not running; start it to see what the core detected',
+        }
+      const gpus = hardware.info.gpus.map((g) =>
+        g.driver_version ? `${g.name} (${g.vendor}, driver ${g.driver_version})` : `${g.name} (${g.vendor})`
+      )
+      const message = gpus.length ? gpus.join('; ') : 'no GPU detected; engines run on the CPU'
+      return hardware.warnings.length
+        ? { status: 'warn', message, hint: hardware.warnings.join('; ') }
+        : { status: 'ok', message }
     },
   },
   {
@@ -160,6 +175,11 @@ export const CHECKS: Check[] = [
     run: async () => ({ status: 'skip', message: 'probing Docker/WSL lands in iteration 4' }),
   },
 ]
+
+/** The running server's hardware facts for the gpu check, `undefined` when no server runs. */
+export function coreHardware(attach: AttachFn): () => Promise<HardwareInfoResponse | undefined> {
+  return async () => (await attachIfRunning(attach))?.request<HardwareInfoResponse>('GET', '/hardware/info')
+}
 
 export async function runChecks(checks: Check[], ctx: CheckContext): Promise<CheckResult[]> {
   const results: CheckResult[] = []

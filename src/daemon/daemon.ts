@@ -1,6 +1,6 @@
 /**
  * The long-lived `atc` process: the core in-process (owner of the data folder), the admin server,
- * the hardware facts the core cannot measure itself, the host-step loop for managed runtimes, and
+ * the host-step loop for managed runtimes, and
  * the run record that tells commands this owner is an `atc` daemon. Everything else is a command
  * that attaches to it.
  */
@@ -17,13 +17,7 @@ import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { FIELDS, getAt } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
-import {
-  HostStepExecutor,
-  HostStepJournal,
-  probeHardware,
-  restrictToOwner,
-  toOverride,
-} from '../host/index.js'
+import { HostStepExecutor, HostStepJournal, restrictToOwner } from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
@@ -40,8 +34,6 @@ export interface DaemonOptions {
   admin: { enabled: boolean; host?: string; port?: number }
   telemetry?: boolean
   now?: () => number
-  /** Test seam: skip the hardware probe (it spawns `nvidia-smi`). */
-  probeHardware?: boolean
   /** Test seam: how the core is created (the tests record the options it is given). */
   createCore?: typeof AtomicCore.create
 }
@@ -156,22 +148,6 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   }, PENDING_POLL_MS)
   pendingTimer.unref?.()
 
-  if (options.probeHardware !== false) {
-    try {
-      const probe = await probeHardware({
-        exec: host.exec,
-        platform: host.facts.platform,
-        arch: host.facts.arch,
-        readFile: io.readFile,
-      })
-      for (const note of probe.notes) log.debug(`hardware: ${note}`)
-      await link.hardware.set(toOverride(probe))
-      log.info(`hardware: ${probe.gpus.length} GPU(s), cpu ${probe.cpu_extensions.join(',') || 'none'}`)
-    } catch (error) {
-      log.warn(`hardware probe failed; the core will pick a CPU engine: ${String(error)}`)
-    }
-  }
-
   let admin: AdminServer | undefined
   const status = async (): Promise<AdminStatus> => {
     const snapshot = await link.snapshot()
@@ -267,7 +243,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
 
 /** Run as the foreground process until a signal or a control-API shutdown; the exit code. */
 export async function runDaemon(options: DaemonOptions & { printReadyLine?: boolean }): Promise<number> {
-  // Listen before starting: a signal during startup (the core, the hardware probe, the admin bind)
+  // Listen before starting: a signal during startup (the core, the admin bind)
   // would otherwise kill the process with Node's default handler and leave `daemon.json` behind.
   const started: { daemon?: RunningDaemon } = {}
   let stopRequested = false

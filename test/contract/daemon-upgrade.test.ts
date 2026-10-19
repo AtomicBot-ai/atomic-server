@@ -45,7 +45,6 @@ async function setup(options: Parameters<typeof fakeOldOwner>[1] = {}) {
           controlPort: 0,
           admin: { enabled: false },
           telemetry: false,
-          probeHardware: false,
         })
       },
     })

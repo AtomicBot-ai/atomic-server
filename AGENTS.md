@@ -67,7 +67,7 @@ when this table is stale or a module's `index.ts` has no comment):
 | `src/downloads/` | Model downloads: resumable, verified, parallel byte ranges written in place, proxies and progress. |
 | `src/engines/` | Engines: backend packs (core-installed) and the managed container runtime state machine. |
 | `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
-| `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, hardware probing, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
+| `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
 | `src/models/` | Model sources, spec parsing and the installer seam. |
 | `src/output/` | Everything a command prints: colours, tables, the printer, progress, prompts and the logger. |
 | `src/telemetry/` | Error reports: what the core is told, and the one-time notice. |
@@ -223,8 +223,8 @@ The core (`@atomic-chat/core`, repo `atomic-chat-core`) is embedded at an exact 
 Rule: **never copy core logic — request an export.** Lock semantics, attach, downloads, `model.yml` and
 engine selection belong to the core; a missing export is a change in the core branch (plan §9), not a copy
 here. The one deliberate mirror is `src/host/managed-types.ts` (types from the core's `feat/tenzor-rt`
-branch), which becomes re-exports once that branch lands. The core never probes GPUs itself; the daemon
-pushes `PUT /hardware/override` after start.
+branch), which becomes re-exports once that branch lands. The core probes the hardware itself and is the
+only source of hardware facts; `atc` never sends `PUT /hardware/override`.
 
 ---
 

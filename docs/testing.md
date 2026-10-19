@@ -53,9 +53,8 @@ folder from these, so a test can never touch `~/.local/share/atomic-chat-cli` or
 | `deps.ts` | Type re-exports (`CoreLinkFactory`, `RunCliDeps`) so helpers import from one place. |
 | `src/io.ts` — `recordingIo()` | The `AtcIo` tests use; lives in `src/` because commands are typed against it. |
 
-The daemon contract test builds the real thing with `startDaemon({ …, host: fakeHost(), probeHardware:
-false, admin: { enabled: true, host: '127.0.0.1', port: 0 }, telemetry: false })`: no `nvidia-smi`
-spawn, a random admin port, and telemetry off.
+The daemon contract test builds the real thing with `startDaemon({ …, host: fakeHost(), admin: { enabled:
+true, host: '127.0.0.1', port: 0 }, telemetry: false })`: a random admin port and telemetry off.
 
 ## Running one project
 
