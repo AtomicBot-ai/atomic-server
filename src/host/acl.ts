@@ -3,10 +3,11 @@
  * with (0600 keys, admin token, chats) mean nothing. A data folder outside the profile (`--data-folder
  * C:\atc`) would otherwise inherit the drive's ACL, which lets every local user read. The folder gets
  * no inherited entries, no explicit ones for the broad groups (a folder may carry the drive's entries
- * as its own), and full control for this user, SYSTEM and Administrators. Everyone is named by SID, so
- * nothing depends on the system language; its files inherit that. The result is read back through the
- * core (`readWindowsAcl`, Get-Acl by SID) and judged twice: by the core executor's `judgeWindowsAcl`, so
- * a folder atc accepts is one the executor trusts, and by atc's own rule that nobody else may even read.
+ * as its own), full control for this user, SYSTEM and Administrators, and this user as its owner.
+ * Everyone is named by SID, so nothing depends on the system language; its files inherit that. The
+ * result is read back through the core (`readWindowsAcl`, Get-Acl by SID) and judged twice: by the core
+ * executor's `judgeWindowsAcl`, so a folder atc accepts is one the executor trusts, and by atc's own
+ * rule that nobody else may even read.
  */
 
 import { judgeWindowsAcl, readWindowsAcl } from '@atomic-chat/core/host'
@@ -28,6 +29,15 @@ export function ownerOnlyAclArgs(dir: string, user: string): string[] {
 /** Explicit entries `/inheritance:r` leaves in place; removing an absent one is not an error. */
 export function removeBroadAclArgs(dir: string): string[] {
   return [dir, '/remove:g', ...BROAD]
+}
+
+/**
+ * This user as the folder's owner. From an elevated session a new folder is owned by Administrators;
+ * the core's judge then takes this user's own grant for another writer. Full control includes taking
+ * ownership for oneself, so no privilege is needed.
+ */
+export function setOwnerAclArgs(dir: string, user: string): string[] {
+  return [dir, '/setowner', user]
 }
 
 /** icacls by its full path: never one found on PATH, and no name resolution to go wrong. */
@@ -83,7 +93,11 @@ export async function restrictToOwner(
 ): Promise<string | undefined> {
   if (options.platform !== 'win32') return undefined
   const icacls = icaclsPath(options.systemRoot)
-  for (const args of [ownerOnlyAclArgs(dir, options.user), removeBroadAclArgs(dir)]) {
+  for (const args of [
+    ownerOnlyAclArgs(dir, options.user),
+    removeBroadAclArgs(dir),
+    setOwnerAclArgs(dir, options.user),
+  ]) {
     const r = await options.exec(icacls, args, { timeoutMs: 30_000 })
     if (r.error || r.code !== 0) return (r.error ?? r.stderr.trim()) || `icacls exit code ${r.code}`
   }

@@ -89,10 +89,14 @@ describe('owner-only folder ACL', () => {
       expect(calls.map((c) => c.command)).toEqual([
         'D:\\Win\\System32\\icacls.exe',
         'D:\\Win\\System32\\icacls.exe',
+        'D:\\Win\\System32\\icacls.exe',
         'D:\\Win\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
       ])
       expect(calls[1]?.args).toEqual([dir, '/remove:g', '*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'])
-      expect(calls[2]?.env).toEqual({
+      // From an elevated session the folder's owner is Administrators, and the core's judge would take
+      // this user's own grant for another writer: the user becomes the owner.
+      expect(calls[2]?.args).toEqual([dir, '/setowner', 'HOST\\alice'])
+      expect(calls[3]?.env).toEqual({
         SystemRoot: 'D:\\Win',
         PATH: 'D:\\Win\\System32',
         ATOMIC_HOST_STEP_PATH: dir,

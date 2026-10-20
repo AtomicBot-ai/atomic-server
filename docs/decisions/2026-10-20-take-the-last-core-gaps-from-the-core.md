@@ -22,9 +22,9 @@ title: "Take the last core gaps from the core"
 - **Consequences:** No copy of a core rule and no deep path into the core package is left. The binary
   carries the core's FFI module (an e2e proves it); a Foundry Local host process also evaluates atc's
   module graph before its fork (about 7 MB). `foundry-local` and `sglang` gain a settings screen. A
-  folder that fails the ACL check is still only a warning in the server's log. A Windows folder owned
-  by someone other than this user (created from an elevated session) is refused, as the core's
-  executor would refuse it.
+  folder that fails the ACL check is still only a warning in the server's log. `icacls /setowner` makes
+  this user the folder's owner: from an elevated session the owner would be Administrators, and the
+  core's judge would take the user's own grant for another writer.
 - **Alternatives:** keep `choosePrismBuild` and add the capability filter here — a second copy of the
   core's choice; a separate host binary next to `atc` — a second artefact to sign and ship; make an
   ACL failure fatal — a broken `icacls` would leave the machine without a server.
