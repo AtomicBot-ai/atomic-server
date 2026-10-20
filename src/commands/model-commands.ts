@@ -6,8 +6,9 @@ import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../workspace-service/index.js'
-import { operation, printOperation, workspace } from './control.js'
+import { operation, workspace } from './control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
+import { modelLogs, runModel } from './managed-run.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
@@ -40,15 +41,10 @@ export const runCommand = defineCommand({
     ...engineOption,
     embedding: { type: 'boolean', description: 'Use embedding mode on a compatible engine' },
   },
-  run: async (inv, ctx) => {
-    const service = await workspace(ctx)
-    const input = {
-      provider: await loadProvider(ctx, inv.values['engine'], service),
-      model_id: inv.positionals[0],
-      ...(inv.values['embedding'] ? { options: { isEmbedding: true } } : {}),
-    }
-    return printOperation(ctx, 'models.load', await service.execute('models.load', input))
-  },
+  run: (inv, ctx) =>
+    runModel(ctx, inv.positionals[0]!, inv.values, (service) =>
+      loadProvider(ctx, inv.values['engine'], service)
+    ),
 })
 export const unloadCommand = defineCommand({
   name: 'unload',
@@ -213,6 +209,13 @@ export const modelsCommand = defineCommand({
       positionals: [{ name: 'path', description: 'Model file path', required: true }],
       // The server may run from any folder: resolve here, where the user's working directory is known.
       run: (inv, ctx) => operation(ctx, 'models.import', { path: resolve(ctx.io.cwd, inv.positionals[0]!) }),
+    }),
+    defineCommand({
+      name: 'logs',
+      summary: 'The log of a loaded managed model, or of its last failed load',
+      positionals: [{ name: 'model', description: 'Model ID', required: true }],
+      options: engineOption,
+      run: async (inv, ctx) => modelLogs(ctx, inv.positionals[0]!, await provider(ctx, inv.values['engine'])),
     }),
     defineCommand({
       name: 'info',
