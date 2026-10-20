@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { migrateConfig } from './migrations.js'
+import { validateConfig } from './parse.js'
 import { CONFIG_VERSION } from './schema.js'
 
 describe('migrateConfig', () => {
@@ -9,6 +10,15 @@ describe('migrateConfig', () => {
     })
     expect(migrateConfig({ a: 1 })).toEqual({ raw: { version: CONFIG_VERSION, a: 1 }, migratedFrom: 1 })
   })
+
+  it.each(['llamacpp-upstream', 'llamacpp', 'mlx'])(
+    'reads a current file with engines.default %s as it is',
+    (value) => {
+      const raw = { version: CONFIG_VERSION, engines: { default: value } }
+      expect(migrateConfig(raw)).toEqual({ raw })
+      expect(validateConfig(raw).config.engines.default).toBe(value)
+    }
+  )
 
   it.each([
     [

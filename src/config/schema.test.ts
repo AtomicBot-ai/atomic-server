@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
+import { coerceValue } from './parse.js'
 import { defaultConfig, envNameFor, fieldFor, FIELDS, getAt, setAt } from './schema.js'
 
 describe('schema', () => {
@@ -16,6 +18,14 @@ describe('schema', () => {
     expect(config.admin.port).toBe(1338)
     expect(config.engines.default).toBe('llamacpp-upstream')
     expect(config.proxy.url).toBeUndefined()
+  })
+
+  it('offers every local provider of the core as engines.default and names them when refusing one', () => {
+    const field = fieldFor('engines.default')!
+    expect(field.values).toEqual(LOCAL_PROVIDER_IDS)
+    for (const provider of ['tensorrt-llm', 'vllm', 'sglang', 'foundry-local'])
+      expect(coerceValue(field, provider)).toBe(provider)
+    expect(() => coerceValue(field, 'trt')).toThrow(/one of llamacpp-upstream, .*vllm, sglang, foundry-local/)
   })
 
   it('gets and sets dotted paths', () => {

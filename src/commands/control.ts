@@ -25,7 +25,10 @@ export async function operation(
   name: string,
   input: Record<string, unknown> = {}
 ): Promise<number> {
-  const result = await (await workspace(ctx)).execute(name, input)
+  return printOperation(ctx, name, await (await workspace(ctx)).execute(name, input))
+}
+/** An operation's result as `atc control call` prints it: the JSON envelope, or the result as text. */
+export function printOperation(ctx: CommandContext, name: string, result: unknown): number {
   const envelope = { schema_version: 1, operation: name, status: 'ok', result: result ?? null }
   ctx.out.result(envelope, () =>
     ctx.out.line(typeof result === 'string' ? result : JSON.stringify(result, null, 2))

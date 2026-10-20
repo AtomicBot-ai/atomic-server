@@ -2,12 +2,28 @@ import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
-import { operation, workspace } from './control.js'
+import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
+import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
+import type { WorkspaceClient } from '../workspace-service/index.js'
+import { operation, printOperation, workspace } from './control.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   if (typeof value === 'string') return value
   const configured = (await ctx.config()).values.engines.default
   return configured
+}
+/**
+ * The engine a load goes to: the one named, else `engines.default` once the host is known to register
+ * it, so a default this machine lacks (vLLM on macOS) is said here rather than by a failed load.
+ */
+async function loadProvider(ctx: CommandContext, value: unknown, service: WorkspaceClient): Promise<string> {
+  const chosen = await provider(ctx, value)
+  if (typeof value === 'string' || !(chosen in ENGINE_KINDS)) return chosen
+  const { engines } = (await service.execute('engines.list')) as EngineVersionsResponse
+  if (engines.some((e) => e.engine === chosen)) return chosen
+  throw new AtcError('ATC_USAGE', `The default engine ${chosen} is not available on this machine.`, {
+    hint: `Name one with --engine (${engines.map((e) => e.engine).join(', ')}), or change engines.default.`,
+  })
 }
 const engineOption = {
   engine: { type: 'string' as const, description: 'Engine provider ID', placeholder: 'provider' },
@@ -21,12 +37,15 @@ export const runCommand = defineCommand({
     ...engineOption,
     embedding: { type: 'boolean', description: 'Use embedding mode on a compatible engine' },
   },
-  run: async (inv, ctx) =>
-    operation(ctx, 'models.load', {
-      provider: await provider(ctx, inv.values['engine']),
+  run: async (inv, ctx) => {
+    const service = await workspace(ctx)
+    const input = {
+      provider: await loadProvider(ctx, inv.values['engine'], service),
       model_id: inv.positionals[0],
       ...(inv.values['embedding'] ? { options: { isEmbedding: true } } : {}),
-    }),
+    }
+    return printOperation(ctx, 'models.load', await service.execute('models.load', input))
+  },
 })
 export const unloadCommand = defineCommand({
   name: 'unload',
