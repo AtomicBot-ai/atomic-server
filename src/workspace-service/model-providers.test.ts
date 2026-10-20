@@ -63,3 +63,24 @@ describe('models.installed providers', () => {
     expect((await providers())['gemma-mlx']).toEqual([])
   })
 })
+
+describe('engine order', () => {
+  const CORE_ORDER = ['llamacpp-upstream', 'mlx', 'foundry-local', 'tensorrt-llm', 'vllm', 'sglang']
+
+  it('answers engines.list in the order both UIs show: managed as the desktop app, then Foundry Local', async () => {
+    const tmp = tmpDataFolder()
+    cleanup.push(tmp.cleanup)
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = { engines: CORE_ORDER.map((engine) => ({ engine })) }
+    const service = new WorkspaceService({ link, paths: tmp.paths, config: defaultConfig() })
+    const listed = (await service.execute('engines.list')) as { engines: Array<{ engine: string }> }
+    expect(listed.engines.map((e) => e.engine)).toEqual([
+      'llamacpp-upstream',
+      'mlx',
+      'vllm',
+      'sglang',
+      'tensorrt-llm',
+      'foundry-local',
+    ])
+  })
+})

@@ -15,7 +15,7 @@ function linuxWithoutDocker(): ManagedHost {
   t = run.t
   const h = run.h
   for (const engine of ['tensorrt-llm', 'vllm', 'sglang']) h.plans[engine] = plan(engine)
-  h.versions = ['llamacpp-upstream', 'tensorrt-llm', 'vllm', 'sglang'].map((engine) => ({
+  h.versions = ['llamacpp-upstream', 'vllm', 'sglang', 'tensorrt-llm'].map((engine) => ({
     engine: engine as never,
     kind: engine === 'llamacpp-upstream' ? 'llamacpp' : 'managed',
   }))
@@ -82,7 +82,7 @@ describe('atc engines status', () => {
     const doc = JSON.parse(out()) as {
       engines: Array<{ engine: string; managed?: { state: { kind: string } } }>
     }
-    expect(doc.engines.map((e) => e.engine)).toEqual(['llamacpp-upstream', 'tensorrt-llm', 'vllm', 'sglang'])
+    expect(doc.engines.map((e) => e.engine)).toEqual(['llamacpp-upstream', 'vllm', 'sglang', 'tensorrt-llm'])
     expect(doc.engines.find((e) => e.engine === 'vllm')?.managed?.state.kind).toBe('installable')
     expect(doc.engines.find((e) => e.engine === 'llamacpp-upstream')?.managed).toBeUndefined()
   })

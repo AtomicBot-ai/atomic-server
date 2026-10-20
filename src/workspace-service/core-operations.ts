@@ -6,6 +6,7 @@ import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { modelIdPath, object, segment } from './validation.js'
 import { managedEngineOperation } from './managed-engines.js'
+import { orderEngines } from '../workspace-view/index.js'
 export { NOT_CORE } from './not-core.js'
 export async function coreOperation(
   link: CoreLink,
@@ -34,8 +35,13 @@ export async function coreOperation(
       return get(`${model()}/logs`)
     case 'models.remove':
       return link.request('DELETE', `/managed-models/${modelIdPath(input['model_id'])}`)
-    case 'engines.list':
-      return post('/engines/versions', input)
+    case 'engines.list': {
+      // The core lists engines by id; every client shows them in one order (managed as the desktop app).
+      const answer = (await post('/engines/versions', input)) as { engines?: Array<{ engine: string }> }
+      if (!Array.isArray(answer?.engines)) return answer
+      const order = orderEngines(answer.engines.map((e) => e.engine))
+      return { ...answer, engines: order.map((id) => answer.engines!.find((e) => e.engine === id)!) }
+    }
     case 'engines.catalog': {
       const engine = String(input['engine'])
       const kind = engineKind(engine)

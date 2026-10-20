@@ -14,6 +14,7 @@ import type {
 } from '@atomic-chat/core/contracts'
 import type { ManagedVerdict, ModelCheckResult } from '../contract/index.js'
 import type { CoreLink } from '../core-link/index.js'
+import { orderEngines } from '../workspace-view/index.js'
 import { AtcError } from '../errors/index.js'
 import { checkRequestFor, fetchHfRevision, HF_HUB, normalizeRepository } from './hf-revision.js'
 import type { HfRevision } from './hf-revision.js'
@@ -33,7 +34,9 @@ export const hubOf = (env: ManagedModelDeps['env']) => (env?.['HF_ENDPOINT'] || 
 export async function managedEngines(link: CoreLink): Promise<Array<{ engine: string; installed: boolean }>> {
   const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
   const environment = ((await link.environments.list()) as EnvironmentSnapshot[])[0]
-  return (engines ?? [])
+  const order = orderEngines((engines ?? []).map((e) => e.engine as string))
+  return order
+    .map((id) => (engines ?? []).find((e) => e.engine === id)!)
     .filter((e) => ENGINE_KINDS[e.engine] === 'managed')
     .map((e) => ({
       engine: e.engine,

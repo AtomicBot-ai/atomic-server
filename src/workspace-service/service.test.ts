@@ -247,8 +247,8 @@ describe('workspace operations', () => {
       {
         id: 'Qwen/Qwen3.5-2B',
         name: 'Qwen/Qwen3.5-2B',
-        provider: 'tensorrt-llm',
-        providers: ['tensorrt-llm', 'vllm'],
+        provider: 'vllm',
+        providers: ['vllm', 'tensorrt-llm'],
         store: 'managed',
         size_bytes: 1000 + '{"repository":"Qwen/Qwen3.5-2B"}'.length,
       },

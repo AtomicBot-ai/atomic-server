@@ -107,9 +107,9 @@ describe('atc models check', () => {
       verdicts: Array<{ engine: string; compatibility: { verdict: { ok: boolean } } }>
     }
     expect(doc.verdicts.map((v) => [v.engine, v.compatibility.verdict.ok])).toEqual([
-      ['tensorrt-llm', false],
       ['vllm', true],
       ['sglang', true],
+      ['tensorrt-llm', false],
     ])
   })
 

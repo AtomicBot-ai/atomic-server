@@ -59,9 +59,9 @@ describe('checkModel', () => {
     l.responses['POST /models/tensorrt-llm/check'] = refused('AutoAWQ is not supported by this release.')
     const result = await checkModel(deps(l, { HF_TOKEN: 'hf_x' }), { repository: REPO })
     expect(checks(l).map((c) => c.path)).toEqual([
-      '/models/tensorrt-llm/check',
       '/models/vllm/check',
       '/models/sglang/check',
+      '/models/tensorrt-llm/check',
     ])
     expect(checks(l)[0]?.body).toMatchObject({
       repository: REPO,
@@ -73,9 +73,9 @@ describe('checkModel', () => {
     expect(checks(l)[0]?.body).not.toHaveProperty('gpu_id')
     expect(result).toMatchObject({ repository: REPO, revision: HF_SHA })
     expect(result.verdicts.map((v) => [v.engine, v.installed, v.compatibility?.verdict.ok])).toEqual([
-      ['tensorrt-llm', false, false],
       ['vllm', true, true],
       ['sglang', false, true],
+      ['tensorrt-llm', false, false],
     ])
     expect(server.requests.every((r) => r.authorization === 'Bearer hf_x')).toBe(true)
   })

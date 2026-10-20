@@ -9,6 +9,7 @@ import type { DataLayout } from '@atomic-chat/core/host'
 import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { CoreLink } from '../core-link/index.js'
 import { modelIdPath, segment } from './validation.js'
+import { orderEngines } from '../workspace-view/index.js'
 
 interface Row {
   id: string
@@ -30,7 +31,7 @@ const folderOf = (layout: DataLayout, provider: string) => {
 export const registeredEngines = (link: CoreLink): Promise<string[] | null> =>
   link
     .request<EngineVersionsResponse>('POST', '/engines/versions', {})
-    .then((r) => (r.engines ?? []).map((e) => e.engine as string))
+    .then((r) => orderEngines((r.engines ?? []).map((e) => e.engine as string)))
     .catch(() => null)
 
 export async function withProviders<T extends Row>(

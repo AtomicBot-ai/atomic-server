@@ -33,7 +33,7 @@ describe('the managed store in atc models', () => {
       .split('\n')
       .filter((l) => l.startsWith(REPO))
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toContain('tensorrt-llm, vllm')
+    expect(rows[0]).toContain('vllm, tensorrt-llm')
     expect(rows[0]).toContain('2.0 KiB')
   })
 
@@ -46,7 +46,7 @@ describe('the managed store in atc models', () => {
       engine_caches_removed: 2,
     }
     expect(await t.run(['models', 'rm', REPO, '--yes'])).toBe(0)
-    expect(err() + out()).toContain('every managed engine (tensorrt-llm, vllm)')
+    expect(err() + out()).toContain('every managed engine (vllm, tensorrt-llm)')
     expect(out()).toContain('3.0 GiB')
     expect(t.link.calls.some((c) => c.method === 'DELETE' && c.path === `/managed-models/${REPO}`)).toBe(true)
   })
