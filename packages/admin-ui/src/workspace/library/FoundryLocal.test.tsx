@@ -64,8 +64,19 @@ describe('Foundry Local in the admin', () => {
     expect(execute).toHaveBeenCalledWith('foundry.prepare', {})
   })
 
-  it('opens from the Engines tab', async () => {
-    const { workspace } = workspaceFixture({
+  it('updates the build and prepares the accelerators after it', async () => {
+    const { workspace, execute } = workspaceFixture({
+      'foundry.accelerators': view(),
+      'foundry.prepare': view({ preparing: true }),
+    })
+    render(<FoundryLocal workspace={workspace} onClose={() => {}} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Update build' }))
+    expect(execute).toHaveBeenCalledWith('engines.install', { engine: 'foundry-local' })
+    expect(execute).toHaveBeenCalledWith('foundry.prepare', {})
+  })
+
+  it('opens from the Engines tab, an installed build’s Update too', async () => {
+    const { workspace, execute } = workspaceFixture({
       'engines.list': enginesList(['llamacpp-upstream', 'foundry-local']),
       'foundry.accelerators': view(),
       'models.installed': [],
@@ -75,5 +86,10 @@ describe('Foundry Local in the admin', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Engines' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Accelerators' }))
     expect(await screen.findByRole('dialog', { name: 'Foundry Local' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    // Foundry Local's Update is the panel's: a bare install would leave the new build unprepared.
+    await userEvent.click(screen.getAllByRole('button', { name: 'Update' })[1]!)
+    expect(await screen.findByRole('dialog', { name: 'Foundry Local' })).toBeInTheDocument()
+    expect(execute).not.toHaveBeenCalledWith('engines.install', { engine: 'foundry-local' })
   })
 })

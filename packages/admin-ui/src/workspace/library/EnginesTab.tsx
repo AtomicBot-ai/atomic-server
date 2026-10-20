@@ -37,7 +37,7 @@ export function EnginesTab({
                   onClick={() =>
                     engine.kind === 'managed'
                       ? onManaged(text(engine.engine))
-                      : engine.engine === 'foundry-local' && !engine.active
+                      : engine.engine === 'foundry-local'
                         ? onFoundry()
                         : execute('engines.install', { engine: engine.engine })
                   }

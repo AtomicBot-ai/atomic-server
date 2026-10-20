@@ -150,6 +150,14 @@ describe('Foundry Local in the TUI', () => {
     expect(calls(t, 'foundry.prepare')).toEqual([{}])
   })
 
+  it('updates the build and prepares the accelerators after it, as the install does', async () => {
+    const t = tui(accelerators())
+    await activate('library-row:0', t.ctx)
+    await activate('foundry-update', t.ctx)
+    expect(calls(t, 'engines.install')).toEqual([{ engine: 'foundry-local' }])
+    expect(calls(t, 'foundry.prepare')).toEqual([{}])
+  })
+
   it('lists models with their variants, verdicts and the unverified mark', async () => {
     const t = tui(accelerators())
     await activate('library-row:0', t.ctx)

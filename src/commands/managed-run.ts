@@ -59,6 +59,15 @@ export async function runModel(
 ): Promise<number> {
   const { link, service } = await attachWorkspace(ctx)
   const named = typeof values['engine'] === 'string' ? values['engine'] : undefined
+  // Foundry Local exists only where the core registers it (spec foundry-local-server): say so here.
+  if (named === 'foundry-local') {
+    const { engines } = (await service.execute('engines.list')) as { engines: Array<{ engine: string }> }
+    if (!engines.some((e) => e.engine === 'foundry-local'))
+      throw new AtcError(
+        'ATC_USAGE',
+        'Foundry Local is not available on this platform: the core does not offer it here.'
+      )
+  }
   const provider =
     named ??
     (await storeEngine(service, model, (await ctx.config()).values.engines.default)) ??

@@ -9,8 +9,8 @@ import type { Workspace } from '../useWorkspace'
 /**
  * Foundry Local's accelerators (spec foundry-local-server): what the library found, each one's Prepare,
  * and each accelerator's step while the server prepares (`foundry.accelerators`' `steps`, read again at
- * every snapshot while a prepare runs); Install when the engine is absent, which prepares after it as
- * `atc engines install foundry-local` does. Closing it stops nothing.
+ * every snapshot while a prepare runs); Install when the engine is absent and Update build when it is
+ * there, each preparing after it as `atc engines install foundry-local` does. Closing it stops nothing.
  */
 export function FoundryLocal({ workspace: w, onClose }: { workspace: Workspace; onClose: () => void }) {
   const dialog = useDialog(onClose)
@@ -41,6 +41,12 @@ export function FoundryLocal({ workspace: w, onClose }: { workspace: Workspace; 
       await read()
     }
   }
+  // An update installs a new build, which registers nothing yet: prepare after it, as the install does.
+  const install = () =>
+    act(async () => {
+      await execute('engines.install', { engine: 'foundry-local' })
+      await execute('foundry.prepare', {})
+    })
   const preparable = (view?.accelerators ?? []).filter((a) => !a.prepared && a.execution_provider !== null)
   return (
     <div className="modal-shade">
@@ -67,17 +73,13 @@ export function FoundryLocal({ workspace: w, onClose }: { workspace: Workspace; 
         )}
         <div className="ew-actions">
           {view && !view.installed && (
-            <Action
-              primary
-              disabled={busy}
-              onClick={() =>
-                act(async () => {
-                  await execute('engines.install', { engine: 'foundry-local' })
-                  await execute('foundry.prepare', {})
-                })
-              }
-            >
+            <Action primary disabled={busy} onClick={install}>
               Install Foundry Local
+            </Action>
+          )}
+          {view?.installed && !view.preparing && (
+            <Action disabled={busy} onClick={install}>
+              Update build
             </Action>
           )}
           {view?.installed &&

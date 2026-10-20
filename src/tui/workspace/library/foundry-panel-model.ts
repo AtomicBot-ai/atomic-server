@@ -78,6 +78,8 @@ export function foundryModel(p: EnginePanel): {
           'Download and register them in the server (about 2 GB)'
         )
       add('foundry-models', 'Find models', 'Variants for this machine with the core’s verdicts')
+      if (!view.preparing)
+        add('foundry-update', 'Update build', 'Install the newest build, then prepare its accelerators')
       if (p.inSetup) add('setup-path-continue', 'Choose models >', 'Go on with guided setup')
     }
     add('engine-settings', 'Settings', 'This engine’s settings in the core')

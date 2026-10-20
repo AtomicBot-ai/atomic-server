@@ -55,9 +55,10 @@ export async function foundryAction(id: string, ctx: PanelContext): Promise<bool
       set(ctx, { busy: false, error: message(e) })
     }
   }
-  if (id === 'foundry-prepare' || id === 'foundry-install') {
+  // A new build drops what the old one registered: an update prepares again, as an install does.
+  if (id === 'foundry-prepare' || id === 'foundry-install' || id === 'foundry-update') {
     await work(async () => {
-      if (id === 'foundry-install') await run.execute('engines.install', { engine: 'foundry-local' })
+      if (id !== 'foundry-prepare') await run.execute('engines.install', { engine: 'foundry-local' })
       set(ctx, {}, { view: (await run.execute('foundry.prepare', {})) as FoundryAcceleratorsView })
     })
     return true

@@ -55,7 +55,7 @@ const foundryPlan = {
   verdict: { verdict: 'ok', reason: null, accelerator: null },
 }
 
-function harness(installed: string[]) {
+function harness(installed: string[], plan: object = foundryPlan) {
   let state = { ...createWorkspace('setup') }
   state.setup = {
     ...newSetup('server'),
@@ -82,7 +82,7 @@ function harness(installed: string[]) {
       }
     if (name === 'models.search') return { rows: [] }
     if (name === 'managed.plan') return managedPlan
-    if (name === 'foundry.plan') return foundryPlan
+    if (name === 'foundry.plan') return plan
     if (name === 'engines.plan')
       return { engine: input['engine'], plan: null, installation: null, operation: null }
     return { id: 'job' }
@@ -195,6 +195,26 @@ describe('guided setup with Foundry Local', () => {
       kind: 'foundry-model',
       model: 'phi-4-mini-cpu',
       engine: 'foundry-local',
+    })
+  })
+  it.each([
+    ['accelerator-not-prepared', 'Prepare accelerators'],
+    ['engine-not-installed', 'Install Foundry Local'],
+  ])('a variant that waits on %s leads to the Foundry Local panel, then back', async (verdict, label) => {
+    const waiting = {
+      ...foundryPlan,
+      verdict: { verdict, reason: null, accelerator: 'OpenVINO NPU' },
+      blockers: ['Not runnable here yet.'],
+    }
+    const t = harness(['foundry-local'], waiting)
+    await setupAction('setup-engine:foundry-local', t.ctx)
+    await setupAction('setup-path-repo:0', t.ctx)
+    expect(screen(t.get())).toContain(label)
+    expect(screen(t.get())).not.toContain('Download')
+    await setupAction('setup-path-foundry', t.ctx)
+    expect(t.get()).toMatchObject({
+      overlay: 'engine-panel',
+      enginePanel: { engine: 'foundry-local', inSetup: true },
     })
   })
 })

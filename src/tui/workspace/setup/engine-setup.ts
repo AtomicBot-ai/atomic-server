@@ -118,12 +118,14 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   }
   const engine = id.startsWith('setup-engine:') ? id.slice('setup-engine:'.length) : ''
   const kind = pathKind(engine)
+  // The engine's own panel, inside setup: its "Choose models >" comes back here.
+  const openPanel = async (name: string) => {
+    await engineAction(`engine-open:${name}`, ctx)
+    update((s) => (s.enginePanel ? { ...s, enginePanel: { ...s.enginePanel, inSetup: true } } : s))
+    return true
+  }
   if (kind) {
-    if (!view.installed.includes(engine)) {
-      await engineAction(`engine-open:${engine}`, ctx)
-      update((s) => (s.enginePanel ? { ...s, enginePanel: { ...s.enginePanel, inSetup: true } } : s))
-      return true
-    }
+    if (!view.installed.includes(engine)) return openPanel(engine)
     change({ engine, stage: 'models', query: '', path: { engine, kind, rows: [], plan: null, job: null } })
     return run(async () => {
       path({ rows: await rows(c, get().setup!.path!, '') })
@@ -143,6 +145,8 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   }
   const current = view.path
   if (!current || !id.startsWith('setup-')) return false
+  // A variant that waits on Foundry Local itself: its panel installs it or prepares the accelerator.
+  if (id === 'setup-path-foundry') return openPanel('foundry-local')
   if (id === 'setup-search' && view.stage === 'models')
     return run(async () => path({ rows: await rows(c, current, view.query) }))
   if (id.startsWith('setup-path-repo:')) {

@@ -107,6 +107,13 @@ describe('atc engines accelerators foundry-local', () => {
     expect(prepares()).toEqual([])
   })
 
+  it('says models run on the CPU in the plain listing too', async () => {
+    host()
+    t.link.responses['GET /runtimes/foundry-local/accelerators'] = probe([CPU])
+    expect(await t.run(['engines', 'accelerators', 'foundry-local'])).toBe(0)
+    expect(out()).toContain('run on the CPU')
+  })
+
   it('says Foundry Local is not available where the core does not register it', async () => {
     t = testRun()
     t.link.responses['GET /runtimes/foundry-local/accelerators'] = new AtomicCoreError(

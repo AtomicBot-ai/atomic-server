@@ -174,3 +174,13 @@ describe('Foundry Local models', () => {
     expect(loads(t).map((c) => c.path)).toEqual([`/models/foundry-local/${VARIANT}/load`])
   })
 })
+
+describe('atc run --engine foundry-local where the core does not register it', () => {
+  it('says the engine is not available on this platform and loads nothing', async () => {
+    t = testRun()
+    t.link.responses['POST /engines/versions'] = registered('llamacpp-upstream')
+    expect(await t.run(['run', 'phi-cpu', '--engine', 'foundry-local'])).toBe(2)
+    expect(t.io.err.join('')).toContain('not available on this platform')
+    expect(loads(t)).toEqual([])
+  })
+})

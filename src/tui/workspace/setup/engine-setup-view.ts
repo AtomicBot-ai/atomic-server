@@ -67,6 +67,12 @@ function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan): string[] {
   ]
 }
 
+/** A Foundry variant that runs once Foundry Local is ready: the step its panel takes. */
+const FOUNDRY_STEP: Record<string, string> = {
+  'accelerator-not-prepared': 'Prepare accelerators',
+  'engine-not-installed': 'Install Foundry Local',
+}
+
 export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   const plan = v.path?.plan
   if (!plan) return
@@ -76,9 +82,13 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
     .slice(0, Math.max(1, a.bottom - a.y - 6))
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))
   if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.red, a.width)
+  const waits = 'variant_id' in plan ? FOUNDRY_STEP[plan.verdict.verdict] : undefined
+  let bx = a.x
   if (!plan.blockers.length)
-    button(c, 'setup-path-install', a.x, a.bottom, 'Download', 'Download in the server', a.focus)
-  button(c, 'setup-back', a.x + 13, a.bottom, 'Back', 'Return without downloading', a.focus)
+    bx += button(c, 'setup-path-install', bx, a.bottom, 'Download', 'Download in the server', a.focus) + 1
+  else if (waits)
+    bx += button(c, 'setup-path-foundry', bx, a.bottom, waits, 'Open Foundry Local', a.focus) + 1
+  button(c, 'setup-back', bx, a.bottom, 'Back', 'Return without downloading', a.focus)
 }
 
 export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: Area) {

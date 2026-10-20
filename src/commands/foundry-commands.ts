@@ -17,6 +17,8 @@ import { attachWorkspace } from './control.js'
 import { follow, followDisplay } from './follow.js'
 import { followSetup } from './managed-model-commands.js'
 
+const CPU_ONLY = 'Only the CPU is here: Foundry Local models run on the CPU, and nothing needs preparing.'
+
 type Step =
   { kind: 'step'; step: FoundryLocalAcceleratorsEvent } | { kind: 'status'; view: FoundryAcceleratorsView }
 
@@ -40,7 +42,7 @@ export async function prepareAccelerators(ctx: CommandContext, names: string[] =
     ctx.out.line(
       view.accelerators.some((a) => a.execution_provider !== null && a.execution_provider !== 'cpu')
         ? 'Every accelerator is prepared.'
-        : 'Only the CPU is here: Foundry Local models run on the CPU, and nothing needs preparing.'
+        : CPU_ONLY
     )
     return 0
   }
@@ -124,6 +126,11 @@ export const acceleratorsCommand = defineCommand({
         ])
       )
       if (view.preparing) ctx.out.note('a prepare is running in the server')
+      if (
+        view.installed &&
+        !view.accelerators.some((a) => a.execution_provider !== null && a.execution_provider !== 'cpu')
+      )
+        ctx.out.line(CPU_ONLY)
     })
     return 0
   },
