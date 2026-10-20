@@ -21,17 +21,24 @@ export function variantLabel(v: { execution_provider: string; device: string }):
     : accelerator
 }
 
+/** An accelerator as a person names it: its execution provider and device (`OpenVINO NPU`, `CPU`). */
+export function acceleratorLabel(a: {
+  name: string
+  execution_provider: string | null
+  device: string
+}): string {
+  if (a.execution_provider === null) return a.name
+  if (a.execution_provider === 'cpu') return 'CPU'
+  return `${LABELS[a.execution_provider] ?? a.execution_provider} ${a.device.toUpperCase()}`
+}
+
 /** What the library found: each accelerator prepared or not, a prepare running, the last one's failure. */
 export function acceleratorLines(view: FoundryAcceleratorsView): string[] {
   if (!view.installed) return [`Foundry Local is not installed: ${INSTALL}`]
   if (view.error && view.accelerators.length === 0) return [`The library was not probed: ${view.error}`]
   const lines = view.accelerators.map((a) => {
     if (a.execution_provider === null) return `${a.name}: not offered${a.reason ? ` (${a.reason})` : ''}`
-    const label =
-      a.execution_provider === 'cpu'
-        ? 'CPU'
-        : `${LABELS[a.execution_provider] ?? a.execution_provider} ${a.device.toUpperCase()}`
-    return `${label}: ${a.prepared ? 'prepared' : `not prepared — ${PREPARE}`}`
+    return `${acceleratorLabel(a)}: ${a.prepared ? 'prepared' : `not prepared — ${PREPARE}`}`
   })
   if (!view.accelerators.some((a) => a.execution_provider !== null && a.execution_provider !== 'cpu'))
     lines.push('Models run on the CPU; nothing needs preparing.')

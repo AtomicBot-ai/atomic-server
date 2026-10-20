@@ -9,6 +9,7 @@ import { ModelInstall } from './ModelInstall'
 import { Downloads } from './Downloads'
 import { EngineSettings } from './EngineSettings'
 import { EngineSetup } from './EngineSetup'
+import { FoundryLocal } from './FoundryLocal'
 import { InstalledModels } from './InstalledModels'
 
 export function Catalog({
@@ -29,6 +30,7 @@ export function Catalog({
   const [selected, setSelected] = useState<RecordValue | null>(null)
   const [settingsProvider, setSettingsProvider] = useState('')
   const [managed, setManaged] = useState('')
+  const [foundry, setFoundry] = useState(false)
   const { execute } = w
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -152,15 +154,22 @@ export function Catalog({
                 title={text(engine.engine)}
                 actions={
                   // A managed engine's setup is a plan to agree to: the modal, never a direct install.
-                  <Action
-                    onClick={() =>
-                      engine.kind === 'managed'
-                        ? setManaged(text(engine.engine))
-                        : execute('engines.install', { engine: engine.engine })
-                    }
-                  >
-                    {engine.active ? (engine.kind === 'managed' ? 'Manage' : 'Update') : 'Install'}
-                  </Action>
+                  <>
+                    {engine.engine === 'foundry-local' && (
+                      <Action onClick={() => setFoundry(true)}>Accelerators</Action>
+                    )}
+                    <Action
+                      onClick={() =>
+                        engine.kind === 'managed'
+                          ? setManaged(text(engine.engine))
+                          : engine.engine === 'foundry-local' && !engine.active
+                            ? setFoundry(true)
+                            : execute('engines.install', { engine: engine.engine })
+                      }
+                    >
+                      {engine.active ? (engine.kind === 'managed' ? 'Manage' : 'Update') : 'Install'}
+                    </Action>
+                  </>
                 }
               >
                 <p className="ew-muted">
@@ -214,6 +223,7 @@ export function Catalog({
         </>
       )}
       {tab === 'downloads' && <Downloads workspace={w} />}
+      {foundry && <FoundryLocal workspace={w} onClose={() => setFoundry(false)} />}
       {managed && <EngineSetup workspace={w} engine={managed} onClose={() => setManaged('')} />}
       {settingsProvider && (
         <EngineSettings provider={settingsProvider} workspace={w} onClose={() => setSettingsProvider('')} />
