@@ -1,7 +1,7 @@
 import { judgeWindowsAcl } from '@atomic-chat/core/host'
 import type { WindowsAcl } from '@atomic-chat/core/host'
 import { describe, expect, it, vi } from 'vitest'
-import { icaclsPath, ownerOnlyAclArgs, restrictToOwner, windowsPowerShellEnv } from './acl.js'
+import { icaclsPath, overlayWindowsEnv, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
 import type { ExecFn } from './exec.js'
 
 describe('owner-only folder ACL', () => {
@@ -183,25 +183,21 @@ describe('owner-only folder ACL', () => {
     })
   })
 
-  // Started from pwsh, the server inherits PowerShell 7's module path; Windows PowerShell then finds
-  // Get-Acl's module there and cannot load it (CouldNotAutoloadMatchingModule). Its default path holds
-  // every module installed for it, which a cold command lookup searches for past 30 s on a slow
-  // machine. Only its own modules folder, where Get-Acl's module lives, is searched.
-  it.each([
-    [{ SystemRoot: 'D:\\Win' }, 'D:\\Win'],
-    [{ SYSTEMROOT: 'E:\\W\\' }, 'E:\\W'],
-    [{}, 'C:\\Windows'],
-  ])("points PSModulePath at Windows PowerShell's own modules for %j", (root, expected) => {
+  // Started from pwsh, the server inherits PowerShell 7's module path (Get-Acl then fails with
+  // CouldNotAutoloadMatchingModule); the core's readWindowsAcl sets Windows PowerShell's own, and that
+  // one must win whatever case the inherited name is in.
+  it('lays the extra names over the base ones in any case and keeps the rest', () => {
     expect(
-      windowsPowerShellEnv(
-        { Path: 'C:\\Windows', PSModulePath: 'C:\\pwsh7', psmodulepath: 'C:\\other', ...root },
-        { ATOMIC_HOST_STEP_PATH: 'C:\\d' }
+      overlayWindowsEnv(
+        { Path: 'C:\\Windows', TEMP: 'C:\\t', PSModulePath: 'C:\\pwsh7', psmodulepath: 'C:\\other' },
+        { PSMODULEPATH: 'C:\\ps51', ATOMIC_HOST_STEP_PATH: 'C:\\d' }
       )
     ).toEqual({
       Path: 'C:\\Windows',
-      ...root,
-      PSModulePath: `${expected}\\System32\\WindowsPowerShell\\v1.0\\Modules`,
+      TEMP: 'C:\\t',
+      PSMODULEPATH: 'C:\\ps51',
       ATOMIC_HOST_STEP_PATH: 'C:\\d',
     })
+    expect(overlayWindowsEnv({ Path: 'C:\\Windows' })).toEqual({ Path: 'C:\\Windows' })
   })
 })

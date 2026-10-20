@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { judgeWindowsAcl, readWindowsAcl } from '@atomic-chat/core/host'
 import { afterAll, describe, expect, it } from 'vitest'
-import { windowsPowerShellEnv } from '../../src/host/index.js'
+import { overlayWindowsEnv } from '../../src/host/index.js'
 import { ATC, ROOT } from '../helpers/binary.js'
 
 const command = [...ATC]
@@ -251,7 +251,7 @@ describe(`atc (${command.join(' ')})`, () => {
           exec: async (exe, args, options) => {
             const r = spawnSync(exe, args, {
               encoding: 'utf8',
-              env: windowsPowerShellEnv(process.env, options?.env),
+              env: overlayWindowsEnv(process.env, options?.env),
             })
             return { code: r.status, stdout: r.stdout, stderr: r.stderr }
           },

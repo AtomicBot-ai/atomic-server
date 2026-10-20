@@ -46,22 +46,20 @@ export function icaclsPath(systemRoot: string | undefined): string {
 }
 
 /**
- * The environment for Windows PowerShell (`powershell.exe`): `base` plus `extra`, with `PSModulePath`
- * set to its own modules folder alone, where `Get-Acl`'s module lives. Started from pwsh, atc inherits
- * PowerShell 7's module path, whose copy of that module Windows PowerShell cannot load; its default
- * path holds every module installed for it, which a cold command lookup searches for past 30 s.
+ * `base` with `extra` laid over it, for a child on Windows, where a name means the same in any case:
+ * each name in `extra` replaces the base's in every case. The core's `readWindowsAcl` sets
+ * `PSModulePath` to Windows PowerShell's own modules folder in `extra`; started from pwsh, atc
+ * inherits PowerShell 7's path, and with both names in the environment the inherited one could win.
  */
-export function windowsPowerShellEnv(
+export function overlayWindowsEnv(
   base: NodeJS.ProcessEnv,
   extra: Record<string, string> = {}
 ): NodeJS.ProcessEnv {
-  const entries = Object.entries(base)
-  const root = (entries.find(([key]) => key.toUpperCase() === 'SYSTEMROOT')?.[1] ?? 'C:\\Windows').replace(
-    /[\\/]+$/,
-    ''
-  )
-  const env = Object.fromEntries(entries.filter(([key]) => key.toUpperCase() !== 'PSMODULEPATH'))
-  return { ...env, PSModulePath: `${root}\\System32\\WindowsPowerShell\\v1.0\\Modules`, ...extra }
+  const names = new Set(Object.keys(extra).map((key) => key.toUpperCase()))
+  return {
+    ...Object.fromEntries(Object.entries(base).filter(([key]) => !names.has(key.toUpperCase()))),
+    ...extra,
+  }
 }
 
 /**
@@ -123,7 +121,7 @@ async function readOwnerOnly(
       exec: async (command, args, o) => {
         const r = await options.exec(command, args, {
           timeoutMs: o?.timeoutMs ?? 120_000,
-          env: windowsPowerShellEnv(options.env, o?.env),
+          env: overlayWindowsEnv(options.env, o?.env),
         })
         return { code: r.error ? null : r.code, stdout: r.stdout, stderr: r.error ?? r.stderr }
       },
