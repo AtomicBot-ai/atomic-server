@@ -62,6 +62,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     user: io.env['USERDOMAIN'] ? `${io.env['USERDOMAIN']}\\${host.facts.username}` : host.facts.username,
     exec: host.exec,
     systemRoot: io.env['SystemRoot'] ?? io.env['SYSTEMROOT'],
+    env: io.env,
   })
   if (denied) log.warn(`could not restrict ${paths.atcDir} to this user: ${denied}`)
   else if (host.facts.platform === 'win32') log.info(`restricted ${paths.atcDir} to this user`)

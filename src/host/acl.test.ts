@@ -1,5 +1,8 @@
+import { judgeWindowsAcl } from '@atomic-chat/core/host'
+import type { WindowsAcl } from '@atomic-chat/core/host'
 import { describe, expect, it } from 'vitest'
 import { icaclsPath, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
+import type { ExecFn } from './exec.js'
 
 describe('owner-only folder ACL', () => {
   it('removes inherited entries and grants this user, SYSTEM and Administrators by SID', () => {
@@ -30,50 +33,92 @@ describe('owner-only folder ACL', () => {
     expect(icaclsPath(undefined)).toBe('C:\\Windows\\System32\\icacls.exe')
   })
 
-  it('removes the broad groups by SID, then reads the folder back for anyone else left', async () => {
+  // The folder is read back through the core's `readWindowsAcl` (Get-Acl by SID, any system
+  // language) and must pass the core executor's judge, and grant nobody else even read access.
+  describe('reading the folder back', () => {
     const dir = 'C:\\a (I) dir\\atc'
-    const listing = (aces: string[]) => ({
-      code: 0,
-      stdout: `${dir} ${aces.join('\n      ')}\n\nSuccessfully processed 1 files; Failed processing 0 files\n`,
-      stderr: '',
-      timedOut: false,
-    })
-    const owned = listing([
-      'HOST\\alice:(OI)(CI)(F)',
-      'NT AUTHORITY\\SYSTEM:(OI)(CI)(F)',
-      'BUILTIN\\Administrators:(OI)(CI)(F)',
-    ])
-    // What the windows-11-arm runner listed: no (I), but the drive's groups as the folder's own.
-    const explicit = listing([
-      'NT AUTHORITY\\Authenticated Users:(M)',
-      'HOST\\alice:(OI)(CI)(F)',
-      'NT AUTHORITY\\SYSTEM:(OI)(CI)(F)',
-      'BUILTIN\\Administrators:(OI)(CI)(F)',
-      'BUILTIN\\Users:(OI)(CI)(RX)',
-    ])
-    const inherited = listing(['HOST\\alice:(OI)(CI)(F)', 'BUILTIN\\Users:(I)(OI)(CI)(RX)'])
-    const run = async (read: typeof owned) => {
-      const calls: string[][] = []
+    const USER = 'S-1-5-21-1-2-3-1001'
+    const FULL = 2032127
+    const READ = 1179817
+    const owned: WindowsAcl = {
+      reparse: false,
+      directory: true,
+      owner: USER,
+      rules: [
+        { sid: USER, allow: true, rights: FULL },
+        { sid: 'S-1-5-18', allow: true, rights: FULL },
+        { sid: 'S-1-5-32-544', allow: true, rights: FULL },
+      ],
+    }
+    const run = async (acl: unknown, answer: { code?: number; stderr?: string } = {}) => {
+      const calls: Array<{ command: string; args: readonly string[]; env?: NodeJS.ProcessEnv }> = []
+      const exec: ExecFn = async (command, args, options) => {
+        calls.push({ command, args, ...(options?.env ? { env: options.env } : {}) })
+        if (command.endsWith('powershell.exe'))
+          return {
+            code: answer.code ?? 0,
+            stdout: JSON.stringify(acl),
+            stderr: answer.stderr ?? '',
+            timedOut: false,
+          }
+        return { code: 0, stdout: 'processed 1 files', stderr: '', timedOut: false }
+      }
       const result = await restrictToOwner(dir, {
         platform: 'win32',
         user: 'HOST\\alice',
-        exec: async (_c, args) => {
-          calls.push([...args])
-          return args.length === 1 ? read : { ...owned, stdout: 'processed 1 files' }
-        },
+        exec,
+        systemRoot: 'D:\\Win',
+        env: { SystemRoot: 'D:\\Win', PATH: 'D:\\Win\\System32' },
       })
       return { result, calls }
     }
-    const ok = await run(owned)
-    expect(ok.result).toBeUndefined()
-    expect(ok.calls[1]).toEqual([dir, '/remove:g', '*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'])
-    expect((await run(explicit)).result).toMatch(
-      /still grants more .*Authenticated Users:\(M\).*BUILTIN\\Users/
-    )
-    expect((await run(inherited)).result).toMatch(/still grants more .*BUILTIN\\Users:\(I\)/)
-    // Nothing listed, or UTF-16: not taken for an owner-only folder.
-    expect((await run({ ...owned, stdout: '' })).result).toMatch(/did not list the folder/)
-    const utf16 = { ...explicit, stdout: [...explicit.stdout].join('\0') }
-    expect((await run(utf16)).result).toMatch(/still grants more/)
+
+    it('grants by icacls, then reads the ACL with PowerShell by its full path and the inherited env', async () => {
+      const { result, calls } = await run(owned)
+      expect(result).toBeUndefined()
+      expect(calls.map((c) => c.command)).toEqual([
+        'D:\\Win\\System32\\icacls.exe',
+        'D:\\Win\\System32\\icacls.exe',
+        'D:\\Win\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      ])
+      expect(calls[1]?.args).toEqual([dir, '/remove:g', '*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'])
+      expect(calls[2]?.env).toEqual({
+        SystemRoot: 'D:\\Win',
+        PATH: 'D:\\Win\\System32',
+        ATOMIC_HOST_STEP_PATH: dir,
+      })
+      // What atc accepts, the core's executor accepts.
+      expect(judgeWindowsAcl(owned, dir, 'directory')).toBeNull()
+    })
+
+    it('accepts CREATOR OWNER, and refuses a read-only grant to Users by its SID', async () => {
+      const creator = { ...owned, rules: [...owned.rules, { sid: 'S-1-3-0', allow: true, rights: FULL }] }
+      expect((await run(creator)).result).toBeUndefined()
+      const users = { ...owned, rules: [...owned.rules, { sid: 'S-1-5-32-545', allow: true, rights: READ }] }
+      // The executor's judge looks at writers only; atc keeps the keys and chats unreadable too.
+      expect(judgeWindowsAcl(users, dir, 'directory')).toBeNull()
+      expect((await run(users)).result).toMatch(/S-1-5-32-545/)
+      const denied = { ...owned, rules: [...owned.rules, { sid: 'S-1-1-0', allow: false, rights: FULL }] }
+      expect((await run(denied)).result).toBeUndefined()
+    })
+
+    it.each([
+      [
+        'a writer the core refuses',
+        { ...owned, rules: [...owned.rules, { sid: 'S-1-5-11', allow: true, rights: 1245631 }] },
+        /writable by S-1-5-11/,
+      ],
+      ['a reparse point', { ...owned, reparse: true }, /reparse point/],
+      ['a broad owner', { ...owned, owner: 'S-1-1-0' }, /owned by S-1-1-0/],
+      ['an answer without an owner', { reparse: false, directory: true, rules: [] }, /without an owner/],
+    ])('refuses %s', async (_name, acl, reason) => {
+      expect((await run(acl)).result).toMatch(reason)
+    })
+
+    it('reports a PowerShell that fails instead of throwing', async () => {
+      expect((await run(owned, { code: 1, stderr: 'Access denied' })).result).toMatch(
+        /cannot read the folder's ACL back: .*Access denied/
+      )
+    })
   })
 })
