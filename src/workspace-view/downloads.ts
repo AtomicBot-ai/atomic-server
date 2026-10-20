@@ -69,7 +69,7 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
       ...job,
       id,
       // What both lists name the row by: a store job's repository, a Foundry Local job's variant.
-      model_id: job['model_id'] ?? plan['model_id'] ?? plan['repository'] ?? plan['variant_id'],
+      model_id: job['model_id'] ?? plan['variant_id'] ?? plan['repository'] ?? plan['model_id'],
       total: size,
       transferred: done,
       state: phase || 'queued',

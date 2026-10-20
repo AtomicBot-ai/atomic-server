@@ -100,7 +100,8 @@ describe('store and Foundry Local downloads', () => {
           id: 'f1',
           kind: 'foundry-model',
           stage: 'downloading',
-          plan: { variant_id: 'phi-cpu', download_bytes: 400 },
+          // A Foundry Local plan names both: the model and the variant it installs as.
+          plan: { model_id: 'phi', variant_id: 'phi-cpu', download_bytes: 400 },
         },
       ],
       [
