@@ -268,10 +268,14 @@ export function SetupWizard({
               setTarget(id)
               setStep(2)
             }}
-            onEngine={() => {
+            onEngine={(id) => {
+              // The engine that would take the model: chosen, and its install shown in the wizard.
               setReview(null)
               setStep(0)
-              setEngineConfirmed(false)
+              setEngine(id)
+              setChoice('')
+              setQuery('')
+              setEngineConfirmed(true)
             }}
           />
         )}

@@ -1,6 +1,6 @@
 /** Draws guided setup's steps for a managed engine or Foundry Local: models, review, download. */
 
-import type { FoundryModelPlan, ManagedModelPlan } from '../../../contract/index.js'
+import type { FoundryModelPlan, ManagedModelPlan, ManagedVerdict } from '../../../contract/index.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
 import { formatSize, foundryVerdictText, variantLabel, verdictLine } from '../../../workspace-view/index.js'
 import { computeRowWindow } from '../../row-window.js'
@@ -52,7 +52,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
   button(c, 'setup-query', a.x + 13, a.bottom, 'Search', 'Search more models.', a.focus)
 }
 
-function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan): string[] {
+function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan, verdicts?: ManagedVerdict[]): string[] {
   if ('variant_id' in plan)
     return [
       `${plan.name}: ${plan.variant_id} (${variantLabel(plan)})`,
@@ -62,7 +62,7 @@ function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan): string[] {
     ]
   return [
     `${plan.repository} @ ${plan.revision.slice(0, 12)}`,
-    verdictLine(plan.verdict),
+    ...(verdicts?.length ? verdicts : [plan.verdict]).map(verdictLine),
     `${plan.pending.length} of ${plan.files.length} files, ${formatSize(plan.download_bytes)}, into ${plan.root}`,
   ]
 }
@@ -77,7 +77,7 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   const plan = v.path?.plan
   if (!plan) return
   text(c, a.x, a.y + 3, 'Review before downloading', COLORS.gold, a.width)
-  const lines = [...planLinesOf(plan), ...plan.blockers].flatMap((l) => wrap(l, a.width))
+  const lines = [...planLinesOf(plan, v.path?.verdicts), ...plan.blockers].flatMap((l) => wrap(l, a.width))
   lines
     .slice(0, Math.max(1, a.bottom - a.y - 6))
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))

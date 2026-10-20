@@ -164,15 +164,18 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
   const p = s.libraryPlan ?? {}
   text(c, x + 2, y + 1, 'Review installation', COLORS.gold)
   if (s.libraryRequest['managed']) {
-    // A store download for a managed engine: the core's verdict, the bytes, any blockers.
+    // A store download for a managed engine: the core's verdict of every managed engine, the bytes, any blockers.
     const blockers = Array.isArray(p['blockers']) ? (p['blockers'] as string[]) : []
+    const checked = s.libraryRequest['verdicts']
+    const verdicts = Array.isArray(checked) ? (checked as ManagedVerdict[]) : [p['verdict'] as ManagedVerdict]
     const lines = [
       String(s.libraryRequest['repository'] ?? ''),
-      verdictLine(p['verdict'] as ManagedVerdict),
+      ...verdicts.map(verdictLine),
       `Download: ${bytes(Number(p['download_bytes'] ?? 0))}`,
-      ...blockers,
     ]
-    lines.forEach((l, i) => text(c, x + 2, y + 3 + i, l, i >= 3 ? COLORS.red : COLORS.text, width - 4))
+    ;[...lines, ...blockers].forEach((l, i) =>
+      text(c, x + 2, y + 3 + i, l, i >= lines.length ? COLORS.red : COLORS.text, width - 4)
+    )
     if (!blockers.length)
       button(c, 'library-install', x + 2, y + height - 3, 'Download', 'Download in the server', focus)
     button(c, 'close', x + 16, y + height - 3, 'Cancel', 'Return without downloading', focus)

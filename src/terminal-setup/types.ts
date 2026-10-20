@@ -1,4 +1,4 @@
-import type { FoundryModelPlan, ManagedModelPlan } from '../contract/index.js'
+import type { FoundryModelPlan, ManagedModelPlan, ManagedVerdict } from '../contract/index.js'
 import type { BackendCatalogResponse } from '@atomic-chat/core'
 import type { ModelSetup, ModelSetupPlan, ModelSetupPlanRequest } from '../contract/index.js'
 export type { BackendCatalogResponse, ModelSetup, ModelSetupPlan, ModelSetupPlanRequest }
@@ -111,5 +111,7 @@ export interface EngineSetupPath {
   kind: 'managed' | 'foundry'
   rows: EngineSetupRow[]
   plan: ManagedModelPlan | FoundryModelPlan | null
+  /** The core's verdict of every managed engine on the reviewed checkpoint (`models.check`). */
+  verdicts?: ManagedVerdict[]
   job: EngineSetupJob | null
 }

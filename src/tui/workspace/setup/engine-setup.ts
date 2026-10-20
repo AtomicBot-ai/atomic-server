@@ -10,7 +10,12 @@
 import { randomUUID } from 'node:crypto'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
-import type { FoundryModelPlan, ManagedModelPlan, WorkspaceSnapshot } from '../../../contract/index.js'
+import type {
+  FoundryModelPlan,
+  ManagedModelPlan,
+  ManagedVerdict,
+  WorkspaceSnapshot,
+} from '../../../contract/index.js'
 import type {
   EngineSetupJob,
   EngineSetupPath,
@@ -153,14 +158,16 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
     const row = current.rows[Number(id.slice('setup-path-repo:'.length))]
     if (!row) return true
     return run(async () => {
-      const plan =
-        current.kind === 'managed'
-          ? ((await c.runtime.execute('managed.plan', {
-              repository: row.id,
-              engine: current.engine,
-            })) as ManagedModelPlan)
-          : ((await c.runtime.execute('foundry.plan', { model: row.id })) as FoundryModelPlan)
-      path({ plan })
+      if (current.kind === 'managed') {
+        const [plan, checked] = await Promise.all([
+          c.runtime.execute('managed.plan', { repository: row.id, engine: current.engine }),
+          c.runtime.execute('models.check', { repository: row.id }),
+        ])
+        path({
+          plan: plan as ManagedModelPlan,
+          verdicts: (checked as { verdicts: ManagedVerdict[] }).verdicts,
+        })
+      } else path({ plan: (await c.runtime.execute('foundry.plan', { model: row.id })) as FoundryModelPlan })
       change({ stage: 'review' })
       focus('setup-path-install')
     })

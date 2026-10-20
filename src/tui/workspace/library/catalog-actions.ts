@@ -45,7 +45,7 @@ export async function managedChoice(repository: string, ctx: ActionContext): Pro
     update((v) => ({
       ...v,
       libraryPlan: plan,
-      libraryRequest: { managed: installed.engine, repository },
+      libraryRequest: { managed: installed.engine, repository, verdicts },
       overlay: 'install-review',
       focus: 'library-install',
       message: '',

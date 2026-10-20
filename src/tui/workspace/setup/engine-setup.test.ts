@@ -82,6 +82,19 @@ function harness(installed: string[], plan: object = foundryPlan) {
       }
     if (name === 'models.search') return { rows: [] }
     if (name === 'managed.plan') return managedPlan
+    if (name === 'models.check')
+      return {
+        repository: input['repository'],
+        verdicts: [
+          managedPlan.verdict,
+          {
+            engine: 'tensorrt-llm',
+            installed: false,
+            compatibility: null,
+            error: { code: 'MODEL_INCOMPATIBLE', message: 'tensorrt-llm takes no Qwen3.5' },
+          },
+        ],
+      }
     if (name === 'foundry.plan') return plan
     if (name === 'engines.plan')
       return { engine: input['engine'], plan: null, installation: null, operation: null }
@@ -129,6 +142,9 @@ describe('guided setup with a managed engine', () => {
     expect(t.calls('managed.plan')).toEqual([{ repository: REPO, engine: 'vllm' }])
     expect(t.get().setup?.stage).toBe('review')
     expect(screen(t.get())).toMatch(/vllm \(installed\): ok/)
+    // Every managed engine's verdict, as atc models check prints them.
+    expect(t.calls('models.check')).toEqual([{ repository: REPO }])
+    expect(screen(t.get())).toContain('tensorrt-llm takes no Qwen3.5')
     await setupAction('setup-path-install', t.ctx)
     expect(t.calls('managed.install')).toEqual([
       { request_id: expect.stringMatching(/^terminal-/), plan_digest: 'plan-d1' },

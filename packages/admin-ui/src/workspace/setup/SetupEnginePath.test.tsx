@@ -42,6 +42,38 @@ describe('the admin setup wizard with a managed engine', () => {
     expect(await screen.findByRole('dialog', { name: 'vLLM setup' })).toBeInTheDocument()
   })
 
+  it('leads to the install of the engine that would take the model when no installed one does', async () => {
+    const refused = {
+      ...ok,
+      compatibility: {
+        ...ok.compatibility,
+        verdict: { ok: false, error: { code: 'MODEL_INCOMPATIBLE', message: 'vllm refuses it' } },
+      },
+    }
+    const { workspace } = workspaceFixture({
+      'engines.list': enginesList(['llamacpp-upstream', 'vllm', 'sglang'], ['llamacpp-upstream', 'vllm']),
+      'models.catalog': (i: Record<string, unknown>) =>
+        i['engine'] === 'vllm'
+          ? { engine: 'vllm', models: [{ repository: REPO, note: 'Qwen 2B', vram_tier_bytes: 0 }] }
+          : { rows: [] },
+      'models.check': {
+        repository: REPO,
+        verdicts: [refused, { ...ok, engine: 'sglang', installed: false }],
+      },
+      'engines.plan': { engine: 'sglang', plan: null, installation: null, operation: null },
+      'config.get': {},
+    })
+    render(<SetupWizard workspace={workspace} onClose={() => {}} onOpenGoal={() => {}} />)
+    await chooseEngine('vllm')
+    await waitFor(() => expect(screen.getByLabelText('Setup model')).toHaveTextContent(REPO))
+    await userEvent.selectOptions(screen.getByLabelText('Setup model'), REPO)
+    await userEvent.click(screen.getByRole('button', { name: 'Review model' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Install SGLang' }))
+    // Back on the Engine step with SGLang chosen: its install, as for an engine chosen there.
+    await userEvent.click(await screen.findByRole('button', { name: 'Install SGLang' }))
+    expect(await screen.findByRole('dialog', { name: 'SGLang setup' })).toBeInTheDocument()
+  })
+
   it('takes a vLLM model through its verdict and plan, then loads it with vLLM', async () => {
     const { workspace, execute } = workspaceFixture({
       'engines.list': enginesList(LINUX),

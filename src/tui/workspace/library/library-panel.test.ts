@@ -84,6 +84,8 @@ describe('the TUI catalog for managed engines', () => {
     expect(t.calls('managed.plan')).toEqual([{ repository: REPO, engine: 'vllm' }])
     expect(t.get().overlay).toBe('install-review')
     expect(t.screen()).toMatch(/vllm \(installed\): ok/)
+    // Every managed engine with a descriptor: the refusal too, with its reason.
+    expect(t.screen()).toMatch(/tensorrt-llm: refused/)
     expect(t.screen()).not.toContain('No GGUF file found')
     await activate('library-install', t.ctx)
     expect(t.calls('managed.install')).toEqual([
