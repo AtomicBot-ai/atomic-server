@@ -117,7 +117,7 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Server | `atc logs` | Tail of the server log; `-f` follows it | works |
 | Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on the active engine; stop it | stub (iteration 2) |
 | Models & engines | `atc models search\|pull\|list\|rm\|info` | The catalog and the model files | stub (`pull`: iteration 2; the rest: 3) |
-| Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, TensorRT-LLM) and their builds; installing one prepares what it needs | stub (`install`: iteration 2; the rest: 4) |
+| Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, Foundry Local, the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs | works (see [Managed engines](#managed-engines)) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
 | Access | `atc chat` | Send a message to an OpenAI-compatible model | works |
@@ -142,6 +142,32 @@ JSON document on stdout; an error is `{"error":{"code","message","details?","hin
 
 Exit codes: `0` success, `1` runtime error, `2` usage (also bare `atc` and bare groups such as `atc models`),
 `3` not implemented in this build, `130` interrupted.
+
+## Managed engines
+
+TensorRT-LLM, vLLM and SGLang run in a container the core manages: on the system Docker on Linux, in its
+own WSL distribution on Windows (not on macOS). `atc` sets one up only after you agree to the core's plan:
+
+```bash
+atc engines install vllm                 # prints the plan, asks, then follows the setup to ready
+atc engines install vllm --dry-run       # the plan only
+atc engines install vllm --yes           # agree to the plan this command prints
+atc engines install vllm --approve sha256:<digest>   # agree to that exact plan only (configuration management)
+atc engines install --resume <operation> # follow it again, or continue after a sign-in or a restart
+atc engines install --cancel <operation> # stops at the core's next safe boundary
+atc engines status vllm                  # plan, blockers, installation, operation, update offer
+atc engines rm vllm [--keep-models]      # the shared models stay while another managed engine is installed
+```
+
+The plan lists every system change (Docker, the NVIDIA Container Toolkit, the `docker` group), the
+download and the disk it needs, whether one privileged step, a new sign-in or a restart may follow, the
+blockers with the commands that fix them, and the plan digest your consent is bound to. Without a terminal
+and without `--yes` or `--approve` nothing begins. The setup is a durable operation in the server: Ctrl-C
+or `--detach` only stops following it. The privileged step runs through `atc host-step exec` — `sudo` in
+your terminal, `pkexec` on a desktop, UAC on Windows, or a command `atc status` prints for you to run.
+After you were added to the `docker` group the server needs a new sign-in and `atc restart` (`atc` never
+signs anyone out or restarts the machine); the operation then continues. `atc engines install <engine>` on
+an installed engine with a newer release updates it the same way, keeping the models.
 
 ## Where data lives
 

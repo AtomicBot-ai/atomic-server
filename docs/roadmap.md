@@ -88,6 +88,14 @@ milestones (status, gates and server specifics under
 
 **4b — the managed runtime.**
 
+> **Status (change `add-cli-engine-parity`, ADR 2026-10-20 "Install managed engines from atc"):** landed
+> for TensorRT-LLM, vLLM and SGLang on core 0.18.5 — `engines install` with the whole plan, consent bound
+> to its digest (`--yes`, `--approve`), one `request_id` per call, following with `--detach`, `--resume`
+> and `--cancel`, waiting for another engine's operation, the update as the core's reinstall; `engines rm
+> [--keep-models]`; `engines status`. Models, the sign-in instructions per server mode, `doctor` and the
+> screens follow in the same change. Not planned here: the staged update with a smoke load (the core's
+> reinstall is what ships), and `SupplementaryGroups` (rejected, see below).
+
 - `engines install tensorrt-llm`: `POST /environments/probe` → print the `RequirementPlan` (`system_changes`, download
   and disk estimates, whether elevation, a sign-out or a reboot may follow, blockers) → consent → begin
   with one `request_id` per invocation, so a retried command joins the operation instead of starting
@@ -100,8 +108,9 @@ milestones (status, gates and server specifics under
   recipe the core exports, verifies its digest and never touches the control API. `relogin-required` has
   a server catch: the `docker` group must reach the **server's** process, which inherits its groups from
   whoever started it. After `usermod -aG docker` that takes a new login and then `atc restart`, or a
-  restart of a system service (`SupplementaryGroups=docker` in the unit makes it immediate); a
-  `systemd --user` service keeps its old groups until the user manager restarts. `engines install
+  restart of a system service; a `systemd --user` service keeps its old groups until the user manager
+  restarts. `SupplementaryGroups=docker` in the unit was rejected: systemd refuses to start a service whose
+  group does not exist yet. `engines install
   --resume <op>` re-probes and continues; the core never re-elevates blindly.
 - Windows: the helper only enables WSL and the Virtual Machine Platform (UAC); after the reboot the next
   `atc start` resumes the same operation. The distribution is imported as the original user, so the

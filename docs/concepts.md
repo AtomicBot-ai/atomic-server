@@ -24,7 +24,7 @@ the core's CLI, not `atc`. Both would own the same data folder, so `atc` refuses
 | Term | Meaning | Not to be confused with |
 | --- | --- | --- |
 | **server** | Atomic Server's background process: the core, the API and the web admin in one process that owns the data folder. `atc start` / `stop` / `restart` / `status`. | "daemon" is its name in the code (`src/daemon/`, `atc daemon`), not in anything a user reads. |
-| **engine** | What runs a model: llama.cpp, MLX, TensorRT-LLM; vLLM and SGLang later. The desktop app calls the family "Engine" too. | A model. |
+| **engine** | What runs a model: llama.cpp, MLX, Foundry Local, and the managed engines TensorRT-LLM, vLLM and SGLang. The desktop app calls the family "Engine" too. | A model. |
 | **engine build** | One installed variant of an engine for this hardware, e.g. llama.cpp b6000 CUDA 12.4. | The desktop app calls it "backend"; we do not, because "backend" means a server to most readers. |
 | **model** | Weights in the data folder: GGUF for llama.cpp, a safetensors snapshot for TensorRT-LLM and MLX. Downloading a model does not start it. | A running model. |
 | **running model** | A model loaded on an engine and answering through the API. `atc run <model>` starts it, `atc unload <model>` stops it — the desktop app's Run and Stop (its "Unload from memory"). | The server, which keeps running with no model. |
@@ -43,10 +43,11 @@ the core's CLI, not `atc`. Both would own the same data folder, so `atc` refuses
   the GPU and hands the facts to the core; that moves into the core (a core branch), after which
   `atc hardware show` only shows what the core found.
 - **Where an engine runs is the engine's business.** A llama.cpp build runs as a plain process;
-  TensorRT-LLM runs in a container on the system Docker (on Windows, in an owned WSL distribution). The
-  core starts each engine the way it needs, talks to it and stops it; commands and screens look the same
-  either way. Installing an engine that needs a container prepares that too (`atc engines install
-  tensorrt-llm`, with consent for the one privileged step), so there is no separate setup command.
+  the managed engines — TensorRT-LLM, vLLM and SGLang — run in a container on the system Docker (on
+  Windows, in an owned WSL distribution). The core starts each engine the way it needs, talks to it and
+  stops it; commands and screens look the same either way. Installing an engine that needs a container
+  prepares that too (`atc engines install vllm`: the core's plan, your consent bound to its digest, then
+  the one privileged step if any), so there is no separate setup command.
 - **Every front end is a client of the server.** The commands, the terminal UI and the web admin offer
   the same actions through the same functions; none has an action the commands lack.
 
