@@ -1,23 +1,20 @@
 import { readFile } from 'node:fs/promises'
-import { basename, isAbsolute, join, resolve } from 'node:path'
-import { randomUUID } from 'node:crypto'
-import { ModelRegistry } from '@atomic-chat/core/models'
+import { join } from 'node:path'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
 import type { CoreLink } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
 import { AGENTS, agentProfile, type AgentId } from '../agent-launch/index.js'
 import type { Conversation } from '../terminal-data/index.js'
 import { ChatHistory, ClientKeys } from '../terminal-data/index.js'
-import { installedModels, modelFiles, searchHub } from '../terminal-setup/index.js'
 import { WORKSPACE_OPERATIONS } from '../contract/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
-import { importedModelId, inputFor, object, sanitized } from './validation.js'
+import { inputFor, object, sanitized } from './validation.js'
 import { WorkspaceMetrics } from './metrics.js'
 import { publicEndpoint, workspaceSnapshot } from './snapshot.js'
 import { saveWorkspaceSetup } from './state.js'
 import { coreOperation, NOT_CORE } from './core-operations.js'
+import { modelOperation } from './model-operations.js'
 import { WorkspaceCatalog } from './catalog.js'
-import type { CatalogCategory } from './catalog.js'
 import { engineSettingsSchema, workspaceConfig, updateWorkspaceConfig } from './settings.js'
 import { verifyWorkload } from './readiness.js'
 import { callPublic } from './public-api.js'
@@ -85,6 +82,12 @@ export class WorkspaceService {
     if (!descriptor) throw new AtcError('ATC_USAGE', `Unknown operation: ${operation}. Use operations.list.`)
     const input = inputFor(descriptor, raw),
       { link, paths, config } = this.options
+    const model = await modelOperation(
+      { options: this.options, catalog: this.catalog, request: this.request },
+      operation,
+      input
+    )
+    if (model !== NOT_CORE) return model
     switch (operation) {
       case 'settings.schema':
         return engineSettingsSchema(String(input['provider']))
@@ -162,51 +165,6 @@ export class WorkspaceService {
           throw new AtcError('ATC_USAGE', 'No such API key.')
         await this.keys.revoke(String(input['id']))
         return { revoked: true }
-      case 'models.catalog':
-        return this.catalog.list(
-          input['category'] as CatalogCategory | undefined,
-          String(input['query'] ?? ''),
-          input['refresh'] === true
-        )
-      case 'models.search':
-        return searchHub(String(input['query']), this.request)
-      case 'models.files':
-        return modelFiles(String(input['repo']), this.request)
-      case 'models.installed':
-        return [
-          ...(await installedModels(paths.layout)),
-          ...(await new ModelRegistry(paths.layout, 'mlx').list()).map((m) => ({
-            id: m.id,
-            name: String(m.yml.name ?? m.id),
-            provider: 'mlx',
-          })),
-        ]
-      case 'models.remove': {
-        const id = String(input['model_id']),
-          local = new ModelRegistry(paths.layout),
-          mlx = new ModelRegistry(paths.layout, 'mlx'),
-          entry = await local.find(id),
-          registry = entry ? local : mlx
-        if (!entry && !(await mlx.find(id))) break
-        if ((await link.models.sessions()).some((s) => s.model_id === id))
-          throw new AtcError('ATC_USAGE', 'Unload this model before removing it.')
-        await registry.remove(id)
-        return { removed: true, model_id: id }
-      }
-      case 'models.import': {
-        // The daemon's working directory means nothing to the caller; CLI resolves against its own.
-        if (!isAbsolute(String(input['path'])))
-          throw new AtcError('ATC_USAGE', 'Use an absolute path to the GGUF file.')
-        const path = resolve(String(input['path'])),
-          validation = await link.request<{ isValid: boolean; error?: string }>('POST', '/gguf/validate', {
-            path,
-          })
-        if (!validation.isValid)
-          throw new AtcError('ATC_USAGE', validation.error ?? 'This file is not a GGUF model.')
-        const id = importedModelId(path, randomUUID())
-        await new ModelRegistry(paths.layout).write(id, { model_path: path, name: basename(path, '.gguf') })
-        return { model_id: id, path }
-      }
       case 'setup.manual':
         return saveWorkspaceSetup(paths, 'manual')
       case 'setup.complete': {

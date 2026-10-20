@@ -6,6 +6,8 @@
 
 import type {
   EngineBuildKey,
+  ErrorBody,
+  ModelCompatibility,
   EngineUpdateOffer,
   EnvironmentOperation,
   ExecutorKind,
@@ -55,3 +57,20 @@ export type ManagedInstallResult =
  * the user manager, a system unit a restart of the unit.
  */
 export type ServerLaunch = 'terminal' | 'systemd-user' | 'systemd-system' | 'launchd'
+
+/** One managed engine's answer about a checkpoint: the core's verdict, or why it gave none. */
+export interface ManagedVerdict {
+  engine: string
+  /** The engine's installation is `ready` here: it could load the model once downloaded. */
+  installed: boolean
+  compatibility: ModelCompatibility | null
+  error: ErrorBody | null
+}
+
+/** `models.check`: a revision of a Hugging Face repository and each managed engine's verdict on it. */
+export interface ModelCheckResult {
+  repository: string
+  /** The commit the requested revision resolved to. */
+  revision: string
+  verdicts: ManagedVerdict[]
+}

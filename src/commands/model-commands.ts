@@ -6,6 +6,7 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operation, printOperation, workspace } from './control.js'
+import { checkModelCommand } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   if (typeof value === 'string') return value
@@ -96,6 +97,7 @@ export const modelsCommand = defineCommand({
       positionals: [{ name: 'query', description: 'Search words or owner/repo', required: true }],
       run: (inv, ctx) => operation(ctx, 'models.search', { query: inv.positionals[0] }),
     }),
+    checkModelCommand,
     defineCommand({
       name: 'files',
       summary: 'List downloadable GGUF files',

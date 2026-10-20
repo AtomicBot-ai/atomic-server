@@ -13,5 +13,6 @@ export {
   rebootLines,
   reloginLines,
   removalLines,
+  verdictLine,
 } from './engines.js'
 export type { EngineView, EngineViewKind } from './engines.js'

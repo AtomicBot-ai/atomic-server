@@ -12,6 +12,7 @@ import {
   rebootLines,
   reloginLines,
   removalLines,
+  verdictLine,
 } from './engines.js'
 
 function state(over: Partial<ManagedEngineState> = {}): ManagedEngineState {
@@ -164,5 +165,43 @@ describe('sign-in and restart instructions', () => {
     expect(lines).toContain('restart')
     expect(lines).toContain('atc start')
     expect(lines).toContain('op-2')
+  })
+})
+
+describe('verdictLine', () => {
+  const compatibility = (ok: boolean) => ({
+    architectures: ['Qwen3ForCausalLM'],
+    quantization_format: 'fp8',
+    weight_bytes: 8 * 1024 ** 3,
+    checked_gpu_id: 'GPU-0',
+    curated: true,
+    unified_memory: false,
+    fits_other_gpus: ['GPU-1'],
+    verdict: ok
+      ? ({ ok: true } as const)
+      : ({ ok: false, error: { code: 'MODEL_INCOMPATIBLE', message: 'Needs 12.4 GiB, has 7.8.' } } as const),
+    warnings: [{ code: 'wsl-vm-memory', message: 'The WSL VM has less memory than the weights.' }],
+  })
+  it.each([
+    [
+      true,
+      true,
+      'vllm (installed): ok — Qwen3ForCausalLM, fp8, 8.0 GiB on GPU-0 (curated); fits GPU-1; warning: The WSL VM',
+    ],
+    [false, false, 'vllm: refused — Needs 12.4 GiB, has 7.8. [MODEL_INCOMPATIBLE]; fits GPU-1'],
+  ])('ok %s, installed %s', (ok, installed, line) => {
+    expect(
+      verdictLine({ engine: 'vllm', installed, compatibility: compatibility(ok) as never, error: null })
+    ).toContain(line)
+  })
+  it('says why there is no verdict', () => {
+    expect(
+      verdictLine({
+        engine: 'sglang',
+        installed: false,
+        compatibility: null,
+        error: { code: 'MANAGED_METADATA_INVALID', message: 'No descriptor.' },
+      })
+    ).toBe('sglang: no verdict — No descriptor. [MANAGED_METADATA_INVALID]')
   })
 })

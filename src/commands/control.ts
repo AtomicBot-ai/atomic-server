@@ -20,6 +20,7 @@ export async function attachWorkspace(
     config: config.values,
     fetch: ctx.io.fetch,
     selfCommand: ctx.host.selfCommand,
+    env: ctx.io.env,
   })
   return { link, service }
 }

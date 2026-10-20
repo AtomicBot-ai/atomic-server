@@ -10,7 +10,7 @@ import type {
   ManagedPhase,
   RequirementPlan,
 } from '@atomic-chat/core/contracts'
-import type { ManagedEngineState, ServerLaunch } from '../contract/index.js'
+import type { ManagedEngineState, ManagedVerdict, ServerLaunch } from '../contract/index.js'
 
 const UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
 
@@ -270,4 +270,20 @@ export function rebootLines(operationId: string): string[] {
     'After the restart, `atc start` (or the service) continues the operation with the import of the distribution;',
     `follow it with: atc engines install --resume ${operationId}`,
   ]
+}
+
+/** One managed engine's verdict on a checkpoint, on one line, with the core's numbers. */
+export function verdictLine(v: ManagedVerdict): string {
+  const name = `${v.engine}${v.installed ? ' (installed)' : ''}`
+  const c = v.compatibility
+  if (!c) return `${name}: no verdict — ${v.error?.message ?? 'unknown'} [${v.error?.code ?? '?'}]`
+  const others = c.fits_other_gpus.length ? `; fits ${c.fits_other_gpus.join(', ')}` : ''
+  const warnings = (c.warnings ?? []).map((w) => `; warning: ${w.message}`).join('')
+  if (!c.verdict.ok) return `${name}: refused — ${c.verdict.error.message} [${c.verdict.error.code}]${others}`
+  const facts = [
+    c.architectures.join(', '),
+    c.quantization_format ?? 'unquantized',
+    formatSize(c.weight_bytes),
+  ]
+  return `${name}: ok — ${facts.join(', ')} on ${c.checked_gpu_id}${c.curated ? ' (curated)' : ''}${others}${warnings}`
 }
