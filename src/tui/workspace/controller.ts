@@ -1,5 +1,6 @@
 import type { WorkspaceState } from './state.js'
 import { WorkspaceRuntime } from './runtime.js'
+import { contextExceeded } from '../../workspace-service/index.js'
 import { AtcError } from '../../errors/index.js'
 import { installedModels } from '../../terminal-setup/index.js'
 import { dirname } from 'node:path'
@@ -190,6 +191,16 @@ export class WorkspaceController {
         signal: AbortSignal.any([turn.signal, this.abort.signal, AbortSignal.timeout(600000)]),
         onText,
       })
+    } catch (error) {
+      // A managed engine's or Foundry Local's overflow: say the limit, the length and the setting to raise.
+      const link = await this.deps.base.attach({ launch: false, log: this.log }).catch(() => undefined)
+      const provider = (await link?.models.sessions().catch(() => []))?.find(
+        (s) => s.model_id === model
+      )?.provider
+      const context = provider
+        ? contextExceeded(provider, error instanceof Error ? error.message : String(error))
+        : undefined
+      throw context ? new Error(`${context.message} ${context.hint ?? ''}`.trim()) : error
     } finally {
       if (this.turn === turn) this.turn = undefined
     }

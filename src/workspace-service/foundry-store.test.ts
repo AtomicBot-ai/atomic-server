@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { dataLayout } from '@atomic-chat/core/host'
 import { afterEach, describe, expect, it } from 'vitest'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
@@ -67,5 +68,20 @@ describe('Foundry Local models in the workspace', () => {
     expect(link.calls.map((c) => c.path)).toContain(`/models/foundry-local/${VARIANT}/unload`)
     expect(link.calls.some((c) => c.path.startsWith('/managed-models'))).toBe(false)
     expect(existsSync(dir)).toBe(false)
+  })
+})
+
+describe('foundryTakesTools', () => {
+  it('reads tools from a variant’s model.yml, and is false for a variant without it', async () => {
+    const { service: _s, dir } = context()
+    const { foundryTakesTools } = await import('./foundry-store.js')
+    const layout = dataLayout(dirname(dirname(dirname(dir))))
+    expect(await foundryTakesTools(layout, VARIANT)).toBe(false)
+    const yml = JSON.parse(readFileSync(join(dir, 'model.yml'), 'utf8')) as {
+      foundry_local: Record<string, unknown>
+    }
+    yml.foundry_local['tools'] = true
+    writeFileSync(join(dir, 'model.yml'), JSON.stringify(yml))
+    expect(await foundryTakesTools(layout, VARIANT)).toBe(true)
   })
 })

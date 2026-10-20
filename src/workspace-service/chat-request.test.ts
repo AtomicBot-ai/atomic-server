@@ -57,6 +57,12 @@ describe('chatRequestFor', () => {
     ])
   })
 
+  it('offers a Foundry Local model tools only when its model.yml says it takes them', () => {
+    const shaped = chatRequestFor('foundry-local', { ...body, tools, tool_choice: 'auto' }, { tools: false })
+    expect(shaped).not.toHaveProperty('tools')
+    expect(shaped).not.toHaveProperty('tool_choice')
+  })
+
   it('leaves a llama.cpp body as it is', () => {
     expect(chatRequestFor('llamacpp-upstream', body)).toEqual(body)
   })
@@ -79,6 +85,23 @@ describe('contextExceeded', () => {
     expect(error?.message).toContain('4096')
     expect(error?.message).toContain('5120')
     expect(error?.hint).toContain('atc config set engine.tensorrt-llm.context_length')
+  })
+
+  it.each([
+    [
+      'vllm',
+      "This model's maximum context length is 4096 tokens, but the request has 5120 tokens. Shorten the conversation or the requested output.",
+    ],
+    [
+      'sglang',
+      "This model's maximum context length is 4096 tokens, but the request has 5120 tokens. Shorten the conversation or the requested output.",
+    ],
+    [
+      'tensorrt-llm',
+      "This model's maximum context length is 4096 tokens. However, your messages resulted in 5120 tokens. Please reduce the length of the messages.",
+    ],
+  ])('reads the request length from the core’s wording for %s', (provider, message) => {
+    expect(contextExceeded(provider, message)?.message).toContain('(5120 tokens)')
   })
 
   it('reads the error code too, and leaves other errors alone', () => {

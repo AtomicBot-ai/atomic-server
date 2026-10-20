@@ -47,3 +47,41 @@ it('reloads the selected installed model on explicit server start, without repla
     folder.cleanup()
   }
 })
+
+it('turns a managed engine’s context overflow in the chat into the limit, the length and the setting', async () => {
+  const folder = tmpDataFolder(),
+    link = fakeCoreLink(),
+    config = resolveConfig({ env: {} })
+  link.snapshotValue.sessions = [{ provider: 'tensorrt-llm', model_id: 'qwen', port: 0 } as never]
+  const message =
+    "This model's maximum context length is 4096 tokens. However, your messages resulted in 5120 tokens."
+  const c = new WorkspaceController(
+    {
+      request: (async () =>
+        new Response(JSON.stringify({ error: { message } }), { status: 400 })) as unknown as typeof fetch,
+      apiKey: '',
+      chatKey: '',
+      base: {
+        paths: folder.paths,
+        attach: async () => link,
+        loadConfig: async () => config,
+        runDoctor: async () => [],
+        pendingHostSteps: async () => [],
+        loginUrl: async () => '',
+        openUrl: async () => undefined,
+        now: () => new Date(),
+      },
+    },
+    () => undefined,
+    () => undefined,
+    () => undefined
+  )
+  try {
+    await expect(
+      c.chat('http://127.0.0.1:1337/v1', 'qwen', [{ role: 'user', content: 'hi' }], () => {})
+    ).rejects.toThrow(/5120 tokens.*atc config set engine\.tensorrt-llm\.context_length/s)
+  } finally {
+    c.dispose()
+    folder.cleanup()
+  }
+})

@@ -6,3 +6,4 @@ export type { WorkspaceOperation, WorkspaceSnapshot, WorkspaceInput } from '../c
 export * from './client.js'
 export { sanitized as sanitizeWorkspaceData } from './validation.js'
 export type { FoundrySearchResult, FoundryModelRow, FoundryVariantRow } from './foundry-catalog.js'
+export { contextExceeded } from './chat-request.js'

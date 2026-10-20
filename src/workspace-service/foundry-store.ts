@@ -61,3 +61,9 @@ export async function removeFoundryModel(link: CoreLink, layout: DataLayout, id:
   await registry.remove(id)
   return { removed: true, model_id: id, was_loaded: loaded, freed_bytes: freed }
 }
+
+/** Whether a downloaded variant takes tools, by its `model.yml` (`foundry_local.tools`). */
+export async function foundryTakesTools(layout: DataLayout, id: string): Promise<boolean> {
+  const entry = await new ModelRegistry(layout, PROVIDER).find(id).catch(() => undefined)
+  return (entry?.yml as { foundry_local?: { tools?: unknown } } | undefined)?.foundry_local?.tools === true
+}

@@ -5,6 +5,7 @@ import { AtcError } from '../errors/index.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import { object } from './validation.js'
 import { chatRequestFor, contextExceeded } from './chat-request.js'
+import { foundryTakesTools } from './foundry-store.js'
 import { publicEndpoint } from './snapshot.js'
 import { mergeChatDelta, readChatStream } from './chat-stream.js'
 
@@ -58,12 +59,12 @@ export class ChatJobs {
           : 'Load the selected model in Engines & Models, then retry.'
       )
     // What this session's engine accepts; images for an engine without them are refused here.
-    const body = chatRequestFor(String(sessions[0]!.provider), {
-      ...request,
-      stream: true,
-      stream_options: { include_usage: true },
-      n: 1,
-    })
+    const provider = String(sessions[0]!.provider)
+    const body = chatRequestFor(
+      provider,
+      { ...request, stream: true, stream_options: { include_usage: true }, n: 1 },
+      provider === 'foundry-local' ? { tools: await foundryTakesTools(this.options.paths.layout, model) } : {}
+    )
     const status = await this.options.link.server.status()
     if (!status.running) throw new AtcError('ATC_USAGE', 'Start the API on the Server page, then retry.')
     const endpoint = publicEndpoint(object(status), this.options.config).endpoint
