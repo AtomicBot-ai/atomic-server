@@ -51,6 +51,9 @@ title: "Install managed engines from atc"
   - **The terminal UI's engine panel** (Library → Engines, task 9.2) drives the same operations from a
     pure model of `engines.plan` joined with the live snapshot; Approve carries the digest of the plan
     it shows and none while the operation waits for a digest not shown.
+  - **The web admin's engine modal** (Engines tab, task 10.2) renders the same decisions
+    (`workspace-view/engine-live.ts`) as the terminal panel; `AdminStatus.launch` gives it the
+    server's launch mode for the sign-in instruction.
 - **Alternatives:** the command assembling `environments.begin` itself — the target and descriptor rules
   would live in three clients. `SupplementaryGroups=docker` in the unit — systemd refuses to start a
   service whose group does not exist yet (`216/GROUP`), and a `systemd --user` service takes its groups
