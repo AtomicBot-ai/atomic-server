@@ -9,12 +9,14 @@ export function InstalledModels({
   loading,
   openCommand,
   browse,
+  onChanged,
 }: {
   workspace: Workspace
   installed: RecordValue[]
   loading: boolean
   openCommand: (name: string) => void
   browse: () => void
+  onChanged?: () => void
 }) {
   const [chosen, setChosen] = useState<Record<string, string>>({}),
     [query, setQuery] = useState('')
@@ -102,6 +104,23 @@ export function InstalledModels({
                   >
                     {loaded && ['ready', 'running', 'loaded'].includes(loaded.state) ? 'Ready' : 'Load model'}
                   </Action>
+                  {!row.category && (
+                    <Action
+                      danger
+                      disabled={Boolean(pending)}
+                      onClick={async () => {
+                        const warning =
+                          row.store === 'managed'
+                            ? `${id} is in the managed engines' shared store: removing it removes it for every managed engine (${providers.join(', ')}), loaded or not.`
+                            : `Remove ${id}? A loaded model is unloaded first.`
+                        if (!window.confirm(warning)) return
+                        await w.execute('models.remove', { model_id: model })
+                        onChanged?.()
+                      }}
+                    >
+                      Remove
+                    </Action>
+                  )}
                   {(pending === id || loaded?.state === 'loading') && !row.category && (
                     <Action
                       onClick={() =>
