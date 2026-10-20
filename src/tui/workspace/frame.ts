@@ -2,6 +2,7 @@ import { drawSections, workspacePage } from './navigation.js'
 import { messageText } from '../../terminal-service/index.js'
 import { fill, drawWelcome } from './draw/fortress.js'
 import { drawCockpit } from './server/cockpit.js'
+import { drawLoadLine } from './chat/chat-load.js'
 import { drawFooter } from './footer.js'
 import { drawSetup } from './setup/setup-panel.js'
 import { drawDataPanel } from './data-panels.js'
@@ -109,6 +110,7 @@ export function workspaceFrame(
           )
         )
     }
+    drawLoadLine(c, s, x, composerY - 1, bodyWidth, focus)
     drawComposer(c, s, x, composerY, bodyWidth, focus)
   } else drawPanels(c, s, { x, y, width: bodyWidth, bottom: l.bottom }, focus)
   if (isPicker(s.overlay)) drawPicker(c, s, focus)

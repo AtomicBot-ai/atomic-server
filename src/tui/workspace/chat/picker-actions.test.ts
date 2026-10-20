@@ -94,3 +94,29 @@ it('opens later downloads in Models without numbered onboarding, retaining compl
   await activate('hosting', ctx)
   expect(ctx.get()).toMatchObject({ page: 'server', overlay: null, setupComplete: true })
 })
+
+it('keeps a store model when the new engine lists it, and loads it there', async () => {
+  const { ctx, loadModel } = harness()
+  const store = { id: 'Qwen/Qwen3.5-2B', name: 'Qwen', provider: 'vllm', providers: ['vllm', 'tensorrt-llm'] }
+  const trt = {
+    id: 'tensorrt-llm',
+    provider: 'tensorrt-llm',
+    version: 'trt-1',
+    backend: 'linux/amd64',
+    installed: true,
+  }
+  ctx.update((s) => ({ ...s, installed: [store], model: store.id, engine: 'vllm', engines: [trt] }))
+  ;(ctx.controller.engineSelection as { list: unknown }).list = async () => [trt]
+  await activate('choose-engine', ctx)
+  await activate('pick-engine:0', ctx)
+  expect(loadModel).toHaveBeenCalledWith('tensorrt-llm', store.id)
+  expect(ctx.get()).toMatchObject({ model: store.id, engine: 'tensorrt-llm' })
+})
+
+it('loads a store model with the provider of the row picked', async () => {
+  const { ctx, loadModel } = harness()
+  const store = { id: 'Qwen/Qwen3.5-2B', name: 'Qwen', provider: 'vllm', providers: ['vllm', 'tensorrt-llm'] }
+  ctx.update((s) => ({ ...s, installed: [store], overlay: 'model-picker' }))
+  await activate('installed:0:tensorrt-llm', ctx)
+  expect(loadModel).toHaveBeenCalledWith('tensorrt-llm', store.id)
+})

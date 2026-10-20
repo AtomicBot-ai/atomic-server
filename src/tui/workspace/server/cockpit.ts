@@ -4,7 +4,7 @@ import { art, button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { fill } from '../draw/fortress.js'
-import { operationView } from '../../../workspace-view/index.js'
+import { loadStageText, operationView } from '../../../workspace-view/index.js'
 
 export function cockpitStatus(s: WorkspaceState): EyeStatus {
   if (/stopping/i.test(s.message) && s.busy) return 'stopping'
@@ -28,6 +28,10 @@ export function cockpitNotices(s: WorkspaceState): Array<{ text: string; command
     ...(s.workspace?.engines ?? []).flatMap((e) =>
       e.operation ? [{ text: operationView(e.operation).text, command: false }] : []
     ),
+    ...(s.workspace?.loads ?? []).map((l) => ({
+      text: `${l.provider}  ${l.model_id}  · ${loadStageText({ ...l, elapsed_ms: l.elapsed_ms + Math.max(0, Date.now() - l.at) })}`,
+      command: false,
+    })),
   ]
 }
 const metric = (value: number | null | undefined, unit: string) =>

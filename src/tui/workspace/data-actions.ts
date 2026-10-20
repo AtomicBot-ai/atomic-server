@@ -1,5 +1,6 @@
 import type { ActionContext } from './actions.js'
 import type { WorkspaceState } from './state.js'
+import { readVision } from './chat/chat-load.js'
 import { modelProvider } from '../../terminal-setup/index.js'
 export async function persistConversation(ctx: Pick<ActionContext, 'get' | 'controller'>): Promise<void> {
   const s = ctx.get()
@@ -114,11 +115,19 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
       message: 'Key revoked. New requests using it will be refused.',
     })
   } else if (id.startsWith('installed:')) {
-    const model = s.installed[Number(id.slice(10))]
+    const [index, picked] = id.slice(10).split(':')
+    const model = s.installed[Number(index)]
     if (!model) return true
-    patch({ busy: true, message: `Loading ${model.name}...` })
+    const provider = picked ?? modelProvider(s.engine, model.provider)
+    patch({ busy: true, message: `Loading ${model.name}...`, loadError: null })
     try {
-      await c.loadModel(modelProvider(s.engine, model.provider), model.id)
+      await c.loadModel(provider, model.id).catch((e: unknown) => {
+        patch({
+          loadError: { provider, model: model.id, message: e instanceof Error ? e.message : String(e) },
+        })
+        throw e
+      })
+      patch({ modelVision: await readVision(c, provider, model.id), ...(picked ? { engine: picked } : {}) })
       const endpoint = await c.localEndpoint()
       await c.save('tui.model', model.id)
       await c.save('tui.endpoint', endpoint)

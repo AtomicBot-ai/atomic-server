@@ -5,6 +5,7 @@ import { COMPOSER_HEIGHT } from './composer.js'
 import { fill } from '../draw/fortress.js'
 import { workspaceLayout } from '../draw/layout.js'
 import type { WorkspaceState } from '../state.js'
+const LLAMA = ['llamacpp-upstream', 'llamacpp']
 export const isPicker = (overlay: WorkspaceState['overlay']) =>
   overlay === 'engine-picker' || overlay === 'model-picker'
 export interface PickerRow {
@@ -24,12 +25,18 @@ export function pickerRows(s: WorkspaceState): PickerRow[] {
       })),
       { id: 'picker-refresh', title: 'Refresh engines', detail: 'Check compatible builds' },
     ]
-  const rows: PickerRow[] = s.installed.map((m, i) => ({
-    id: `installed:${i}`,
-    title: m.name || m.id,
-    detail: `On this device · ${engineName(m.provider)}`,
-    current: m.id === s.model,
-  }))
+  // A model under each provider that lists it; llama.cpp's two are one row, the engine choice picks.
+  const rows: PickerRow[] = s.installed.flatMap((m, i) => {
+    const providers = [
+      ...new Set((m.providers ?? [m.provider]).map((p) => (LLAMA.includes(p) ? m.provider : p))),
+    ]
+    return providers.map((p) => ({
+      id: providers.length > 1 ? `installed:${i}:${p}` : `installed:${i}`,
+      title: m.name || m.id,
+      detail: `On this device · ${engineName(p)}`,
+      current: m.id === s.model && (providers.length === 1 || s.engine.split('|')[0] === p),
+    }))
+  })
   for (const [i, model] of s.models.entries())
     if (!s.installed.some((m) => m.id === model))
       rows.push({ id: `model:${i}`, title: model, detail: 'Connected endpoint', current: model === s.model })

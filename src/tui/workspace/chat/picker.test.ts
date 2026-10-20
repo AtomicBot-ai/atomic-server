@@ -32,3 +32,24 @@ it.each([
   expect(workspaceInput('[<0;1;1M', {} as Key, s, frame).action).toBe('close')
   expect(workspaceInput('', { escape: true } as Key, s, frame).action).toBe('close')
 })
+
+it('offers a store model under each provider that lists it, and a GGUF model once', async () => {
+  const { pickerRows } = await import('./picker.js')
+  const s = createWorkspace('chat')
+  s.overlay = 'model-picker'
+  s.installed = [
+    { id: 'Qwen/Qwen3.5-2B', name: 'Qwen/Qwen3.5-2B', provider: 'vllm', providers: ['vllm', 'tensorrt-llm'] },
+    {
+      id: 'gemma',
+      name: 'Gemma',
+      provider: 'llamacpp-upstream',
+      providers: ['llamacpp-upstream', 'llamacpp'],
+    },
+  ]
+  const rows = pickerRows(s).filter((r) => r.id.startsWith('installed:'))
+  expect(rows.map((r) => [r.id, r.detail])).toEqual([
+    ['installed:0:vllm', 'On this device · vLLM'],
+    ['installed:0:tensorrt-llm', 'On this device · TensorRT-LLM'],
+    ['installed:1', 'On this device · llama.cpp'],
+  ])
+})

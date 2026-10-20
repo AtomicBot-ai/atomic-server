@@ -2,9 +2,11 @@ import { engineName } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { isPicker, pickerRows } from './picker.js'
+import { loadAction, readVision } from './chat-load.js'
 import type { WorkspaceController } from '../controller.js'
 const reads = new WeakMap<WorkspaceController, number>()
 export async function pickerAction(id: string, ctx: ActionContext): Promise<boolean> {
+  if (await loadAction(id, ctx)) return true
   const { get, update, controller: c } = ctx,
     s = get()
   const patch = (p: Partial<WorkspaceState>) => update((v) => ({ ...v, ...p }))
@@ -66,15 +68,17 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
     try {
       await c.engineSelection.select(engine)
       const local = s.installed.find((m) => m.id === s.model)
+      // The model stays when the new provider lists it; llama.cpp's two take each other's models.
       const compatible =
         local &&
-        (local.provider === engine.provider ||
+        ((local.providers ?? [local.provider]).includes(engine.provider) ||
           (['llamacpp', 'llamacpp-upstream'].includes(local.provider) &&
             ['llamacpp', 'llamacpp-upstream'].includes(engine.provider)))
       patch({ engine: engine.id, ...(local && !compatible ? { model: '' } : {}) })
       if (local && !compatible) await c.save('tui.model', '')
       if (compatible) {
         await c.loadModel(engine.provider, local.id)
+        patch({ modelVision: await readVision(c, engine.provider, local.id) })
         const endpoint = await c.localEndpoint()
         await c.save('tui.model', local.id)
         await c.save('tui.endpoint', endpoint)

@@ -53,6 +53,10 @@ export interface WorkspaceState {
   libraryEngines: string[]
   /** The installed model a confirmation removes. */
   libraryRemove: string
+  /** Whether the chat's model takes images (`models.info`); `null` when unknown. */
+  modelVision: boolean | null
+  /** The last load from the chat that failed, for its log. */
+  loadError: { provider: string; model: string; message: string } | null
   libraryPlan: Record<string, unknown> | null
   /** The managed engine panel of Library → Engines, while it is open. */
   enginePanel: EnginePanel | null
@@ -142,6 +146,8 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     libraryFormat: 'gguf',
     libraryEngines: [],
     libraryRemove: '',
+    modelVision: null,
+    loadError: null,
     libraryPlan: null,
     enginePanel: null,
     libraryRequest: {},
