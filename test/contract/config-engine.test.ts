@@ -77,6 +77,9 @@ describe('atc config … engine.<provider>.<key>', () => {
     server({}, false)
     expect(await t.run(['config', 'set', 'engine.tensorrt-llm.context_length', '16384'])).not.toBe(0)
     expect(err()).toMatch(/daemon is running|not running/i)
+    t.io.err.length = 0
+    expect(await t.run(['config', 'get', 'engine.tensorrt-llm.context_length'])).not.toBe(0)
+    expect(err()).toMatch(/daemon is running|not running/i)
     expect(t.link.calls.some((c) => c.path.startsWith('/settings'))).toBe(false)
   })
 
