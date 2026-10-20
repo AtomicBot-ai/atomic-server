@@ -1,3 +1,4 @@
+import type { EnginePanel } from './library/engine-panel-model.js'
 import { WORKSPACE_NAVIGATION } from '../../contract/index.js'
 import type { LibraryRow, LibraryView } from './library/library-model.js'
 import type { WorkspaceSnapshot, WorkspaceOperation } from '../../contract/index.js'
@@ -46,6 +47,8 @@ export interface WorkspaceState {
   libraryRows: LibraryRow[]
   libraryQuery: string
   libraryPlan: Record<string, unknown> | null
+  /** The managed engine panel of Library → Engines, while it is open. */
+  enginePanel: EnginePanel | null
   libraryRequest: Record<string, unknown>
   workspace: WorkspaceSnapshot | null
   operations: WorkspaceOperation[]
@@ -96,6 +99,7 @@ export interface WorkspaceState {
     | 'console'
     | 'agent-setup'
     | 'install-review'
+    | 'engine-panel'
     | 'images'
     | 'setup-goal'
     | null
@@ -128,6 +132,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     libraryRows: [],
     libraryQuery: '',
     libraryPlan: null,
+    enginePanel: null,
     libraryRequest: {},
     workspace: null,
     operations: [],

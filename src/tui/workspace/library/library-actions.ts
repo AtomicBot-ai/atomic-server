@@ -1,3 +1,4 @@
+import { engineAction, isManagedEngine } from './engine-actions.js'
 import { downloadRows } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
@@ -70,6 +71,8 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     const index = Number(id.slice(12)),
       row = s.libraryRows[index]
     if (!row || s.busy) return true
+    if (s.libraryView === 'engines' && isManagedEngine(row.id))
+      return engineAction(`engine-open:${row.id}`, ctx)
     if (s.libraryView === 'engines') {
       patch({
         operations: [...WORKSPACE_OPERATIONS],

@@ -1,4 +1,5 @@
 import { drawInstallReview } from './library/library-panel.js'
+import { drawEnginePanel } from './library/engine-panel.js'
 import { drawGoalSetup } from './setup/goal-setup.js'
 import { drawOperationOverlay } from './operations/operation-panel.js'
 import { AGENTS } from '../../agent-launch/index.js'
@@ -22,6 +23,10 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     }
   if (s.overlay === 'install-review') {
     drawInstallReview(c, s, focus)
+    return
+  }
+  if (s.overlay === 'engine-panel') {
+    drawEnginePanel(c, s, focus)
     return
   }
   if (drawOperationOverlay(c, s, focus)) return

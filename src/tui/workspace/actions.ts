@@ -2,6 +2,7 @@ import { navigationAction } from './navigation-actions.js'
 import { goalSetupAction } from './setup/goal-setup.js'
 import { imageAction } from './chat/image-actions.js'
 import { libraryAction } from './library/library-actions.js'
+import { engineAction } from './library/engine-actions.js'
 import { serverEndpoint, example } from './connection.js'
 export { serverEndpoint, example } from './connection.js'
 import { operationAction } from './operations/operation-actions.js'
@@ -31,6 +32,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   if (await navigationAction(id, ctx)) return
   if (await imageAction(id, ctx)) return
   if (await operationAction(id, ctx)) return
+  if (await engineAction(id, ctx)) return
   if (await libraryAction(id, ctx)) return
   if (await pickerAction(id, ctx)) return
   if (await setupAction(id, ctx)) return

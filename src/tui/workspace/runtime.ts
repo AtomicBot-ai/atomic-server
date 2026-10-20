@@ -48,6 +48,10 @@ export class WorkspaceRuntime {
   async read(name: string, input: Record<string, unknown> = {}) {
     return (await this.connect(false)).execute(name, input)
   }
+  /** How the server was started (its record), which decides what a new sign-in takes for it. */
+  async launch() {
+    return (await readDaemonRecord(this.deps.paths.daemonRecord))?.launch ?? 'terminal'
+  }
   async openAdmin() {
     const record = await readDaemonRecord(this.deps.paths.daemonRecord)
     if (!record?.admin_url) throw new Error('Start the server with web admin enabled.')

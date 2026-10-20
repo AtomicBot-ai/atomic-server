@@ -4,6 +4,8 @@ import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { persistConversation } from './data-actions.js'
 import { setupAction } from './setup/setup-actions.js'
+import { engineAction } from './library/engine-actions.js'
+import { panelRefreshKey } from './library/engine-panel-model.js'
 import { setupWait } from '../../terminal-setup/index.js'
 type Update = (fn: (s: WorkspaceState) => WorkspaceState) => void
 export function useWorkspaceData(
@@ -20,6 +22,13 @@ export function useWorkspaceData(
     opened.current = s.setup.startedAt
     void setupAction('setup-finish', { controller: c.current, get: () => latest.current, update })
   }, [s.page, s.setup?.stage, s.setup?.busy, s.setup?.error, s.setup?.startedAt, c, latest, update])
+  // The engine panel reads the core's state again when the live operation starts, moves on or ends.
+  useEffect(() => {
+    const p = s.enginePanel
+    if (s.overlay !== 'engine-panel' || !p?.state || p.busy || !c.current) return
+    if (panelRefreshKey(p, s.workspace) === p.seen) return
+    void engineAction('engine-refresh', { controller: c.current, get: () => latest.current, update })
+  }, [s.overlay, s.workspace, s.enginePanel, c, latest, update])
   useEffect(() => {
     if (!s.ready || !s.setupComplete) return
     let live = true
