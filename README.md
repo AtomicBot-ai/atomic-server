@@ -191,6 +191,29 @@ terminal does not stop it, and a server restart shows it as interrupted until th
 continues it. Gated repositories need `HF_TOKEN` in the server's environment. `atc models pull <repo>`
 of a repository without GGUF files names the engines that would take it.
 
+## Foundry Local
+
+Foundry Local runs ONNX variants of a model on the NPU, the GPU or the CPU through Microsoft's library,
+where the core registers it (Windows x64/arm64, macOS 15+ on Apple Silicon, Linux x64/arm64 with glibc
+2.28+). A variant runs only on a prepared accelerator; `atc` prepares them after the install, as the app
+does:
+
+```bash
+atc engines install foundry-local                    # the build, then every accelerator it can prepare
+atc engines accelerators foundry-local [--refresh]   # what the library found, prepared or not
+atc models search gemma --engine foundry-local       # Atomic Chat's list, then Microsoft's catalog
+atc models pull gemma-4-e2b-it --engine foundry-local [--device npu|gpu|cpu]
+atc models pull --cancel <request-id> --engine foundry-local
+atc run gemma-4-e2b-it-openvino-npu                  # a downloaded variant loads with foundry-local
+atc models rm gemma-4-e2b-it-openvino-npu            # unloaded first, then its folder is deleted
+```
+
+Without `--device` the pull takes the NPU variant, then GPU, then CPU, among those that run here or will
+once prepared, and downloads only one the core says runs (`ok`). Files come with sizes and sha256 from
+Atomic Chat's list; a Microsoft catalog model is marked unverified. A download runs in the server into
+`<data>/foundry-local/models/<variant>/`, continues across an expired Azure link, and writes `model.yml`
+last. The list is cached for an hour; `ATC_FOUNDRY_LOCAL_MODELS_URL` names another one.
+
 ## Where data lives
 
 ```
