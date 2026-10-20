@@ -1,4 +1,5 @@
 /** The TUI Library for managed engines and Foundry Local (spec managed-models-server, foundry-local-server). */
+import { AtomicCoreError } from '@atomic-chat/core'
 import { describe, expect, it, vi } from 'vitest'
 import { activate } from '../actions.js'
 import type { ActionContext } from '../actions.js'
@@ -38,7 +39,10 @@ function tui(answers: Record<string, unknown>, over: Partial<ReturnType<typeof c
     },
     controller: {
       runtime: { execute, snapshot: async () => null, launch: async () => 'terminal' },
-      files: vi.fn(async () => []),
+      // What the core's GGUF lookup does for a repository without GGUF files: it throws.
+      files: vi.fn(async (repo: string) => {
+        throw new AtomicCoreError('MODEL_NOT_FOUND', `No GGUF files found in Hugging Face repo ${repo}`)
+      }),
       installed: vi.fn(async () => s.installed),
       models: vi.fn(async () => []),
       setup: { engines: vi.fn(async () => ['llamacpp-upstream', 'vllm', 'tensorrt-llm', 'foundry-local']) },

@@ -38,6 +38,7 @@ export function Catalog({
   const [managed, setManaged] = useState('')
   const [foundry, setFoundry] = useState(false)
   const [format, setFormat] = useState<CatalogFormat>('gguf')
+  const [managedRepo, setManagedRepo] = useState('')
   const [managedEngine, setManagedEngine] = useState('')
   const { engines: registered } = useEngines(w.execute)
   const managedEngines = registered.filter((e) => e.kind === 'managed').map((e) => text(e.engine))
@@ -250,8 +251,28 @@ export function Catalog({
           }}
         />
       )}
+      {managedRepo && (
+        <ManagedModelInstall
+          workspace={w}
+          repository={managedRepo}
+          onClose={() => setManagedRepo('')}
+          onStarted={() => setTab('downloads')}
+          onInstallEngine={(engine) => {
+            setManagedRepo('')
+            setManaged(engine)
+          }}
+        />
+      )}
       {selected && (format === 'gguf' || category !== 'text') && (
         <ModelInstall
+          onNoGguf={
+            catalogFormats(registered).includes('safetensors')
+              ? (repo) => {
+                  setSelected(null)
+                  setManagedRepo(repo)
+                }
+              : undefined
+          }
           model={selected}
           category={category}
           execute={execute}

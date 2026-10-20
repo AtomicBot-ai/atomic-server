@@ -14,6 +14,7 @@ export function ModelInstall({
   execute,
   onClose,
   onStarted,
+  onNoGguf,
 }: {
   expectedEngine?: string
   technical?: boolean
@@ -22,6 +23,8 @@ export function ModelInstall({
   execute: Execute
   onClose: () => void
   onStarted?: (result: unknown) => void
+  /** A repository with no GGUF file: the managed engines' path, when the host has one. */
+  onNoGguf?: (repository: string) => void
 }) {
   const dialog = useDialog(onClose)
   const id = text(model.id ?? model.model_name ?? model.repo, '')
@@ -52,7 +55,11 @@ export function ModelInstall({
           }
         })
         .catch((e) => {
-          if (active) setError(describeError(e))
+          if (!active) return
+          const noGguf =
+            (e as { code?: string }).code === 'MODEL_NOT_FOUND' && /no gguf/i.test(describeError(e))
+          if (noGguf && onNoGguf) onNoGguf(id)
+          else setError(describeError(e))
         })
         .finally(() => {
           if (active) setLoading(false)

@@ -225,6 +225,27 @@ describe('the admin catalog and installed models', () => {
     await waitFor(() => expect(execute).toHaveBeenLastCalledWith('models.catalog', { category: 'image' }))
   })
 
+  it('leads a repository without GGUF to the managed engines’ verdicts instead of “No GGUF”', async () => {
+    const { workspace, execute } = workspaceFixture({
+      'engines.list': enginesList(['llamacpp-upstream', 'vllm']),
+      'models.catalog': { rows: [{ id: REPO, name: REPO, category: 'text', source: { format: 'gguf' } }] },
+      'models.files': () => {
+        throw Object.assign(new Error(`No GGUF files found in Hugging Face repo ${REPO}`), {
+          code: 'MODEL_NOT_FOUND',
+        })
+      },
+      'models.check': { repository: REPO, verdicts: [verdict('vllm', true, true)] },
+      'models.installed': [],
+      'artifacts.list': [],
+    })
+    render(<Catalog workspace={workspace} openCommand={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose model' }))
+    await waitFor(() => expect(execute).toHaveBeenCalledWith('models.check', { repository: REPO }))
+    expect(screen.queryByText(/No GGUF/)).toBeNull()
+    expect(await screen.findByRole('button', { name: 'Review download' })).toBeInTheDocument()
+  })
+
   it('warns that removing a store model removes it for every managed engine', async () => {
     const { workspace, execute } = workspaceFixture({ 'models.remove': {} })
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)

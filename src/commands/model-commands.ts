@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
-import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../workspace-service/index.js'
@@ -10,6 +9,7 @@ import { operation, workspace } from './control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
 import { foundryListing, pullFoundryModel } from './foundry-commands.js'
+import { isNoGguf } from '../terminal-setup/index.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
@@ -186,12 +186,7 @@ export const modelsCommand = defineCommand({
         if (!file) {
           const result = (await service.execute('models.files', { repo }).catch((error: unknown) => {
             // A repository without GGUF files: maybe a managed engine's safetensors checkpoint.
-            if (
-              error instanceof AtomicCoreError &&
-              error.code === 'MODEL_NOT_FOUND' &&
-              /No GGUF/i.test(error.message)
-            )
-              return []
+            if (isNoGguf(error)) return []
             throw error
           })) as unknown
           const files = Array.isArray(result) ? result : ((result as { files?: unknown[] }).files ?? [])

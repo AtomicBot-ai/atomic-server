@@ -1,6 +1,7 @@
 import { engineAction, engineRunner, hasPanel } from './engine-actions.js'
 import { catalogAction, jobRunner, libraryFormats, managedChoice } from './catalog-actions.js'
 import { downloadRows } from '../../../workspace-view/index.js'
+import { isNoGguf } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import type { LibraryView } from './library-model.js'
@@ -91,7 +92,7 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       if (s.libraryCategory === 'text' && row.source?.['format'] === 'safetensors')
         return await managedChoice(row.id, ctx)
       if (s.libraryCategory === 'text' && row.source?.['format'] !== 'mlx') {
-        const files = await c.files(row.id),
+        const files = await c.files(row.id).catch((e: unknown) => (isNoGguf(e) ? [] : Promise.reject(e))),
           file = files[0] // modelFiles puts the default quant first
         // A repository without GGUF may be a managed engine's: the core's verdicts lead there.
         if (!file && libraryFormats(s.libraryEngines).includes('safetensors'))
