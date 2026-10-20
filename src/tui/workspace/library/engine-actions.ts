@@ -55,7 +55,7 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
     const engine = id.slice('engine-open:'.length)
     const managed = isManagedEngine(engine)
     const kind = managed ? 'managed' : engine === 'foundry-local' ? 'foundry' : 'build'
-    const launch = (await c.runtime.launch().catch(() => 'terminal')) as ServerLaunch
+    const started = await c.runtime.start().catch(() => ({ launch: 'terminal' as ServerLaunch }))
     update((v) => ({
       ...v,
       overlay: 'engine-panel',
@@ -73,7 +73,7 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
         notice: '',
         removing: false,
         keepModels: false,
-        launch,
+        ...started,
         seen: '',
       },
     }))

@@ -79,7 +79,7 @@ function printStatus(ctx: CommandContext, s: DaemonDescription & { downloads?: S
   ])
   for (const o of s.environment_operations) {
     if (o.phase === 'relogin-required')
-      for (const line of reloginLines(s.launch, o.operation_id)) ctx.out.line(line)
+      for (const line of reloginLines(s.launch, o.operation_id, s.service)) ctx.out.line(line)
     if (o.phase === 'reboot-required') for (const line of rebootLines(o.operation_id)) ctx.out.line(line)
   }
   for (const step of s.pending_host_steps) {

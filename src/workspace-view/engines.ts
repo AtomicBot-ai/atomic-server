@@ -242,7 +242,7 @@ export function engineView(state: ManagedEngineState): EngineView {
  * After the person was added to the `docker` group (`relogin-required`): how the group reaches this
  * server, by the way it was started (design D5). `atc` never signs anyone out or restarts the machine.
  */
-export function reloginLines(launch: ServerLaunch, operationId: string): string[] {
+export function reloginLines(launch: ServerLaunch, operationId: string, service = 'atc'): string[] {
   const steps: Record<ServerLaunch, string[]> = {
     'terminal': [
       'The server was started from a terminal: sign out and in again (a new SSH session too),',
@@ -252,9 +252,11 @@ export function reloginLines(launch: ServerLaunch, operationId: string): string[
     'systemd-user': [
       'The server runs as a systemd --user service, which keeps the groups of your user manager:',
       'end all your sessions (or restart the machine yourself), sign in again,',
-      'then `systemctl --user start atc` if it is not running.',
+      `then \`systemctl --user start ${service}\` if it is not running.`,
     ],
-    'systemd-system': ['The server runs as a system service: restart it with `sudo systemctl restart atc`.'],
+    'systemd-system': [
+      `The server runs as a system service: restart it with \`sudo systemctl restart ${service}\`.`,
+    ],
   }
   return [
     'You were added to the docker group; it reaches the server only once the server starts again with it.',

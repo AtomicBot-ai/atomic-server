@@ -27,7 +27,8 @@ const state = (over: Partial<ManagedEngineState> = {}): ManagedEngineState => ({
 /** A TUI whose server answers `engines.plan` with `planned` and records every other call. */
 function tui(
   planned: ManagedEngineState,
-  answer: (name: string, input: Record<string, unknown>) => unknown = () => ({})
+  answer: (name: string, input: Record<string, unknown>) => unknown = () => ({}),
+  started: { launch: string; service?: string } = { launch: 'terminal' }
 ) {
   let s = { ...createWorkspace('models'), setupComplete: true }
   s.libraryView = 'engines'
@@ -41,7 +42,7 @@ function tui(
       s = fn(s)
     },
     controller: {
-      runtime: { execute, snapshot: async () => null, launch: async () => 'terminal' },
+      runtime: { execute, snapshot: async () => null, start: async () => started },
     } as unknown as WorkspaceController,
     send: vi.fn(),
     cancel: vi.fn(),
@@ -53,6 +54,12 @@ const calls = (execute: ReturnType<typeof tui>['execute'], name: string) =>
   execute.mock.calls.filter(([n]) => n === name).map(([, input]) => input)
 
 describe('the engine panel’s actions', () => {
+  it('keeps how the server was started and its service name for the sign-in steps', async () => {
+    const t = tui(state(), undefined, { launch: 'systemd-system', service: 'atomic' })
+    await activate('library-row:0', t.ctx)
+    expect(t.get().enginePanel).toMatchObject({ launch: 'systemd-system', service: 'atomic' })
+  })
+
   it('opens the panel for a managed engine instead of the operation runner', async () => {
     const t = tui(state())
     await activate('library-row:0', t.ctx)

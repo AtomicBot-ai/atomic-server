@@ -21,12 +21,24 @@ export function serverLaunch(facts: {
   return 'terminal'
 }
 
-/** The running process's own launch; reads `/proc/self/cgroup` on Linux, best effort. */
+/**
+ * The systemd unit the process runs in, without `.service` (`atc service install --name` sets it):
+ * the last `.service` segment of the cgroup path, never the user manager `user@<uid>.service`.
+ */
+export function serviceUnit(cgroup: string | undefined): string | undefined {
+  const path = cgroup?.split('\n').find((line) => line.startsWith('0::')) ?? ''
+  const unit = /\/([^/]+)\.service$/.exec(path.trim())?.[1]
+  return unit && !/^user@\d+$/.test(unit) ? unit : undefined
+}
+
+/** The running process's own launch and, under systemd, its unit; reads `/proc/self/cgroup` on Linux, best effort. */
 export async function readServerLaunch(
   platform: NodeJS.Platform,
   env: Record<string, string | undefined>
-): Promise<ServerLaunch> {
+): Promise<{ launch: ServerLaunch; service?: string }> {
   const cgroup =
     platform === 'linux' ? await readFile('/proc/self/cgroup', 'utf8').catch(() => undefined) : undefined
-  return serverLaunch({ platform, env, cgroup })
+  const launch = serverLaunch({ platform, env, cgroup })
+  const service = launch.startsWith('systemd') ? serviceUnit(cgroup) : undefined
+  return { launch, ...(service ? { service } : {}) }
 }

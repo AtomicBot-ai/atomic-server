@@ -38,7 +38,7 @@ function tui(answers: Record<string, unknown>, over: Partial<ReturnType<typeof c
       s = fn(s)
     },
     controller: {
-      runtime: { execute, snapshot: async () => null, launch: async () => 'terminal' },
+      runtime: { execute, snapshot: async () => null, start: async () => ({ launch: 'terminal' }) },
       // What the core's GGUF lookup does for a repository without GGUF files: it throws.
       files: vi.fn(async (repo: string) => {
         throw new AtomicCoreError('MODEL_NOT_FOUND', `No GGUF files found in Hugging Face repo ${repo}`)

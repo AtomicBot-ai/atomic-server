@@ -112,6 +112,15 @@ describe('the managed engine panel', () => {
     expect(ids(m)).toContain('engine-resume')
   })
 
+  it('names the service the server runs as', () => {
+    const relogin = operation('vllm', 'relogin-required')
+    const m = enginePanelModel(
+      panel({ launch: 'systemd-system', service: 'atomic' }),
+      live([{ engine: 'vllm', installation: null, operation: relogin }])
+    )
+    expect(text(m)).toContain('sudo systemctl restart atomic')
+  })
+
   it('says another engine’s operation runs first and offers no Approve meanwhile', () => {
     const other = operation('sglang', 'pulling-image')
     const m = enginePanelModel(panel(), live([{ engine: 'sglang', installation: null, operation: other }]))

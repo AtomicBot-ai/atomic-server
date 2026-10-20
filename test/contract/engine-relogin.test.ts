@@ -13,7 +13,7 @@ afterEach(() => t?.cleanup())
 const out = () => t.io.out.join('')
 
 /** The daemon's record, saying how this server was started. */
-function launchedAs(run: TestRun, launch: string) {
+function launchedAs(run: TestRun, launch: string, service?: string) {
   const path = atcPathsFor(run.io.env['ATC_DATA_FOLDER'] as string).daemonRecord
   mkdirSync(dirname(path), { recursive: true })
   writeFileSync(
@@ -29,14 +29,15 @@ function launchedAs(run: TestRun, launch: string) {
       admin_url: null,
       started_at: 0,
       launch,
+      ...(service ? { service } : {}),
     })
   )
 }
 
-function host(engine: string, launch: string): ManagedHost {
+function host(engine: string, launch: string, service?: string): ManagedHost {
   const run = managedRun(engine)
   t = run.t
-  launchedAs(t, launch)
+  launchedAs(t, launch, service)
   return run.h
 }
 
@@ -56,6 +57,13 @@ describe('relogin-required on a server', () => {
     }
   )
 
+  it('names the service the server runs as', async () => {
+    const h = host('tensorrt-llm', 'systemd-system', 'atomic')
+    h.onBegin = (op) => void h.play(op.operation_id, [{ phase: 'relogin-required', plan_digest: DIGEST_A }])
+    expect(await t.run(['engines', 'install', 'tensorrt-llm', '--yes'])).toBe(0)
+    expect(out()).toContain('sudo systemctl restart atomic')
+  })
+
   it('continues after the restart with --resume and no new consent', async () => {
     const h = host('tensorrt-llm', 'terminal')
     h.set(operation('tensorrt-llm', 'relogin-required', { approved_plan_digest: DIGEST_A }))
@@ -66,10 +74,11 @@ describe('relogin-required on a server', () => {
   })
 
   it('atc status prints the same steps for an operation waiting on a sign-in', async () => {
-    const h = host('tensorrt-llm', 'systemd-user')
+    const h = host('tensorrt-llm', 'systemd-user', 'atomic')
     h.set(operation('tensorrt-llm', 'relogin-required'))
     expect(await t.run(['status'])).toBe(0)
     expect(out()).toContain('end all your sessions')
+    expect(out()).toContain('systemctl --user start atomic')
   })
 })
 

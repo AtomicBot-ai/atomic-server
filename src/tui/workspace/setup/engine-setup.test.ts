@@ -98,7 +98,7 @@ function harness(installed: string[], plan: object = foundryPlan) {
       state = fn(state)
     },
     controller: {
-      runtime: { execute, snapshot: async () => null, launch: async () => 'terminal' },
+      runtime: { execute, snapshot: async () => null, start: async () => ({ launch: 'terminal' }) },
       setup,
       api: vi.fn(async () => {}),
       localEndpoint: vi.fn(async () => 'http://127.0.0.1:1337/v1'),

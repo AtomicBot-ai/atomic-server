@@ -48,6 +48,8 @@ export interface DaemonDescription {
   /** Privileged steps the server could not run itself: the exact command to run as administrator. */
   /** How the server was started: what a sign-in for the docker group takes for it. */
   launch: ServerLaunch
+  /** The systemd unit the server runs as (absent outside systemd). */
+  service?: string
   pending_host_steps: Array<{
     step_id: string
     operation_id: string
@@ -90,6 +92,7 @@ export function describeSnapshot(
     sessions: snapshot.sessions.map((s) => ({ provider: s.provider, model_id: s.model_id, port: s.port })),
     clients: snapshot.clients.map((c) => c.name),
     launch: record?.launch ?? 'terminal',
+    ...(record?.service ? { service: record.service } : {}),
     pending_host_steps: waitingHostSteps(journal, operations).map((e) => ({
       step_id: e.step_id,
       operation_id: e.operation_id,

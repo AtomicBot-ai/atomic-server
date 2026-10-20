@@ -1,3 +1,4 @@
+import type { ServerLaunch } from '../../contract/index.js'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { createWorkspaceClient, readWorkspaceSetup } from '../../workspace-service/index.js'
 import type { AtcConfig } from '../../config/index.js'
@@ -48,9 +49,10 @@ export class WorkspaceRuntime {
   async read(name: string, input: Record<string, unknown> = {}) {
     return (await this.connect(false)).execute(name, input)
   }
-  /** How the server was started (its record), which decides what a new sign-in takes for it. */
-  async launch() {
-    return (await readDaemonRecord(this.deps.paths.daemonRecord))?.launch ?? 'terminal'
+  /** How the server was started and its systemd unit (its record): what a new sign-in takes for it. */
+  async start(): Promise<{ launch: ServerLaunch; service?: string }> {
+    const record = await readDaemonRecord(this.deps.paths.daemonRecord)
+    return { launch: record?.launch ?? 'terminal', ...(record?.service ? { service: record.service } : {}) }
   }
   async openAdmin() {
     const record = await readDaemonRecord(this.deps.paths.daemonRecord)

@@ -99,7 +99,7 @@ function tui(view: FoundryAcceleratorsView, search: unknown = SEARCH) {
       s = fn(s)
     },
     controller: {
-      runtime: { execute, snapshot: async () => null, launch: async () => 'terminal' },
+      runtime: { execute, snapshot: async () => null, start: async () => ({ launch: 'terminal' }) },
     } as unknown as WorkspaceController,
     send: vi.fn(),
     cancel: vi.fn(),

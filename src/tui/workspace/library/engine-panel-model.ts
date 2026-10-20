@@ -62,6 +62,8 @@ export interface EnginePanel {
   removing: boolean
   keepModels: boolean
   launch: ServerLaunch
+  /** The systemd unit the server runs as, for the sign-in steps. */
+  service?: string
   /** The live operation key the state was last read for (`panelRefreshKey`). */
   seen: string
 }
@@ -171,7 +173,7 @@ export function enginePanelModel(
       break
     }
     case 'relogin':
-      for (const line of reloginLines(p.launch, op!.operation_id)) say(line)
+      for (const line of reloginLines(p.launch, op!.operation_id, p.service)) say(line)
       add('engine-resume', 'Continue', 'Continue once the server has the new group')
       break
     case 'reboot':

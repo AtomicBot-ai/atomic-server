@@ -45,7 +45,7 @@ function tui(engine: string, values: Record<string, unknown> = {}) {
       s = fn(s)
     },
     controller: {
-      runtime: { execute, snapshot: async () => null, launch: async () => 'terminal' },
+      runtime: { execute, snapshot: async () => null, start: async () => ({ launch: 'terminal' }) },
     } as unknown as WorkspaceController,
     send: vi.fn(),
     cancel: vi.fn(),

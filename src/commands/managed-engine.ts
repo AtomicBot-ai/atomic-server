@@ -63,8 +63,9 @@ export async function settle(
     case 'awaiting-consent':
       return consentFor(s, op, approval)
     case 'relogin-required': {
-      const launch = (await readDaemonRecord(s.ctx.paths.daemonRecord))?.launch ?? 'terminal'
-      for (const line of reloginLines(launch, op.operation_id)) say(line)
+      const record = await readDaemonRecord(s.ctx.paths.daemonRecord)
+      for (const line of reloginLines(record?.launch ?? 'terminal', op.operation_id, record?.service))
+        say(line)
       return 0
     }
     case 'reboot-required':

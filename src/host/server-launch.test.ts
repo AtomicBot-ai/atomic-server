@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { serverLaunch } from './server-launch.js'
+import { serverLaunch, serviceUnit } from './server-launch.js'
 
 describe('serverLaunch', () => {
   const user = '0::/user.slice/user-1000.slice/user@1000.service/app.slice/atc.service\n'
@@ -22,5 +22,20 @@ describe('serverLaunch', () => {
     ['Windows', { platform: 'win32', env: { INVOCATION_ID: 'x' } }, 'terminal'],
   ] as const)('%s', (_name, facts, launch) => {
     expect(serverLaunch(facts)).toBe(launch)
+  })
+})
+
+describe('serviceUnit', () => {
+  it.each([
+    [
+      'a systemd --user unit',
+      '0::/user.slice/user-1000.slice/user@1000.service/app.slice/atc.service\n',
+      'atc',
+    ],
+    ['a system unit installed with --name', '0::/system.slice/atomic.service\n', 'atomic'],
+    ['a login session', '0::/user.slice/user-1000.slice/session-3.scope\n', undefined],
+    ['no cgroup', undefined, undefined],
+  ] as const)('%s', (_name, cgroup, unit) => {
+    expect(serviceUnit(cgroup)).toBe(unit)
   })
 })

@@ -110,7 +110,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       control_url: `http://${core.control.host}:${core.control.port}`,
       admin_url: null,
       started_at: startedAt,
-      launch: await readServerLaunch(host.facts.platform, io.env),
+      ...(await readServerLaunch(host.facts.platform, io.env)),
     }
     await writeDaemonRecord(paths.daemonRecord, startingRecord)
     const relay = new RelayHub()

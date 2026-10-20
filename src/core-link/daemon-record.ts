@@ -26,6 +26,8 @@ export interface DaemonRecord {
   started_at: number
   /** How this server was started (absent in a record of an older build: read as `terminal`). */
   launch?: ServerLaunch
+  /** The systemd unit this server runs as, without `.service` (absent outside systemd). */
+  service?: string
 }
 
 export async function readDaemonRecord(path: string): Promise<DaemonRecord | undefined> {

@@ -161,6 +161,15 @@ describe('sign-in and restart instructions', () => {
     expect(lines).not.toMatch(/reboot|restart the machine now/i)
   })
 
+  it('names the service as it was installed (atc service install --name)', () => {
+    expect(reloginLines('systemd-system', 'op-1', 'atomic').join('\n')).toContain(
+      'sudo systemctl restart atomic'
+    )
+    expect(reloginLines('systemd-user', 'op-1', 'atomic').join('\n')).toContain(
+      'systemctl --user start atomic'
+    )
+  })
+
   it('says a restart of Windows is needed and that the next start continues', () => {
     const lines = rebootLines('op-2').join('\n')
     expect(lines).toContain('restart')
