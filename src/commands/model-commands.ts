@@ -7,7 +7,7 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operation, printOperation, workspace } from './control.js'
-import { checkModelCommand, noGgufHint, pullManagedModel } from './managed-model-commands.js'
+import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   if (typeof value === 'string') return value
@@ -89,14 +89,22 @@ export const modelsCommand = defineCommand({
           description: 'text, image, video, embedding or decision',
           default: 'text',
         },
+        ...engineOption,
       },
-      run: (inv, ctx) => operation(ctx, 'models.catalog', { category: inv.values['category'] }),
+      run: (inv, ctx) =>
+        typeof inv.values['engine'] === 'string'
+          ? managedListing(ctx, 'models.catalog', { engine: inv.values['engine'] })
+          : operation(ctx, 'models.catalog', { category: inv.values['category'] }),
     }),
     defineCommand({
       name: 'search',
       summary: 'Search model repositories',
       positionals: [{ name: 'query', description: 'Search words or owner/repo', required: true }],
-      run: (inv, ctx) => operation(ctx, 'models.search', { query: inv.positionals[0] }),
+      options: engineOption,
+      run: (inv, ctx) =>
+        typeof inv.values['engine'] === 'string'
+          ? managedListing(ctx, 'models.search', { engine: inv.values['engine'], query: inv.positionals[0] })
+          : operation(ctx, 'models.search', { query: inv.positionals[0] }),
     }),
     checkModelCommand,
     defineCommand({

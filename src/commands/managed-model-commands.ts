@@ -169,3 +169,34 @@ export async function noGgufHint(
     hint: `see atc models check ${repository}`,
   })
 }
+
+interface Listing {
+  engine: string
+  descriptor_id: string
+  models?: Array<{ repository: string; revision: string; note: string; vram_tier_bytes: number }>
+  rows?: Array<{
+    repository: string
+    section: string
+    architectures: string[]
+    weight_bytes_estimate: number | null
+  }>
+}
+
+/** `atc models catalog|search --engine <managed>`: the descriptor's curated models, the narrowed Hub. */
+export async function managedListing(ctx: CommandContext, name: string, input: Record<string, unknown>) {
+  const result = (await (await workspace(ctx)).execute(name, input)) as Listing
+  ctx.out.result(result, () => {
+    ctx.out.note(`${result.engine}, descriptor ${result.descriptor_id}`)
+    for (const m of result.models ?? [])
+      ctx.out.line(
+        `${m.repository}@${m.revision.slice(0, 12)}  ${formatSize(m.vram_tier_bytes)} card — ${m.note}`
+      )
+    for (const r of result.rows ?? []) {
+      const size = r.weight_bytes_estimate !== null ? `~${formatSize(r.weight_bytes_estimate)}` : ''
+      ctx.out.line(
+        `${r.repository}  ${r.section}  ${[r.architectures.join(','), size].filter(Boolean).join('  ')}`
+      )
+    }
+  })
+  return 0
+}

@@ -13,6 +13,8 @@ import { installedModels, modelFiles, searchHub } from '../terminal-setup/index.
 import type { WorkspaceCatalog } from './catalog.js'
 import type { CatalogCategory } from './catalog.js'
 import type { ManagedModelSetups } from './managed-model-setups.js'
+import { managedCatalog, managedSearch } from './managed-catalog.js'
+import { isManagedEngine } from './managed-engines.js'
 import { checkModel } from './managed-models.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
@@ -54,12 +56,19 @@ export async function modelOperation(
         }
       )
     case 'models.catalog':
+      if (isManagedEngine(String(input['engine'] ?? ''))) return managedCatalog(link, String(input['engine']))
       return d.catalog.list(
         input['category'] as CatalogCategory | undefined,
         String(input['query'] ?? ''),
         input['refresh'] === true
       )
     case 'models.search':
+      if (isManagedEngine(String(input['engine'] ?? '')))
+        return managedSearch(
+          { link, fetch: d.request, env: d.options.env },
+          String(input['engine']),
+          String(input['query'])
+        )
       return searchHub(String(input['query']), d.request)
     case 'models.files':
       return modelFiles(String(input['repo']), d.request)

@@ -13,13 +13,17 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
         category: { type: 'string', enum: ['text', 'image', 'video', 'embedding', 'decision'] },
         query: { type: 'string' },
         refresh: { type: 'boolean' },
+        engine: { type: 'string', description: "A managed engine: its descriptor's curated models" },
       },
     }
   ),
-  operation('models.search', 'Search Hugging Face', 'read', 'Search Hugging Face for model repositories.', {
-    properties: { query: { type: 'string' } },
-    required: ['query'],
-  }),
+  operation(
+    'models.search',
+    'Search Hugging Face',
+    'read',
+    "Search Hugging Face for model repositories. With a managed engine: its curated models first, then safetensors repositories narrowed by the descriptor's architectures and the largest card; an exact owner/repo is always shown.",
+    { properties: { query: { type: 'string' }, engine: { type: 'string' } }, required: ['query'] }
+  ),
   operation(
     'models.files',
     'Model files',
