@@ -18,6 +18,7 @@ import { managedCatalog, managedSearch } from './managed-catalog.js'
 import { isManagedEngine } from './managed-engines.js'
 import { checkModel } from './managed-models.js'
 import { storeModels } from './managed-store.js'
+import { withProviders } from './model-providers.js'
 import { foundryStoreModels, removeFoundryModel } from './foundry-store.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
@@ -90,7 +91,7 @@ export async function modelOperation(
     case 'models.files':
       return modelFiles(String(input['repo']), d.request)
     case 'models.installed':
-      return [
+      return withProviders(link, paths.layout, [
         ...(await installedModels(paths.layout)),
         ...(await new ModelRegistry(paths.layout, 'mlx').list()).map((m) => ({
           id: m.id,
@@ -99,7 +100,7 @@ export async function modelOperation(
         })),
         ...(await storeModels(link)),
         ...(await foundryStoreModels(paths.layout)),
-      ]
+      ])
     case 'models.remove': {
       const id = String(input['model_id']),
         local = new ModelRegistry(paths.layout),

@@ -15,6 +15,7 @@ function context() {
   const tmp = tmpDataFolder()
   cleanup.push(tmp.cleanup)
   const link = fakeCoreLink()
+  link.responses['POST /engines/versions'] = { engines: [{ engine: 'foundry-local' }] }
   const dir = join(tmp.paths.dataFolder, 'foundry-local', 'models', VARIANT)
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, 'model.onnx'), Buffer.alloc(1000))
