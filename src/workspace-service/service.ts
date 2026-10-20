@@ -10,6 +10,7 @@ import { WORKSPACE_OPERATIONS } from '../contract/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { inputFor, object, sanitized } from './validation.js'
 import { WorkspaceMetrics } from './metrics.js'
+import { LoadStages } from './load-stages.js'
 import { publicEndpoint, workspaceSnapshot } from './snapshot.js'
 import { saveWorkspaceSetup } from './state.js'
 import { coreOperation, NOT_CORE } from './core-operations.js'
@@ -24,6 +25,7 @@ import type { ModelSetups } from './model-setups.js'
 import type { ManagedModelSetups } from './managed-model-setups.js'
 import { downloadProxy } from './download-proxy.js'
 import { FoundryAccelerators } from './foundry.js'
+import { foundryOperation } from './foundry-operations.js'
 import { isManagedEngine } from './managed-engines.js'
 import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
@@ -42,6 +44,7 @@ export interface WorkspaceServiceOptions {
 }
 export class WorkspaceService {
   readonly metrics = new WorkspaceMetrics()
+  private readonly loads = new LoadStages()
   private keys: ClientKeys
   private history: ChatHistory
   private request: typeof fetch
@@ -74,6 +77,7 @@ export class WorkspaceService {
   }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
+    this.loads.event(name, payload)
   }
   async snapshot() {
     const result = await workspaceSnapshot(
@@ -85,6 +89,7 @@ export class WorkspaceService {
     )
     // The core's own downloads are engine builds; every model transfer is this server's.
     result.downloads.push(...this.downloader.snapshot())
+    result.loads = this.loads.list()
     result.setups.push(
       ...(await this.setups.list()),
       ...(await this.artifacts.list()),
@@ -104,23 +109,9 @@ export class WorkspaceService {
       input
     )
     if (model !== NOT_CORE) return model
+    const foundry = foundryOperation(this.foundry, this.foundryModels, operation, input)
+    if (foundry !== NOT_CORE) return foundry
     switch (operation) {
-      case 'foundry.accelerators':
-        return this.foundry.status(input['force'] === true)
-      case 'foundry.plan':
-        return this.foundryModels.plan({
-          model: String(input['model']),
-          ...(typeof input['variant'] === 'string' ? { variant: input['variant'] } : {}),
-          ...(typeof input['device'] === 'string' ? { device: input['device'] } : {}),
-        })
-      case 'foundry.install':
-        return this.foundryModels.install(input)
-      case 'foundry.cancel':
-        return this.foundryModels.cancel(String(input['id']))
-      case 'foundry.prepare':
-        return this.foundry.prepare(
-          Array.isArray(input['accelerators']) ? input['accelerators'].map(String) : undefined
-        )
       case 'settings.schema':
         return engineSettingsSchema(String(input['provider']))
       case 'config.get':
@@ -280,7 +271,10 @@ export class WorkspaceService {
     const proxy = downloadProxy(this.options.config)
     if (operation === 'engines.install' && proxy && !isManagedEngine(String(input['engine'])))
       input['request'] = { proxy, ...object(input['request']) }
-    const result = await coreOperation(link, operation, input)
+    const result = await coreOperation(link, operation, input).catch((error: unknown) => {
+      if (operation === 'models.load') this.loads.drop(String(input['provider']), String(input['model_id']))
+      throw error
+    })
     if (result === NOT_CORE) throw new AtcError('ATC_USAGE', `No implementation for ${operation}.`)
     // Inference results are content, not session credentials. Keep token statistics and user JSON intact.
     return operation.endsWith('.run') || operation.includes('.job') || operation.endsWith('.create')
