@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { loadStageText } from '@view'
+import { describeError } from '@/services/admin-api'
 import { Action, Empty, Field, Panel } from '../Controls'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
@@ -21,6 +23,8 @@ export function InstalledModels({
   const [chosen, setChosen] = useState<Record<string, string>>({}),
     [query, setQuery] = useState('')
   const [pending, setPending] = useState('')
+  const [failures, setFailures] = useState<Record<string, string>>({})
+  const [logs, setLogs] = useState<Record<string, string>>({})
   const services = w.snapshot?.services ?? []
   return (
     <>
@@ -53,7 +57,12 @@ export function InstalledModels({
             const loaded = services.find(
               (s) => s.model === model && (row.category || s.provider === selectedEngine)
             )
-            const state = pending === id ? 'Loading' : (loaded?.state ?? 'Installed · not loaded')
+            // A managed engine's load reports its stage; the elapsed time goes on from when it was seen.
+            const load = w.snapshot?.loads?.find((l) => l.model_id === model && l.provider === selectedEngine)
+            const stage = load
+              ? loadStageText({ ...load, elapsed_ms: load.elapsed_ms + Math.max(0, Date.now() - load.at) })
+              : ''
+            const state = stage || (pending === id ? 'Loading' : (loaded?.state ?? 'Installed · not loaded'))
             return (
               <article className="installed-row" key={id}>
                 <div>
@@ -74,6 +83,12 @@ export function InstalledModels({
                       ))}
                     </select>
                   )}
+                  {failures[id] && (
+                    <p role="alert" className="inline-error">
+                      {failures[id]}
+                    </p>
+                  )}
+                  {logs[id] && <pre className="model-log">{logs[id]}</pre>}
                   <details>
                     <summary>Model details</summary>
                     <code>{model}</code>
@@ -93,10 +108,13 @@ export function InstalledModels({
                       )
                         return
                       setPending(id)
+                      setFailures((f) => ({ ...f, [id]: '' }))
                       try {
                         if (row.category || record(row.plan).category)
                           await w.execute('artifacts.load', { id: row.id })
                         else await w.execute('models.load', { provider: selectedEngine, model_id: model })
+                      } catch (e) {
+                        setFailures((f) => ({ ...f, [id]: describeError(e) }))
                       } finally {
                         setPending('')
                       }
@@ -121,7 +139,20 @@ export function InstalledModels({
                       Remove
                     </Action>
                   )}
-                  {(pending === id || loaded?.state === 'loading') && !row.category && (
+                  {failures[id] && (
+                    <Action
+                      onClick={async () => {
+                        const log = await w.execute('models.logs', {
+                          provider: selectedEngine,
+                          model_id: model,
+                        })
+                        setLogs((l) => ({ ...l, [id]: typeof log === 'string' ? log : JSON.stringify(log) }))
+                      }}
+                    >
+                      View log
+                    </Action>
+                  )}
+                  {(load || pending === id || loaded?.state === 'loading') && !row.category && (
                     <Action
                       onClick={() =>
                         w.execute('models.cancel', { provider: selectedEngine, model_id: model })
