@@ -46,6 +46,8 @@ export interface EnginePanel {
   form: EngineForm | null
   /** Foundry Local's accelerators, model list and reviewed plan. */
   foundry: FoundryPanelData | null
+  /** Opened by guided setup: once the engine is ready it offers to go on to the models. */
+  inSetup?: boolean
   /** `engines.plan`'s answer; `null` until it came. */
   state: ManagedEngineState | null
   busy: boolean
@@ -198,6 +200,7 @@ export function enginePanelModel(
         add('engine-remove-cancel', 'Back', 'Keep the engine')
         break
       }
+      if (p.inSetup) add('setup-path-continue', 'Choose models >', 'Go on with guided setup')
       if (view.kind === 'update')
         add('engine-update', 'Update', 'Reinstall with the newer release, keeping models')
       add('engine-remove', 'Remove…', 'Show what removing it does')

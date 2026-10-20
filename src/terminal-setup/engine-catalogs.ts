@@ -32,3 +32,9 @@ export async function engineCatalogs(link: CoreLink): Promise<BackendCatalogResp
     throw new Error('No compatible engine could be found. Check your connection and retry.')
   return catalogs
 }
+
+/** The registered engines installed here: an active build, or a managed engine's installation. */
+export async function installedEngines(link: CoreLink): Promise<string[]> {
+  const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
+  return orderEngines((engines ?? []).filter((e) => e.active).map((e) => e.engine as string))
+}

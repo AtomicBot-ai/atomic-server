@@ -5,6 +5,7 @@ import type { WorkspaceState } from '../state.js'
 import { computeRowWindow } from '../../row-window.js'
 import { drawSetupBrowser } from './setup-browser.js'
 import { drawSetupReview } from './setup-review.js'
+import { drawPathDownload, drawPathModels, drawPathReview } from './engine-setup-view.js'
 export function bytes(n: number): string {
   if (!n) return 'size unknown'
   return n >= 1024 ** 3
@@ -74,7 +75,11 @@ export function drawSetup(
       'Return to your model library | Downloads continue in background',
       focus
     )
-  if (v.stage === 'review') {
+  const area = { x, y, width, bottom, focus }
+  if (v.path && v.stage === 'models') drawPathModels(c, s, v, area)
+  else if (v.path && v.stage === 'review') drawPathReview(c, v, area)
+  else if (v.path && (v.stage === 'download' || v.stage === 'ready')) drawPathDownload(c, s, v, area)
+  else if (v.stage === 'review') {
     drawSetupReview(c, v, x, y, width, bottom, focus)
   } else if (v.stage === 'engine' || v.stage === 'models') {
     drawSetupBrowser(c, s, x, y, width, bottom, focus)

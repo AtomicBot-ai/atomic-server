@@ -54,7 +54,14 @@ export function drawSetupBrowser(
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
     for (const engine of registered.filter((e) => OTHER.includes(e)))
-      put(row++, `${engineName(engine)}  /  Install it from Library → Engines`)
+      b(
+        `setup-engine:${engine}`,
+        row++,
+        `${engineName(engine)}${v.installed.includes(engine) ? '' : '  /  not installed'}`,
+        v.installed.includes(engine)
+          ? 'Installed. Enter chooses a model for it.'
+          : 'Not installed. Enter installs it here first, then you choose a model.'
+      )
     if (y + row < bottom - 1)
       b(
         'setup-engine-info',
