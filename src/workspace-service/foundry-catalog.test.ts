@@ -96,6 +96,18 @@ describe('foundrySearch', () => {
     expect(qwen.default_variant).toMatch(/-npu$/)
   })
 
+  it('opens on a GPU variant that runs when no NPU does, before the CPU', async () => {
+    const link = core()
+    const check = link.responses['POST /models/foundry-local/check'] as (b: unknown) => unknown
+    link.responses['POST /models/foundry-local/check'] = (body: unknown) =>
+      (body as { device: string }).device === 'npu'
+        ? { verdict: 'accelerator-unavailable', reason: 'No NPU.', accelerator: null }
+        : check(body)
+    const qwen = (await foundrySearch({ ...deps(web()), link }, 'qwen2.5')).models[0]!
+    const chosen = qwen.variants.find((v) => v.id === qwen.default_variant)
+    expect(chosen).toMatchObject({ device: 'gpu', verdict: { verdict: 'ok' } })
+  })
+
   it('keeps only the variants of another platform (Linux x64: CPU and CUDA)', async () => {
     const qwen = (await foundrySearch(deps(web(), 'linux', 'x64'), 'qwen2.5')).models[0]!
     expect(qwen.variants.map((v) => v.execution_provider).sort()).toEqual(['cpu', 'cuda'])

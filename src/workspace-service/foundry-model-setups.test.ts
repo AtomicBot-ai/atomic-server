@@ -10,6 +10,7 @@ import { FixtureHttpServer } from '../../test/helpers/fixture-http-server.js'
 import { ASSET, confList, foundryCheck, serveAzure, WEIGHTS } from '../../test/helpers/foundry-azure.js'
 import { waitFor } from '../../test/helpers/wait-for.js'
 import type { FoundryModelJob } from '../contract/index.js'
+import { writeDocument } from '../terminal-data/index.js'
 import { FoundryModelSetups } from './foundry-model-setups.js'
 
 const azure = new FixtureHttpServer()
@@ -121,6 +122,27 @@ describe('FoundryModelSetups', () => {
     expect(azure.requests.find((r) => r.path === '/container/v3/model.onnx?sig=2')?.range).toMatch(
       /^bytes=[1-9]\d*-$/
     )
+  })
+
+  it('fails after three fresh links that are refused too', async () => {
+    serve('generic-cpu', '1')
+    const { s } = setups()
+    const plan = await s.plan({ model: 'gemma-4-e2b-it', device: 'cpu' })
+    azure.files.set('/container/v3/model.onnx?sig=1', { body: WEIGHTS, failStatus: 403, failTimes: 99 })
+    const job = await settled(s, (await s.install({ request_id: 'f5', plan_digest: plan.digest })).id)
+    expect(job).toMatchObject({ stage: 'failed', relinks: 3 })
+    expect(job.error).toContain('403')
+  })
+
+  it('reads a download the server stopped in the middle of as interrupted, and resumes it', async () => {
+    serve('generic-cpu', '1')
+    const { s, data } = setups()
+    const plan = await s.plan({ model: 'gemma-4-e2b-it', device: 'cpu' })
+    const stopped = { id: 'f6', kind: 'foundry-model', plan, stage: 'downloading', updated_at: 1 }
+    await writeDocument(join(data, 'atc', 'foundry-model-setups', 'f6.json'), stopped)
+    expect((await s.list()).find((j) => j.id === 'f6')?.stage).toBe('interrupted')
+    await s.install({ request_id: 'f6', plan_digest: plan.digest })
+    expect((await settled(s, 'f6')).stage).toBe('ready')
   })
 
   it('repairs a template with the function wrapper once', async () => {
