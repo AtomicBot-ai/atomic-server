@@ -136,7 +136,8 @@ export async function pullManagedModel(
     id,
     label: plan.repository,
     cancel: `atc models pull --cancel ${id}`,
-    retry: `atc models pull ${ref} --engine ${engine} --request-id ${id}`,
+    // The revision the job was planned at: `main` may have moved, and another plan refuses this id.
+    retry: `atc models pull ${plan.repository}@${plan.revision} --engine ${engine} --request-id ${id}`,
   })
   if (code === 0) ctx.out.line(`${plan.repository} is in the store for every managed engine.`)
   return code
@@ -162,8 +163,13 @@ export async function noGgufHint(
   service: WorkspaceClient,
   repository: string
 ): Promise<never> {
-  const check = (await service.execute('models.check', { repository }).catch(() => undefined)) as
-    ModelCheckResult | undefined
+  let failure = ''
+  const check = (await service.execute('models.check', { repository }).catch((error: unknown) => {
+    // A gated model needs the server's HF_TOKEN, not another engine: that refusal is the answer.
+    if (error instanceof Error && error.message.includes('HF_TOKEN')) throw error
+    failure = error instanceof Error ? error.message : String(error)
+    return undefined
+  })) as ModelCheckResult | undefined
   const accepting = (check?.verdicts ?? []).filter((v) => v.compatibility?.verdict.ok)
   const installed = accepting.filter((v) => v.installed)
   if (installed.length)
@@ -179,7 +185,11 @@ export async function noGgufHint(
       }
     )
   throw new AtcError('ATC_USAGE', `${repository} has no GGUF file, and no managed engine here takes it.`, {
-    ...(check ? { details: check.verdicts.map(verdictLine).join('; ') } : {}),
+    ...(check
+      ? { details: check.verdicts.map(verdictLine).join('; ') }
+      : failure
+        ? { details: failure }
+        : {}),
     hint: `see atc models check ${repository}`,
   })
 }

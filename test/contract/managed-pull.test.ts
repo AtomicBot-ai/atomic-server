@@ -102,6 +102,25 @@ describe('atc models pull --engine <managed>', () => {
     expect(existsSync(dir)).toBe(false)
   })
 
+  it('names HF_TOKEN for a gated repository without GGUF instead of saying no engine takes it', async () => {
+    await server()
+    serveRepository(hf, REPO, qwenFiles(), { gated: 403, revisions: ['main'] })
+    expect(await t.run(['models', 'pull', REPO])).toBe(2)
+    expect(err()).toContain('HF_TOKEN')
+    expect(err()).not.toContain('no managed engine here takes it')
+  })
+
+  it('says how to continue a failed download at the same revision, whatever main is by then', async () => {
+    await server()
+    hf.files.set(`/${REPO}/resolve/${HF_SHA}/tokenizer.json`, {
+      body: Buffer.from('{}'),
+      failStatus: 404,
+      failTimes: 99,
+    })
+    expect(await t.run(['models', 'pull', REPO, '--engine', 'vllm', '--request-id', 'pull-2'])).toBe(2)
+    expect(err()).toContain(`atc models pull ${REPO}@${HF_SHA} --engine vllm --request-id pull-2`)
+  })
+
   it('starts with --detach and stops with --cancel, keeping what was downloaded', async () => {
     await server()
     // Bigger than the header probe (256 KiB), so the plan reads its header and the download is held.
