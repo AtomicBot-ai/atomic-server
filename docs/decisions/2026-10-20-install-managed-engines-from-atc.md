@@ -48,6 +48,9 @@ title: "Install managed engines from atc"
   `test/fixtures/managed/`, to be copied again when the core's changes). Found on the way: the Bun binary's
   `process.exit` dropped what a pipe had not taken yet (a `--json` cut at 64 KiB); `bin.ts` now waits for
   `drain` first.
+  - **The terminal UI's engine panel** (Library → Engines, task 9.2) drives the same operations from a
+    pure model of `engines.plan` joined with the live snapshot; Approve carries the digest of the plan
+    it shows and none while the operation waits for a digest not shown.
 - **Alternatives:** the command assembling `environments.begin` itself — the target and descriptor rules
   would live in three clients. `SupplementaryGroups=docker` in the unit — systemd refuses to start a
   service whose group does not exist yet (`216/GROUP`), and a `systemd --user` service takes its groups

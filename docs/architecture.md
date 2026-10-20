@@ -141,6 +141,33 @@ the foreground process, and changes nothing above:
   `CoreLinkFactory.attach` takes the UI's logger and its messages go to the status line. `q`, Esc, Ctrl+C
   or SIGTERM unmount it and give the terminal back; the daemon keeps running.
 
+### Engines, models and chat in the terminal UI
+
+The terminal UI shows managed engines, Foundry Local and their models through the same workspace
+operations as the commands, and polls the workspace snapshot every 2.5 s for what changes on its own
+(`engines`, `host_steps`, `loads` in `WorkspaceSnapshot`); words and states come from
+`src/workspace-view/` so the commands and both UIs say the same thing.
+
+- **Library → Engines** opens an engine panel (`src/tui/workspace/library/engine-panel*.ts`) for every
+  local provider. A managed engine shows its state, the whole plan with Approve bound to the digest
+  shown, phases and image bytes, the privileged step's command, sign-in or restart, Resume, Cancel,
+  update and removal with "keep models"; the core's state is read again whenever the live operation
+  changes phase. Foundry Local shows its accelerators, Prepare with each accelerator's step, Install,
+  and its models with variants and verdicts (`foundry-*.ts`). Every panel has the settings form
+  (`engine-settings.ts`): the core's schema without `version_backend`, `gpu_id` from the environment's
+  cards, Save with the revision read at open.
+- **Guided setup** lists the engines the core registers; a managed engine or Foundry Local takes its own
+  path (`setup/engine-setup.ts`): installed first in its panel, then its models, the core's verdict and
+  plan, the server's download job (its id in `<atc>/setup-path.json`), and a load with that engine.
+- **Catalog** filters text models by format; a repository without GGUF goes through `models.check` to an
+  installed engine's plan or to installing the engine that takes it. Installed models show every provider
+  that lists them (`models.installed`); a store model's removal warns that every managed engine loses it.
+- **Chat** offers each installed engine and each model under each provider that lists it; an engine
+  switch keeps the model when the new provider lists it; "+ Image" follows `models.info`'s `vision`; the
+  load line shows the stage and time with Cancel load, and the last attempt's log after a failure.
+- **Overview** lists the privileged step the server waits on, with its command, and engine operations
+  and loads in progress.
+
 ## Daemon startup
 
 `src/daemon/daemon.ts`, `startDaemon()`:
