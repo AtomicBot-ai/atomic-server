@@ -12,6 +12,7 @@ import { AtcError } from '../errors/index.js'
 import { installedModels, modelFiles, searchHub } from '../terminal-setup/index.js'
 import type { WorkspaceCatalog } from './catalog.js'
 import type { CatalogCategory } from './catalog.js'
+import type { ManagedModelSetups } from './managed-model-setups.js'
 import { checkModel } from './managed-models.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
@@ -21,6 +22,7 @@ export interface ModelOperationDeps {
   options: WorkspaceServiceOptions
   catalog: WorkspaceCatalog
   request: typeof fetch
+  managed: ManagedModelSetups
 }
 
 export async function modelOperation(
@@ -30,6 +32,18 @@ export async function modelOperation(
 ): Promise<unknown> {
   const { link, paths } = d.options
   switch (operation) {
+    case 'managed.plan':
+      return d.managed.plan({
+        repository: String(input['repository']),
+        engine: String(input['engine']),
+        ...(typeof input['revision'] === 'string' ? { revision: input['revision'] } : {}),
+      })
+    case 'managed.install':
+      return d.managed.install(input)
+    case 'managed.cancel':
+      return d.managed.cancel(String(input['id']))
+    case 'managed.list':
+      return d.managed.list()
     case 'models.check':
       return checkModel(
         { link, fetch: d.request, env: d.options.env },

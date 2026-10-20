@@ -17,4 +17,41 @@ export const MANAGED_MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
       required: ['repository'],
     }
   ),
+  operation(
+    'managed.plan',
+    'Review managed model download',
+    'read',
+    "Plan downloading a Hugging Face checkpoint into the managed engines' shared store for one engine: its verdict, the store the core names and its free space, the files still missing, whether the revision is already there, and blockers. Its digest is what managed.install accepts.",
+    {
+      properties: {
+        repository: { type: 'string' },
+        revision: { type: 'string' },
+        engine: { type: 'string' },
+      },
+      required: ['repository', 'engine'],
+    }
+  ),
+  operation(
+    'managed.install',
+    'Download managed model',
+    'download',
+    'Start or continue (same request_id) the durable download of a reviewed managed.plan into the shared store: files verified by size and sha256, model.yml written last, then the core asked to list the model. It runs in the server and survives the terminal.',
+    {
+      properties: { request_id: { type: 'string' }, plan_digest: { type: 'string' } },
+      required: ['request_id', 'plan_digest'],
+    }
+  ),
+  operation(
+    'managed.cancel',
+    'Cancel managed model download',
+    'interrupt',
+    'Stop a managed model download; its partial files stay for the next managed.install with the same request_id.',
+    { properties: { id: { type: 'string' } }, required: ['id'] }
+  ),
+  operation(
+    'managed.list',
+    'Managed model downloads',
+    'read',
+    'List the managed model downloads of this server.'
+  ),
 ]

@@ -21,6 +21,7 @@ import { callPublic } from './public-api.js'
 import { completeChat } from './chat-complete.js'
 import type { ArtifactService } from './artifacts.js'
 import type { ModelSetups } from './model-setups.js'
+import type { ManagedModelSetups } from './managed-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
 import { modelDownloads } from './model-downloads.js'
 import { ChatJobs } from './chat-jobs.js'
@@ -43,6 +44,7 @@ export class WorkspaceService {
   private catalog: WorkspaceCatalog
   private artifacts: ArtifactService
   private setups: ModelSetups
+  private managed: ManagedModelSetups
   /** Every model download of this server: GGUF setups, media and MLX. */
   private downloader: Downloader
   private chats: ChatJobs
@@ -56,6 +58,7 @@ export class WorkspaceService {
     this.downloader = downloads.downloader
     this.artifacts = downloads.artifacts
     this.setups = downloads.setups
+    this.managed = downloads.managed
   }
   /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
   start(): Promise<{ kept: string[] }> {
@@ -74,7 +77,11 @@ export class WorkspaceService {
     )
     // The core's own downloads are engine builds; every model transfer is this server's.
     result.downloads.push(...this.downloader.snapshot())
-    result.setups.push(...(await this.setups.list()), ...(await this.artifacts.list()))
+    result.setups.push(
+      ...(await this.setups.list()),
+      ...(await this.artifacts.list()),
+      ...(await this.managed.list())
+    )
     return result
   }
   async execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
@@ -83,7 +90,7 @@ export class WorkspaceService {
     const input = inputFor(descriptor, raw),
       { link, paths, config } = this.options
     const model = await modelOperation(
-      { options: this.options, catalog: this.catalog, request: this.request },
+      { options: this.options, catalog: this.catalog, request: this.request, managed: this.managed },
       operation,
       input
     )

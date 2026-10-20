@@ -1,11 +1,13 @@
+import { join } from 'node:path'
 import { Downloader } from '../downloads/index.js'
+import { ManagedModelSetups } from './managed-model-setups.js'
 import { ArtifactService } from './artifacts.js'
 import type { WorkspaceCatalog } from './catalog.js'
 import { downloadProxy } from './download-proxy.js'
 import { ModelSetups } from './model-setups.js'
 import type { WorkspaceServiceOptions } from './service.js'
 
-/** One downloader for every model this server fetches: GGUF setups, media and MLX installs. */
+/** One downloader for every model this server fetches: GGUF setups, media, MLX and the managed store. */
 export function modelDownloads(
   options: WorkspaceServiceOptions,
   catalog: WorkspaceCatalog,
@@ -20,6 +22,14 @@ export function modelDownloads(
   return {
     downloader,
     artifacts: new ArtifactService(options, catalog, request, downloader),
+    managed: new ManagedModelSetups({
+      link: options.link,
+      fetch: request,
+      env: options.env,
+      directory: join(options.paths.atcDir, 'managed-model-setups'),
+      downloader,
+      proxy: downloadProxy(options.config),
+    }),
     setups: new ModelSetups({
       link: options.link,
       paths: options.paths,

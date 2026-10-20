@@ -74,3 +74,43 @@ export interface ModelCheckResult {
   revision: string
   verdicts: ManagedVerdict[]
 }
+
+/** One file of a checkpoint revision, as Hugging Face lists it and `model.yml` records it. */
+export interface ManagedModelFile {
+  path: string
+  size: number
+  sha256: string | null
+}
+
+/**
+ * `managed.plan`: what downloading a checkpoint into the managed engines' shared store would do — the
+ * revision, the engine whose verdict allows it, where the core keeps the store, the files still to
+ * fetch, and why it cannot start (`blockers`). `present` when that revision is already in the store.
+ */
+export interface ManagedModelPlan {
+  digest: string
+  repository: string
+  revision: string
+  engine: string
+  architectures: string[]
+  /** The store's root as the core names it (on Windows a `\\wsl.localhost\…` path). */
+  root: string
+  files: ManagedModelFile[]
+  /** Paths still to download; empty when `present`. */
+  pending: string[]
+  download_bytes: number
+  free_bytes: number | null
+  verdict: ManagedVerdict
+  present: boolean
+  blockers: string[]
+}
+
+/** A durable download into the store (`managed.install`), listed with the server's other setups. */
+export interface ManagedModelJob {
+  id: string
+  kind: 'managed-model'
+  plan: ManagedModelPlan
+  stage: 'queued' | 'downloading' | 'verifying' | 'ready' | 'failed' | 'cancelled' | 'interrupted'
+  error?: string
+  updated_at: number
+}
