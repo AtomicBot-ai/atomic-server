@@ -85,3 +85,32 @@ describe('shared Downloads view', () => {
     ).toEqual(['unknown', 'active'])
   })
 })
+
+describe('store and Foundry Local downloads', () => {
+  it('count against their plan’s download size and are named by their model', () => {
+    const rows = downloadRows(
+      [
+        {
+          id: 'm1',
+          kind: 'managed-model',
+          stage: 'downloading',
+          plan: { repository: 'Qwen/Qwen3.5-2B', download_bytes: 1000 },
+        },
+        {
+          id: 'f1',
+          kind: 'foundry-model',
+          stage: 'downloading',
+          plan: { variant_id: 'phi-cpu', download_bytes: 400 },
+        },
+      ],
+      [
+        { taskId: 'm1', transferred: 250, total: 1000 },
+        { taskId: 'f1', transferred: 100, total: 400 },
+      ]
+    )
+    expect(rows.map((r) => [r['model_id'], r.transferred, r.total])).toEqual([
+      ['Qwen/Qwen3.5-2B', 250, 1000],
+      ['phi-cpu', 100, 400],
+    ])
+  })
+})

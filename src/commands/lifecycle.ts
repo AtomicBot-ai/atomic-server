@@ -15,6 +15,8 @@ import {
   waitForRelease,
 } from '../core-link/index.js'
 import type { CoreLink, DaemonDescription, OutdatedOwner } from '../core-link/index.js'
+import { downloadLine, statusDownloads } from './status-downloads.js'
+import type { StatusDownload } from './status-downloads.js'
 import { formatDuration } from '../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../telemetry/index.js'
 import { rebootLines, reloginLines } from '../workspace-view/index.js'
@@ -51,7 +53,7 @@ function killProcess(ctx: CommandContext): (pid: number) => Promise<void> {
 const describe = (ctx: CommandContext, link: CoreLink): Promise<DaemonDescription> =>
   describeDaemon(link, ctx.paths, ctx.now)
 
-function printStatus(ctx: CommandContext, s: DaemonDescription): void {
+function printStatus(ctx: CommandContext, s: DaemonDescription & { downloads?: StatusDownload[] }): void {
   ctx.out.kv([
     ['server', `running (pid ${s.pid}${s.uptime_ms !== null ? `, up ${formatDuration(s.uptime_ms)}` : ''})`],
     ['versions', `atc ${s.atc_version ?? '?'}, core ${s.core_version}`],
@@ -73,6 +75,7 @@ function printStatus(ctx: CommandContext, s: DaemonDescription): void {
       'managed',
       `${o.engine ?? 'environment'} ${o.kind}: ${o.phase_text} (${o.operation_id})`,
     ]),
+    ...(s.downloads ?? []).map(downloadLine),
   ])
   for (const o of s.environment_operations) {
     if (o.phase === 'relogin-required')
@@ -282,7 +285,7 @@ export const statusCommand = defineCommand({
       })
       return 0
     }
-    const s = await describe(ctx, found.link)
+    const s = { ...(await describe(ctx, found.link)), downloads: await statusDownloads(ctx) }
     ctx.out.result(s, () => printStatus(ctx, s))
     return 0
   },
