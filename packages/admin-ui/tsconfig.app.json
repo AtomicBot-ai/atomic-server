@@ -26,7 +26,8 @@
     /* Url */
     "paths": {
       "@/*": ["./src/*"],
-      "@contract": ["../../src/contract/index.ts"]
+      "@contract": ["../../src/contract/index.ts"],
+      "@view": ["../../src/workspace-view/index.ts"]
     }
   },
   "include": ["src"],

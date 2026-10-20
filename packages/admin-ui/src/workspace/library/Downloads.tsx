@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { downloadRows } from './download-data'
+import { downloadRows, jobOperations, loadTarget } from './download-data'
 import type { Workspace } from '../useWorkspace'
 import { Action, Empty, Panel } from '../Controls'
 import { bytes, record, text } from '../types'
@@ -74,29 +74,26 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
               {ready ? (
                 <Action
                   onClick={() =>
-                    media
-                      ? w.execute('artifacts.load', { id })
-                      : w.execute('models.load', {
-                          provider: text(job.provider ?? record(job.plan).provider, 'llamacpp-upstream'),
-                          model_id: text(job.model_id ?? record(job.plan).model_id),
-                        })
+                    media ? w.execute('artifacts.load', { id }) : w.execute('models.load', loadTarget(job))
                   }
                 >
                   Load
                 </Action>
               ) : failed ? (
                 <Action
-                  onClick={() =>
-                    w.execute(media ? 'artifacts.resume' : 'setup.resume', media ? { id } : { setup_id: id })
-                  }
+                  onClick={() => {
+                    const [name, input] = jobOperations(job, id, media).resume
+                    return w.execute(name, input)
+                  }}
                 >
                   Resume
                 </Action>
               ) : (
                 <Action
-                  onClick={() =>
-                    w.execute(media ? 'artifacts.cancel' : 'setup.cancel', media ? { id } : { setup_id: id })
-                  }
+                  onClick={() => {
+                    const [name, input] = jobOperations(job, id, media).cancel
+                    return w.execute(name, input)
+                  }}
                 >
                   Cancel
                 </Action>

@@ -6,6 +6,7 @@ import { EngineSettings } from '../library/EngineSettings'
 import { OperationForm } from '../OperationForm'
 import { record, text } from '../types'
 import { describeError } from '@/services/admin-api'
+import { useEngines } from '../useEngines'
 
 export function SetupDetails({
   workspace,
@@ -44,6 +45,7 @@ function DetailsContent({
   const [engineSettings, setEngineSettings] = useState(false)
   const [operation, setOperation] = useState('')
   const { execute } = w
+  const { engines } = useEngines(execute)
   useEffect(() => {
     let active = true
     void execute('config.get')
@@ -112,10 +114,15 @@ function DetailsContent({
       <details>
         <summary>Engine settings: context, memory & performance</summary>
         <Field label="Settings engine">
-          <select value={provider} onChange={(e) => setProvider(e.target.value)}>
-            {['llamacpp-upstream', 'llamacpp', 'atomic-prism', 'mlx', 'vllm', 'tensorrt-llm'].map((id) => (
-              <option key={id}>{id}</option>
-            ))}
+          <select aria-label="Settings engine" value={provider} onChange={(e) => setProvider(e.target.value)}>
+            {engines
+              .map((e) => text(e.engine))
+              .filter((id) => id !== 'sd-cpp')
+              .map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
           </select>
         </Field>
         <Action onClick={() => setEngineSettings(true)}>Configure engine</Action>

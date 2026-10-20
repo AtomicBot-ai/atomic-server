@@ -16,20 +16,13 @@ export function InstalledModels({
   openCommand: (name: string) => void
   browse: () => void
 }) {
-  const [provider, setProvider] = useState('llamacpp-upstream'),
+  const [chosen, setChosen] = useState<Record<string, string>>({}),
     [query, setQuery] = useState('')
   const [pending, setPending] = useState('')
   const services = w.snapshot?.services ?? []
   return (
     <>
       <div className="ew-actions">
-        <Field label="Load with engine">
-          <select value={provider} onChange={(e) => setProvider(e.target.value)}>
-            {['llamacpp-upstream', 'llamacpp', 'atomic-prism', 'mlx', 'vllm', 'tensorrt-llm'].map((id) => (
-              <option key={id}>{id}</option>
-            ))}
-          </select>
-        </Field>
         <Field label="Search installed models">
           <input value={query} onChange={(e) => setQuery(e.target.value)} />
         </Field>
@@ -46,10 +39,14 @@ export function InstalledModels({
         installed
           .filter((m) => JSON.stringify(m).toLowerCase().includes(query.toLowerCase()))
           .map((row, i) => {
-            const id = text(row.id ?? row.model_id, String(i)),
-              engine = text(row.provider, provider)
-            const selectedEngine =
-              row.provider === 'atomic-prism' || row.provider === 'mlx' ? engine : provider
+            const id = text(row.id ?? row.model_id, String(i))
+            // The providers the core says list this model (`models.installed`), never a list kept here.
+            const providers = Array.isArray(row.providers)
+              ? row.providers.map(String)
+              : row.provider
+                ? [text(row.provider)]
+                : []
+            const selectedEngine = chosen[id] ?? providers[0] ?? ''
             const model = text(row.model_id ?? record(row.plan).model_id ?? row.id)
             const loaded = services.find(
               (s) => s.model === model && (row.category || s.provider === selectedEngine)
@@ -62,6 +59,19 @@ export function InstalledModels({
                   <small>
                     {selectedEngine} · {state}
                   </small>
+                  {providers.length > 1 && !row.category && (
+                    <select
+                      aria-label={`Load ${id} with`}
+                      value={selectedEngine}
+                      onChange={(e) => setChosen((c) => ({ ...c, [id]: e.target.value }))}
+                    >
+                      {providers.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <details>
                     <summary>Model details</summary>
                     <code>{model}</code>
