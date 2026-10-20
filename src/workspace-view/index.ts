@@ -18,3 +18,4 @@ export {
 export type { EngineView, EngineViewKind } from './engines.js'
 export { acceleratorLines, foundryVerdictText, prepareResultLines, variantLabel } from './foundry.js'
 export { LOAD_STAGE_LABELS, loadStageText } from './loads.js'
+export { engineName, orderEngines } from './engine-order.js'

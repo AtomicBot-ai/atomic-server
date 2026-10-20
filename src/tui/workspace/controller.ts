@@ -1,9 +1,11 @@
+import type { WorkspaceState } from './state.js'
 import { WorkspaceRuntime } from './runtime.js'
+import { AtcError } from '../../errors/index.js'
+import { installedModels } from '../../terminal-setup/index.js'
 import { dirname } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
 import {
   TerminalSetup,
-  installedModels,
   ModelCatalog,
   modelFiles,
   EngineSelection,
@@ -105,8 +107,18 @@ export class WorkspaceController {
   image(path: string) {
     return readChatImage(path)
   }
-  installed() {
-    return installedModels(this.deps.base.paths.layout)
+  /**
+   * Every installed model with the providers that list it, as the server's core says
+   * (`models.installed`). Without a running server there is no core to ask: the models on disk, each
+   * with the provider its format names.
+   */
+  async installed(): Promise<WorkspaceState['installed']> {
+    try {
+      return (await this.runtime.read('models.installed')) as WorkspaceState['installed']
+    } catch (error) {
+      if (!(error instanceof AtcError && error.code === 'ATC_DAEMON_NOT_RUNNING')) throw error
+      return installedModels(this.deps.base.paths.layout)
+    }
   }
   hub(query: string, signal: AbortSignal = this.abort.signal, onRefresh?: (rows: HubRepository[]) => void) {
     return this.catalog.list(query, AbortSignal.any([signal, this.abort.signal]), onRefresh)

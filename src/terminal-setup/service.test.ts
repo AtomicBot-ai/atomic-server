@@ -233,6 +233,8 @@ it('requests every installable GGUF engine from the shared live advisor', async 
   const link = fakeCoreLink()
   link.request = async <T>(_method: string, path: string) => {
     link.calls.push({ method: 'POST', path })
+    if (path === '/engines/versions')
+      return { engines: ['llamacpp-upstream', 'llamacpp', 'atomic-prism'].map((engine) => ({ engine })) } as T
     return { provider: path.split('/')[2], available: [{ version: 'v1', backend: 'cpu' }] } as T
   }
   const service = new TerminalSetup(await folder(), async () => link, workspace().ws)
@@ -241,4 +243,22 @@ it('requests every installable GGUF engine from the shared live advisor', async 
     'llamacpp',
     'atomic-prism',
   ])
+})
+
+it('asks only the llama.cpp engines the core registers, and lists every registered engine in order', async () => {
+  const link = fakeCoreLink()
+  link.request = async <T>(method: string, path: string) => {
+    link.calls.push({ method, path })
+    if (path === '/engines/versions')
+      return {
+        engines: ['foundry-local', 'llamacpp-upstream', 'tensorrt-llm', 'vllm'].map((engine) => ({ engine })),
+      } as T
+    return { provider: path.split('/')[2], available: [{ version: 'v1', backend: 'cpu' }] } as T
+  }
+  const service = new TerminalSetup(await folder(), async () => link, workspace().ws)
+  expect((await service.catalogs()).map((c) => c.provider)).toEqual(['llamacpp-upstream'])
+  expect(
+    link.calls.some((c) => c.path.includes('/backends/llamacpp/') || c.path.includes('atomic-prism'))
+  ).toBe(false)
+  expect(await service.engines()).toEqual(['llamacpp-upstream', 'vllm', 'tensorrt-llm', 'foundry-local'])
 })

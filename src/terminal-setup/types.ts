@@ -49,6 +49,8 @@ export interface SetupView {
   stage: 'engine' | 'models' | 'review' | 'download' | 'ready'
   mode: 'personal' | 'server'
   catalogs: BackendCatalogResponse[]
+  /** Every engine the core registers here, in display order (`engines.list`). */
+  registered: string[]
   engine: string
   query: string
   repositories: HubRepository[]
@@ -67,6 +69,7 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
     stage: 'engine',
     mode,
     catalogs: [],
+    registered: [],
     engine: '',
     query: '',
     repositories: [],

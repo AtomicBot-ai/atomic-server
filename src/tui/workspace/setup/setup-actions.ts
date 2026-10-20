@@ -117,11 +117,15 @@ export async function setupAction(
   try {
     if (id === 'setup-refresh') {
       await wait(c.initializeKeys())
-      const catalogs = await wait(c.setup.catalogs(), 20000)
+      const [catalogs, registered] = await wait(Promise.all([c.setup.catalogs(), c.setup.engines()]), 20000)
       const first = catalogs.find((cat) => cat.provider === 'llamacpp-upstream') ?? catalogs[0]!
       const build =
         first.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first.available[0]!
-      patch({ catalogs, engine: view.engine || `${first.provider}|${build.version}|${build.backend}` })
+      patch({
+        catalogs,
+        registered,
+        engine: view.engine || `${first.provider}|${build.version}|${build.backend}`,
+      })
       if (!operation.signal.aborted)
         focus(`setup-engine:${view.engine || `${first.provider}|${build.version}|${build.backend}`}`)
     } else if (id.startsWith('setup-engine:')) {

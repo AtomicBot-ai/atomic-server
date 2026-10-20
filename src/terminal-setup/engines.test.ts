@@ -97,3 +97,43 @@ it('offers the build the core names as latest, and none when the core offers non
     await rm(directory, { recursive: true, force: true })
   }
 })
+
+// Installed managed engines and Foundry Local are choices too (spec server-engine-settings); a pick
+// remembers the engine: there is no llama.cpp build to activate.
+it('adds installed managed engines and Foundry Local after llama.cpp, and selects them without activating a build', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'atc-engine-managed-')),
+    link = fakeCoreLink()
+  link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', backend: 'cpu' }] }
+  link.responses['POST /engines/versions'] = {
+    engines: [
+      { engine: 'llamacpp-upstream', latest: null, active: null },
+      { engine: 'foundry-local', active: { version: 'v2.1.0', variant: 'win-x64' } },
+      { engine: 'tensorrt-llm', active: { version: 'trt-1', variant: 'linux/amd64' } },
+      { engine: 'sglang', active: null },
+      { engine: 'vllm', active: { version: 'vllm-1', variant: 'linux/amd64' } },
+    ],
+  }
+  try {
+    const selection = new EngineSelection(directory, async () => link)
+    const choices = await selection.list([
+      {
+        provider: 'llamacpp-upstream',
+        recommended: null,
+        available: [],
+      } as unknown as BackendCatalogResponse,
+    ])
+    expect(choices.map((c) => c.provider)).toEqual([
+      'llamacpp-upstream',
+      'vllm',
+      'tensorrt-llm',
+      'foundry-local',
+    ])
+    expect(choices.slice(1).every((c) => c.installed)).toBe(true)
+    link.calls.length = 0
+    await selection.select(choices[1]!)
+    expect(link.calls).toEqual([])
+    expect(await selection.read()).toBe(choices[1]!.id)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})

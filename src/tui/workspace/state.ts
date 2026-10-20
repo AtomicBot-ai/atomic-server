@@ -64,7 +64,8 @@ export interface WorkspaceState {
   historyFilter: string
   clientKeys: ClientKeyView[]
   secret: string
-  installed: { id: string; provider: string; name: string }[]
+  /** `providers`: every provider the core says lists the model; `provider` the first. */
+  installed: { id: string; provider: string; name: string; providers?: string[] }[]
   modelsUpdated: number
   modelsError: string
   engine: string

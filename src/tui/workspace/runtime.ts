@@ -44,6 +44,10 @@ export class WorkspaceRuntime {
   async execute(name: string, input: Record<string, unknown> = {}) {
     return (await this.connect(true)).execute(name, input)
   }
+  /** A read that never starts the server: it fails with `ATC_DAEMON_NOT_RUNNING` when none runs. */
+  async read(name: string, input: Record<string, unknown> = {}) {
+    return (await this.connect(false)).execute(name, input)
+  }
   async openAdmin() {
     const record = await readDaemonRecord(this.deps.paths.daemonRecord)
     if (!record?.admin_url) throw new Error('Start the server with web admin enabled.')

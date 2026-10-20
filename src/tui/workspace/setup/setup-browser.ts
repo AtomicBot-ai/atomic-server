@@ -2,11 +2,13 @@ import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { computeRowWindow } from '../../row-window.js'
-const engines = [
-  ['llamacpp-upstream', 'llama.cpp', 'Standard GGUF models'],
-  ['llamacpp', 'llama.cpp TurboQuant', 'Atomic Chat’s TurboQuant engine'],
-  ['atomic-prism', 'Atomic Prism', 'Bonsai models'],
-] as const
+import { engineName } from '../../../workspace-view/index.js'
+const LLAMA: Readonly<Record<string, string>> = {
+  'llamacpp-upstream': 'Standard GGUF models',
+  'llamacpp': 'Atomic Chat’s TurboQuant engine',
+  'atomic-prism': 'Bonsai models',
+}
+const OTHER = ['vllm', 'sglang', 'tensorrt-llm', 'foundry-local']
 export function drawSetupBrowser(
   c: Canvas,
   s: WorkspaceState,
@@ -25,7 +27,11 @@ export function drawSetupBrowser(
   if (v.stage === 'engine') {
     put(3, v.busy ? 'Finding compatible builds...' : 'Choose your inference engine.', COLORS.text)
     let row = 5
-    for (const [provider, name, detail] of engines) {
+    // The core's engines when it answered; llama.cpp's three until then.
+    const registered = v.registered.length ? v.registered : Object.keys(LLAMA)
+    for (const provider of registered.filter((e) => e in LLAMA)) {
+      const name = engineName(provider),
+        detail = LLAMA[provider]!
       const catalog = v.catalogs.find((cat) => cat.provider === provider)
       const build =
         catalog?.available.find((p) => `${p.version}/${p.backend}` === catalog.recommended) ??
@@ -47,6 +53,8 @@ export function drawSetupBrowser(
         if (bottom - y >= 17) put(row++, `    ${build.version} / ${build.backend}  •  Recommended`)
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
+    for (const engine of registered.filter((e) => OTHER.includes(e)))
+      put(row++, `${engineName(engine)}  /  Install it from Library → Engines`)
     if (y + row < bottom - 1)
       b(
         'setup-engine-info',

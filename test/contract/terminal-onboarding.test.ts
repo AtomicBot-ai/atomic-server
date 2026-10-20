@@ -29,6 +29,8 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
         recommended: 'b1/cpu',
         source: 'live',
       } as T
+    if (path === '/engines/versions')
+      return { engines: ['llamacpp-upstream', 'llamacpp', 'atomic-prism'].map((e) => ({ engine: e })) } as T
     if (path === '/models/atomic-prism/families') return { families: [] } as T
     if (path === '/models/compatibility')
       return { outcome: 'compatible', provider: null, requires: [], reason: 'stock' } as T
