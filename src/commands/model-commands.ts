@@ -9,6 +9,7 @@ import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operation, workspace } from './control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
+import { foundryListing } from './foundry-commands.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
@@ -96,12 +97,21 @@ export const modelsCommand = defineCommand({
     defineCommand({
       name: 'search',
       summary: 'Search model repositories',
-      positionals: [{ name: 'query', description: 'Search words or owner/repo', required: true }],
+      positionals: [
+        { name: 'query', description: 'Search words or owner/repo (optional for foundry-local)' },
+      ],
       options: engineOption,
       run: (inv, ctx) =>
-        typeof inv.values['engine'] === 'string'
-          ? managedListing(ctx, 'models.search', { engine: inv.values['engine'], query: inv.positionals[0] })
-          : operation(ctx, 'models.search', { query: inv.positionals[0] }),
+        inv.values['engine'] === 'foundry-local'
+          ? foundryListing(ctx, inv.positionals[0] ?? '')
+          : !inv.positionals[0]
+            ? Promise.reject(new AtcError('ATC_USAGE', 'Name what to search for.'))
+            : typeof inv.values['engine'] === 'string'
+              ? managedListing(ctx, 'models.search', {
+                  engine: inv.values['engine'],
+                  query: inv.positionals[0],
+                })
+              : operation(ctx, 'models.search', { query: inv.positionals[0] }),
     }),
     checkModelCommand,
     defineCommand({

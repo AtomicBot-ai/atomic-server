@@ -10,6 +10,8 @@ import type { FoundryLocalAcceleratorsEvent } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import type { FoundryAcceleratorsView } from '../contract/index.js'
+import type { FoundrySearchResult } from '../workspace-service/index.js'
+import { formatSize } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
 import { follow, followDisplay } from './follow.js'
 
@@ -127,3 +129,57 @@ export const acceleratorsCommand = defineCommand({
     return 0
   },
 })
+
+const LABELS: Record<string, string> = {
+  cpu: 'CPU',
+  cuda: 'CUDA',
+  webgpu: 'WebGPU',
+  openvino: 'OpenVINO',
+  qnn: 'QNN',
+  vitisai: 'Vitis AI',
+}
+
+/** `atc models search [query] --engine foundry-local`: models, their variants here, the core's verdicts. */
+export async function foundryListing(ctx: CommandContext, query: string): Promise<number> {
+  const { service } = await attachWorkspace(ctx)
+  const result = (await service.execute('models.search', {
+    engine: 'foundry-local',
+    query,
+  })) as FoundrySearchResult
+  ctx.out.result(result, () => {
+    if (result.list_source !== 'remote' && result.list_error)
+      ctx.out.note(
+        `conf's Foundry Local list could not be read (${result.list_error}); using the ${result.list_source === 'cache' ? 'last copy' : 'bundled list'}`
+      )
+    if (result.catalog_unavailable)
+      ctx.out.note(`Microsoft's catalog could not be read: ${result.catalog_error ?? ''}`)
+    if (!result.models.length)
+      ctx.out.line(`No Foundry Local model for ${result.platform}${query ? ` matches "${query}"` : ''}.`)
+    for (const m of result.models) {
+      ctx.out.line(
+        `${m.name} (${m.model_id})${m.unverified ? ' — Microsoft catalog, not verified by Atomic Chat' : ''}`
+      )
+      for (const v of m.variants) {
+        const device =
+          v.device === 'npu' || (v.execution_provider === 'openvino' && v.device === 'gpu')
+            ? ` ${v.device.toUpperCase()}`
+            : ''
+        const verdict =
+          v.verdict.verdict === 'ok'
+            ? 'ok'
+            : `${v.verdict.verdict}${v.verdict.reason ? ` — ${v.verdict.reason}` : ''}${
+                v.verdict.verdict === 'accelerator-not-prepared'
+                  ? ' (atc engines accelerators foundry-local --prepare)'
+                  : v.verdict.verdict === 'engine-not-installed'
+                    ? ' (atc engines install foundry-local)'
+                    : ''
+              }`
+        const mark = v.id === m.default_variant ? '*' : ' '
+        ctx.out.line(
+          `  ${mark} ${v.id}  ${LABELS[v.execution_provider] ?? v.execution_provider}${device}  ${v.size_bytes ? formatSize(v.size_bytes) : '?'}  ${verdict}`
+        )
+      }
+    }
+  })
+  return 0
+}

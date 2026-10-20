@@ -5,7 +5,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { basename, isAbsolute, resolve } from 'node:path'
+import { basename, isAbsolute, join, resolve } from 'node:path'
 import { ModelRegistry } from '@atomic-chat/core/models'
 import type { WorkspaceInput } from '../contract/index.js'
 import { AtcError } from '../errors/index.js'
@@ -13,6 +13,7 @@ import { installedModels, modelFiles, searchHub } from '../terminal-setup/index.
 import type { WorkspaceCatalog } from './catalog.js'
 import type { CatalogCategory } from './catalog.js'
 import type { ManagedModelSetups } from './managed-model-setups.js'
+import { foundrySearch } from './foundry-catalog.js'
 import { managedCatalog, managedSearch } from './managed-catalog.js'
 import { isManagedEngine } from './managed-engines.js'
 import { checkModel } from './managed-models.js'
@@ -64,6 +65,20 @@ export async function modelOperation(
         input['refresh'] === true
       )
     case 'models.search':
+      if (input['engine'] === 'foundry-local')
+        return foundrySearch(
+          {
+            link,
+            fetch: d.request,
+            list: {
+              cachePath: join(paths.atcDir, 'cache', 'foundry-local-models.json'),
+              url: d.options.env?.['ATC_FOUNDRY_LOCAL_MODELS_URL'],
+            },
+            platform: d.options.platform ?? process.platform,
+            arch: process.arch,
+          },
+          String(input['query'] ?? '')
+        )
       if (isManagedEngine(String(input['engine'] ?? '')))
         return managedSearch(
           { link, fetch: d.request, env: d.options.env },
