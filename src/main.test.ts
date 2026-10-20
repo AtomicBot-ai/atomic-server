@@ -13,7 +13,7 @@ describe('runCli', () => {
     expect(help.out.join('')).toContain('Usage: atc <command>')
     const sub = recordingIo()
     expect(await runCli(['models', 'pull', '--help'], sub)).toBe(0)
-    expect(sub.out.join('')).toContain('Usage: atc models pull <model>')
+    expect(sub.out.join('')).toContain('Usage: atc models pull [model]')
   })
 
   it('reports unknown commands and malformed operation input as JSON', async () => {

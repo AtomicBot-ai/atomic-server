@@ -14,7 +14,8 @@ import type { ProgressHandle } from '../output/index.js'
 export const FOLLOW_POLL_MS = 2000
 
 export interface FollowOptions<T> {
-  events: CoreEventSource
+  /** The core's events; without them the job is polled (a download `atc` runs has no core event). */
+  events?: CoreEventSource
   /** The value an event carries for this job, `undefined` for every other event. */
   pick(message: CoreEventMessage): T | undefined
   /** The job's current state from the server (a workspace operation). */
@@ -61,28 +62,30 @@ export async function follow<T>(options: FollowOptions<T>): Promise<FollowResult
   let connected: () => void = () => {}
   const ready = new Promise<void>((resolve) => (connected = resolve))
   const subscription = options.events
-    .subscribe(
-      (message) => {
-        streaming = true
-        const value = options.pick(message)
-        if (value !== undefined) offer(value)
-      },
-      {
-        signal: stop.signal,
-        onSnapshot: () => {
-          streaming = true
-          connected()
-        },
-        onDrop: () => {
+    ? options.events
+        .subscribe(
+          (message) => {
+            streaming = true
+            const value = options.pick(message)
+            if (value !== undefined) offer(value)
+          },
+          {
+            signal: stop.signal,
+            onSnapshot: () => {
+              streaming = true
+              connected()
+            },
+            onDrop: () => {
+              streaming = false
+            },
+          }
+        )
+        .catch(() => {})
+        .finally(() => {
           streaming = false
-        },
-      }
-    )
-    .catch(() => {})
-    .finally(() => {
-      streaming = false
-      connected()
-    })
+          connected()
+        })
+    : Promise.resolve(connected())
   try {
     // Subscribed before the first poll, so nothing that changes between the two is missed.
     await Promise.race([ready, wait(pollMs, stop.signal)])

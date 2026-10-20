@@ -59,6 +59,8 @@ export function serveRepository(
         : listing
     )
   }
+  // What the GGUF path reads (`fetchHfGgufFiles`): the repository's own listing.
+  server.files.set(`/api/models/${repository}?blobs=true&files_metadata=true`, listing)
   for (const [path, body] of Object.entries(files))
     server.files.set(`/${repository}/resolve/${HF_SHA}/${path}`, { body })
   return siblings

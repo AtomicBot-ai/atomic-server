@@ -2,11 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
-import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
+import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operation, printOperation, workspace } from './control.js'
-import { checkModelCommand } from './managed-model-commands.js'
+import { checkModelCommand, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   if (typeof value === 'string') return value
@@ -117,9 +118,18 @@ export const modelsCommand = defineCommand({
     }),
     defineCommand({
       name: 'pull',
-      summary: 'Plan and start a durable GGUF download',
-      positionals: [{ name: 'model', description: 'owner/repo[:file.gguf]', required: true }],
+      summary: 'Plan and start a durable download: GGUF, or with --engine a managed checkpoint',
+      positionals: [
+        { name: 'model', description: 'owner/repo[:file.gguf], or owner/repo[@revision] with --engine' },
+      ],
       options: {
+        'engine': {
+          type: 'string',
+          description: 'A managed engine: download the safetensors checkpoint into its shared store',
+          placeholder: 'engine',
+        },
+        'detach': { type: 'boolean', description: 'Start a managed download without following it' },
+        'cancel': { type: 'string', description: 'Cancel a managed download', placeholder: 'request-id' },
         'file': { type: 'string', description: 'Exact filename in the repository' },
         'quant': { type: 'string', description: 'Select an unambiguous quantization' },
         'mmproj': { type: 'boolean', description: 'Include required vision projector', default: true },
@@ -127,6 +137,14 @@ export const modelsCommand = defineCommand({
         'request-id': { type: 'string', description: 'Stable ID reused when retrying this installation' },
       },
       run: async (inv, ctx) => {
+        if (typeof inv.values['cancel'] === 'string')
+          return operation(ctx, 'managed.cancel', { id: inv.values['cancel'] })
+        if (!inv.positionals[0]) throw new AtcError('ATC_USAGE', 'Name the model to download.')
+        if (
+          typeof inv.values['engine'] === 'string' &&
+          ENGINE_KINDS[inv.values['engine'] as EngineId] === 'managed'
+        )
+          return pullManagedModel(ctx, inv.positionals[0], inv.values['engine'], inv.values)
         const raw = inv.positionals[0]!,
           colon = raw.indexOf(':')
         const repo = colon < 0 ? raw : raw.slice(0, colon)
@@ -134,7 +152,16 @@ export const modelsCommand = defineCommand({
           typeof inv.values['file'] === 'string' ? inv.values['file'] : colon < 0 ? '' : raw.slice(colon + 1)
         const service = await workspace(ctx)
         if (!file) {
-          const result = (await service.execute('models.files', { repo })) as unknown
+          const result = (await service.execute('models.files', { repo }).catch((error: unknown) => {
+            // A repository without GGUF files: maybe a managed engine's safetensors checkpoint.
+            if (
+              error instanceof AtomicCoreError &&
+              error.code === 'MODEL_NOT_FOUND' &&
+              /No GGUF/i.test(error.message)
+            )
+              return []
+            throw error
+          })) as unknown
           const files = Array.isArray(result) ? result : ((result as { files?: unknown[] }).files ?? [])
           const quant = String(inv.values['quant'] ?? '').toLowerCase()
           const matches = files.filter(
@@ -146,6 +173,7 @@ export const modelsCommand = defineCommand({
               !/mmproj/i.test(v.filename) &&
               (!quant || v.filename.toLowerCase().includes(quant))
           )
+          if (files.length === 0) return noGgufHint(ctx, service, repo)
           if (matches.length !== 1)
             throw new AtcError('ATC_USAGE', 'Choose an exact model file.', {
               hint: `Run atc models files ${repo}, then use --file filename.gguf.`,
