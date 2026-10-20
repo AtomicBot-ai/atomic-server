@@ -1,6 +1,7 @@
 // Lifted from atomic-chat-core/src/downloads/downloader.ts @ 8a38521 (v0.17.0); adapted: progress goes to `snapshot()` and an `onProgress` callback instead of core events, a hash-pinned file of `minRangedBytes` and more comes over parallel ranges written in place (`ranges.ts`), and verification runs on the partial before it is renamed, so a cancel there keeps every byte.
 /**
- * atc's model downloader. `save_path` is relative to the data folder and must stay inside it; the
+ * atc's model downloader. `save_path` is relative to the data folder and must stay inside it, or an
+ * absolute path inside one of the call's `allowedRoots` (the managed-model store the core names); the
  * partial is `<file>.tmp` beside `<file>.url` (and `<file>.ranges` for a ranged download), the same
  * sidecars the core and the desktop app write, so either can continue the other's partial. Preflight:
  * the Windows path limit and free space for what is left plus 512 MiB. After every file is complete
@@ -8,7 +9,7 @@
  */
 
 import { rename, rm, rmdir } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { dirname, isAbsolute, resolve } from 'node:path'
 import { checkFreeSpace, checkPathWithinLimit, remainingBytes } from './disk.js'
 import {
   canonicalizeExistingPrefix,
@@ -32,7 +33,7 @@ export { DOWNLOAD_CANCELLED } from './local.js'
 
 export interface DownloadItem {
   url: string
-  /** Relative to the data folder. */
+  /** Relative to the data folder, or absolute inside one of `DownloadOptions.allowedRoots`. */
   save_path: string
   sha256?: string | null
   size?: number | null
@@ -41,6 +42,8 @@ export interface DownloadItem {
 export interface DownloadOptions {
   headers?: Record<string, string>
   resume?: boolean
+  /** Absolute folders outside the data folder this call may also write into. */
+  allowedRoots?: string[]
 }
 export interface DownloadProgress {
   taskId: string
@@ -140,27 +143,34 @@ export class Downloader {
     const total = sizes.reduce((a, b) => a + b, 0)
     const ranged = items.map((item, i) => streams > 1 && !!item.sha256 && (sizes[i] ?? 0) >= minRanged)
 
-    const root = await canonicalizeExistingPrefix(dataFolder)
+    const roots = await allowedRoots(dataFolder, options.allowedRoots ?? [])
     const savePaths: string[] = []
-    const partials: number[] = []
+    // Free space is asked of the volume holding each root the files go to, for what goes there.
+    const remaining = new Map<string, { total: number; partials: number[] }>()
     for (const [i, item] of items.entries()) {
       const savePath = resolve(dataFolder, item.save_path)
       const limit = checkPathWithinLimit(savePath, platform)
       if (limit) throw new Error(limit)
-      if (!isInside(await canonicalizeExistingPrefix(savePath), root))
-        throw new Error(`Path ${savePath} is outside of the data folder ${dataFolder}`)
+      const canonical = await canonicalizeExistingPrefix(savePath)
+      const root = roots.find((r) => isInside(canonical, r.canonical))
+      if (!root) throw new Error(`Path ${savePath} is outside of the data folder ${dataFolder}`)
+      const share = remaining.get(root.given) ?? { total: 0, partials: [] }
+      share.total += sizes[i] ?? 0
+      remaining.set(root.given, share)
       savePaths.push(savePath)
       // Core 0.16's parallel parts (atc 0.1.0): nothing resumes them, so they go before the space check.
       await rm(`${savePath}.segments`, { recursive: true, force: true })
       if (!resume) continue
       const state = ranged[i] ? await readRangeState(savePath, item.url, sizes[i] ?? 0) : undefined
-      partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, item.url)) ?? 0))
+      share.partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, item.url)) ?? 0))
     }
-    const space = checkFreeSpace(
-      await (this.deps.availableSpace ?? defaultAvailableSpace)(dataFolder),
-      remainingBytes(total, partials)
-    )
-    if (space) throw new Error(space)
+    for (const [root, share] of remaining) {
+      const space = checkFreeSpace(
+        await (this.deps.availableSpace ?? defaultAvailableSpace)(root),
+        remainingBytes(share.total, share.partials)
+      )
+      if (space) throw new Error(space)
+    }
 
     const done = new Map<number, number>()
     let reported = -PROGRESS_STEP_BYTES
@@ -239,4 +249,14 @@ export class Downloader {
     }
     publish(true)
   }
+}
+
+/** The data folder first, then each extra root; every one absolute, compared by its canonical path. */
+async function allowedRoots(dataFolder: string, extra: string[]) {
+  const roots = [{ given: dataFolder, canonical: await canonicalizeExistingPrefix(dataFolder) }]
+  for (const root of extra) {
+    if (!isAbsolute(root)) throw new Error(`Allowed root ${root} must be absolute`)
+    roots.push({ given: root, canonical: await canonicalizeExistingPrefix(root) })
+  }
+  return roots
 }

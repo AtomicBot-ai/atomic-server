@@ -123,6 +123,55 @@ describe('Downloader, one stream', () => {
     )
   })
 
+  it('writes into an allowed root outside the data folder, its partial beside the file, its space checked there', async () => {
+    server.files.set('/hold.bin', { body, holdAfterBytes: 1024 * 1024 })
+    const root = await mkdtemp(join(tmpdir(), 'atc-store-'))
+    const asked: string[] = []
+    const { dl } = await make({
+      availableSpace: async (path) => {
+        asked.push(path)
+        return undefined
+      },
+    })
+    const out = join(root, 'Qwen/Qwen3-0.6B/model.safetensors')
+    const running = dl.download('t', [item('/hold.bin', { save_path: out })], { allowedRoots: [root] })
+    await waitFor(async () => (await stat(`${out}.tmp`).catch(() => null))?.size === 1024 * 1024)
+    server.release()
+    await running
+    expect((await readFile(out)).equals(body)).toBe(true)
+    expect(await readdir(dirname(out))).toEqual(['model.safetensors'])
+    expect(asked).toEqual([root])
+  })
+
+  it('refuses a path outside the data folder and every allowed root, and a `..` out of a root', async () => {
+    server.files.set('/ok.bin', { body })
+    const root = await mkdtemp(join(tmpdir(), 'atc-store-'))
+    const elsewhere = await mkdtemp(join(tmpdir(), 'atc-elsewhere-'))
+    const { dl } = await make()
+    const outside = join(elsewhere, 'model.safetensors')
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: outside })], { allowedRoots: [root] })
+    ).rejects.toThrow('outside of the data folder')
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: `${root}/../escape.safetensors` })], {
+        allowedRoots: [root],
+      })
+    ).rejects.toThrow('outside of the data folder')
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: join(root, 'm.safetensors') })])
+    ).rejects.toThrow('outside of the data folder')
+    expect(server.requests.filter((r) => r.method === 'GET')).toEqual([])
+    expect(await exists(join(elsewhere, 'model.safetensors.tmp'))).toBe(false)
+  })
+
+  it('refuses a relative allowed root', async () => {
+    server.files.set('/ok.bin', { body })
+    const { dl } = await make()
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: 'store/m.safetensors' })], { allowedRoots: ['store'] })
+    ).rejects.toThrow('must be absolute')
+  })
+
   it('starts again when the partial belongs to another URL', async () => {
     server.files.set('/ok.bin', { body })
     const { dl, out } = await make()
