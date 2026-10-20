@@ -4,6 +4,7 @@ import { art, button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { fill } from '../draw/fortress.js'
+import { operationView } from '../../../workspace-view/index.js'
 
 export function cockpitStatus(s: WorkspaceState): EyeStatus {
   if (/stopping/i.test(s.message) && s.busy) return 'stopping'
@@ -12,6 +13,22 @@ export function cockpitStatus(s: WorkspaceState): EyeStatus {
   if (s.base.daemon.kind === 'down') return s.base.daemon.error ? 'error' : 'offline'
   if (s.base.daemon.kind !== 'up' || !s.base.daemon.snapshot.server.running) return 'offline'
   return s.generating ? 'busy' : 'ready'
+}
+/**
+ * The privileged steps the server waits on, with the command to run as administrator, and the managed
+ * engine operations in progress — from the snapshot; before the first one, the steps the daemon reported.
+ */
+export function cockpitNotices(s: WorkspaceState): Array<{ text: string; command: boolean }> {
+  const steps = s.workspace?.host_steps ?? (s.base.daemon.kind === 'up' ? s.base.daemon.pending : [])
+  return [
+    ...steps.flatMap((step) => [
+      { text: 'Waiting for a privileged step; run as administrator:', command: false },
+      { text: step.instructions, command: true },
+    ]),
+    ...(s.workspace?.engines ?? []).flatMap((e) =>
+      e.operation ? [{ text: operationView(e.operation).text, command: false }] : []
+    ),
+  ]
 }
 const metric = (value: number | null | undefined, unit: string) =>
   value == null ? '—' : `${value.toFixed(value < 10 ? 1 : 0)}${unit}`
@@ -42,10 +59,16 @@ export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, second
           state: 'loaded',
         }))
       : [])
-  rows
+  // What needs a person comes first: a privileged step to run by hand, then engine work in progress.
+  const notices = cockpitNotices(s)
+  notices
     .slice(0, Math.max(1, height - 4))
-    .forEach((v, i) => text(c, x, i + 1, `${v.provider}  ${v.model}  · ${v.state}`, COLORS.gold, width))
-  if (!rows.length) text(c, x, 1, 'No model loaded', COLORS.muted, width)
+    .forEach((n, i) => text(c, x, i + 1, n.text, n.command ? COLORS.green : COLORS.text, width))
+  const top = 1 + Math.min(notices.length, Math.max(1, height - 4))
+  rows
+    .slice(0, Math.max(0, height - 3 - top))
+    .forEach((v, i) => text(c, x, top + i, `${v.provider}  ${v.model}  · ${v.state}`, COLORS.gold, width))
+  if (!rows.length && top < height - 2) text(c, x, top, 'No model loaded', COLORS.muted, width)
   if (rows.length > height - 4)
     text(
       c,
