@@ -23,6 +23,7 @@ import type { ArtifactService } from './artifacts.js'
 import type { ModelSetups } from './model-setups.js'
 import type { ManagedModelSetups } from './managed-model-setups.js'
 import { FoundryAccelerators } from './foundry.js'
+import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
 import { modelDownloads } from './model-downloads.js'
 import { ChatJobs } from './chat-jobs.js'
@@ -47,6 +48,7 @@ export class WorkspaceService {
   private setups: ModelSetups
   private managed: ManagedModelSetups
   private foundry: FoundryAccelerators
+  private foundryModels: FoundryModelSetups
   /** Every model download of this server: GGUF setups, media and MLX. */
   private downloader: Downloader
   private chats: ChatJobs
@@ -62,6 +64,7 @@ export class WorkspaceService {
     this.setups = downloads.setups
     this.managed = downloads.managed
     this.foundry = new FoundryAccelerators(options.link)
+    this.foundryModels = downloads.foundry
   }
   /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
   start(): Promise<{ kept: string[] }> {
@@ -83,7 +86,8 @@ export class WorkspaceService {
     result.setups.push(
       ...(await this.setups.list()),
       ...(await this.artifacts.list()),
-      ...(await this.managed.list())
+      ...(await this.managed.list()),
+      ...(await this.foundryModels.list())
     )
     return result
   }
@@ -101,6 +105,16 @@ export class WorkspaceService {
     switch (operation) {
       case 'foundry.accelerators':
         return this.foundry.status(input['force'] === true)
+      case 'foundry.plan':
+        return this.foundryModels.plan({
+          model: String(input['model']),
+          ...(typeof input['variant'] === 'string' ? { variant: input['variant'] } : {}),
+          ...(typeof input['device'] === 'string' ? { device: input['device'] } : {}),
+        })
+      case 'foundry.install':
+        return this.foundryModels.install(input)
+      case 'foundry.cancel':
+        return this.foundryModels.cancel(String(input['id']))
       case 'foundry.prepare':
         return this.foundry.prepare(
           Array.isArray(input['accelerators']) ? input['accelerators'].map(String) : undefined

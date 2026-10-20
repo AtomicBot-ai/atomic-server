@@ -82,7 +82,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
   await mkdir(dirname(job.savePath), { recursive: true }).catch((e) => {
     throw diskError(e)
   })
-  let state = job.resume ? await readRangeState(job.savePath, job.url, job.size) : undefined
+  let state = job.resume ? await readRangeState(job.savePath, job.identity, job.size) : undefined
   let fresh = false
   if (!state) {
     // A one-stream partial of this URL (this downloader's, or an earlier client's) keeps its bytes.
@@ -90,13 +90,13 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
       () => true,
       () => false
     )
-    const prefix = job.resume && !hasRanges ? await partialBytes(job.savePath, job.url) : undefined
+    const prefix = job.resume && !hasRanges ? await partialBytes(job.savePath, job.identity) : undefined
     fresh = !(prefix !== undefined && prefix > 0 && prefix <= job.size)
-    state = { url: job.url, size: job.size, ranges: planRanges(job.size, streams, fresh ? 0 : prefix) }
+    state = { url: job.identity, size: job.size, ranges: planRanges(job.size, streams, fresh ? 0 : prefix) }
     if (fresh) await rm(s.tmp, { force: true })
   }
   await rm(s.rangesNext, { force: true })
-  await writeFile(s.url, job.url).catch((e) => {
+  await writeFile(s.url, job.identity).catch((e) => {
     throw diskError(e)
   })
   await record(job.savePath, state)

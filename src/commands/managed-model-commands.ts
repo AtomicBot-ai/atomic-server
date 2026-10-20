@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
-import type { ManagedModelJob, ManagedModelPlan, ModelCheckResult } from '../contract/index.js'
+import type { ManagedModelPlan, ModelCheckResult } from '../contract/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { formatSize, verdictLine } from '../workspace-view/index.js'
 import { workspace } from './control.js'
@@ -47,15 +47,57 @@ export function splitRevision(ref: string): [string, string | undefined] {
 
 const FINISHED = ['ready', 'failed', 'cancelled', 'interrupted']
 
-/** What one poll of a managed download shows: the job, and its bytes from the server's downloader. */
-async function jobState(service: WorkspaceClient, id: string) {
+/** What one poll of a download job shows: the job, and its bytes from the server's downloader. */
+async function jobState(service: WorkspaceClient, kind: string, id: string) {
   const snapshot = await service.snapshot()
-  const job = (snapshot.setups as ManagedModelJob[]).find((j) => j?.kind === 'managed-model' && j.id === id)
-  if (!job) throw new AtcError('ATC_USAGE', `No managed model download ${id}.`)
+  const job = (snapshot.setups as Array<{ kind?: string; id: string; stage: string; error?: string }>).find(
+    (j) => j?.kind === kind && j.id === id
+  )
+  if (!job) throw new AtcError('ATC_USAGE', `No download ${id}.`)
   const bytes = (snapshot.downloads as Array<{ taskId?: string; transferred: number; total: number }>).find(
     (d) => d.taskId === id
   )
   return { ...job, transferred: bytes?.transferred ?? null, total: bytes?.total ?? null }
+}
+
+/**
+ * Follow a download job the server runs (a managed model's, a Foundry Local variant's) until it ends;
+ * Ctrl-C only stops the following. Exit 0 once it is ready.
+ */
+export async function followSetup(
+  ctx: CommandContext,
+  service: WorkspaceClient,
+  job: { kind: string; id: string; label: string; cancel: string; retry: string }
+): Promise<number> {
+  const interrupt = new AbortController()
+  const off = ctx.io.onInterrupt?.(() => interrupt.abort()) ?? (() => {})
+  const display = followDisplay<Awaited<ReturnType<typeof jobState>>>(
+    { io: ctx.io, progress: ctx.progress, flags: ctx.flags },
+    (j) => ({ stage: j.stage, text: `${job.label}: ${j.stage}`, done: j.transferred, total: j.total })
+  )
+  try {
+    const result = await follow({
+      pick: () => undefined,
+      poll: () => jobState(service, job.kind, job.id),
+      finished: (j) => FINISHED.includes(j.stage),
+      show: (j) => display.show(j),
+      signal: AbortSignal.any([ctx.signal, interrupt.signal]),
+      pollMs: 1000,
+    })
+    display.close(result.value.stage === 'ready')
+    if (result.kind === 'detached') {
+      ctx.out.line(`${job.id} goes on in the server; cancel it with: ${job.cancel}`)
+      return 130
+    }
+    if (result.value.stage !== 'ready')
+      throw new AtcError('ATC_USAGE', `The download of ${job.label} ended ${result.value.stage}.`, {
+        ...(result.value.error ? { details: result.value.error } : {}),
+        hint: `continue it with: ${job.retry}`,
+      })
+    return 0
+  } finally {
+    off()
+  }
 }
 
 /** `atc models pull <repo> --engine <managed>`: the plan, then the download in the server, followed. */
@@ -89,43 +131,15 @@ export async function pullManagedModel(
     })
     return 0
   }
-  const interrupt = new AbortController()
-  const off = ctx.io.onInterrupt?.(() => interrupt.abort()) ?? (() => {})
-  const display = followDisplay<Awaited<ReturnType<typeof jobState>>>(
-    { io: ctx.io, progress: ctx.progress, flags: ctx.flags },
-    (job) => ({
-      stage: job.stage,
-      text: `${plan.repository}: ${job.stage}`,
-      done: job.transferred,
-      total: job.total,
-    })
-  )
-  try {
-    const result = await follow({
-      pick: () => undefined,
-      poll: () => jobState(service, id),
-      finished: (job) => FINISHED.includes(job.stage),
-      show: (job) => display.show(job),
-      signal: AbortSignal.any([ctx.signal, interrupt.signal]),
-      pollMs: 1000,
-    })
-    display.close(result.value.stage === 'ready')
-    if (result.kind === 'detached') {
-      ctx.out.line(`${id} goes on in the server; cancel it with: atc models pull --cancel ${id}`)
-      return 130
-    }
-    if (result.value.stage !== 'ready')
-      throw new AtcError('ATC_USAGE', `The download of ${plan.repository} ended ${result.value.stage}.`, {
-        ...(result.value.error ? { details: result.value.error } : {}),
-        hint: `continue it with: atc models pull ${ref} --engine ${engine} --request-id ${id}`,
-      })
-    ctx.out.result(result.value, () =>
-      ctx.out.line(`${plan.repository} is in the store for every managed engine.`)
-    )
-    return 0
-  } finally {
-    off()
-  }
+  const code = await followSetup(ctx, service, {
+    kind: 'managed-model',
+    id,
+    label: plan.repository,
+    cancel: `atc models pull --cancel ${id}`,
+    retry: `atc models pull ${ref} --engine ${engine} --request-id ${id}`,
+  })
+  if (code === 0) ctx.out.line(`${plan.repository} is in the store for every managed engine.`)
+  return code
 }
 
 function printPlan(ctx: CommandContext, plan: ManagedModelPlan): void {

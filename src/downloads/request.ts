@@ -91,6 +91,8 @@ export function plainError(e: unknown): Error {
 export interface FileJob extends RequestContext {
   /** Absolute; the partial is `<savePath>.tmp` until the downloader verifies and renames it. */
   savePath: string
+  /** What the partial belongs to (its `.url` sidecar): the URL, or a resume key that outlives a link. */
+  identity: string
   /** Bytes to expect, `0` when unknown. */
   size: number
   resume: boolean

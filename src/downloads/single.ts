@@ -39,7 +39,7 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   })
   let from = 0
   if (!initial && job.resume) {
-    const have = await partialBytes(job.savePath, job.url)
+    const have = await partialBytes(job.savePath, job.identity)
     if (have !== undefined && job.size > 0 && have === job.size) {
       job.report(have)
       return
@@ -48,7 +48,7 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   }
   await rm(s.ranges, { force: true })
   await rm(s.rangesNext, { force: true })
-  await writeFile(s.url, job.url).catch((e) => {
+  await writeFile(s.url, job.identity).catch((e) => {
     throw diskError(e)
   })
   let res: Response

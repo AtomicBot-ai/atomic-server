@@ -38,6 +38,8 @@ export interface DownloadItem {
   sha256?: string | null
   size?: number | null
   proxy?: ProxyConfig | null
+  /** What a partial belongs to, when a file's link changes between attempts (an expiring SAS link). */
+  resume_key?: string
 }
 export interface DownloadOptions {
   headers?: Record<string, string>
@@ -161,8 +163,9 @@ export class Downloader {
       // Core 0.16's parallel parts (atc 0.1.0): nothing resumes them, so they go before the space check.
       await rm(`${savePath}.segments`, { recursive: true, force: true })
       if (!resume) continue
-      const state = ranged[i] ? await readRangeState(savePath, item.url, sizes[i] ?? 0) : undefined
-      share.partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, item.url)) ?? 0))
+      const identity = item.resume_key ?? item.url
+      const state = ranged[i] ? await readRangeState(savePath, identity, sizes[i] ?? 0) : undefined
+      share.partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, identity)) ?? 0))
     }
     for (const [root, share] of remaining) {
       const space = checkFreeSpace(
@@ -191,6 +194,7 @@ export class Downloader {
           const job: FileJob = {
             fetch: fetchOf(item),
             url: item.url,
+            identity: item.resume_key ?? item.url,
             headers,
             signal,
             sleep,

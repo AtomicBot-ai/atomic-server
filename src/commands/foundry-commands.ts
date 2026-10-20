@@ -9,11 +9,14 @@ import type { CoreEventMessage } from '@atomic-chat/core/client'
 import type { FoundryLocalAcceleratorsEvent } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
-import type { FoundryAcceleratorsView } from '../contract/index.js'
+import { randomUUID } from 'node:crypto'
+import type { FoundryAcceleratorsView, FoundryModelPlan } from '../contract/index.js'
+import { variantLabel } from '../workspace-service/index.js'
 import type { FoundrySearchResult } from '../workspace-service/index.js'
 import { formatSize } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
 import { follow, followDisplay } from './follow.js'
+import { followSetup } from './managed-model-commands.js'
 
 type Step =
   { kind: 'step'; step: FoundryLocalAcceleratorsEvent } | { kind: 'status'; view: FoundryAcceleratorsView }
@@ -182,4 +185,53 @@ export async function foundryListing(ctx: CommandContext, query: string): Promis
     }
   })
   return 0
+}
+
+/** `atc models pull <model|variant> --engine foundry-local [--device]`: the variant, checked, downloaded, followed. */
+export async function pullFoundryModel(
+  ctx: CommandContext,
+  model: string,
+  values: Record<string, unknown>
+): Promise<number> {
+  const { service } = await attachWorkspace(ctx)
+  const plan = (await service.execute('foundry.plan', {
+    model,
+    ...(typeof values['device'] === 'string' ? { device: values['device'] } : {}),
+  })) as FoundryModelPlan
+  const print = () => {
+    ctx.out.line(
+      `${plan.name}: ${plan.variant_id} (${variantLabel(plan)})${plan.unverified ? ' — Microsoft catalog, not verified by Atomic Chat' : ''}`
+    )
+    ctx.out.line(`Verdict: ${plan.verdict.verdict}${plan.verdict.reason ? ` — ${plan.verdict.reason}` : ''}`)
+    ctx.out.line(
+      `${plan.pending.length} of ${plan.files.length} files to download, ${formatSize(plan.download_bytes)}, into ${plan.dir}`
+    )
+    for (const b of plan.blockers) ctx.out.line(`  - ${b}`)
+  }
+  if (values['dry-run']) {
+    ctx.out.result(plan, print)
+    return 0
+  }
+  if (!ctx.flags.json) print()
+  if (plan.blockers.length) throw new AtcError('ATC_USAGE', plan.blockers.join(' '))
+  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
+  await service.execute('foundry.install', { request_id: id, plan_digest: plan.digest })
+  if (values['detach']) {
+    ctx.out.result({ id }, () =>
+      ctx.out.line(
+        `Downloading in the server as ${id}; cancel it with: atc models pull --cancel ${id} --engine foundry-local`
+      )
+    )
+    return 0
+  }
+  const code = await followSetup(ctx, service, {
+    kind: 'foundry-model',
+    id,
+    label: plan.variant_id,
+    cancel: `atc models pull --cancel ${id} --engine foundry-local`,
+    retry: `atc models pull ${model} --engine foundry-local --request-id ${id}`,
+  })
+  if (code === 0)
+    ctx.out.line(`${plan.variant_id} is ready: atc run ${plan.variant_id} --engine foundry-local`)
+  return code
 }

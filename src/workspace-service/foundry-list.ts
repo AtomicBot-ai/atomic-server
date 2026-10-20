@@ -92,6 +92,10 @@ const BASELINE_LIST = {
   models: [],
 }
 
+/** An HTTPS URL, or plain HTTP on this machine's loopback (a test's Azure and catalog stand-in). */
+export const servedUrl = (value: string) =>
+  /^(https:\/\/|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/)/.test(value)
+
 // ── Parsing ──────────────────────────────────────────────────────────────────
 
 const ID = /^[a-z0-9][a-z0-9._-]*$/
@@ -195,7 +199,7 @@ export function parseFoundryLocalList(raw: unknown): FoundryLocalList {
   if (
     !isObject(resolver) ||
     typeof resolver.url_template !== 'string' ||
-    !resolver.url_template.startsWith('https://') ||
+    !servedUrl(resolver.url_template) ||
     !resolver.url_template.includes('{region}') ||
     !resolver.url_template.includes('{asset_id}') ||
     !Array.isArray(resolver.regions) ||
@@ -204,7 +208,7 @@ export function parseFoundryLocalList(raw: unknown): FoundryLocalList {
   ) {
     throw new Error('The Foundry Local model list has no usable resolver.')
   }
-  if (!isObject(catalog) || typeof catalog.url !== 'string' || !catalog.url.startsWith('https://')) {
+  if (!isObject(catalog) || typeof catalog.url !== 'string' || !servedUrl(catalog.url)) {
     throw new Error('The Foundry Local model list has no usable catalog URL.')
   }
   if (!Array.isArray(models)) throw new Error('The Foundry Local model list has no models array.')

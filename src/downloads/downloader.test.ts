@@ -172,6 +172,25 @@ describe('Downloader, one stream', () => {
     ).rejects.toThrow('must be absolute')
   })
 
+  it('continues a partial under a new link when the resume key is the same (an expired SAS link)', async () => {
+    server.files.set('/old.bin', { body, holdAfterBytes: 2 * 1024 * 1024 })
+    const { dl, out } = await make()
+    const first = dl.download('t', [item('/old.bin', { resume_key: 'foundry/v/model.onnx' })])
+    await waitFor(async () => (await stat(`${out}.tmp`).catch(() => null))?.size === 2 * 1024 * 1024)
+    dl.cancel('t')
+    await expect(first).rejects.toThrow(DOWNLOAD_CANCELLED)
+    server.release()
+    server.files.set('/new.bin?sig=fresh', { body })
+    await dl.download('t', [item('/new.bin?sig=fresh', { resume_key: 'foundry/v/model.onnx' })], {
+      resume: true,
+    })
+    expect((await readFile(out)).equals(body)).toBe(true)
+    expect(server.requests.at(-1)).toMatchObject({
+      path: '/new.bin?sig=fresh',
+      range: `bytes=${2 * 1024 * 1024}-`,
+    })
+  })
+
   it('starts again when the partial belongs to another URL', async () => {
     server.files.set('/ok.bin', { body })
     const { dl, out } = await make()

@@ -124,3 +124,45 @@ export type FoundryAcceleratorsView = FoundryLocalAccelerators & {
   last_result: FoundryLocalPrepareResult | null
   last_error: string | null
 }
+
+/** `foundry.plan`: one Foundry Local variant to download, chosen and checked, with its files. */
+export interface FoundryModelPlan {
+  digest: string
+  model_id: string
+  name: string
+  variant_id: string
+  device: string
+  execution_provider: string
+  asset_id: string
+  version: string
+  /** A catalog model: files listed from Azure Blob, checked by size only. */
+  unverified: boolean
+  verdict: { verdict: string; reason: string | null; accelerator: string | null }
+  /** `<data>/foundry-local/models/<variant_id>`. */
+  dir: string
+  prefix: string
+  files: Array<{ path: string; size: number; sha256?: string }>
+  pending: string[]
+  download_bytes: number
+  free_bytes: number | null
+  /** What `model.yml` records besides the files: from conf's list, else the resolve answer's tags. */
+  record: {
+    context_length?: number
+    tools: boolean
+    reasoning: boolean
+    reasoning_start?: string
+    reasoning_end?: string
+  }
+  blockers: string[]
+}
+
+export interface FoundryModelJob {
+  id: string
+  kind: 'foundry-model'
+  plan: FoundryModelPlan
+  stage: 'queued' | 'downloading' | 'verifying' | 'ready' | 'failed' | 'cancelled' | 'interrupted'
+  error?: string
+  /** How many times an expired link was resolved again in this run. */
+  relinks?: number
+  updated_at: number
+}

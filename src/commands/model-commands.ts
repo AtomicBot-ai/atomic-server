@@ -9,7 +9,7 @@ import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operation, workspace } from './control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
-import { foundryListing } from './foundry-commands.js'
+import { foundryListing, pullFoundryModel } from './foundry-commands.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
@@ -144,7 +144,16 @@ export const modelsCommand = defineCommand({
           placeholder: 'engine',
         },
         'detach': { type: 'boolean', description: 'Start a managed download without following it' },
-        'cancel': { type: 'string', description: 'Cancel a managed download', placeholder: 'request-id' },
+        'device': {
+          type: 'string',
+          description: 'Foundry Local: the variant for npu, gpu or cpu',
+          placeholder: 'device',
+        },
+        'cancel': {
+          type: 'string',
+          description: 'Cancel a managed or Foundry Local download (with its --engine)',
+          placeholder: 'request-id',
+        },
         'file': { type: 'string', description: 'Exact filename in the repository' },
         'quant': { type: 'string', description: 'Select an unambiguous quantization' },
         'mmproj': { type: 'boolean', description: 'Include required vision projector', default: true },
@@ -153,8 +162,16 @@ export const modelsCommand = defineCommand({
       },
       run: async (inv, ctx) => {
         if (typeof inv.values['cancel'] === 'string')
-          return operation(ctx, 'managed.cancel', { id: inv.values['cancel'] })
+          return operation(
+            ctx,
+            inv.values['engine'] === 'foundry-local' ? 'foundry.cancel' : 'managed.cancel',
+            {
+              id: inv.values['cancel'],
+            }
+          )
         if (!inv.positionals[0]) throw new AtcError('ATC_USAGE', 'Name the model to download.')
+        if (inv.values['engine'] === 'foundry-local')
+          return pullFoundryModel(ctx, inv.positionals[0], inv.values)
         if (
           typeof inv.values['engine'] === 'string' &&
           ENGINE_KINDS[inv.values['engine'] as EngineId] === 'managed'

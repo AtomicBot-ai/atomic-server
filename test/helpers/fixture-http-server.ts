@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-core/test/helpers/fixture-http-server.ts @ 8a38521 (v0.17.0); adapted: `holdAfterBytes` keeps a body open until `release()`, every GET is counted per path, and a request's `Authorization` is recorded.
+// Lifted from atomic-chat-core/test/helpers/fixture-http-server.ts @ 8a38521 (v0.17.0); adapted: `holdAfterBytes` keeps a body open until `release()`, every GET is counted per path, a request's `Authorization` is recorded, and `cut()` breaks held connections.
 /**
  * Scripted HTTP server for download tests: serves in-memory files with Range/206 support, and lets a
  * test inject failures (drop the connection after N bytes, answer a status, refuse Range).
@@ -34,6 +34,7 @@ export class FixtureHttpServer {
   private drops = new Map<string, number>()
   private fails = new Map<string, number>()
   private held: Array<() => void> = []
+  private heldSockets: Array<() => void> = []
   /** Bytes of body sent per path, for tests that bound what a resume fetched again. */
   readonly sent = new Map<string, number>()
 
@@ -51,7 +52,14 @@ export class FixtureHttpServer {
 
   /** Finish every body `holdAfterBytes` is holding. */
   release(): void {
+    this.heldSockets.length = 0
     for (const finish of this.held.splice(0)) finish()
+  }
+
+  /** Cut every connection `holdAfterBytes` is holding: the client sees its stream break. */
+  cut(): void {
+    this.held.length = 0
+    for (const destroy of this.heldSockets.splice(0)) destroy()
   }
 
   reset(): void {
@@ -130,6 +138,7 @@ export class FixtureHttpServer {
         count(slice.length - head.length)
         if (!res.destroyed) res.end(slice.subarray(file.holdAfterBytes))
       })
+      this.heldSockets.push(() => res.socket?.destroy())
       return
     }
     count(slice.length)
