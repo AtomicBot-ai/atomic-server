@@ -1,4 +1,5 @@
 import { engineAction, engineRunner, hasPanel } from './engine-actions.js'
+import { catalogAction, jobRunner, libraryFormats, managedChoice } from './catalog-actions.js'
 import { downloadRows } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
@@ -6,6 +7,7 @@ import type { LibraryView } from './library-model.js'
 import { libraryRows, record } from './library-model.js'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 export async function libraryAction(id: string, ctx: ActionContext): Promise<boolean> {
+  if (await catalogAction(id, ctx)) return true
   const { get, update, controller: c } = ctx,
     s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
@@ -32,6 +34,7 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       edit: '',
       libraryView: view,
       libraryCategory: category,
+      ...(id === 'library-refresh' ? {} : { libraryFormat: 'gguf' as const }),
       selected: 0,
       focus: 'library-row:0',
       hover: '',
@@ -46,6 +49,12 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       return true
     }
     patch({ busy: true, libraryRows: [] })
+    if (view === 'catalog' && !s.libraryEngines.length)
+      patch({
+        libraryEngines: await Promise.resolve()
+          .then(() => c.setup.engines())
+          .catch(() => []),
+      })
     try {
       const result = await c.runtime.execute(
         view === 'engines' ? 'engines.list' : 'models.catalog',
@@ -76,9 +85,14 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     patch({ busy: true, message: 'Checking installation requirements…', selected: index })
     try {
       let request: Record<string, unknown>
+      if (s.libraryCategory === 'text' && row.source?.['format'] === 'safetensors')
+        return await managedChoice(row.id, ctx)
       if (s.libraryCategory === 'text' && row.source?.['format'] !== 'mlx') {
         const files = await c.files(row.id),
           file = files[0] // modelFiles puts the default quant first
+        // A repository without GGUF may be a managed engine's: the core's verdicts lead there.
+        if (!file && libraryFormats(s.libraryEngines).includes('safetensors'))
+          return await managedChoice(row.id, ctx)
         if (!file) throw new Error('No GGUF file found. Use engine-specific controls for this model format.')
         request = { repo: row.id, file: file.filename, include_projector: true }
       } else request = { category: s.libraryCategory, model_id: row.id }
@@ -132,6 +146,8 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
   if (id.startsWith('download-row:')) {
     const job = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? [])[Number(id.slice(13))]
     if (!job) return true
+    const runner = jobRunner(job)
+    if (runner) return (patch(runner), true)
     const media = job.owner === 'artifacts',
       standalone = job.owner === 'download'
     const name = standalone ? '' : media ? 'artifacts.resume' : 'setup.resume'

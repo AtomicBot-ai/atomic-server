@@ -1,3 +1,4 @@
+import type { LibraryFormat } from './library/catalog-actions.js'
 import type { EnginePanel } from './library/engine-panel-model.js'
 import { WORKSPACE_NAVIGATION } from '../../contract/index.js'
 import type { LibraryRow, LibraryView } from './library/library-model.js'
@@ -46,6 +47,12 @@ export interface WorkspaceState {
   libraryCategory: string
   libraryRows: LibraryRow[]
   libraryQuery: string
+  /** The text catalog's format: GGUF, a managed engine's safetensors, or Foundry Local. */
+  libraryFormat: LibraryFormat
+  /** Every engine the core registers here, for the formats the catalog offers. */
+  libraryEngines: string[]
+  /** The installed model a confirmation removes. */
+  libraryRemove: string
   libraryPlan: Record<string, unknown> | null
   /** The managed engine panel of Library → Engines, while it is open. */
   enginePanel: EnginePanel | null
@@ -68,7 +75,7 @@ export interface WorkspaceState {
   clientKeys: ClientKeyView[]
   secret: string
   /** `providers`: every provider the core says lists the model; `provider` the first. */
-  installed: { id: string; provider: string; name: string; providers?: string[] }[]
+  installed: { id: string; provider: string; name: string; providers?: string[]; store?: string }[]
   modelsUpdated: number
   modelsError: string
   engine: string
@@ -100,6 +107,7 @@ export interface WorkspaceState {
     | 'agent-setup'
     | 'install-review'
     | 'engine-panel'
+    | 'remove-model'
     | 'images'
     | 'setup-goal'
     | null
@@ -131,6 +139,9 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     libraryCategory: 'text',
     libraryRows: [],
     libraryQuery: '',
+    libraryFormat: 'gguf',
+    libraryEngines: [],
+    libraryRemove: '',
     libraryPlan: null,
     enginePanel: null,
     libraryRequest: {},
