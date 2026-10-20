@@ -42,6 +42,11 @@ export interface AtcIo {
   openUrl: (url: string) => Promise<void>
   /** Present only when stdin and stdout are both a terminal: what `atc tui` renders on. */
   terminal?: TerminalStreams
+  /**
+   * Run `handler` on Ctrl-C instead of exiting, until the returned function is called: for a command
+   * that only follows work the server does, so it can say how to follow again. Absent: Ctrl-C exits.
+   */
+  onInterrupt?: (handler: () => void) => () => void
 }
 
 export function nodeIo(): AtcIo {
@@ -69,6 +74,10 @@ export function nodeIo(): AtcIo {
       ),
     question: (prompt, options) => askOnTerminal(prompt, options?.secret === true),
     openUrl: (url) => openInBrowser(url),
+    onInterrupt: (handler) => {
+      process.once('SIGINT', handler)
+      return () => process.off('SIGINT', handler)
+    },
     waitForShutdown: (onStop) =>
       new Promise<void>((resolve) => {
         const stop = () => {

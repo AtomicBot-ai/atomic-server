@@ -8,7 +8,10 @@ export interface FakeCoreLink extends CoreLink {
   snapshotValue: CoreSnapshot
   emit(message: CoreEventMessage): void
   shutdowns: number
-  /** What `request` answers for `"<METHOD> <path>"`, as the real core would; anything else gets `{}`. */
+  /**
+   * What `request` answers for `"<METHOD> <path>"`, as the real core would; anything else gets `{}`.
+   * A function answers each call from its body; an `Error` it returns or throws is thrown.
+   */
   responses: Record<string, unknown>
 }
 
@@ -70,7 +73,10 @@ export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
     snapshot: async () => link.snapshotValue,
     request: async <T>(method: string, path: string, body?: unknown) => {
       link.calls.push({ method, path, body })
-      return (link.responses[`${method} ${path}`] ?? {}) as T
+      const answer = link.responses[`${method} ${path}`]
+      const value = typeof answer === 'function' ? await (answer as (b: unknown) => unknown)(body) : answer
+      if (value instanceof Error) throw value
+      return (value ?? {}) as T
     },
     models: {
       load: async (provider, modelId) => {

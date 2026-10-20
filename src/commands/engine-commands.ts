@@ -1,5 +1,10 @@
+import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { operation } from './control.js'
+import { installManagedEngine } from './managed-engine.js'
+
+const isManaged = (engine: string | undefined) =>
+  engine !== undefined && (ENGINE_KINDS as Readonly<Record<string, string>>)[engine] === 'managed'
 export const enginesCommand = defineCommand({
   name: 'engines',
   summary: 'Discover and manage engine builds',
@@ -24,12 +29,45 @@ export const enginesCommand = defineCommand({
     defineCommand({
       name: 'install',
       summary: 'Install a compatible engine build',
+      description:
+        'A managed engine (tensorrt-llm, vllm, sglang) is set up by a durable operation in the server after you agree to its plan: on a terminal you are asked; --yes agrees to the plan this command prints, --approve to the plan with that digest only. Ctrl-C and --detach leave the operation running; --resume follows it again.',
       positionals: [{ name: 'engine', description: 'Engine ID; default llamacpp-upstream' }],
       options: {
-        'dry-run': { type: 'boolean', description: 'Show compatible builds only' },
+        'dry-run': {
+          type: 'boolean',
+          description: 'Show compatible builds, or a managed engine’s plan, only',
+        },
         'build': { type: 'string', description: 'Version/variant for llama.cpp' },
+        'approve': {
+          type: 'string',
+          description: 'Agree to the managed plan with this digest only',
+          placeholder: 'sha256:digest',
+        },
+        'detach': { type: 'boolean', description: 'Start or continue the operation without following it' },
+        'resume': {
+          type: 'string',
+          description: 'Continue and follow this operation',
+          placeholder: 'operation',
+        },
+        'cancel': {
+          type: 'string',
+          description: 'Ask the server to cancel this operation',
+          placeholder: 'operation',
+        },
+        'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
       },
+      examples: [
+        'atc engines install vllm',
+        'atc engines install tensorrt-llm --approve sha256:<digest>',
+        'atc engines install --resume <operation>',
+      ],
       run: (inv, ctx) => {
+        if (
+          typeof inv.values['resume'] === 'string' ||
+          typeof inv.values['cancel'] === 'string' ||
+          isManaged(inv.positionals[0])
+        )
+          return installManagedEngine(ctx, inv.positionals[0], inv.values)
         const engine = inv.positionals[0] ?? 'llamacpp-upstream'
         if (inv.values['dry-run']) return operation(ctx, 'engines.catalog', { engine })
         let request = {}

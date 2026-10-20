@@ -3,16 +3,25 @@ import type { CommandContext } from '../cli/index.js'
 import { parseControlInput } from '../agent-control/index.js'
 import { createWorkspaceClient, WORKSPACE_OPERATIONS } from '../workspace-service/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
+import type { CoreLink } from '../core-link/index.js'
 
 export async function workspace(ctx: CommandContext, launch = true): Promise<WorkspaceClient> {
+  return (await attachWorkspace(ctx, launch)).service
+}
+/** The workspace and the link it runs over, for a command that also follows the core's events. */
+export async function attachWorkspace(
+  ctx: CommandContext,
+  launch = true
+): Promise<{ link: CoreLink; service: WorkspaceClient }> {
   const [link, config] = await Promise.all([ctx.core.attach({ launch }), ctx.config()])
-  return createWorkspaceClient({
+  const service = await createWorkspaceClient({
     link,
     paths: ctx.paths,
     config: config.values,
     fetch: ctx.io.fetch,
     selfCommand: ctx.host.selfCommand,
   })
+  return { link, service }
 }
 export async function inputFile(ctx: CommandContext, value: unknown): Promise<Record<string, unknown>> {
   if (typeof value !== 'string') return {}

@@ -114,7 +114,9 @@ export interface FollowView {
  */
 export function followDisplay<T>(
   ctx: Pick<CommandContext, 'io' | 'progress'> & { flags: { json: boolean; quiet: boolean } },
-  view: (value: T) => FollowView
+  view: (value: T) => FollowView,
+  /** What one NDJSON line holds for a value; the value itself by default. */
+  line: (value: T) => unknown = (value) => value
 ): { show(value: T): void; close(ok: boolean, message?: string): void } {
   let stage: string | undefined
   let bar: ProgressHandle | undefined
@@ -126,7 +128,7 @@ export function followDisplay<T>(
   return {
     show(value) {
       if (ctx.flags.json) {
-        ctx.io.stdout(`${JSON.stringify(value)}\n`)
+        ctx.io.stdout(`${JSON.stringify(line(value))}\n`)
         return
       }
       if (ctx.flags.quiet) return
