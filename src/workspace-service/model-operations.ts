@@ -18,7 +18,7 @@ import { managedCatalog, managedSearch } from './managed-catalog.js'
 import { isManagedEngine } from './managed-engines.js'
 import { checkModel } from './managed-models.js'
 import { storeModels } from './managed-store.js'
-import { withProviders } from './model-providers.js'
+import { registeredEngines, withProviders } from './model-providers.js'
 import { foundryStoreModels, removeFoundryModel } from './foundry-store.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
@@ -90,17 +90,25 @@ export async function modelOperation(
       return searchHub(String(input['query']), d.request)
     case 'models.files':
       return modelFiles(String(input['repo']), d.request)
-    case 'models.installed':
-      return withProviders(link, paths.layout, [
-        ...(await installedModels(paths.layout)),
-        ...(await new ModelRegistry(paths.layout, 'mlx').list()).map((m) => ({
-          id: m.id,
-          name: String(m.yml.name ?? m.id),
-          provider: 'mlx',
-        })),
-        ...(await storeModels(link)),
-        ...(await foundryStoreModels(paths.layout)),
-      ])
+    case 'models.installed': {
+      // One read of the registered engines serves the store's providers and everyone else's.
+      const registered = await registeredEngines(link)
+      return withProviders(
+        link,
+        paths.layout,
+        [
+          ...(await installedModels(paths.layout)),
+          ...(await new ModelRegistry(paths.layout, 'mlx').list()).map((m) => ({
+            id: m.id,
+            name: String(m.yml.name ?? m.id),
+            provider: 'mlx',
+          })),
+          ...(await storeModels(link, registered ?? undefined)),
+          ...(await foundryStoreModels(paths.layout)),
+        ],
+        registered
+      )
+    }
     case 'models.remove': {
       const id = String(input['model_id']),
         local = new ModelRegistry(paths.layout),

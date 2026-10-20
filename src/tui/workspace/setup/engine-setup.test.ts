@@ -198,3 +198,44 @@ describe('guided setup with Foundry Local', () => {
     })
   })
 })
+
+describe('a guided-setup download that did not finish', () => {
+  const job = { id: 'j1', kind: 'managed-model' as const, model: REPO, engine: 'vllm' }
+  const stopped = (stage: string) =>
+    ({ setups: [{ id: 'j1', kind: 'managed-model', stage, plan: { digest: 'p1' } }], downloads: [] }) as never
+
+  it('resumes the same job, or lets go of it and returns to the engines', async () => {
+    const t = harness(['vllm'])
+    t.ctx.update((s) => ({
+      ...s,
+      workspace: stopped('interrupted'),
+      setup: {
+        ...s.setup!,
+        stage: 'download',
+        path: { engine: 'vllm', kind: 'managed', rows: [], plan: null, job },
+      },
+    }))
+    const targets = workspaceFrame(t.get(), 120, 36, 0).targets.map((x) => x.id)
+    expect(targets).toEqual(expect.arrayContaining(['setup-path-resume', 'setup-path-abandon']))
+    await setupAction('setup-path-resume', t.ctx)
+    expect(t.calls('managed.install')).toEqual([{ request_id: 'j1', plan_digest: 'p1' }])
+    await setupAction('setup-path-abandon', t.ctx)
+    expect(t.setup.clearPath).toHaveBeenCalled()
+    expect(t.get().setup).toMatchObject({ stage: 'engine', path: null })
+  })
+
+  it('offers Retry when loading the finished model failed', () => {
+    const t = harness(['vllm'])
+    t.ctx.update((s) => ({
+      ...s,
+      workspace: stopped('ready'),
+      setup: {
+        ...s.setup!,
+        stage: 'download',
+        error: 'load failed',
+        path: { engine: 'vllm', kind: 'managed', rows: [], plan: null, job },
+      },
+    }))
+    expect(workspaceFrame(t.get(), 120, 36, 0).targets.map((x) => x.id)).toContain('setup-path-finish')
+  })
+})

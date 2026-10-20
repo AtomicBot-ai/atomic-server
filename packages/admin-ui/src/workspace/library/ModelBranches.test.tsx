@@ -1,5 +1,5 @@
 /** The admin's model install for managed engines and Foundry Local (spec managed-models-server, foundry-local-server). */
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { enginesList, workspaceFixture } from '@/test/workspace-fixture'
@@ -209,6 +209,20 @@ describe('the admin catalog and installed models', () => {
     expect(execute).toHaveBeenCalledWith('models.catalog', { engine: 'vllm' })
     await userEvent.click(await screen.findByRole('button', { name: 'Choose model' }))
     expect(await screen.findByRole('dialog', { name: `Install ${REPO}` })).toBeInTheDocument()
+  })
+
+  it('goes back to the category catalog when the task changes after another format was chosen', async () => {
+    const { workspace, execute } = workspaceFixture({
+      'engines.list': enginesList(['llamacpp-upstream', 'vllm']),
+      'models.catalog': { rows: [] },
+      'models.installed': [],
+      'artifacts.list': [],
+    })
+    render(<Catalog workspace={workspace} openCommand={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
+    await userEvent.selectOptions(await screen.findByLabelText('Format'), 'safetensors')
+    await userEvent.selectOptions(screen.getByLabelText('Task'), 'image')
+    await waitFor(() => expect(execute).toHaveBeenLastCalledWith('models.catalog', { category: 'image' }))
   })
 
   it('warns that removing a store model removes it for every managed engine', async () => {

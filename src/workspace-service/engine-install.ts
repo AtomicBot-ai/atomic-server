@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineKind, EngineVersions, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { CoreLink } from '../core-link/index.js'
+import type { ProxyConfig } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
 import type { ManagedInstallResult } from '../contract/index.js'
 import { managedEngineState } from './managed-engines.js'
@@ -18,12 +19,18 @@ async function engineVersions(link: CoreLink, engine: string): Promise<EngineVer
 }
 
 /** Install through the core's `/engines/:engine/update`; a fresh llama.cpp engine gets the core's `latest`. */
-export async function installEngine(link: CoreLink, engine: string, request: Record<string, unknown> = {}) {
+/** `proxy`: atc's `proxy.*` — an engine build is a download, fetched with the proxy the request names. */
+export async function installEngine(
+  link: CoreLink,
+  engine: string,
+  request: Record<string, unknown> = {},
+  proxy?: ProxyConfig | null
+) {
   const update = (body: Record<string, unknown>) =>
     link.request('POST', `/engines/${segment(engine)}/update`, body)
   const kind = engineKind(engine)
   if (kind === 'managed') return installManaged(link, engine, request)
-  const body = { task_id: randomUUID(), ...request }
+  const body = { task_id: randomUUID(), ...(proxy ? { proxy } : {}), ...request }
   if (kind === 'engine-build' || (kind === 'llamacpp' && request['target'])) return update(body)
   if (kind !== 'llamacpp') throw new AtcError('ATC_USAGE', 'Choose an engine from engines.list.')
   const latest = (await engineVersions(link, engine))?.latest
@@ -32,7 +39,12 @@ export async function installEngine(link: CoreLink, engine: string, request: Rec
 }
 
 /** Install the engine a load needs when it has nothing to run on; a load picks among builds on disk. */
-export async function ensureArtifactEngine(link: CoreLink, engine: string, taskId: string) {
+export async function ensureArtifactEngine(
+  link: CoreLink,
+  engine: string,
+  taskId: string,
+  proxy?: ProxyConfig | null
+) {
   const kind = engineKind(engine)
   if (kind === 'llamacpp') {
     const installed = await link.request<{ backends: unknown[] }>('GET', `/backends/${engine}`)
@@ -45,7 +57,7 @@ export async function ensureArtifactEngine(link: CoreLink, engine: string, taskI
     )
     if (Object.keys(object(catalog['active'])).length) return
   }
-  await installEngine(link, engine, { task_id: taskId })
+  await installEngine(link, engine, { task_id: taskId }, proxy)
 }
 
 /**

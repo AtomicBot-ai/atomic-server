@@ -26,15 +26,19 @@ const folderOf = (layout: DataLayout, provider: string) => {
 }
 
 /** `rows` with `providers` filled (the managed store's rows already carry theirs) and `provider` its first. */
+/** The engines this host registers (`engines.list`), or `null` when the core cannot say. */
+export const registeredEngines = (link: CoreLink): Promise<string[] | null> =>
+  link
+    .request<EngineVersionsResponse>('POST', '/engines/versions', {})
+    .then((r) => (r.engines ?? []).map((e) => e.engine as string))
+    .catch(() => null)
+
 export async function withProviders<T extends Row>(
   link: CoreLink,
   layout: DataLayout,
-  rows: T[]
+  rows: T[],
+  registered: string[] | null
 ): Promise<Array<T & { providers: string[] }>> {
-  const registered = await link
-    .request<EngineVersionsResponse>('POST', '/engines/versions', {})
-    .then((r) => (r.engines ?? []).map((e) => e.engine))
-    .catch(() => null)
   const lists = (provider: string, id: string) =>
     link
       .request('GET', `/models/${segment(provider)}/${modelIdPath(id)}/capabilities`)

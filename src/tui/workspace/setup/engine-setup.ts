@@ -36,13 +36,14 @@ export function pathJob(setup: SetupView, snapshot: WorkspaceSnapshot | null) {
       id?: string
       stage?: string
       error?: string
-      plan?: { download_bytes?: number }
+      plan?: { download_bytes?: number; digest?: string }
     }>
   ).find((r) => r.id === job.id)
   const transfers = (
     snapshot.downloads as Array<{ taskId?: string; transferred?: number; total?: number }>
   ).filter((d) => d.taskId === job.id)
   return {
+    digest: record?.plan?.digest ?? null,
     stage: record?.stage ?? 'queued',
     error: record?.error ?? null,
     done: transfers.reduce((n, t) => n + (t.transferred ?? 0), 0),
@@ -180,6 +181,24 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
       change({ stage: 'download', startedAt: Date.now() })
       focus('setup-cancel')
     })
+  }
+  if (id === 'setup-path-resume' && current.job) {
+    const job = current.job
+    const digest = pathJob(view, get().workspace)?.digest
+    return run(async () => {
+      if (!digest) throw new Error('The server no longer knows this download; choose the model again.')
+      await c.runtime.execute(job.kind === 'managed-model' ? 'managed.install' : 'foundry.install', {
+        request_id: job.id,
+        plan_digest: digest,
+      })
+    })
+  }
+  if (id === 'setup-path-abandon') {
+    // Let go of the record too: otherwise every later setup opens on this download.
+    await c.setup.clearPath()
+    change({ stage: 'engine', path: null, error: '' })
+    focus(`setup-engine:${current.engine}`)
+    return true
   }
   if (id === 'setup-path-finish' && current.job) {
     const job = current.job

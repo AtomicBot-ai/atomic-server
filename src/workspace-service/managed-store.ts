@@ -8,6 +8,8 @@
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ManagedModelLocation } from '@atomic-chat/core/contracts'
+import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
+import type { EngineId } from '@atomic-chat/core/contracts'
 import type { CoreLink } from '../core-link/index.js'
 import { managedEngines } from './managed-models.js'
 import { modelIdPath, segment } from './validation.js'
@@ -43,8 +45,11 @@ async function modelIds(root: string, prefix: string[] = []): Promise<string[]> 
   return ids.sort()
 }
 
-export async function storeModels(link: CoreLink): Promise<StoreModel[]> {
-  const engines = (await managedEngines(link).catch(() => [])).map((e) => e.engine)
+/** `registered`: the engines `engines.list` names here, when the caller already read them. */
+export async function storeModels(link: CoreLink, registered?: readonly string[]): Promise<StoreModel[]> {
+  const engines = registered
+    ? registered.filter((e) => ENGINE_KINDS[e as EngineId] === 'managed')
+    : (await managedEngines(link).catch(() => [])).map((e) => e.engine)
   if (engines.length === 0) return []
   const location = await link
     .request<ManagedModelLocation>('GET', '/managed-models/location')

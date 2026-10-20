@@ -48,6 +48,9 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       patch({ workspace: await c.runtime.snapshot() })
       return true
     }
+    // Refresh re-reads the format shown: a managed engine's checkpoints are not the GGUF catalog.
+    if (view === 'catalog' && id === 'library-refresh' && s.libraryFormat === 'safetensors')
+      return catalogAction('format:safetensors', ctx)
     patch({ busy: true, libraryRows: [] })
     if (view === 'catalog' && !s.libraryEngines.length)
       patch({

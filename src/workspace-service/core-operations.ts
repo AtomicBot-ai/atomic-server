@@ -1,12 +1,19 @@
 import { randomUUID } from 'node:crypto'
 import { engineKind, installEngine, ensureArtifactEngine } from './engine-install.js'
 import type { CoreLink } from '../core-link/index.js'
+import type { ProxyConfig } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { modelIdPath, object, segment } from './validation.js'
 import { managedEngineOperation } from './managed-engines.js'
 export { NOT_CORE } from './not-core.js'
-export async function coreOperation(link: CoreLink, name: string, input: WorkspaceInput): Promise<unknown> {
+export async function coreOperation(
+  link: CoreLink,
+  name: string,
+  input: WorkspaceInput,
+  /** atc's download proxy, for the engine builds an install or a load fetches. */
+  proxy: ProxyConfig | null = null
+): Promise<unknown> {
   const request = object(input['request']),
     id = () => segment(input['id']),
     model = () => `/models/${segment(input['provider'])}/${modelIdPath(input['model_id'])}`
@@ -15,7 +22,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
   switch (name) {
     case 'models.load':
       if (engineKind(String(input['provider'])) === 'llamacpp')
-        await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`)
+        await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`, proxy)
       return link.models.load(String(input['provider']), String(input['model_id']), object(input['options']))
     case 'models.unload':
       return link.models.unload(String(input['provider']), String(input['model_id']))
@@ -41,7 +48,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
       )
     }
     case 'engines.install':
-      return installEngine(link, String(input['engine']), request)
+      return installEngine(link, String(input['engine']), request, proxy)
     case 'engines.activate':
       return post(
         `/engines/${segment(input['engine'])}/builds/${segment(input['version'])}/${segment(input['variant'])}/activate`

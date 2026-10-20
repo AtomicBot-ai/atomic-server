@@ -117,6 +117,9 @@ describe('the TUI catalog for managed engines', () => {
     await activate('format:safetensors', t.ctx)
     expect(t.calls('models.catalog').at(-1)).toEqual({ engine: 'vllm' })
     expect(t.get().libraryRows.map((r) => r.id)).toEqual([REPO])
+    await activate('library-refresh', t.ctx)
+    expect(t.calls('models.catalog').at(-1)).toEqual({ engine: 'vllm' })
+    expect(t.get().libraryRows.map((r) => r.id)).toEqual([REPO])
     await activate('format:foundry', t.ctx)
     expect(t.get()).toMatchObject({
       overlay: 'engine-panel',

@@ -108,4 +108,29 @@ export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: 
   )
   if (state?.error) text(c, a.x, a.y + 9, state.error, COLORS.red, a.width)
   if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.red, a.width)
+  let bx = a.x
+  if (state && STOPPED.includes(state.stage))
+    bx +=
+      button(
+        c,
+        'setup-path-resume',
+        bx,
+        a.bottom,
+        'Resume',
+        'Continue this download in the server',
+        a.focus
+      ) + 1
+  if (state?.stage === 'ready' && v.error)
+    bx += button(c, 'setup-path-finish', bx, a.bottom, 'Retry', 'Load the model again', a.focus) + 1
+  button(
+    c,
+    'setup-path-abandon',
+    bx,
+    a.bottom,
+    'Choose another model',
+    'Leave this download and pick again',
+    a.focus
+  )
 }
+
+const STOPPED = ['failed', 'cancelled', 'interrupted']

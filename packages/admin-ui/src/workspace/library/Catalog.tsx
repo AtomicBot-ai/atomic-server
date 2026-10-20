@@ -103,9 +103,12 @@ export function Catalog({
           <div className="catalog-filters">
             <Field label="Task">
               <select
+                aria-label="Task"
                 value={category}
                 onChange={(e) => {
                   setCategory(e.target.value)
+                  // Formats are chat models' only: another task lists its own catalog.
+                  setFormat('gguf')
                   setQuery('')
                 }}
               >

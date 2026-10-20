@@ -26,7 +26,6 @@ import type { ManagedModelSetups } from './managed-model-setups.js'
 import { downloadProxy } from './download-proxy.js'
 import { FoundryAccelerators } from './foundry.js'
 import { foundryOperation } from './foundry-operations.js'
-import { isManagedEngine } from './managed-engines.js'
 import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
 import { modelDownloads } from './model-downloads.js'
@@ -268,14 +267,12 @@ export class WorkspaceService {
     }
     if (operation === 'media.configure')
       input['request'] = { ...object(input['request']), dataFolder: paths.dataFolder }
-    // An engine build is a download too: the core fetches it with the proxy the request names, else none.
-    const proxy = downloadProxy(this.options.config)
-    if (operation === 'engines.install' && proxy && !isManagedEngine(String(input['engine'])))
-      input['request'] = { proxy, ...object(input['request']) }
-    const result = await coreOperation(link, operation, input).catch((error: unknown) => {
-      if (operation === 'models.load') this.loads.drop(String(input['provider']), String(input['model_id']))
-      throw error
-    })
+    const result = await coreOperation(link, operation, input, downloadProxy(this.options.config)).catch(
+      (error: unknown) => {
+        if (operation === 'models.load') this.loads.drop(String(input['provider']), String(input['model_id']))
+        throw error
+      }
+    )
     if (result === NOT_CORE) throw new AtcError('ATC_USAGE', `No implementation for ${operation}.`)
     // Inference results are content, not session credentials. Keep token statistics and user JSON intact.
     return operation.endsWith('.run') || operation.includes('.job') || operation.endsWith('.create')
