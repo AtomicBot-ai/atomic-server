@@ -16,6 +16,7 @@ import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operationView, planLines } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
 import { follow, followDisplay } from './follow.js'
+import { terminalHostSteps } from './host-step-terminal.js'
 
 /** How the person consents to a plan: `--yes`, `--approve <digest>`, on the terminal, or not at all. */
 export type Consent =
@@ -29,6 +30,8 @@ export interface ManagedSession {
   detach: boolean
   signal: AbortSignal
   interrupted(): boolean
+  /** Runs or prints a privileged step the server left to a person. */
+  onState(op: EnvironmentOperation): void
   close(): void
 }
 
@@ -60,6 +63,7 @@ export async function managedSession(
     detach: values['detach'] === true,
     signal: AbortSignal.any([ctx.signal, interrupt.signal]),
     interrupted: () => interrupt.signal.aborted || ctx.signal.aborted,
+    onState: terminalHostSteps(ctx),
     close: off,
   }
 }
@@ -104,7 +108,10 @@ export async function track(
       })) as EnvironmentOperation,
     finished: (value) => STOPS.includes(value.phase),
     revision: (value) => value.revision,
-    show: (value) => display.show(value),
+    show: (value) => {
+      display.show(value)
+      s.onState(value)
+    },
     signal: s.signal,
     detach: s.detach,
   })
