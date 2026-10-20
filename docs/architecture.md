@@ -293,7 +293,7 @@ an export request in the core branch.
 
 `src/cli/not-implemented.ts` is the registry: `PLANNED` maps each stub command to an iteration, and
 `PLANNED_PARTIAL` names the stubbed features of working commands (`logs --follow`, `update apply`,
-`host-step recipes` in their time; none today). A unit test keeps the registry and the command tree in agreement,
+`host-step recipes`, `config engine.*` in their time). A unit test keeps the registry and the command tree in agreement,
 and `docs/commands.md` (generated) shows the status of every command. The iteration map: **I2** a first
 model answering (`engines install`, `models pull`, `run`, `unload`, `api start|stop`, `start
 --foreground`); **I3** the catalog, resumable pulls, model management and API keys; **I4** engines and

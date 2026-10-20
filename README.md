@@ -115,8 +115,8 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Server | `atc start` / `stop` / `restart` | The server: core, API and web admin in the background; `start --foreground` runs it in place | works |
 | Server | `atc status` | The server, the API endpoint, running models, the admin URL | works (`--watch` is a stub) |
 | Server | `atc logs` | Tail of the server log; `-f` follows it | works |
-| Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on the active engine; stop it | stub (iteration 2) |
-| Models & engines | `atc models search\|pull\|list\|rm\|info` | The catalog and the model files | stub (`pull`: iteration 2; the rest: 3) |
+| Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on an engine (`--engine`; a managed engine shows its load stages); stop it | works |
+| Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines' and Foundry Local's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local)) |
 | Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, Foundry Local, the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs | works (see [Managed engines](#managed-engines)) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
