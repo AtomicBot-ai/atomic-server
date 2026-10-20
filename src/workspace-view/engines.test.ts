@@ -189,12 +189,36 @@ describe('verdictLine', () => {
       true,
       'vllm (installed): ok — Qwen3ForCausalLM, fp8, 8.0 GiB on GPU-0 (curated); fits GPU-1; warning: The WSL VM',
     ],
-    [false, false, 'vllm: refused — Needs 12.4 GiB, has 7.8. [MODEL_INCOMPATIBLE]; fits GPU-1'],
+    [false, false, 'vllm: refused — Needs 12.4 GiB, has 7.8. (on GPU-0) [MODEL_INCOMPATIBLE]; fits GPU-1'],
   ])('ok %s, installed %s', (ok, installed, line) => {
     expect(
       verdictLine({ engine: 'vllm', installed, compatibility: compatibility(ok) as never, error: null })
     ).toContain(line)
   })
+  it('gives a refusal the core’s numbers and the card it checked, as the core sends them in details', () => {
+    const refused = {
+      ...compatibility(false),
+      fits_other_gpus: [],
+      verdict: {
+        ok: false,
+        error: {
+          code: 'MODEL_INCOMPATIBLE',
+          message: 'Format NVFP4 requires compute capability 10.0 or newer.',
+          details: 'required=10.0 actual=8.9',
+        },
+      },
+    }
+    const line = verdictLine({
+      engine: 'tensorrt-llm',
+      installed: true,
+      compatibility: refused as never,
+      error: null,
+    })
+    expect(line).toContain('requires compute capability 10.0')
+    expect(line).toContain('actual=8.9')
+    expect(line).toContain('GPU-0')
+  })
+
   it('says why there is no verdict', () => {
     expect(
       verdictLine({

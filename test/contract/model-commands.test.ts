@@ -59,7 +59,7 @@ describe('atc models check', () => {
   })
   afterAll(() => server.stop())
   const REPO = 'nvidia/Qwen3-8B-NVFP4'
-  const verdict = (ok: boolean, message = '') => ({
+  const verdict = (ok: boolean, message = '', details = '') => ({
     architectures: ['Qwen3ForCausalLM'],
     quantization_format: 'nvfp4',
     weight_bytes: 6 * 1024 ** 3,
@@ -67,7 +67,9 @@ describe('atc models check', () => {
     curated: false,
     unified_memory: false,
     fits_other_gpus: [],
-    verdict: ok ? { ok: true } : { ok: false, error: { code: 'MODEL_INCOMPATIBLE', message } },
+    verdict: ok
+      ? { ok: true }
+      : { ok: false, error: { code: 'MODEL_INCOMPATIBLE', message, ...(details ? { details } : {}) } },
   })
   function host(gated?: number) {
     server.reset()
@@ -78,9 +80,10 @@ describe('atc models check', () => {
 
   it('prints each engine’s refusal with the numbers when NVFP4 meets an Ada card', async () => {
     host()
-    const cc = 'NVFP4 needs compute capability 10.0; GPU-0 has 8.9.'
+    // As the core words it: the requirement in the message, the actual capability only in details.
+    const cc = 'Format NVFP4 requires compute capability 10.0 or newer.'
     for (const engine of ['tensorrt-llm', 'vllm', 'sglang'])
-      t.link.responses[`POST /models/${engine}/check`] = verdict(false, cc)
+      t.link.responses[`POST /models/${engine}/check`] = verdict(false, cc, 'required=10.0 actual=8.9')
     expect(await t.run(['models', 'check', REPO])).toBe(0)
     const lines = t.io.out.join('').split('\n')
     for (const engine of ['tensorrt-llm', 'vllm', 'sglang']) {

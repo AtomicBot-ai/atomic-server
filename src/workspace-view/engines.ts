@@ -279,7 +279,14 @@ export function verdictLine(v: ManagedVerdict): string {
   if (!c) return `${name}: no verdict — ${v.error?.message ?? 'unknown'} [${v.error?.code ?? '?'}]`
   const others = c.fits_other_gpus.length ? `; fits ${c.fits_other_gpus.join(', ')}` : ''
   const warnings = (c.warnings ?? []).map((w) => `; warning: ${w.message}`).join('')
-  if (!c.verdict.ok) return `${name}: refused — ${c.verdict.error.message} [${c.verdict.error.code}]${others}`
+  if (!c.verdict.ok) {
+    // The core's numbers (`required=10.0 actual=8.9`) travel in details, beside the card it checked.
+    const details = (c.verdict.error as { details?: unknown }).details
+    const facts = [typeof details === 'string' && details ? details : '', `on ${c.checked_gpu_id}`]
+      .filter(Boolean)
+      .join(' ')
+    return `${name}: refused — ${c.verdict.error.message} (${facts}) [${c.verdict.error.code}]${others}${warnings}`
+  }
   const facts = [
     c.architectures.join(', '),
     c.quantization_format ?? 'unquantized',
