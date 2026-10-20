@@ -10,7 +10,7 @@
 import { serializeModelYml } from '@atomic-chat/core/models'
 import { join } from 'node:path'
 import type { FoundryModelJob, FoundryModelPlan, WorkspaceInput } from '../contract/index.js'
-import type { Downloader } from '../downloads/index.js'
+import type { Downloader, ProxyConfig } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import { fetchFoundryLocalList } from './foundry-list.js'
@@ -63,6 +63,7 @@ export interface FoundryModelSetupsDeps extends Omit<FoundryPlanDeps, 'files'> {
   directory: string
   downloader: Pick<Downloader, 'download' | 'cancel'>
   files?: FoundryPlanDeps['files']
+  proxy?: ProxyConfig | null | undefined
 }
 
 export class FoundryModelSetups {
@@ -166,6 +167,7 @@ export class FoundryModelSetups {
             size: f.size,
             ...(f.sha256 ? { sha256: f.sha256 } : {}),
             resume_key: `foundry-local/${plan.variant_id}/${f.path}`,
+            ...(this.d.proxy ? { proxy: this.d.proxy } : {}),
           }))
           try {
             await this.d.downloader.download(job.id, items, { resume: true })

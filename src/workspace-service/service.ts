@@ -22,7 +22,9 @@ import { completeChat } from './chat-complete.js'
 import type { ArtifactService } from './artifacts.js'
 import type { ModelSetups } from './model-setups.js'
 import type { ManagedModelSetups } from './managed-model-setups.js'
+import { downloadProxy } from './download-proxy.js'
 import { FoundryAccelerators } from './foundry.js'
+import { isManagedEngine } from './managed-engines.js'
 import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
 import { modelDownloads } from './model-downloads.js'
@@ -274,6 +276,10 @@ export class WorkspaceService {
     }
     if (operation === 'media.configure')
       input['request'] = { ...object(input['request']), dataFolder: paths.dataFolder }
+    // An engine build is a download too: the core fetches it with the proxy the request names, else none.
+    const proxy = downloadProxy(this.options.config)
+    if (operation === 'engines.install' && proxy && !isManagedEngine(String(input['engine'])))
+      input['request'] = { proxy, ...object(input['request']) }
     const result = await coreOperation(link, operation, input)
     if (result === NOT_CORE) throw new AtcError('ATC_USAGE', `No implementation for ${operation}.`)
     // Inference results are content, not session credentials. Keep token statistics and user JSON intact.

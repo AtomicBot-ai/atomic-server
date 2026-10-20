@@ -35,6 +35,19 @@ describe('workspace operations', () => {
     expect(link.calls).toEqual([])
     expect(WORKSPACE_OPERATIONS.find((o) => o.name === 'keys.create')?.mutates).toBe(true)
   })
+  it('installs an engine build through the configured download proxy', async () => {
+    const tmp = tmpDataFolder()
+    cleanup.push(tmp.cleanup)
+    const link = fakeCoreLink()
+    const config = defaultConfig()
+    config.proxy = { url: 'http://proxy.test:3128', noProxy: ['localhost'], ignoreSsl: true }
+    await new WorkspaceService({ link, paths: tmp.paths, config }).execute('engines.install', {
+      engine: 'foundry-local',
+    })
+    expect(link.calls.find((c) => c.path === '/engines/foundry-local/update')?.body).toMatchObject({
+      proxy: { url: 'http://proxy.test:3128', no_proxy: ['localhost'], ignore_ssl: true },
+    })
+  })
   it('refuses a relative import path instead of resolving it against the server folder', async () => {
     const { service, link } = context()
     await expect(service.execute('models.import', { path: './model.gguf' })).rejects.toThrow('absolute path')

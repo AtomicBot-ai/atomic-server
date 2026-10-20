@@ -43,6 +43,7 @@ export function modelDownloads(
       modelsDir: options.paths.layout.provider('foundry-local').modelsDir,
       directory: join(options.paths.atcDir, 'foundry-model-setups'),
       downloader,
+      proxy: downloadProxy(options.config),
     }),
     setups: new ModelSetups({
       link: options.link,
