@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { GpuFacts } from '@atomic-chat/core/contracts'
 import { useDialog } from '../useDialog'
 import type { Workspace } from '../useWorkspace'
 import { Action, Field } from '../Controls'
@@ -8,6 +9,8 @@ import type { RecordValue } from '../types'
 import { SETTING_GROUPS, commonSetting, editableSetting, settingGroup } from './engine-setting-groups'
 import { EngineSettingField } from './EngineSettingField'
 import { downloadJson } from '../chat/chat-preferences'
+
+const MANAGED = ['vllm', 'sglang', 'tensorrt-llm']
 
 export function EngineSettings({
   provider,
@@ -34,6 +37,14 @@ export function EngineSettings({
   }
   const dialog = useDialog(close),
     { execute } = w
+  const [gpus, setGpus] = useState<GpuFacts[]>([])
+  useEffect(() => {
+    if (!MANAGED.includes(provider)) return
+    void execute('environments.list').then(
+      (list) => setGpus((rows(list)[0]?.gpus as GpuFacts[]) ?? []),
+      () => {}
+    )
+  }, [provider, execute])
   useEffect(() => {
     let active = true
     void Promise.all([execute('settings.get', { provider }), execute('settings.schema', { provider })])
@@ -154,6 +165,7 @@ export function EngineSettings({
               values={values}
               saved={saved}
               update={update}
+              gpus={gpus}
             />
           ))}
         </div>
