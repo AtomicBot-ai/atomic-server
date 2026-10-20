@@ -14,6 +14,8 @@ import type { HostServices } from '../host/index.js'
 import { installLabel } from '../update/index.js'
 import type { InstallInfo } from '../update/index.js'
 import { ATC_VERSION, CORE_VERSION } from '../version.js'
+import { MANAGED_CHECKS } from './managed-checks.js'
+import type { ManagedFacts } from './managed-checks.js'
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'skip'
 
@@ -34,6 +36,8 @@ export interface CheckContext {
   install: InstallInfo
   /** What the running server's core detected; `undefined` when no server runs. */
   hardware: () => Promise<HardwareInfoResponse | undefined>
+  /** The core's managed engines and their environment; `undefined` when no server runs. */
+  managed?: () => Promise<ManagedFacts | undefined>
 }
 
 export interface Check {
@@ -169,11 +173,7 @@ export const CHECKS: Check[] = [
         : { status: 'ok', message }
     },
   },
-  {
-    id: 'docker',
-    title: 'container runtime (managed engines)',
-    run: async () => ({ status: 'skip', message: 'probing Docker/WSL lands in iteration 4' }),
-  },
+  ...MANAGED_CHECKS,
 ]
 
 /** The running server's hardware facts for the gpu check, `undefined` when no server runs. */

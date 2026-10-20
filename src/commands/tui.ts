@@ -8,6 +8,7 @@ import { adminLoginUrl, ensureAdminToken } from '../admin/index.js'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { readTextFile, resolveConfig } from '../config/index.js'
 import { CHECKS, coreHardware, runChecks } from '../doctor/index.js'
+import { managedFacts } from './doctor.js'
 import { HostStepJournal } from '../host/index.js'
 import { colorEnabled } from '../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../telemetry/index.js'
@@ -97,6 +98,7 @@ export const tuiCommand = defineCommand({
               ATC_TARGET
             ),
             hardware: coreHardware((o) => ctx.core.attach(o)),
+            managed: managedFacts(ctx),
           })
         },
         pendingHostSteps: async () =>
