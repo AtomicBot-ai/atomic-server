@@ -47,17 +47,36 @@ export interface AtcIo {
    * that only follows work the server does, so it can say how to follow again. Absent: Ctrl-C exits.
    */
   onInterrupt?: (handler: () => void) => () => void
+  /** Resolve once stdout and stderr have handed everything written to the OS; before `process.exit`. */
+  flush?: () => Promise<void>
 }
 
 export function nodeIo(): AtcIo {
   const interactive = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY)
+  // A write a pipe could not take at once: the Bun binary's `process.exit` drops it unless 'drain' came.
+  const waiting = new Map<NodeJS.WriteStream, Promise<void>>()
+  const write = (stream: NodeJS.WriteStream) => (text: string) => {
+    if (stream.write(text) || waiting.has(stream)) return
+    waiting.set(
+      stream,
+      new Promise<void>((resolve) =>
+        stream.once('drain', () => {
+          waiting.delete(stream)
+          resolve()
+        })
+      )
+    )
+  }
   return {
     ...(interactive
       ? { terminal: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr } }
       : {}),
     inputLines: () => createInterface({ input: process.stdin, crlfDelay: Infinity }),
-    stdout: (text) => process.stdout.write(text),
-    stderr: (text) => process.stderr.write(text),
+    stdout: write(process.stdout),
+    stderr: write(process.stderr),
+    flush: async () => {
+      while (waiting.size) await Promise.all(waiting.values())
+    },
     env: process.env,
     cwd: process.cwd(),
     isTTY: {
