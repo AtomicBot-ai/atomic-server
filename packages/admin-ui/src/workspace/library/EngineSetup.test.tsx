@@ -171,6 +171,30 @@ describe('the managed engine modal', () => {
     )
   })
 
+  it('offers no Agree and update for a new release this machine cannot run', async () => {
+    const offer = {
+      engine: 'vllm',
+      status: 'update',
+      from: 'vllm-1',
+      target: 'vllm-2',
+      state: state({ plan: plan('vllm', { availability: 'prerequisite-blocked' }) }),
+    }
+    const { workspace } = workspaceFixture(
+      {
+        'engines.plan': state({
+          installation: installation('vllm'),
+          update: { needed: true, target: { version: 'vllm-2' }, apply: 'reinstall' } as never,
+        }),
+        'engines.install': offer,
+      },
+      { engines: [{ engine: 'vllm', installation: installation('vllm'), operation: null }] }
+    )
+    render(<EngineSetup workspace={workspace} engine="vllm" onClose={() => {}} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Update' }))
+    expect(await screen.findByText(/vllm-1 → vllm-2/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agree and update' })).not.toBeInTheDocument()
+  })
+
   it('opens the modal from the Engines tab instead of installing at once', async () => {
     const { workspace, execute } = workspaceFixture({
       'engines.list': enginesList(['llamacpp-upstream', 'vllm'], ['llamacpp-upstream']),

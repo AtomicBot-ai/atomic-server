@@ -33,6 +33,11 @@ describe('serviceUnit', () => {
       'atc',
     ],
     ['a system unit installed with --name', '0::/system.slice/atomic.service\n', 'atomic'],
+    [
+      'a system unit under cgroup v1',
+      '12:pids:/system.slice/atomic.service\n1:name=systemd:/system.slice/atomic.service\n',
+      'atomic',
+    ],
     ['a login session', '0::/user.slice/user-1000.slice/session-3.scope\n', undefined],
     ['no cgroup', undefined, undefined],
   ] as const)('%s', (_name, cgroup, unit) => {

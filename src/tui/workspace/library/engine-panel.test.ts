@@ -112,6 +112,14 @@ describe('the managed engine panel', () => {
     expect(ids(m)).toContain('engine-resume')
   })
 
+  it('offers no Agree and update for a new release this machine cannot run', () => {
+    const blocked = state({ plan: plan('vllm', { availability: 'prerequisite-blocked' }) })
+    const ready = live([{ engine: 'vllm', installation: installation('vllm'), operation: null }])
+    const m = enginePanelModel(panel({ offer: { from: 'vllm-1', target: 'vllm-2', state: blocked } }), ready)
+    expect(ids(m)).not.toContain('engine-update-confirm')
+    expect(ids(m)).toContain('engine-update-cancel')
+  })
+
   it('names the service the server runs as', () => {
     const relogin = operation('vllm', 'relogin-required')
     const m = enginePanelModel(

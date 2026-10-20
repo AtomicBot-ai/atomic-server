@@ -9,6 +9,7 @@ import {
   liveEngineState,
   operationView,
   otherOperationLine,
+  planBlocked,
   planLines,
   rebootLines,
   reloginLines,
@@ -227,7 +228,8 @@ export function EngineSetup({
               Update
             </Action>
           )}
-          {view?.kind === 'update' && offer?.state.plan && (
+          {/* A release this machine cannot run is never agreed to: the reinstall removes the working image first. */}
+          {view?.kind === 'update' && offer?.state.plan && !planBlocked(offer.state.plan) && (
             <>
               <Action
                 primary

@@ -1019,10 +1019,11 @@ Arguments:
   <engine>  Engine ID
 
 Options:
-      --build <value>       Required version/variant (not for a managed engine)
-      --keep-models         Keep the shared model store of a managed engine
-      --detach              Start the removal without following it
-      --request-id <value>  Stable ID that makes a retry join the same operation
+      --build <value>              Required version/variant (not for a managed engine)
+      --keep-models                Keep the shared model store of a managed engine
+      --approve <sha256:<digest>>  Agree only to the removal plan with this digest
+      --detach                     Start the removal without following it
+      --request-id <value>         Stable ID that makes a retry join the same operation
 
 Global options:
   --json                Print the result as one JSON document (errors go to stderr as JSON)

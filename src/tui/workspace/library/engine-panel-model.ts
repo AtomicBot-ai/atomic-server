@@ -23,6 +23,7 @@ import {
   planLines,
   rebootLines,
   otherOperationLine,
+  planBlocked,
   reloginLines,
   removalLines,
 } from '../../../workspace-view/index.js'
@@ -184,7 +185,9 @@ export function enginePanelModel(
       if (p.offer) {
         say(updateLine(p.engine, p.offer.from, p.offer.target), 'warn')
         for (const line of planLines(p.offer.state)) say(line)
-        const digest = p.offer.state.plan?.plan_digest
+        const offered = p.offer.state.plan
+        // A release this machine cannot run is never agreed to: the reinstall removes the working image first.
+        const digest = offered && !planBlocked(offered) ? offered.plan_digest : null
         if (digest) add('engine-update-confirm', 'Agree and update', 'Agree to exactly this plan', digest)
         add('engine-update-cancel', 'Back', 'Keep the installed release')
         break

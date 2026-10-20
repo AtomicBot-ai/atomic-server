@@ -26,8 +26,10 @@ export function serverLaunch(facts: {
  * the last `.service` segment of the cgroup path, never the user manager `user@<uid>.service`.
  */
 export function serviceUnit(cgroup: string | undefined): string | undefined {
-  const path = cgroup?.split('\n').find((line) => line.startsWith('0::')) ?? ''
-  const unit = /\/([^/]+)\.service$/.exec(path.trim())?.[1]
+  // cgroup v2 has one line `0::<path>`; v1 names systemd's own hierarchy `<n>:name=systemd:<path>`.
+  const lines = cgroup?.split('\n') ?? []
+  const line = lines.find((l) => l.startsWith('0::')) ?? lines.find((l) => l.includes(':name=systemd:')) ?? ''
+  const unit = /\/([^/]+)\.service$/.exec(line.trim())?.[1]
   return unit && !/^user@\d+$/.test(unit) ? unit : undefined
 }
 
