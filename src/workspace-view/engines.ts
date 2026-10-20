@@ -110,6 +110,15 @@ export const PHASE_LABELS: Readonly<Record<ManagedPhase, string>> = {
   'failed': 'Failed',
 }
 
+/** The phase of an operation as a person reads it, with the step it waits on and a pending cancel. */
+export function phaseText(op: EnvironmentOperation): string {
+  const label =
+    op.phase === 'preparing-host' && op.pending_host_step !== null
+      ? 'Waiting for the privileged step'
+      : PHASE_LABELS[op.phase]
+  return `${label}${op.cancellation_requested && op.phase !== 'cancelled' ? ' (cancelling)' : ''}`
+}
+
 /** One operation state on a line: its phase, the step it waits on, and bytes when it counts them. */
 export function operationView(op: EnvironmentOperation): {
   stage: string
@@ -118,12 +127,10 @@ export function operationView(op: EnvironmentOperation): {
   total: number | null
 } {
   const engine = op.target.kind === 'runtime' ? op.target.engine_id : 'environment'
-  const waitsForStep = op.phase === 'preparing-host' && op.pending_host_step !== null
-  const label = waitsForStep ? 'Waiting for the privileged step' : PHASE_LABELS[op.phase]
   const bytes = op.progress?.unit === 'bytes' ? op.progress : null
   return {
-    stage: `${op.operation_id}:${op.phase}${waitsForStep ? ':step' : ''}`,
-    text: `${engine} ${op.kind}: ${label}${op.cancellation_requested && op.phase !== 'cancelled' ? ' (cancelling)' : ''}`,
+    stage: `${op.operation_id}:${op.phase}${op.pending_host_step ? ':step' : ''}`,
+    text: `${engine} ${op.kind}: ${phaseText(op)}`,
     done: bytes?.completed ?? null,
     total: bytes?.total ?? null,
   }
@@ -153,4 +160,80 @@ export function removalLines(state: ManagedEngineState, keepModels?: boolean): s
     )
   lines.push('  Docker itself, other containers and other WSL distributions are not touched.')
   return lines
+}
+
+/** Where a managed engine stands, in the order the desktop app decides it (`setup-view.ts`). */
+export type EngineViewKind =
+  | 'checking'
+  | 'unsupported'
+  | 'blocked'
+  | 'installable'
+  | 'operation'
+  | 'consent'
+  | 'host-step'
+  | 'relogin'
+  | 'reboot'
+  | 'failed'
+  | 'ready'
+  | 'update'
+
+export interface EngineView {
+  kind: EngineViewKind
+  /** One line: what a list shows for the engine. */
+  summary: string
+  operation: EnvironmentOperation | null
+}
+
+const STEP: Partial<Record<ManagedPhase, EngineViewKind>> = {
+  'awaiting-consent': 'consent',
+  'relogin-required': 'relogin',
+  'reboot-required': 'reboot',
+}
+
+/**
+ * A running operation outranks everything (the plan may be stale because of it), then the installed
+ * engine and its update, then a failure to retry, then what the last probe said.
+ */
+export function engineView(state: ManagedEngineState): EngineView {
+  const op = state.operation
+  if (op) {
+    const kind =
+      op.phase === 'preparing-host' && op.pending_host_step ? 'host-step' : (STEP[op.phase] ?? 'operation')
+    return { kind, summary: `${op.kind}: ${phaseText(op)} (${op.operation_id})`, operation: op }
+  }
+  const installed = state.installation
+  if (installed?.status === 'ready') {
+    const target = state.update?.needed ? state.update.target?.version : undefined
+    return {
+      kind: target ? 'update' : 'ready',
+      summary: `installed (${installed.active_descriptor_id ?? 'unknown release'})${target ? `; update available: ${target}` : ''}`,
+      operation: null,
+    }
+  }
+  if (state.failed)
+    return {
+      kind: 'failed',
+      summary: `last setup failed: ${state.failed.error?.message ?? 'unknown error'} (${state.failed.operation_id})`,
+      operation: state.failed,
+    }
+  const plan = state.plan
+  if (!plan)
+    return {
+      kind: 'checking',
+      summary: state.plan_error ? `cannot check: ${state.plan_error}` : 'checking',
+      operation: null,
+    }
+  if (plan.availability === 'unsupported')
+    return { kind: 'unsupported', summary: 'not available on this machine', operation: null }
+  if (planBlocked(plan))
+    return {
+      kind: 'blocked',
+      summary: `blocked: ${plan.blockers[0]?.message ?? plan.availability}`,
+      operation: null,
+    }
+  return {
+    kind: 'installable',
+    summary: `not installed; install ${plan.system_changes.length ? 'needs system changes' : 'needs no system changes'}`,
+    operation: null,
+  }
 }

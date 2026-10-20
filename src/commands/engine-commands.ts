@@ -1,6 +1,7 @@
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { operation } from './control.js'
+import { engineStatus } from './engine-status.js'
 import { installManagedEngine, removeManagedEngine } from './managed-engine.js'
 
 const isManaged = (engine: string | undefined) =>
@@ -13,12 +14,13 @@ export const enginesCommand = defineCommand({
     defineCommand({
       name: 'list',
       summary: 'Installed and available engine builds',
-      run: (_inv, ctx) => operation(ctx, 'engines.list'),
+      run: (_inv, ctx) => engineStatus(ctx),
     }),
     defineCommand({
       name: 'status',
-      summary: 'Engine versions and residency',
-      run: (_inv, ctx) => operation(ctx, 'engines.list'),
+      summary: 'Engine versions, managed engine state and operations',
+      positionals: [{ name: 'engine', description: 'One engine in detail' }],
+      run: (inv, ctx) => engineStatus(ctx, inv.positionals[0]),
     }),
     defineCommand({
       name: 'catalog',
