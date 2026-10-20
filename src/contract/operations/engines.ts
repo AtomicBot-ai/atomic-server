@@ -65,6 +65,7 @@ export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
     'Read the current settings of a provider with their revision.',
     { properties: { provider: { type: 'string' } }, required: ['provider'] }
   ),
+  // core-boundary: version_backend — the description tells agents to use engines.activate instead
   operation(
     'settings.update',
     'Save engine settings',

@@ -225,6 +225,12 @@ here. `src/host/managed-types.ts` re-exports the managed-runtime contract and ke
 operation the host-step executor reads. The core probes the hardware itself and is the
 only source of hardware facts; `atc` never sends `PUT /hardware/override`.
 
+Lint holds the line. eslint takes the core only through its package `exports`.
+`scripts/check-core-boundary.mjs` refuses a string in `src/` naming what the core owns (its `CORE_OWNED`)
+unless the file says why: `// core-boundary: <name> — <reason>`. A core bug is fixed in the core (a
+`core:` task in atomic-chat-spec). A stopgap here is marked `// core-workaround: <name> until core X.Y.Z
+— <reason>`, and lint fails once that core is pinned.
+
 ---
 
 ## 9. Keeping this file small
