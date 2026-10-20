@@ -5,7 +5,9 @@ export async function readChatStream(response: Response, onChunk: (value: Record
   if (!response.ok) {
     const body = object(await response.json().catch(() => ({})))
     throw new Error(
-      String(object(body['error'])['message'] ?? `Generation returned HTTP ${response.status}.`)
+      String(
+        object(body['error'])['message'] ?? body['message'] ?? `Generation returned HTTP ${response.status}.`
+      )
     )
   }
   if (!response.body) throw new Error('The engine returned an empty response.')

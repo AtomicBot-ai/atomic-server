@@ -4,6 +4,7 @@ import type { ChatHistory, ClientKeys, Conversation } from '../terminal-data/ind
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import { object } from './validation.js'
+import { chatRequestFor, contextExceeded } from './chat-request.js'
 import { publicEndpoint } from './snapshot.js'
 import { mergeChatDelta, readChatStream } from './chat-stream.js'
 
@@ -56,6 +57,13 @@ export class ChatJobs {
           ? 'This model ID is loaded in multiple engines. Unload the other instance before testing this endpoint.'
           : 'Load the selected model in Engines & Models, then retry.'
       )
+    // What this session's engine accepts; images for an engine without them are refused here.
+    const body = chatRequestFor(String(sessions[0]!.provider), {
+      ...request,
+      stream: true,
+      stream_options: { include_usage: true },
+      n: 1,
+    })
     const status = await this.options.link.server.status()
     if (!status.running) throw new AtcError('ATC_USAGE', 'Start the API on the Server page, then retry.')
     const endpoint = publicEndpoint(object(status), this.options.config).endpoint
@@ -103,7 +111,7 @@ export class ChatJobs {
       lastRead: Date.now(),
     }
     this.jobs.set(job.view.id, job)
-    void this.run(job, chat, endpoint, request)
+    void this.run(job, chat, endpoint, body)
     return structuredClone(job.view)
   }
   get(id: string) {
@@ -145,7 +153,7 @@ export class ChatJobs {
         redirect: 'error',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
         signal: AbortSignal.any([job.controller.signal, AbortSignal.timeout(600000)]),
-        body: JSON.stringify({ ...request, stream: true, stream_options: { include_usage: true }, n: 1 }),
+        body: JSON.stringify(request),
       })
       await readChatStream(response, (chunk) => {
         const choice = object((chunk['choices'] as unknown[] | undefined)?.[0]),
@@ -162,7 +170,11 @@ export class ChatJobs {
       if (job.controller.signal.aborted) state = 'stopped'
     } catch (error) {
       state = job.controller.signal.aborted ? 'stopped' : 'failed'
-      if (state === 'failed') view.error = error instanceof Error ? error.message : String(error)
+      if (state === 'failed') {
+        const message = error instanceof Error ? error.message : String(error)
+        const context = contextExceeded(view.provider, message)
+        view.error = context ? `${context.message} ${context.hint ?? ''}`.trim() : message
+      }
     } finally {
       clearInterval(lease)
       view.duration_ms = Date.now() - view.started_at
