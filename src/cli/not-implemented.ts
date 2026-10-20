@@ -19,9 +19,7 @@ export type Iteration = keyof typeof ITERATIONS
 export const PLANNED: Record<string, Iteration> = {}
 
 /** Features of otherwise working commands that are still stubs (`atc logs -f`, `atc update` without `--check`). */
-export const PLANNED_PARTIAL: Record<string, Iteration> = {
-  'config engine.*': 'I2',
-}
+export const PLANNED_PARTIAL: Record<string, Iteration> = {}
 
 export function plannedPartial(feature: string): string {
   const key = PLANNED_PARTIAL[feature]

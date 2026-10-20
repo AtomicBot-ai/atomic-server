@@ -124,7 +124,7 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Access | `atc api key show\|set\|rotate\|clear` | The keyring from the command line (the terminal UI manages it today; `--api-key` adds one) | stub (iteration 3) |
 | Access | `atc admin [open\|status\|token]` | Sign-in link, where the admin listens, token rotation | works |
 | Access | `atc tui` | The terminal UI, explicitly (what bare `atc` opens on a terminal) | works |
-| System | `atc config get\|set\|unset\|list\|path` | `atc` settings | works (`engine.*` keys are a stub) |
+| System | `atc config get\|set\|unset\|list\|path` | `atc` settings, and engine settings of the running server's core | works |
 | System | `atc doctor` | Diagnostic table with hints | works (GPU: NVIDIA only; Docker check skipped) |
 | System | `atc service install\|uninstall\|status\|start\|stop\|restart` | The server as an OS service (systemd, launchd, Task Scheduler) | works |
 | System | `atc update` | Self-update from GitHub Releases: checksum and signature checked, the server restarted onto it; a deb, rpm or AUR install is left to its package manager | works |
@@ -251,7 +251,10 @@ atc config path
 
 Keys are `api.*`, `admin.*`, `engines.*` (`engines.default` is the engine `atc run` falls back on),
 `models.*`, `managed.*`, `proxy.*`, `update.*`, `telemetry.*`, `log.*` (the table is `src/config/schema.ts`). Engine parameters
-(`engine.<provider>.<key>`) belong to the core's settings; forwarding them through `atc config` is a stub.
+(`engine.<provider>.<key>`, e.g. `atc config set engine.tensorrt-llm.context_length 16384`) belong to the
+core of the running server: checked against the provider's schema, written with the revision read first,
+applied from the next model load; `atc config list` shows those of the providers this host registers. The
+engine build is not one of them: `atc engines activate`.
 A config file written by a newer `atc` is refused with a hint rather than half-read; an older one is
 migrated (version 2 dropped the `serve.*` keys along with the `serve` command; version 4 dropped
 `api.requireKey`, since every API client needs a key from the keyring).

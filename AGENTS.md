@@ -143,7 +143,7 @@ are stripped once by `splitGlobalFlags` before the command parses its own.
 A stub is `notImplemented(spec)`: same strict parsing and help, `run` throws `ATC_NOT_IMPLEMENTED` naming
 the iteration from `PLANNED` in `src/cli/not-implemented.ts`. `not-implemented.test.ts` asserts that every
 stub in the tree is registered and every registry entry is a stub. Partial stubs of working commands
-(`logs --follow`, `update apply`, `config engine.*`) are in `PLANNED_PARTIAL`.
+go in `PLANNED_PARTIAL` (empty today).
 
 `run` gets a `CommandContext`: `io`, `flags`, `paths`, `config()` (lazy), `out` (printer: `result(json,
 humanFn)`), `log`, `prompt`, `core.attach({ launch })`, `host`, `now`, `signal`. Output goes through

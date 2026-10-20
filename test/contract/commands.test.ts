@@ -55,7 +55,8 @@ describe('config', () => {
     expect(t.io.out.join('')).toBe('1337\n')
     expect(await t.run(['config', 'set', 'api.port', 'many'])).toBe(1)
     expect(await t.run(['config', 'get', 'nope.key'])).toBe(2)
-    expect(await t.run(['config', 'get', 'engine.llamacpp.ctx_size'])).toBe(3)
+    // A provider this server does not register (the fake core lists none): engine.* is test/contract/config-engine.test.ts.
+    expect(await t.run(['config', 'get', 'engine.llamacpp.ctx_size'])).toBe(2)
   })
 })
 

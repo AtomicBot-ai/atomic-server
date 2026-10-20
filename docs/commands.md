@@ -1528,6 +1528,7 @@ Arguments:
 Examples:
   atc config set api.port 1337
   atc config set models.autoLoad qwen3-8b,gemma-4b
+  atc config set engine.tensorrt-llm.context_length 16384
 
 Global options:
   --json                Print the result as one JSON document (errors go to stderr as JSON)
