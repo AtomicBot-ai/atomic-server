@@ -5,6 +5,8 @@ core's fake Linux machine (`ATOMIC_MANAGED_TEST_HOST`, `test/helpers/fake-manage
 
 - `runtimes/vllm.json` — `test/fixtures/runtimes/vllm.json`, the vLLM descriptor the core reads through
   `ATOMIC_RUNTIME_DESCRIPTOR_URL_VLLM`;
+- `runtimes/sglang.json`, `runtimes/tensorrt-llm-1.2.1-r2.json` — the other managed engines' descriptors,
+  so the core reads none from conf;
 - `environments/linux.json` — `test/fixtures/runtimes/environments/linux.json`, the environment manifest
   served by a loopback "conf";
 - `os-release-ubuntu-24.04.txt` — `test/fixtures/linux-probe/os-release/ubuntu-24.04.txt`;

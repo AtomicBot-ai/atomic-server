@@ -117,6 +117,15 @@ export async function fakeManagedMachine(initial = readyMachine()): Promise<Fake
     env: {
       ATOMIC_MANAGED_TEST_HOST: dir,
       ATOMIC_RUNTIME_DESCRIPTOR_URL_VLLM: VLLM_DESCRIPTOR_URL,
+      // Every managed engine's descriptor from the fixtures: the core never reaches conf for one.
+      ATOMIC_RUNTIME_DESCRIPTOR_URL_SGLANG: new URL(
+        '../fixtures/managed/runtimes/sglang.json',
+        import.meta.url
+      ).href,
+      ATOMIC_RUNTIME_DESCRIPTOR_URL_TENSORRT_LLM: new URL(
+        '../fixtures/managed/runtimes/tensorrt-llm-1.2.1-r2.json',
+        import.meta.url
+      ).href,
       ATOMIC_ENVIRONMENT_MANIFEST_URL: `https://127.0.0.1:${confPort}/runtimes/environments/linux.json`,
       NODE_EXTRA_CA_CERTS: fixture('tls/ca.pem'),
     },
