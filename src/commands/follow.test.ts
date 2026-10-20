@@ -149,6 +149,22 @@ describe('follow', () => {
     expect(result).toEqual({ kind: 'finished', value: op(3, 'ready') })
   })
 
+  it('keeps polling while events stream when only the server tells the end', async () => {
+    let polls = 0
+    const result = await follow({
+      events: source(),
+      pick: () => undefined,
+      poll: async () => (++polls < 3 ? op(polls, 'pulling-image') : op(polls, 'ready')),
+      finished,
+      show: () => {},
+      signal: new AbortController().signal,
+      sleep: async () => {},
+      alwaysPoll: true,
+    })
+    expect(result.kind).toBe('finished')
+    expect(polls).toBe(3)
+  })
+
   it('detaches on the signal or on `detach`, calling nothing but the poll', async () => {
     const events = source()
     const controller = new AbortController()

@@ -27,6 +27,8 @@ export interface FollowOptions<T> {
   signal: AbortSignal
   /** Show the current state once and return. */
   detach?: boolean
+  /** Poll even while events stream: for a job whose end only the server's state tells. */
+  alwaysPoll?: boolean
   pollMs?: number
   sleep?: (ms: number, signal: AbortSignal) => Promise<void>
 }
@@ -92,7 +94,7 @@ export async function follow<T>(options: FollowOptions<T>): Promise<FollowResult
     if (!stop.signal.aborted) offer(await options.poll())
     while (!done && !stop.signal.aborted && !options.detach) {
       await wait(pollMs, stop.signal)
-      if (!done && !stop.signal.aborted && !streaming) offer(await options.poll())
+      if (!done && !stop.signal.aborted && (!streaming || options.alwaysPoll)) offer(await options.poll())
     }
   } finally {
     options.signal.removeEventListener('abort', onAbort)

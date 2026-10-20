@@ -2,6 +2,7 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { operation } from './control.js'
 import { engineStatus } from './engine-status.js'
+import { acceleratorsCommand, prepareAccelerators } from './foundry-commands.js'
 import { installManagedEngine, removeManagedEngine } from './managed-engine.js'
 
 const isManaged = (engine: string | undefined) =>
@@ -22,6 +23,7 @@ export const enginesCommand = defineCommand({
       positionals: [{ name: 'engine', description: 'One engine in detail' }],
       run: (inv, ctx) => engineStatus(ctx, inv.positionals[0]),
     }),
+    acceleratorsCommand,
     defineCommand({
       name: 'catalog',
       summary: 'Compatible builds for an engine',
@@ -57,13 +59,17 @@ export const enginesCommand = defineCommand({
           placeholder: 'operation',
         },
         'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
+        'no-accelerators': {
+          type: 'boolean',
+          description: 'Foundry Local: do not prepare accelerators after it',
+        },
       },
       examples: [
         'atc engines install vllm',
         'atc engines install tensorrt-llm --approve sha256:<digest>',
         'atc engines install --resume <operation>',
       ],
-      run: (inv, ctx) => {
+      run: async (inv, ctx) => {
         if (
           typeof inv.values['resume'] === 'string' ||
           typeof inv.values['cancel'] === 'string' ||
@@ -78,7 +84,10 @@ export const enginesCommand = defineCommand({
           if (!version || !variant.length) throw new AtcError('ATC_USAGE', 'Use --build version/variant.')
           request = { target: { version, variant: variant.join('/') } }
         }
-        return operation(ctx, 'engines.install', { engine, request })
+        const code = await operation(ctx, 'engines.install', { engine, request })
+        // Foundry Local runs a variant only on a prepared accelerator: prepare them now, as the app does.
+        if (engine === 'foundry-local' && !inv.values['no-accelerators']) return prepareAccelerators(ctx)
+        return code
       },
     }),
     defineCommand({

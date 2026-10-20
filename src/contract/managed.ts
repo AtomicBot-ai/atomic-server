@@ -7,6 +7,8 @@
 import type {
   EngineBuildKey,
   ErrorBody,
+  FoundryLocalAccelerators,
+  FoundryLocalPrepareResult,
   ModelCompatibility,
   EngineUpdateOffer,
   EnvironmentOperation,
@@ -113,4 +115,12 @@ export interface ManagedModelJob {
   stage: 'queued' | 'downloading' | 'verifying' | 'ready' | 'failed' | 'cancelled' | 'interrupted'
   error?: string
   updated_at: number
+}
+
+/** `foundry.accelerators`: the library's probe, and whether this server is preparing accelerators now. */
+export type FoundryAcceleratorsView = FoundryLocalAccelerators & {
+  preparing: boolean
+  /** The last prepare's summary, `null` before one ended. */
+  last_result: FoundryLocalPrepareResult | null
+  last_error: string | null
 }
