@@ -1,4 +1,4 @@
-import { ENGINE_DIALOG } from './setup-data'
+import { engineDialog } from './setup-data'
 import { FoundryModelInstall } from '../library/FoundryModelInstall'
 import { ManagedModelInstall } from '../library/ManagedModelInstall'
 import { ModelInstall } from '../library/ModelInstall'
@@ -29,7 +29,7 @@ export function SetupReview({
   onStarted: (id: string) => void
   onEngine: (engine: string) => void
 }) {
-  const kind = ENGINE_DIALOG[engine]
+  const kind = engineDialog(engine)
   if (kind === 'managed')
     return (
       <ManagedModelInstall

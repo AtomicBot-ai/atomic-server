@@ -76,7 +76,7 @@ export async function settingsAction(id: string, ctx: PanelContext): Promise<boo
     const value = fieldValue(d, f.values, f.draft)
     const draft = (v: unknown) => set(ctx, { error: '', form: { ...f, draft: { ...f.draft, [d.key]: v } } })
     if (d.controllerType === 'checkbox') draft(value !== true)
-    else if (d.key === 'gpu_id' && f.gpus.length)
+    else if (d.key === 'gpu_id' && p.kind === 'managed')
       draft(next(['', ...f.gpus.map((g: GpuFacts) => g.gpu_id)], value ?? ''))
     else if (d.controllerType === 'dropdown' && Array.isArray(d.controllerProps['options']))
       draft(

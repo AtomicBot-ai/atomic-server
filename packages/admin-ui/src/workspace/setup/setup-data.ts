@@ -1,15 +1,13 @@
 import { record, rows, text } from '../types'
 import type { Execute } from '../types'
 import { catalogCards } from '../library/catalog-data'
+import { engineFamily } from '@view'
 import type { RecordValue } from '../types'
 
-const OWN_CATALOG = ['vllm', 'sglang', 'tensorrt-llm', 'foundry-local']
-/** Which install dialog an engine's models take: a managed engine's checkpoint or a Foundry Local variant. */
-export const ENGINE_DIALOG: Record<string, 'managed' | 'foundry'> = {
-  'vllm': 'managed',
-  'sglang': 'managed',
-  'tensorrt-llm': 'managed',
-  'foundry-local': 'foundry',
+/** Which install dialog an engine's models take, by the core's kinds: a checkpoint or a Foundry variant. */
+export const engineDialog = (engine: string): 'managed' | 'foundry' | null => {
+  const family = engineFamily(engine)
+  return family === 'managed' || family === 'foundry' ? family : null
 }
 
 /** Setup's models for `engine`: its own catalog for a managed engine or Foundry Local, else the category's. */
@@ -18,7 +16,7 @@ export async function setupModels(
   engine: string,
   category: string
 ): Promise<RecordValue[]> {
-  const kind = ENGINE_DIALOG[engine]
+  const kind = engineDialog(engine)
   if (kind === 'managed') return catalogCards(await execute('models.catalog', { engine }), 'safetensors')
   if (kind === 'foundry')
     return catalogCards(await execute('models.search', { engine: 'foundry-local', query: '' }), 'foundry')
@@ -30,8 +28,7 @@ export function engineModels(models: RecordValue[], engine: string, category: st
   return models.filter((model) => {
     const source = record(model.source)
     // A managed engine's checkpoints and Foundry Local's variants come from their own catalogs.
-    if (OWN_CATALOG.includes(engine))
-      return model.format === 'safetensors' || model.format === 'Foundry Local'
+    if (engineDialog(engine)) return model.format === 'safetensors' || model.format === 'Foundry Local'
     if (category === 'text') return (source.format === 'mlx') === (engine === 'mlx')
     if (category === 'image' || category === 'video') return engine === 'sd-cpp'
     return engine === text(source.engine, category === 'decision' ? 'llamacpp' : 'llamacpp-upstream')

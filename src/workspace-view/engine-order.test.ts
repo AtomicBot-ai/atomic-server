@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { engineName, orderEngines } from './engine-order.js'
+import { engineFamily, engineName, orderEngines } from './engine-order.js'
 
 describe('engine order and names', () => {
   it('puts llama.cpp first, then MLX, the managed engines as the desktop app does, then Foundry Local', () => {
@@ -39,4 +39,16 @@ describe('engine order and names', () => {
     ['foundry-local', 'Foundry Local'],
     ['something', 'something'],
   ])('%s is %s', (id, name) => expect(engineName(id)).toBe(name))
+})
+
+describe('engineFamily', () => {
+  it.each([
+    ['llamacpp-upstream', 'llamacpp'],
+    ['atomic-prism', 'llamacpp'],
+    ['vllm', 'managed'],
+    ['tensorrt-llm', 'managed'],
+    ['foundry-local', 'foundry'],
+    ['mlx', 'build'],
+    ['something-new', 'build'],
+  ])('%s is %s, by the core’s kinds', (id, family) => expect(engineFamily(id)).toBe(family))
 })

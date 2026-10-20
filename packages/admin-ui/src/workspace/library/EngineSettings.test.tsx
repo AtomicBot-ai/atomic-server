@@ -43,3 +43,21 @@ describe('engine settings in the admin', () => {
     ])
   })
 })
+
+describe('gpu_id without cards in the admin', () => {
+  it('is shown, not typed, when the environment reports no card', async () => {
+    const { workspace } = workspaceFixture({
+      'settings.get': { revision: 1, values: {} },
+      'settings.schema': { descriptors: settingsSchema('vllm') },
+      'environments.list': [{ gpus: [] }],
+    })
+    render(<EngineSettings provider="vllm" workspace={workspace} onClose={() => {}} />)
+    const select = await screen.findByLabelText('GPU card')
+    expect(select).toBeDisabled()
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual(['Card with the most free memory'])
+  })
+})

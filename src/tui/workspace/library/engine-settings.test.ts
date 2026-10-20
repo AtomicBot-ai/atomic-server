@@ -110,3 +110,23 @@ describe('the engine settings form', () => {
     expect(t.get().enginePanel?.notice).toMatch(/next model load/i)
   })
 })
+
+describe('gpu_id without cards', () => {
+  it('is never typed: without the environment’s cards it stays the card with the most free memory', async () => {
+    const t = tui('vllm')
+    t.execute.mockImplementation((async (name: string, input: Record<string, unknown> = {}) => {
+      if (name === 'settings.schema')
+        return { provider: input['provider'], descriptors: settingsSchema('vllm' as never) }
+      if (name === 'settings.get') return { revision: 4, values: {} }
+      if (name === 'environments.list') return [environment({ gpus: [] })]
+      if (name === 'engines.plan')
+        return { engine: 'vllm', plan: plan('vllm'), installation: null, operation: null }
+      return {}
+    }) as never)
+    await activate('library-row:0', t.ctx)
+    await activate('engine-settings', t.ctx)
+    await activate('engine-setting:gpu_id', t.ctx)
+    expect(t.get().overlay).toBe('engine-panel')
+    expect(field(t, 'gpu_id')?.label).toContain('Card with the most free memory')
+  })
+})

@@ -2,13 +2,13 @@ import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { computeRowWindow } from '../../row-window.js'
-import { engineName } from '../../../workspace-view/index.js'
+import { engineFamily, engineName } from '../../../workspace-view/index.js'
+/** What each llama.cpp engine is for: descriptions only; which engines exist is the core's answer. */
 const LLAMA: Readonly<Record<string, string>> = {
   'llamacpp-upstream': 'Standard GGUF models',
   'llamacpp': 'Atomic Chat’s TurboQuant engine',
   'atomic-prism': 'Bonsai models',
 }
-const OTHER = ['vllm', 'sglang', 'tensorrt-llm', 'foundry-local']
 export function drawSetupBrowser(
   c: Canvas,
   s: WorkspaceState,
@@ -29,9 +29,9 @@ export function drawSetupBrowser(
     let row = 5
     // The core's engines when it answered; llama.cpp's three until then.
     const registered = v.registered.length ? v.registered : Object.keys(LLAMA)
-    for (const provider of registered.filter((e) => e in LLAMA)) {
+    for (const provider of registered.filter((e) => engineFamily(e) === 'llamacpp')) {
       const name = engineName(provider),
-        detail = LLAMA[provider]!
+        detail = LLAMA[provider] ?? 'GGUF models'
       const catalog = v.catalogs.find((cat) => cat.provider === provider)
       const build =
         catalog?.available.find((p) => `${p.version}/${p.backend}` === catalog.recommended) ??
@@ -53,7 +53,7 @@ export function drawSetupBrowser(
         if (bottom - y >= 17) put(row++, `    ${build.version} / ${build.backend}  •  Recommended`)
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
-    for (const engine of registered.filter((e) => OTHER.includes(e)))
+    for (const engine of registered.filter((e) => ['managed', 'foundry'].includes(engineFamily(e))))
       b(
         `setup-engine:${engine}`,
         row++,

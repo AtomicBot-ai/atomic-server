@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GpuFacts } from '@atomic-chat/core/contracts'
+import { engineFamily } from '@view'
 import { useDialog } from '../useDialog'
 import type { Workspace } from '../useWorkspace'
 import { Action, Field } from '../Controls'
@@ -9,8 +10,6 @@ import type { RecordValue } from '../types'
 import { SETTING_GROUPS, commonSetting, editableSetting, settingGroup } from './engine-setting-groups'
 import { EngineSettingField } from './EngineSettingField'
 import { downloadJson } from '../chat/chat-preferences'
-
-const MANAGED = ['vllm', 'sglang', 'tensorrt-llm']
 
 export function EngineSettings({
   provider,
@@ -39,7 +38,7 @@ export function EngineSettings({
     { execute } = w
   const [gpus, setGpus] = useState<GpuFacts[]>([])
   useEffect(() => {
-    if (!MANAGED.includes(provider)) return
+    if (engineFamily(provider) !== 'managed') return
     void execute('environments.list').then(
       (list) => setGpus((rows(list)[0]?.gpus as GpuFacts[]) ?? []),
       () => {}
@@ -166,6 +165,7 @@ export function EngineSettings({
               saved={saved}
               update={update}
               gpus={gpus}
+              managed={engineFamily(provider) === 'managed'}
             />
           ))}
         </div>

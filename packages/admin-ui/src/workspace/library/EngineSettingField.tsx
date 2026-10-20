@@ -10,6 +10,7 @@ export function EngineSettingField({
   saved,
   update,
   gpus = [],
+  managed = false,
 }: {
   field: RecordValue
   values: RecordValue
@@ -17,6 +18,7 @@ export function EngineSettingField({
   update: (name: string, value: unknown) => void
   /** The environment's cards: a managed engine's `gpu_id` is one of them, never typed. */
   gpus?: GpuFacts[]
+  managed?: boolean
 }) {
   const name = text(field.key),
     props = record(field.controllerProps),
@@ -26,10 +28,10 @@ export function EngineSettingField({
   return (
     <div className={`engine-setting ${values[name] !== saved[name] ? 'setting-changed' : ''}`}>
       <Field label={text(field.title, name)}>
-        {name === 'gpu_id' && gpus.length ? (
+        {name === 'gpu_id' && managed ? (
           <select
             aria-label="GPU card"
-            disabled={Boolean(disabled)}
+            disabled={Boolean(disabled) || !gpus.length}
             value={text(value, '')}
             onChange={(e) => update(name, e.target.value)}
           >

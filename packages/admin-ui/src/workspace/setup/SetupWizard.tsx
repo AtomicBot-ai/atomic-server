@@ -13,7 +13,7 @@ import { SetupDetails } from './SetupDetails'
 import { useSetupVerify } from './useSetupVerify'
 import { SetupReview } from './SetupReview'
 import { SetupEngineInstall } from './SetupEngineInstall'
-import { ENGINE_DIALOG, setupModels } from './setup-data'
+import { engineDialog, setupModels } from './setup-data'
 import { useEngines } from '../useEngines'
 import { Eye } from '../Eye'
 import { describeError } from '@/services/admin-api'
@@ -170,7 +170,7 @@ export function SetupWizard({
                 setStep(2)
               }}
             />
-            {engineConfirmed && ENGINE_DIALOG[engine] && !installed.includes(engine) ? (
+            {engineConfirmed && engineDialog(engine) && !installed.includes(engine) ? (
               <SetupEngineInstall
                 workspace={w}
                 engine={engine}

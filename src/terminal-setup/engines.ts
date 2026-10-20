@@ -4,7 +4,7 @@ import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
-import { engineName, orderEngines } from '../workspace-view/index.js'
+import { engineFamily, engineName, orderEngines } from '../workspace-view/index.js'
 import type { BackendCatalogResponse } from './types.js'
 
 export interface EngineChoice {
@@ -22,8 +22,6 @@ export function modelProvider(engine: string, provider: string): string {
     ? selected!
     : provider
 }
-/** Chat engines besides llama.cpp's family that a person picks for a model to load with. */
-const OTHER_CHAT_ENGINES: readonly string[] = ['vllm', 'sglang', 'tensorrt-llm', 'foundry-local']
 /** Engine preference is independent of an installation's durable progress record. */
 export class EngineSelection {
   private path: string
@@ -48,7 +46,9 @@ export class EngineSelection {
     const link = await this.attach()
     const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
     const installed = orderEngines(
-      engines.filter((e) => OTHER_CHAT_ENGINES.includes(e.engine) && e.active).map((e) => e.engine as string)
+      engines
+        .filter((e) => ['managed', 'foundry'].includes(engineFamily(e.engine)) && e.active)
+        .map((e) => e.engine as string)
     ).map((engine) => {
       const active = engines.find((e) => e.engine === engine)!.active!
       return {
