@@ -9,6 +9,8 @@ import {
   PHASE_LABELS,
   phaseText,
   planLines,
+  rebootLines,
+  reloginLines,
   removalLines,
 } from './engines.js'
 
@@ -142,5 +144,25 @@ describe('phases', () => {
       '8.4 GiB',
       'unknown',
     ])
+  })
+})
+
+describe('sign-in and restart instructions', () => {
+  it.each([
+    ['terminal', ['sign out', 'atc restart']],
+    ['systemd-user', ['systemd --user', 'end all your sessions', 'systemctl --user start atc']],
+    ['systemd-system', ['system service', 'sudo systemctl restart atc']],
+  ] as const)('a server run as %s', (launch, texts) => {
+    const lines = reloginLines(launch, 'op-1').join('\n')
+    for (const text of texts) expect(lines).toContain(text)
+    expect(lines).toContain('atc engines install --resume op-1')
+    expect(lines).not.toMatch(/reboot|restart the machine now/i)
+  })
+
+  it('says a restart of Windows is needed and that the next start continues', () => {
+    const lines = rebootLines('op-2').join('\n')
+    expect(lines).toContain('restart')
+    expect(lines).toContain('atc start')
+    expect(lines).toContain('op-2')
   })
 })

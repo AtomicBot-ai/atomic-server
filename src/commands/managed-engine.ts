@@ -12,7 +12,8 @@ import type { EnvironmentOperation } from '@atomic-chat/core/contracts'
 import type { CommandContext } from '../cli/index.js'
 import { AtcError } from '../cli/index.js'
 import type { ManagedEngineState, ManagedInstallResult } from '../contract/index.js'
-import { planBlocked, removalLines } from '../workspace-view/index.js'
+import { readDaemonRecord } from '../core-link/index.js'
+import { planBlocked, rebootLines, reloginLines, removalLines } from '../workspace-view/index.js'
 import type { ManagedSession } from './managed-session.js'
 import {
   agree,
@@ -56,13 +57,13 @@ async function settle(s: ManagedSession, op: EnvironmentOperation, approval?: Ap
       return 0
     case 'awaiting-consent':
       return consentFor(s, op, approval)
-    case 'relogin-required':
-      say(`${engine}: you were added to the docker group; it applies to the server from your next sign-in.`)
-      say(`Sign out and in again, run \`atc restart\`, then: atc engines install --resume ${op.operation_id}`)
+    case 'relogin-required': {
+      const launch = (await readDaemonRecord(s.ctx.paths.daemonRecord))?.launch ?? 'terminal'
+      for (const line of reloginLines(launch, op.operation_id)) say(line)
       return 0
+    }
     case 'reboot-required':
-      say(`${engine}: Windows needs a restart to finish turning on WSL.`)
-      say(`After the restart, \`atc start\` continues operation ${op.operation_id}.`)
+      for (const line of rebootLines(op.operation_id)) say(line)
       return 0
     case 'cancelled':
       say(`The ${op.kind} of ${engine} was cancelled.`)

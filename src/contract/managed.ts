@@ -48,3 +48,10 @@ export type ManagedInstallResult =
   | { engine: string; status: 'plan'; state: ManagedEngineState }
   | { engine: string; status: 'updating'; operation_id: string; request_id: string }
   | { engine: string; status: 'ready'; active: EngineBuildKey }
+
+/**
+ * How this server was started, which decides how a new group membership reaches it (design D5): a
+ * server from a terminal needs a new sign-in and `atc restart`, a `systemd --user` unit a restart of
+ * the user manager, a system unit a restart of the unit.
+ */
+export type ServerLaunch = 'terminal' | 'systemd-user' | 'systemd-system' | 'launchd'

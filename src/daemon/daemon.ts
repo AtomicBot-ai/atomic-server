@@ -17,7 +17,7 @@ import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { FIELDS, getAt } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
-import { HostStepExecutor, HostStepJournal, restrictToOwner } from '../host/index.js'
+import { HostStepExecutor, HostStepJournal, readServerLaunch, restrictToOwner } from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
@@ -110,6 +110,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       control_url: `http://${core.control.host}:${core.control.port}`,
       admin_url: null,
       started_at: startedAt,
+      launch: await readServerLaunch(host.facts.platform, io.env),
     }
     await writeDaemonRecord(paths.daemonRecord, startingRecord)
     const relay = new RelayHub()

@@ -8,6 +8,7 @@ import type { CoreSnapshot } from '@atomic-chat/core/client'
 import type { ManagedProgress } from '@atomic-chat/core/contracts'
 import type { AtcPaths } from '../config/index.js'
 import { MANAGED_FINISHED_PHASES } from '../contract/index.js'
+import type { ServerLaunch } from '../contract/index.js'
 import { AtcError } from '../errors/index.js'
 import type { HostStepJournalEntry } from '../host/index.js'
 import { HostStepJournal, waitingHostSteps } from '../host/index.js'
@@ -45,6 +46,8 @@ export interface DaemonDescription {
   sessions: Array<{ provider: string; model_id: string; port: number }>
   clients: string[]
   /** Privileged steps the server could not run itself: the exact command to run as administrator. */
+  /** How the server was started: what a sign-in for the docker group takes for it. */
+  launch: ServerLaunch
   pending_host_steps: Array<{
     step_id: string
     operation_id: string
@@ -86,6 +89,7 @@ export function describeSnapshot(
     state: record?.state ?? null,
     sessions: snapshot.sessions.map((s) => ({ provider: s.provider, model_id: s.model_id, port: s.port })),
     clients: snapshot.clients.map((c) => c.name),
+    launch: record?.launch ?? 'terminal',
     pending_host_steps: waitingHostSteps(journal, operations).map((e) => ({
       step_id: e.step_id,
       operation_id: e.operation_id,

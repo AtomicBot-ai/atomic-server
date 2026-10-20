@@ -10,6 +10,8 @@ export {
   phaseText,
   planBlocked,
   planLines,
+  rebootLines,
+  reloginLines,
   removalLines,
 } from './engines.js'
 export type { EngineView, EngineViewKind } from './engines.js'

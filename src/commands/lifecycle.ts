@@ -17,6 +17,7 @@ import {
 import type { CoreLink, DaemonDescription, OutdatedOwner } from '../core-link/index.js'
 import { formatDuration } from '../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../telemetry/index.js'
+import { rebootLines, reloginLines } from '../workspace-view/index.js'
 import { runServerInPlace } from './daemon.js'
 
 const attached = (ctx: CommandContext): Promise<CoreLink | undefined> =>
@@ -73,6 +74,11 @@ function printStatus(ctx: CommandContext, s: DaemonDescription): void {
       `${o.engine ?? 'environment'} ${o.kind}: ${o.phase_text} (${o.operation_id})`,
     ]),
   ])
+  for (const o of s.environment_operations) {
+    if (o.phase === 'relogin-required')
+      for (const line of reloginLines(s.launch, o.operation_id)) ctx.out.line(line)
+    if (o.phase === 'reboot-required') for (const line of rebootLines(o.operation_id)) ctx.out.line(line)
+  }
   for (const step of s.pending_host_steps) {
     ctx.out.note(`operation ${step.operation_id} waits for a privileged step; run it as administrator:`)
     ctx.out.line(`  ${step.instructions}`)
