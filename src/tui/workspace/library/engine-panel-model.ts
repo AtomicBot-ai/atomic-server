@@ -9,14 +9,16 @@
 import type { EnvironmentOperation, GpuFacts, SettingDescriptor } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ServerLaunch, WorkspaceSnapshot } from '../../../contract/index.js'
 import {
+  engineApproval,
   engineName,
+  engineRefreshKey,
   engineView,
+  liveEngineState,
   fieldText,
   fieldValue,
   formFields,
   formatSize,
   operationView,
-  planBlocked,
   planLines,
   rebootLines,
   reloginLines,
@@ -75,31 +77,16 @@ export interface PanelButton {
 
 const engineOf = (op: EnvironmentOperation) => (op.target.kind === 'runtime' ? op.target.engine_id : '')
 
-/** The core's state with what the snapshot knows newer: this engine's operation and installation. */
-function merged(p: EnginePanel, live: WorkspaceSnapshot | null): ManagedEngineState {
-  const state = p.state!
-  if (!live?.engines) return state
-  const mine = live.engines.find((e) => e.engine === p.engine)
-  const other = live.engines.find((e) => e.engine !== p.engine && e.operation)?.operation ?? null
-  return {
-    ...state,
-    operation: mine?.operation ?? null,
-    installation: mine?.installation ?? null,
-    other_operation: other,
-  }
-}
-
 /** This engine's operation as the panel shows it: the snapshot's, else the one the core last named. */
 export const panelOperation = (p: EnginePanel, live: WorkspaceSnapshot | null) =>
-  p.state ? merged(p, live).operation : null
+  p.state ? liveEngineState(p.state, live).operation : null
 
 /** Changes whenever the live operation of this engine starts, moves to another phase or ends. */
 export function panelRefreshKey(p: EnginePanel, live: WorkspaceSnapshot | null): string {
   // Foundry Local: again at every snapshot while a prepare runs; an engine of builds: never.
   if (p.kind === 'foundry') return p.foundry?.view?.preparing ? `prepare:${live?.captured_at ?? 0}` : p.seen
   if (p.kind === 'build') return p.seen
-  const op = live?.engines?.find((e) => e.engine === p.engine)?.operation
-  return op ? `${op.operation_id}:${op.phase}:${op.plan_digest ?? ''}` : 'none'
+  return engineRefreshKey(p.engine, live)
 }
 
 export function enginePanelModel(
@@ -130,7 +117,8 @@ export function enginePanelModel(
     say(p.busy ? 'Reading the core’s plan…' : 'The core gave no answer yet.', 'muted')
     return end()
   }
-  const state = merged(p, live)
+  const state = liveEngineState(p.state, live)
+  const approval = engineApproval(state)
   const view = engineView(state)
   say(view.summary, 'muted')
   const op = view.operation
@@ -148,17 +136,17 @@ export function enginePanelModel(
           `The ${other.kind} of ${engineOf(other)} runs first: the core changes one managed engine at a time; ${p.engine} is next.`,
           'warn'
         )
-      else if (state.plan && !planBlocked(state.plan))
-        add('engine-approve', 'Approve and install', 'Agree to exactly this plan', state.plan.plan_digest)
+      else if (approval)
+        add('engine-approve', 'Approve and install', 'Agree to exactly this plan', approval.digest)
       break
     }
     case 'consent':
       if (op!.kind === 'remove') {
         for (const line of removalLines(state)) say(line)
-        add('engine-approve', 'Approve removal', 'Agree to this removal', op!.plan_digest ?? undefined)
-      } else if (op!.plan_digest && state.plan?.plan_digest === op!.plan_digest) {
+        if (approval) add('engine-approve', 'Approve removal', 'Agree to this removal', approval.digest)
+      } else if (approval) {
         for (const line of planLines(state)) say(line)
-        add('engine-approve', 'Approve', 'Agree to exactly this plan', op!.plan_digest)
+        add('engine-approve', 'Approve', 'Agree to exactly this plan', approval.digest)
       } else say('The plan changed since it was read: reading the new one to ask again…', 'warn')
       add('engine-cancel', 'Cancel', 'Stop at the core’s next safe boundary')
       break
