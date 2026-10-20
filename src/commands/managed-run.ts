@@ -13,6 +13,9 @@ import { AtcError } from '../cli/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { attachWorkspace } from './control.js'
 
+const SUBSCRIBE_WAIT_MS = 3000
+const LAST_STAGE_WAIT_MS = 300
+
 const STAGES: Record<string, string> = {
   'stopping-previous': 'Stopping the previous model',
   'starting-container': 'Starting the container',
@@ -72,15 +75,26 @@ export async function runModel(
   }
   const stop = new AbortController()
   const startedAt = Date.now()
+  let sawReady: () => void = () => {}
+  const ready = new Promise<void>((resolve) => (sawReady = resolve))
   const show = (m: CoreEventMessage) => {
     if (m.event !== 'session:load-progress') return
     const data = m.data as { provider: string; model_id: string; stage: string; elapsed_ms: number }
     if (data.provider !== provider || data.model_id !== model) return
+    if (data.stage === 'ready') sawReady()
     if (ctx.flags.json) ctx.io.stdout(`${JSON.stringify({ load: data })}\n`)
     else if (!ctx.flags.quiet)
       ctx.io.stderr(`${STAGES[data.stage] ?? data.stage} (${Math.round(data.elapsed_ms / 1000)}s)\n`)
   }
-  void link.events.subscribe(show, { signal: stop.signal }).catch(() => {})
+  // Subscribed before the load is asked for: the stream replays from its snapshot's cursor, so a fast
+  // load's stages are not lost; a stream that cannot connect does not hold the load up.
+  let connected: () => void = () => {}
+  const subscribed = new Promise<void>((resolve) => (connected = resolve))
+  void link.events
+    .subscribe(show, { signal: stop.signal, onSnapshot: () => connected() })
+    .catch(() => {})
+    .finally(() => connected())
+  await Promise.race([subscribed, new Promise((r) => setTimeout(r, SUBSCRIBE_WAIT_MS))])
   let interrupted = false
   const off =
     ctx.io.onInterrupt?.(() => {
@@ -90,6 +104,8 @@ export async function runModel(
   try {
     const result = await service.execute('models.load', input)
     if (interrupted) return 130
+    // The last stage may still be on its way; a native load has none to wait for.
+    await Promise.race([ready, new Promise((r) => setTimeout(r, LAST_STAGE_WAIT_MS))])
     const envelope = { schema_version: 1, operation: 'models.load', status: 'ok', result: result ?? null }
     if (ctx.flags.json) ctx.io.stdout(`${JSON.stringify(envelope)}\n`)
     else ctx.out.line(`${model} is running on ${provider} (${Math.round((Date.now() - startedAt) / 1000)}s).`)
