@@ -5,7 +5,18 @@
  * request id; the model is then listed by the managed providers, and removed through the core.
  */
 import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { createServer } from 'node:net'
+import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -123,5 +134,133 @@ describe.skipIf(process.platform === 'win32')(`managed models (${ATC.join(' ')})
     expect(res.code, res.err).toBe(0)
     expect(res.err).toContain('every managed engine')
     expect((await installed()).some((m) => m.id === REPO)).toBe(false)
+  })
+})
+
+/**
+ * Loading a store model and chatting with it (task 5.3), on the core's model-running fakes: `docker`
+ * runs `fake-vllm-engine.mjs` for a `vllm serve` container and `nvidia-smi` reports one card. vLLM's
+ * installation is written where a setup leaves it (its record and pinned descriptor), as in the core's
+ * own `vllm-provider` e2e.
+ */
+describe.skipIf(process.platform === 'win32')(`a managed load (${ATC.join(' ')})`, () => {
+  const scratch2 = mkdtempSync(join(tmpdir(), 'atc-e2e-load-'))
+  const data2 = join(scratch2, 'data')
+  const root2 = join(scratch2, 'managed')
+  const host2 = join(scratch2, 'host')
+  const KEY = `atc_${'5'.repeat(64)}`
+  let env2: NodeJS.ProcessEnv
+  const run2 = (...rest: string[]) => {
+    const child = spawn(ATC[0] as string, [...ATC.slice(1), ...rest, '--data-folder', data2], { env: env2 })
+    let out = ''
+    let err = ''
+    child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()))
+    child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString()))
+    return new Promise<{ code: number | null; out: string; err: string }>((resolve) =>
+      child.on('exit', (code) => resolve({ code, out, err }))
+    )
+  }
+  const helper = (name: string) => fileURLToPath(new URL(`../helpers/${name}`, import.meta.url))
+  const wrap = (path: string, script: string, vars: Record<string, string> = {}) => {
+    const exports = Object.entries(vars)
+      .map(([k, v]) => `export ${k}=${JSON.stringify(v)}\n`)
+      .join('')
+    writeFileSync(
+      path,
+      `#!/bin/sh\n${exports}exec ${JSON.stringify(process.execPath)} ${JSON.stringify(script)} "$@"\n`
+    )
+    chmodSync(path, 0o755)
+  }
+
+  beforeAll(async () => {
+    if (process.platform === 'win32') return
+    mkdirSync(join(host2, 'bin'), { recursive: true })
+    wrap(join(host2, 'bin', 'docker'), helper('fake-model-docker.mjs'), {
+      FAKE_DOCKER_STATE: join(host2, 'docker.json'),
+    })
+    wrap(join(host2, 'bin', 'nvidia-smi'), helper('fake-nvidia-smi.mjs'))
+    const descriptor = JSON.parse(readFileSync(helper('../fixtures/managed/runtimes/vllm.json'), 'utf8')) as {
+      descriptor_id: string
+      image: Record<string, unknown>
+    }
+    mkdirSync(join(root2, 'descriptors'), { recursive: true })
+    copyFileSync(
+      helper('../fixtures/managed/runtimes/vllm.json'),
+      join(root2, 'descriptors', `${descriptor.descriptor_id}.json`)
+    )
+    mkdirSync(join(root2, 'installations', 'vllm'), { recursive: true })
+    const platform = process.arch === 'arm64' ? 'linux/arm64' : 'linux/amd64'
+    writeFileSync(
+      join(root2, 'installations', 'vllm', 'installation.json'),
+      JSON.stringify({
+        schema_version: 1,
+        installation: {
+          installation_id: 'vllm',
+          engine_id: 'vllm',
+          environment_id: 'default',
+          active_descriptor_id: descriptor.descriptor_id,
+          candidate_descriptor_id: null,
+          availability: 'supported',
+          status: 'ready',
+        },
+        image: descriptor.image[platform],
+        platform,
+        installed_at: '2026-10-20T00:00:00.000Z',
+      })
+    )
+    const model = join(data2, 'managed-models', 'qwen3')
+    mkdirSync(model, { recursive: true })
+    writeFileSync(
+      join(model, 'config.json'),
+      JSON.stringify({
+        architectures: ['Qwen3ForCausalLM'],
+        ...QWEN_CONFIG,
+        num_hidden_layers: 4,
+        hidden_size: 512,
+        head_dim: 64,
+      })
+    )
+    writeFileSync(join(model, 'model.safetensors'), Buffer.alloc(20, 1))
+    writeFileSync(
+      join(model, 'model.yml'),
+      JSON.stringify({
+        repository: 'acme/qwen3',
+        revision: 'deadbeef',
+        architectures: ['Qwen3ForCausalLM'],
+        files: [{ path: 'model.safetensors', size: 20, sha256: null }],
+      })
+    )
+    env2 = { ...process.env, NO_COLOR: '1', ATOMIC_CORE_MANAGED_ROOT: root2, ATOMIC_MANAGED_TEST_HOST: host2 }
+    if ((await run2('start', '--admin-port', '0')).code !== 0) throw new Error('atc start failed')
+  })
+
+  afterAll(async () => {
+    if (process.platform === 'win32') return
+    await run2('stop', '--force', '--kill')
+    rmSync(scratch2, { recursive: true, force: true })
+  })
+
+  it('shows the stages of the load, then the public API answers from the vLLM container', async () => {
+    const run = await run2('run', 'qwen3', '--engine', 'vllm')
+    expect(run.code, run.err).toBe(0)
+    expect(run.err).toMatch(/Starting the container|Initializing the engine/)
+    expect(run.out).toContain('qwen3 is running on vllm')
+    const port = await new Promise<number>((resolve) => {
+      const probe = createServer().listen(0, '127.0.0.1', () => {
+        const free = (probe.address() as { port: number }).port
+        probe.close(() => resolve(free))
+      })
+    })
+    const api = await run2('api', 'start', '--port', String(port), '--api-key', KEY)
+    expect(api.code, api.err).toBe(0)
+    const chat = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'authorization': `Bearer ${KEY}` },
+      body: JSON.stringify({ model: 'qwen3', messages: [{ role: 'user', content: 'hi' }] }),
+    })
+    expect(chat.status, await chat.clone().text()).toBe(200)
+    expect(
+      ((await chat.json()) as { choices: { message: { content: string } }[] }).choices[0]?.message.content
+    ).toBe('hello from vllm')
   })
 })
