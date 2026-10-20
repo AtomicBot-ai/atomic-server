@@ -22,6 +22,8 @@ import {
   reloginLines,
   removalLines,
 } from '../../../workspace-view/index.js'
+import { foundryModel } from './foundry-panel-model.js'
+import type { FoundryPanelData } from './foundry-panel-model.js'
 
 /** The settings form of the open panel: the core's schema and values, and the person's edits. */
 export interface EngineForm {
@@ -36,12 +38,14 @@ export interface EngineForm {
 
 export interface EnginePanel {
   engine: string
-  /** A managed engine (plan, operations) or an engine of builds (llama.cpp, MLX, Foundry Local). */
-  kind: 'managed' | 'build'
+  /** A managed engine (plan, operations), Foundry Local (accelerators, variants) or an engine of builds. */
+  kind: 'managed' | 'foundry' | 'build'
   /** For an engine of builds: its active build as Library lists it. */
   summary: string
-  mode: 'engine' | 'settings'
+  mode: 'engine' | 'settings' | 'models'
   form: EngineForm | null
+  /** Foundry Local's accelerators, model list and reviewed plan. */
+  foundry: FoundryPanelData | null
   /** `engines.plan`'s answer; `null` until it came. */
   state: ManagedEngineState | null
   busy: boolean
@@ -89,6 +93,9 @@ export const panelOperation = (p: EnginePanel, live: WorkspaceSnapshot | null) =
 
 /** Changes whenever the live operation of this engine starts, moves to another phase or ends. */
 export function panelRefreshKey(p: EnginePanel, live: WorkspaceSnapshot | null): string {
+  // Foundry Local: again at every snapshot while a prepare runs; an engine of builds: never.
+  if (p.kind === 'foundry') return p.foundry?.view?.preparing ? `prepare:${live?.captured_at ?? 0}` : p.seen
+  if (p.kind === 'build') return p.seen
   const op = live?.engines?.find((e) => e.engine === p.engine)?.operation
   return op ? `${op.operation_id}:${op.phase}:${op.plan_digest ?? ''}` : 'none'
 }
@@ -98,6 +105,7 @@ export function enginePanelModel(
   live: WorkspaceSnapshot | null
 ): { lines: PanelLine[]; buttons: PanelButton[]; fields?: PanelButton[] } {
   if (p.mode === 'settings') return settingsModel(p)
+  if (p.kind === 'foundry') return foundryModel(p)
   const lines: PanelLine[] = [{ text: engineName(p.engine), tone: 'title' }]
   const buttons: PanelButton[] = []
   const say = (text: string, tone: PanelLine['tone'] = 'text') => lines.push({ text, tone })

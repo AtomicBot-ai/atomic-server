@@ -25,7 +25,8 @@ export function useWorkspaceData(
   // The engine panel reads the core's state again when the live operation starts, moves on or ends.
   useEffect(() => {
     const p = s.enginePanel
-    if (s.overlay !== 'engine-panel' || !p?.state || p.busy || !c.current) return
+    if (s.overlay !== 'engine-panel' || !p || p.busy || !c.current) return
+    if (p.kind === 'managed' && !p.state) return
     if (panelRefreshKey(p, s.workspace) === p.seen) return
     void engineAction('engine-refresh', { controller: c.current, get: () => latest.current, update })
   }, [s.overlay, s.workspace, s.enginePanel, c, latest, update])

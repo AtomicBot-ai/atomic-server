@@ -27,6 +27,7 @@ const panel = (over: Partial<EnginePanel> = {}): EnginePanel => ({
   summary: '',
   mode: 'engine',
   form: null,
+  foundry: null,
   state: state(),
   busy: false,
   error: '',

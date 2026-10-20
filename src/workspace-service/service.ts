@@ -78,6 +78,7 @@ export class WorkspaceService {
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
+    this.foundry.event(name, payload)
   }
   async snapshot() {
     const result = await workspaceSnapshot(

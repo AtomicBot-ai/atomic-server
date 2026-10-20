@@ -8,6 +8,7 @@ import type {
   EngineBuildKey,
   ErrorBody,
   FoundryLocalAccelerators,
+  FoundryLocalAcceleratorsEvent,
   FoundryLocalPrepareResult,
   ModelCompatibility,
   EngineUpdateOffer,
@@ -123,6 +124,8 @@ export type FoundryAcceleratorsView = FoundryLocalAccelerators & {
   /** The last prepare's summary, `null` before one ended. */
   last_result: FoundryLocalPrepareResult | null
   last_error: string | null
+  /** The latest step of each accelerator in the prepare running now (or the last one). */
+  steps: FoundryLocalAcceleratorsEvent[]
 }
 
 /** `foundry.plan`: one Foundry Local variant to download, chosen and checked, with its files. */

@@ -10,6 +10,7 @@ import { AtomicCoreError } from '@atomic-chat/core'
 import type {
   FoundryLocalAccelerator,
   FoundryLocalAccelerators,
+  FoundryLocalAcceleratorsEvent,
   FoundryLocalPrepareResult,
 } from '@atomic-chat/core/contracts'
 import type { FoundryAcceleratorsView } from '../contract/index.js'
@@ -35,6 +36,8 @@ export class FoundryAccelerators {
   private running: Promise<void> | undefined
   private lastResult: FoundryLocalPrepareResult | null = null
   private lastError: string | null = null
+  /** The latest step of each accelerator in the prepare running now, for clients that poll. */
+  private readonly steps = new Map<string, FoundryLocalAcceleratorsEvent>()
   private readonly retryMs: number
 
   constructor(
@@ -53,12 +56,21 @@ export class FoundryAccelerators {
       preparing: this.running !== undefined,
       last_result: this.lastResult,
       last_error: this.lastError,
+      steps: [...this.steps.values()],
     }
+  }
+
+  /** The core's events: a `foundry-local:accelerators` step of the prepare running now. */
+  event(name: string, payload: unknown): void {
+    const step = payload as Partial<FoundryLocalAcceleratorsEvent> | null
+    if (name === 'foundry-local:accelerators' && this.running && typeof step?.accelerator === 'string')
+      this.steps.set(step.accelerator, step as FoundryLocalAcceleratorsEvent)
   }
 
   async prepare(names?: string[]): Promise<FoundryAcceleratorsView> {
     if (!this.running) {
       this.lastError = null
+      this.steps.clear()
       this.running = this.run(names).finally(() => {
         this.running = undefined
       })

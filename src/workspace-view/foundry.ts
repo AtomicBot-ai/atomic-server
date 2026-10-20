@@ -36,6 +36,10 @@ export function acceleratorLines(view: FoundryAcceleratorsView): string[] {
   if (!view.accelerators.some((a) => a.execution_provider !== null && a.execution_provider !== 'cpu'))
     lines.push('Models run on the CPU; nothing needs preparing.')
   if (view.preparing) lines.push('Preparing accelerators in the server…')
+  for (const step of view.preparing ? (view.steps ?? []) : [])
+    lines.push(
+      `${step.accelerator}: ${step.stage}${step.fraction !== null && step.stage === 'downloading' ? ` ${Math.round(step.fraction * 100)}%` : ''}${step.reason ? ` — ${step.reason}` : ''}`
+    )
   if (view.last_error) lines.push(`The last prepare failed: ${view.last_error}`)
   return lines
 }

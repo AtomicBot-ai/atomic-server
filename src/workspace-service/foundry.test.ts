@@ -87,6 +87,30 @@ describe('FoundryAccelerators', () => {
   })
 })
 
+describe('prepare progress', () => {
+  it('keeps the latest step of each accelerator while a prepare runs, and starts over with the next', async () => {
+    const l = fakeCoreLink()
+    l.responses['GET /runtimes/foundry-local/accelerators'] = probe([NPU, CPU])
+    let finish: (v: unknown) => void = () => {}
+    l.responses['POST /runtimes/foundry-local/accelerators/prepare'] = () =>
+      new Promise((resolve) => (finish = resolve))
+    const f = new FoundryAccelerators(l)
+    await f.prepare()
+    const step = (stage: string, fraction: number | null) =>
+      f.event('foundry-local:accelerators', { accelerator: NPU.name, stage, fraction })
+    step('started', 0)
+    step('downloading', 0.4)
+    f.event('session:started', { provider: 'vllm', model_id: 'x' })
+    expect((await f.status(false)).steps).toEqual([
+      { accelerator: NPU.name, stage: 'downloading', fraction: 0.4 },
+    ])
+    finish({ accelerators: [{ name: NPU.name, prepared: true }] })
+    await waitFor(async () => !(await f.status(false)).preparing)
+    await f.prepare()
+    expect((await f.status(false)).steps).toEqual([])
+  })
+})
+
 describe('preparable', () => {
   it('offers only the unprepared accelerators that have an execution provider', () => {
     expect(preparable(probe([NPU, RTX, CPU]) as never).map((a) => a.name)).toEqual([

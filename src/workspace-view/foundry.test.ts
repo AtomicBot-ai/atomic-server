@@ -17,6 +17,7 @@ const view = (over: Partial<FoundryAcceleratorsView> = {}): FoundryAcceleratorsV
   preparing: false,
   last_result: null,
   last_error: null,
+  steps: [],
   ...over,
 })
 
@@ -43,6 +44,20 @@ describe('acceleratorLines', () => {
     const lines = acceleratorLines(view({ preparing: true, last_error: 'disk full' }))
     expect(lines).toContain('Preparing accelerators in the server…')
     expect(lines).toContain('The last prepare failed: disk full')
+  })
+
+  it('shows each accelerator’s step while a prepare runs', () => {
+    const lines = acceleratorLines(
+      view({
+        preparing: true,
+        steps: [
+          { accelerator: 'CUDAExecutionProvider', stage: 'downloading', fraction: 0.4 },
+          { accelerator: 'QNNExecutionProvider', stage: 'failed', fraction: null, reason: 'no driver' },
+        ] as never,
+      })
+    )
+    expect(lines).toContain('CUDAExecutionProvider: downloading 40%')
+    expect(lines).toContain('QNNExecutionProvider: failed — no driver')
   })
 
   it('says the engine is not installed, and why the probe failed', () => {

@@ -13,6 +13,7 @@ import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import type { WorkspaceState } from '../state.js'
 import { settingsAction } from './engine-settings.js'
+import { foundryAction, refreshFoundry } from './foundry-actions.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ServerLaunch } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
@@ -49,9 +50,11 @@ export const hasPanel = (id: string) => (LOCAL_PROVIDER_IDS as readonly string[]
 export async function engineAction(id: string, ctx: PanelContext): Promise<boolean> {
   const { get, update, controller: c } = ctx
   if (await settingsAction(id, ctx)) return true
+  if (await foundryAction(id, ctx)) return true
   if (id.startsWith('engine-open:')) {
     const engine = id.slice('engine-open:'.length)
     const managed = isManagedEngine(engine)
+    const kind = managed ? 'managed' : engine === 'foundry-local' ? 'foundry' : 'build'
     const launch = (await c.runtime.launch().catch(() => 'terminal')) as ServerLaunch
     update((v) => ({
       ...v,
@@ -59,12 +62,13 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
       focus: managed ? 'engine-refresh' : 'engine-settings',
       enginePanel: {
         engine,
-        kind: managed ? 'managed' : 'build',
+        kind,
         summary: v.libraryRows.find((r) => r.id === engine)?.description ?? '',
         mode: 'engine',
         form: null,
+        foundry: null,
         state: null,
-        busy: managed,
+        busy: kind !== 'build',
         error: '',
         notice: '',
         removing: false,
@@ -145,6 +149,7 @@ function panel(ctx: PanelContext, engine: string, part: Partial<EnginePanel>) {
 /** Read the core's state for the open panel again, noting which live operation it was read for. */
 async function refresh(ctx: PanelContext): Promise<void> {
   const p = ctx.get().enginePanel
+  if (p?.kind === 'foundry') return refreshFoundry(ctx, panelRefreshKey(p, ctx.get().workspace))
   if (!p || p.kind !== 'managed') return
   panel(ctx, p.engine, { busy: true, seen: panelRefreshKey(p, ctx.get().workspace) })
   try {
