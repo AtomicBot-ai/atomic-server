@@ -5,8 +5,13 @@
  */
 
 import type { CoreSnapshot } from '@atomic-chat/core/client'
+import type { ManagedProgress } from '@atomic-chat/core/contracts'
 import type { AtcPaths } from '../config/index.js'
+import { MANAGED_FINISHED_PHASES } from '../contract/index.js'
 import { AtcError } from '../errors/index.js'
+import type { HostStepJournalEntry } from '../host/index.js'
+import { HostStepJournal, waitingHostSteps } from '../host/index.js'
+import { phaseText } from '../workspace-view/index.js'
 import { readDaemonRecord } from './daemon-record.js'
 import type { DaemonRecord } from './daemon-record.js'
 import { logTail, waitForDaemonReady } from './attach.js'
@@ -39,14 +44,34 @@ export interface DaemonDescription {
   state: DaemonRecord['state'] | null
   sessions: Array<{ provider: string; model_id: string; port: number }>
   clients: string[]
+  /** Privileged steps the server could not run itself: the exact command to run as administrator. */
+  pending_host_steps: Array<{
+    step_id: string
+    operation_id: string
+    instructions: string
+    updated_at: number
+  }>
+  /** Managed-engine operations in progress, with the phase as a person reads it. */
+  environment_operations: Array<{
+    operation_id: string
+    engine: string | null
+    kind: string
+    phase: string
+    phase_text: string
+    progress: ManagedProgress | null
+  }>
 }
 
 /** What `atc status` prints: the core's snapshot joined with the daemon record. */
 export function describeSnapshot(
   snapshot: CoreSnapshot,
   record: DaemonRecord | undefined,
-  now: () => Date
+  now: () => Date,
+  journal: readonly HostStepJournalEntry[] = []
 ): DaemonDescription {
+  const operations = (snapshot.environment_operations ?? []).filter(
+    (o) => !(MANAGED_FINISHED_PHASES as readonly string[]).includes(o.phase)
+  )
   return {
     running: true,
     pid: snapshot.pid,
@@ -61,16 +86,34 @@ export function describeSnapshot(
     state: record?.state ?? null,
     sessions: snapshot.sessions.map((s) => ({ provider: s.provider, model_id: s.model_id, port: s.port })),
     clients: snapshot.clients.map((c) => c.name),
+    pending_host_steps: waitingHostSteps(journal, operations).map((e) => ({
+      step_id: e.step_id,
+      operation_id: e.operation_id,
+      instructions: e.instructions ?? '',
+      updated_at: e.updated_at,
+    })),
+    environment_operations: operations.map((o) => ({
+      operation_id: o.operation_id,
+      engine: o.target.kind === 'runtime' ? o.target.engine_id : null,
+      kind: o.kind,
+      phase: o.phase,
+      phase_text: phaseText(o),
+      progress: o.progress,
+    })),
   }
 }
 
 export async function describeDaemon(
   link: CoreLink,
-  recordPath: string,
+  paths: Pick<AtcPaths, 'daemonRecord' | 'hostStepsJournal'>,
   now: () => Date
 ): Promise<DaemonDescription> {
-  const [snapshot, record] = await Promise.all([link.snapshot(), readDaemonRecord(recordPath)])
-  return describeSnapshot(snapshot, record, now)
+  const [snapshot, record, journal] = await Promise.all([
+    link.snapshot(),
+    readDaemonRecord(paths.daemonRecord),
+    new HostStepJournal(paths.hostStepsJournal).load(),
+  ])
+  return describeSnapshot(snapshot, record, now, journal)
 }
 
 /** Start a daemon (or find the one starting) and wait until its record says `ready`. */

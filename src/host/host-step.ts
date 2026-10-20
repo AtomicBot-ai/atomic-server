@@ -207,6 +207,22 @@ export class HostStepExecutor {
   }
 }
 
+/**
+ * The steps a person still has to run by hand: journaled as manual, and still the step their
+ * operation waits on. The journal keeps a step after its operation moved on (cancelled, resumed
+ * without it); those are not shown.
+ */
+export function waitingHostSteps(
+  entries: readonly HostStepJournalEntry[],
+  operations: readonly Pick<EnvironmentOperationView, 'operation_id' | 'pending_host_step'>[]
+): HostStepJournalEntry[] {
+  return entries.filter(
+    (e) =>
+      e.state === 'pending-manual' &&
+      operations.some((o) => o.operation_id === e.operation_id && o.pending_host_step?.step_id === e.step_id)
+  )
+}
+
 export async function readResultFile(requestPath: string): Promise<HostStepResultFile | undefined> {
   try {
     const path = resultPathFor(requestPath)

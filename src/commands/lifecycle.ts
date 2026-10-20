@@ -48,7 +48,7 @@ function killProcess(ctx: CommandContext): (pid: number) => Promise<void> {
 }
 
 const describe = (ctx: CommandContext, link: CoreLink): Promise<DaemonDescription> =>
-  describeDaemon(link, ctx.paths.daemonRecord, ctx.now)
+  describeDaemon(link, ctx.paths, ctx.now)
 
 function printStatus(ctx: CommandContext, s: DaemonDescription): void {
   ctx.out.kv([
@@ -68,7 +68,15 @@ function printStatus(ctx: CommandContext, s: DaemonDescription): void {
         ? s.sessions.map((x) => `${x.model_id} (${x.provider}, :${x.port})`).join(', ')
         : 'none loaded',
     ],
+    ...s.environment_operations.map((o): [string, string] => [
+      'managed',
+      `${o.engine ?? 'environment'} ${o.kind}: ${o.phase_text} (${o.operation_id})`,
+    ]),
   ])
+  for (const step of s.pending_host_steps) {
+    ctx.out.note(`operation ${step.operation_id} waits for a privileged step; run it as administrator:`)
+    ctx.out.line(`  ${step.instructions}`)
+  }
 }
 
 /**
