@@ -101,3 +101,19 @@ describe('atc engines install <managed> --approve of a plan that is not the one 
     expect(run.h.begun).toEqual([])
   })
 })
+
+describe('atc engines install <managed> while another engine’s operation waits for a person', () => {
+  it.each(['awaiting-consent', 'relogin-required', 'reboot-required'] as const)(
+    'stops at once naming it (%s) and how to continue it, instead of waiting forever',
+    async (phase) => {
+      const run = managedRun('vllm')
+      t = run.t
+      run.h.set(operation('sglang', phase, { operation_id: 'op-sglang' }))
+      expect(await t.run(['engines', 'install', 'vllm', '--yes'])).toBe(2)
+      expect(err()).toContain('sglang')
+      expect(err()).toContain('atc engines install --resume op-sglang')
+      expect(run.h.begun).toEqual([])
+    },
+    10_000
+  )
+})

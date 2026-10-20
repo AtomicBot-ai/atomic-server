@@ -189,6 +189,9 @@ export async function continueOperation(s: ManagedSession, op: EnvironmentOperat
 }
 
 /** Another engine's operation runs first: show it, wait for it; `false` when following stopped. */
+/** Phases an operation leaves only when a person acts: consent, a new sign-in, a restart. */
+const PERSON: readonly string[] = ['awaiting-consent', 'relogin-required', 'reboot-required']
+
 async function waitForOther(s: ManagedSession, other: EnvironmentOperation, engine: string) {
   s.ctx.io.stderr(
     `Waiting for the ${other.kind} of ${engineOf(other)} (${other.phase}) to finish: the core changes one managed engine at a time; ${engine} is next.\n`
@@ -209,7 +212,17 @@ async function setup(
   for (;;) {
     if (state.operation) return continueOperation(s, state.operation)
     if (!state.other_operation) break
-    if (!(await waitForOther(s, state.other_operation, engine))) return s.interrupted() ? 130 : 0
+    // An operation waiting for a person ends only when they act: waiting here would never end.
+    const other = state.other_operation
+    if (PERSON.includes(other.phase))
+      throw new AtcError(
+        'ATC_USAGE',
+        `The ${other.kind} of ${engineOf(other)} waits for you (${other.phase}); the core changes one managed engine at a time.`,
+        {
+          hint: `continue it with atc engines install --resume ${other.operation_id}, or stop it with --cancel ${other.operation_id}`,
+        }
+      )
+    if (!(await waitForOther(s, other, engine))) return s.interrupted() ? 130 : 0
     state = await engineState(s, engine)
   }
   printState(s, state)
