@@ -6,11 +6,14 @@
  * plan these lines show, and none while the operation waits for consent to a plan not shown.
  */
 
-import type { EnvironmentOperation } from '@atomic-chat/core/contracts'
+import type { EnvironmentOperation, GpuFacts, SettingDescriptor } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ServerLaunch, WorkspaceSnapshot } from '../../../contract/index.js'
 import {
   engineName,
   engineView,
+  fieldText,
+  fieldValue,
+  formFields,
   formatSize,
   operationView,
   planBlocked,
@@ -20,8 +23,25 @@ import {
   removalLines,
 } from '../../../workspace-view/index.js'
 
+/** The settings form of the open panel: the core's schema and values, and the person's edits. */
+export interface EngineForm {
+  descriptors: SettingDescriptor[]
+  values: Record<string, unknown>
+  /** The revision read when the form opened; a save sends it. */
+  revision: number | undefined
+  draft: Record<string, unknown>
+  /** The environment's cards, for `gpu_id` of a managed engine. */
+  gpus: GpuFacts[]
+}
+
 export interface EnginePanel {
   engine: string
+  /** A managed engine (plan, operations) or an engine of builds (llama.cpp, MLX, Foundry Local). */
+  kind: 'managed' | 'build'
+  /** For an engine of builds: its active build as Library lists it. */
+  summary: string
+  mode: 'engine' | 'settings'
+  form: EngineForm | null
   /** `engines.plan`'s answer; `null` until it came. */
   state: ManagedEngineState | null
   busy: boolean
@@ -76,7 +96,8 @@ export function panelRefreshKey(p: EnginePanel, live: WorkspaceSnapshot | null):
 export function enginePanelModel(
   p: EnginePanel,
   live: WorkspaceSnapshot | null
-): { lines: PanelLine[]; buttons: PanelButton[] } {
+): { lines: PanelLine[]; buttons: PanelButton[]; fields?: PanelButton[] } {
+  if (p.mode === 'settings') return settingsModel(p)
   const lines: PanelLine[] = [{ text: engineName(p.engine), tone: 'title' }]
   const buttons: PanelButton[] = []
   const say = (text: string, tone: PanelLine['tone'] = 'text') => lines.push({ text, tone })
@@ -88,6 +109,12 @@ export function enginePanelModel(
     add('engine-refresh', 'Refresh', 'Ask the core again')
     add('close', 'Close', 'The operation goes on in the server')
     return { lines, buttons }
+  }
+  if (p.kind === 'build') {
+    say(p.summary || 'Not installed', 'muted')
+    add('engine-settings', 'Settings', 'This engine’s settings in the core')
+    add('engine-builds', 'Builds…', 'Install, activate or remove builds')
+    return end()
   }
   if (!p.state) {
     say(p.busy ? 'Reading the core’s plan…' : 'The core gave no answer yet.', 'muted')
@@ -166,7 +193,33 @@ export function enginePanelModel(
       if (view.kind === 'update')
         add('engine-update', 'Update', 'Reinstall with the newer release, keeping models')
       add('engine-remove', 'Remove…', 'Show what removing it does')
+      add('engine-settings', 'Settings', 'This engine’s settings in the core')
       break
   }
   return end()
+}
+
+/** The settings form: one field a row, Save sends only what changed. */
+function settingsModel(p: EnginePanel) {
+  const lines: PanelLine[] = [
+    { text: `${engineName(p.engine)} settings`, tone: 'title' },
+    { text: 'Changes apply from the next model load.', tone: 'muted' },
+  ]
+  const f = p.form
+  if (!f) lines.push({ text: p.busy ? 'Reading the settings…' : 'No settings read yet.', tone: 'muted' })
+  const fields: PanelButton[] = f
+    ? formFields(f.descriptors).map((d) => ({
+        id: `engine-setting:${d.key}`,
+        label: `${d.title}: ${fieldText(d, fieldValue(d, f.values, f.draft), f.gpus)}${d.key in f.draft ? '  •' : ''}`,
+        hint: d.description.split('. ')[0] ?? d.key,
+      }))
+    : []
+  if (p.notice) lines.push({ text: p.notice, tone: 'warn' })
+  if (p.error) lines.push({ text: p.error, tone: 'error' })
+  const buttons: PanelButton[] = [
+    { id: 'engine-settings-save', label: 'Save', hint: 'Save the changed settings in the core' },
+    { id: 'engine-settings-back', label: 'Back', hint: 'Return to the engine' },
+    { id: 'close', label: 'Close', hint: 'Discard unsaved changes' },
+  ]
+  return { lines, buttons, fields }
 }

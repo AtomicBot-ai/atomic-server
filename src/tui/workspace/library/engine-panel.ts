@@ -5,6 +5,7 @@ import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { enginePanelModel } from './engine-panel-model.js'
 import type { PanelLine } from './engine-panel-model.js'
+import { computeRowWindow } from '../../row-window.js'
 
 const TONES: Record<PanelLine['tone'], string> = {
   title: COLORS.gold,
@@ -24,13 +25,31 @@ export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string): vo
     height = c.height - 4
   for (let i = y; i < y + height; i++) text(c, x, i, ' '.repeat(width), COLORS.text, width, COLORS.header)
   c.targets = []
-  const { lines, buttons } = enginePanelModel(p, s.workspace)
+  const { lines, buttons, fields } = enginePanelModel(p, s.workspace)
   const rows = lines.flatMap((l) => wrap(l.text, width - 4).map((t) => ({ text: t, tone: l.tone })))
+  if (fields) {
+    // The form: its lines, then a window of fields that keeps the focused one in view.
+    rows.forEach((r, i) => text(c, x + 2, y + 1 + i, r.text, TONES[r.tone], width - 4, COLORS.header))
+    const top = y + 2 + rows.length,
+      room = Math.max(1, y + height - 3 - top)
+    const win = computeRowWindow(
+      fields.length,
+      Math.max(
+        0,
+        fields.findIndex((f) => f.id === focus)
+      ),
+      room
+    )
+    fields
+      .slice(win.start, win.start + win.count)
+      .forEach((f, i) => button(c, f.id, x + 2, top + i, f.label.slice(0, width - 6), f.hint, focus))
+  }
   const room = Math.max(1, height - 4)
   // Keep the end in view: the newest state and its instruction come last.
-  rows.slice(Math.max(0, rows.length - room)).forEach((r, i) => {
-    text(c, x + 2, y + 1 + i, r.text, TONES[r.tone], width - 4, COLORS.header, r.tone === 'title')
-  })
+  if (!fields)
+    rows.slice(Math.max(0, rows.length - room)).forEach((r, i) => {
+      text(c, x + 2, y + 1 + i, r.text, TONES[r.tone], width - 4, COLORS.header, r.tone === 'title')
+    })
   let bx = x + 2
   for (const b of buttons) {
     if (bx + b.label.length + 3 > x + width) break

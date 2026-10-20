@@ -9,6 +9,10 @@
 import { randomUUID } from 'node:crypto'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
+import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
+import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
+import type { WorkspaceState } from '../state.js'
+import { settingsAction } from './engine-settings.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ServerLaunch } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
@@ -21,19 +25,46 @@ const requestId = () => `terminal-${randomUUID()}`
 
 type PanelContext = Pick<ActionContext, 'get' | 'update' | 'controller'>
 
+/** The operation runner on `engines.install` for an engine: its builds, as Library did before the panel. */
+export function engineRunner(engine: string, source: unknown): Partial<WorkspaceState> {
+  return {
+    overlay: null,
+    operations: [...WORKSPACE_OPERATIONS],
+    toolGroup: 'engines',
+    page: 'tools',
+    operation: 'engines.install',
+    operationInput: JSON.stringify({ engine }),
+    operationReturn: 'models',
+    operationResult: JSON.stringify(source, null, 2),
+    focus: 'operation-run',
+    selected: 0,
+    edit: '',
+    scroll: 0,
+  }
+}
+
+/** Engines with settings in the core: every local provider; the panel opens for them. */
+export const hasPanel = (id: string) => (LOCAL_PROVIDER_IDS as readonly string[]).includes(id)
+
 export async function engineAction(id: string, ctx: PanelContext): Promise<boolean> {
   const { get, update, controller: c } = ctx
+  if (await settingsAction(id, ctx)) return true
   if (id.startsWith('engine-open:')) {
     const engine = id.slice('engine-open:'.length)
+    const managed = isManagedEngine(engine)
     const launch = (await c.runtime.launch().catch(() => 'terminal')) as ServerLaunch
     update((v) => ({
       ...v,
       overlay: 'engine-panel',
-      focus: 'engine-refresh',
+      focus: managed ? 'engine-refresh' : 'engine-settings',
       enginePanel: {
         engine,
+        kind: managed ? 'managed' : 'build',
+        summary: v.libraryRows.find((r) => r.id === engine)?.description ?? '',
+        mode: 'engine',
+        form: null,
         state: null,
-        busy: true,
+        busy: managed,
         error: '',
         notice: '',
         removing: false,
@@ -50,6 +81,10 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
   if (s.overlay !== 'engine-panel' || !p || !id.startsWith('engine-')) return false
   const set = (part: Partial<EnginePanel>) => panel(ctx, p.engine, part)
   if (id === 'engine-refresh') return refresh(ctx).then(() => true)
+  if (id === 'engine-builds') {
+    const row = s.libraryRows.find((r) => r.id === p.engine)
+    return (update((v) => ({ ...v, ...engineRunner(p.engine, row?.source ?? {}), enginePanel: null })), true)
+  }
   if (id === 'engine-remove') return (set({ removing: true }), true)
   if (id === 'engine-remove-cancel') return (set({ removing: false }), true)
   if (id === 'engine-keep-models') return (set({ keepModels: !p.keepModels }), true)
@@ -110,7 +145,7 @@ function panel(ctx: PanelContext, engine: string, part: Partial<EnginePanel>) {
 /** Read the core's state for the open panel again, noting which live operation it was read for. */
 async function refresh(ctx: PanelContext): Promise<void> {
   const p = ctx.get().enginePanel
-  if (!p) return
+  if (!p || p.kind !== 'managed') return
   panel(ctx, p.engine, { busy: true, seen: panelRefreshKey(p, ctx.get().workspace) })
   try {
     const state = (await ctx.controller.runtime.execute('engines.plan', {

@@ -23,6 +23,10 @@ function state(over: Partial<ManagedEngineState> = {}): ManagedEngineState {
 }
 const panel = (over: Partial<EnginePanel> = {}): EnginePanel => ({
   engine: 'vllm',
+  kind: 'managed',
+  summary: '',
+  mode: 'engine',
+  form: null,
   state: state(),
   busy: false,
   error: '',

@@ -10,6 +10,7 @@ import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
 import { AtcError } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
+import { parseSettingValue } from '../workspace-view/index.js'
 import { workspace } from './control.js'
 
 const NEXT_LOAD = 'Applies from the next model load.'
@@ -18,42 +19,6 @@ const NEXT_LOAD = 'Applies from the next model load.'
 export function engineKey(raw: string): { provider: string; key: string } | undefined {
   const match = /^engine\.([^.]+)\.(.+)$/.exec(raw)
   return match ? { provider: match[1]!, key: match[2]! } : undefined
-}
-
-const TRUE = new Set(['true', 'on', 'yes', '1'])
-const FALSE = new Set(['false', 'off', 'no', '0'])
-
-/** The typed value of `raw` for a descriptor, or why it is not one. */
-export function parseSettingValue(d: SettingDescriptor, raw: string): { value: unknown } | { error: string } {
-  const props = d.controllerProps
-  if (d.controllerType === 'checkbox') {
-    const word = raw.trim().toLowerCase()
-    if (TRUE.has(word)) return { value: true }
-    if (FALSE.has(word)) return { value: false }
-    return { error: `${d.key} is true or false.` }
-  }
-  if (d.controllerType === 'dropdown') {
-    const options = Array.isArray(props['options'])
-      ? (props['options'] as Array<{ value: unknown }>).map((o) => String(o.value))
-      : []
-    if (options.length === 0 || options.includes(raw)) return { value: raw }
-    return { error: `${d.key} is one of ${options.join(', ')}.` }
-  }
-  if (props['type'] !== 'number') return { value: raw }
-  const value = Number(raw)
-  if (raw.trim() === '' || !Number.isFinite(value)) return { error: `${d.key} is a number.` }
-  const min = typeof props['min'] === 'number' ? props['min'] : undefined
-  const max = typeof props['max'] === 'number' ? props['max'] : undefined
-  if ((min !== undefined && value < min) || (max !== undefined && value > max))
-    return {
-      error:
-        min !== undefined && max !== undefined
-          ? `${d.key} is between ${min} and ${max}.`
-          : min !== undefined
-            ? `${d.key} is at least ${min}.`
-            : `${d.key} is at most ${max}.`,
-    }
-  return { value }
 }
 
 /** The local providers this host registers, in the core's order. */

@@ -1,4 +1,4 @@
-import { engineAction, isManagedEngine } from './engine-actions.js'
+import { engineAction, engineRunner, hasPanel } from './engine-actions.js'
 import { downloadRows } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
@@ -71,24 +71,8 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     const index = Number(id.slice(12)),
       row = s.libraryRows[index]
     if (!row || s.busy) return true
-    if (s.libraryView === 'engines' && isManagedEngine(row.id))
-      return engineAction(`engine-open:${row.id}`, ctx)
-    if (s.libraryView === 'engines') {
-      patch({
-        operations: [...WORKSPACE_OPERATIONS],
-        toolGroup: 'engines',
-        page: 'tools',
-        operation: 'engines.install',
-        operationInput: JSON.stringify({ engine: row.id }),
-        operationReturn: 'models',
-        operationResult: JSON.stringify(row.source, null, 2),
-        focus: 'operation-run',
-        selected: 0,
-        edit: '',
-        scroll: 0,
-      })
-      return true
-    }
+    if (s.libraryView === 'engines' && hasPanel(row.id)) return engineAction(`engine-open:${row.id}`, ctx)
+    if (s.libraryView === 'engines') return (patch(engineRunner(row.id, row.source)), true)
     patch({ busy: true, message: 'Checking installation requirements…', selected: index })
     try {
       let request: Record<string, unknown>
