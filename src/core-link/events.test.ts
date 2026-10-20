@@ -74,6 +74,25 @@ describe('SseEvents', () => {
     expect(seen).toEqual(['resync', 'core:log'])
   })
 
+  it('says when the stream failed, once per failed attempt', async () => {
+    const controller = new AbortController()
+    const drops: string[] = []
+    let streams = 0
+    const client = {
+      snapshot: async () => snapshot('i1', 'c'),
+      events: async () => {
+        streams += 1
+        if (streams < 3) throw new Error(`socket ${streams}`)
+        controller.abort()
+      },
+    }
+    await new SseEvents(client, { sleep: async () => {} }).subscribe(() => {}, {
+      signal: controller.signal,
+      onDrop: (error) => drops.push((error as Error).message),
+    })
+    expect(drops).toEqual(['socket 1', 'socket 2'])
+  })
+
   // A dropped socket loses nothing: the core replays from the cursor (its ring keeps 1000 events), so
   // the stream continues from the last event seen, without a new snapshot.
   it('continues from the last event after a dropped stream, without a new snapshot', async () => {

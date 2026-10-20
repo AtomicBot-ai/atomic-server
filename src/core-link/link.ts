@@ -31,10 +31,17 @@ export interface StartServerBody {
 export type CoreEventHandler = (message: CoreEventMessage) => void
 
 export interface CoreEventSource {
-  /** Snapshot first, then the stream from its cursor; on `resync`, snapshot again. Ends on abort. */
+  /**
+   * Snapshot first, then the stream from its cursor; on `resync`, snapshot again. Ends on abort.
+   * `onDrop` says the stream failed and is being retried: events may be late until the next one.
+   */
   subscribe(
     handler: CoreEventHandler,
-    options: { signal: AbortSignal; onSnapshot?: (snapshot: CoreSnapshot) => void }
+    options: {
+      signal: AbortSignal
+      onSnapshot?: (snapshot: CoreSnapshot) => void
+      onDrop?: (error: unknown) => void
+    }
   ): Promise<void>
 }
 

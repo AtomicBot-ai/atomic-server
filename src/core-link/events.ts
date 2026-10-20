@@ -48,7 +48,11 @@ export class SseEvents implements CoreEventSource {
 
   async subscribe(
     handler: CoreEventHandler,
-    options: { signal: AbortSignal; onSnapshot?: (s: CoreSnapshot) => void }
+    options: {
+      signal: AbortSignal
+      onSnapshot?: (s: CoreSnapshot) => void
+      onDrop?: (error: unknown) => void
+    }
   ): Promise<void> {
     const { signal } = options
     let failures = 0
@@ -104,6 +108,7 @@ export class SseEvents implements CoreEventSource {
           continue
         }
         failures += 1
+        options.onDrop?.(error)
         const delay = this.delay(failures)
         this.log(
           `event stream failed (${String((error as Error).message ?? error)}); retrying in ${delay} ms`
