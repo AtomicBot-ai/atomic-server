@@ -81,7 +81,8 @@ beforeAll(async () => {
   if ((await atc('start', '--admin-port', '0')).code !== 0) throw new Error('atc start failed')
   const setup = await atc('engines', 'install', 'vllm', '--yes')
   if (setup.code !== 0) throw new Error(`vllm setup failed: ${setup.err}`)
-})
+  // A server start and vLLM's setup on the fake machine: longer than the default hook limit under load.
+}, 60_000)
 
 afterAll(async () => {
   if (process.platform === 'win32') return
@@ -232,7 +233,7 @@ describe.skipIf(process.platform === 'win32')(`a managed load (${ATC.join(' ')})
     )
     env2 = { ...process.env, NO_COLOR: '1', ATOMIC_CORE_MANAGED_ROOT: root2, ATOMIC_MANAGED_TEST_HOST: host2 }
     if ((await run2('start', '--admin-port', '0')).code !== 0) throw new Error('atc start failed')
-  })
+  }, 60_000)
 
   afterAll(async () => {
     if (process.platform === 'win32') return
