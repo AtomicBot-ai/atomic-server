@@ -18,14 +18,7 @@ export function statusFixture(overrides: Partial<AdminStatus> = {}): AdminStatus
         api_key: '',
       },
     ],
-    pending_host_steps: [
-      {
-        step_id: 'create-service-user',
-        operation_id: 'op-1',
-        instructions: 'Run: sudo atc engines install tensorrt-llm --resume op-1',
-        updated_at: Date.now() - 5_000,
-      },
-    ],
+    pending_host_steps: [],
     ...overrides,
   }
 }

@@ -1,4 +1,5 @@
 import type { Workspace } from './useWorkspace'
+import { HostStepBanner } from './HostStepBanner'
 import type { Page } from './types'
 import { Action } from './Controls'
 import { Eye } from './Eye'
@@ -33,6 +34,7 @@ export function Cockpit({
         <button className="endpoint-link" onClick={() => navigate('server')}>
           {s?.api.endpoint ?? 'Connecting…'}
         </button>
+        <HostStepBanner workspace={w} />
         <div className="cockpit-services">
           {s?.services.length ? (
             s.services.map((service) => (
