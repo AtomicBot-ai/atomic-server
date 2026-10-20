@@ -239,7 +239,7 @@ describe(`atc (${command.join(' ')})`, () => {
         // The server accepted the folder, and the core's executor would trust it as well. The server
         // reads the folder back after it started (a cold PowerShell takes seconds), so wait for it.
         let log = ''
-        for (const deadline = Date.now() + 45_000; Date.now() < deadline;) {
+        for (const deadline = Date.now() + 90_000; Date.now() < deadline;) {
           log = run('logs', '-n', '50').stdout
           if (/restricted .+ to this user|could not restrict/.test(log)) break
           await new Promise((r) => setTimeout(r, 500))
@@ -262,7 +262,7 @@ describe(`atc (${command.join(' ')})`, () => {
         rmSync(join(ROOT, '.e2e-acl'), { recursive: true, force: true })
       }
     },
-    120_000
+    180_000
   )
 
   it('prints a completion script', () => {

@@ -46,16 +46,22 @@ export function icaclsPath(systemRoot: string | undefined): string {
 }
 
 /**
- * The environment for Windows PowerShell (`powershell.exe`): `base` plus `extra`, without
- * `PSModulePath`. Started from pwsh, atc inherits PowerShell 7's module path, where Windows PowerShell
- * finds `Get-Acl`'s module but cannot load it; without the variable it uses its own default.
+ * The environment for Windows PowerShell (`powershell.exe`): `base` plus `extra`, with `PSModulePath`
+ * set to its own modules folder alone, where `Get-Acl`'s module lives. Started from pwsh, atc inherits
+ * PowerShell 7's module path, whose copy of that module Windows PowerShell cannot load; its default
+ * path holds every module installed for it, which a cold command lookup searches for past 30 s.
  */
 export function windowsPowerShellEnv(
   base: NodeJS.ProcessEnv,
   extra: Record<string, string> = {}
 ): NodeJS.ProcessEnv {
-  const env = Object.fromEntries(Object.entries(base).filter(([key]) => key.toUpperCase() !== 'PSMODULEPATH'))
-  return { ...env, ...extra }
+  const entries = Object.entries(base)
+  const root = (entries.find(([key]) => key.toUpperCase() === 'SYSTEMROOT')?.[1] ?? 'C:\\Windows').replace(
+    /[\\/]+$/,
+    ''
+  )
+  const env = Object.fromEntries(entries.filter(([key]) => key.toUpperCase() !== 'PSMODULEPATH'))
+  return { ...env, PSModulePath: `${root}\\System32\\WindowsPowerShell\\v1.0\\Modules`, ...extra }
 }
 
 /**
@@ -116,7 +122,7 @@ async function readOwnerOnly(
     const acl = await readWindowsAcl(dir, {
       exec: async (command, args, o) => {
         const r = await options.exec(command, args, {
-          timeoutMs: o?.timeoutMs ?? 30_000,
+          timeoutMs: o?.timeoutMs ?? 120_000,
           env: windowsPowerShellEnv(options.env, o?.env),
         })
         return { code: r.error ? null : r.code, stdout: r.stdout, stderr: r.error ?? r.stderr }

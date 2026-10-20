@@ -66,9 +66,19 @@ describe('owner-only folder ACL', () => {
       ],
     }
     const run = async (acl: unknown, answer: { code?: number; stderr?: string } = {}) => {
-      const calls: Array<{ command: string; args: readonly string[]; env?: NodeJS.ProcessEnv }> = []
+      const calls: Array<{
+        command: string
+        args: readonly string[]
+        env?: NodeJS.ProcessEnv
+        timeoutMs?: number | undefined
+      }> = []
       const exec: ExecFn = async (command, args, options) => {
-        calls.push({ command, args, ...(options?.env ? { env: options.env } : {}) })
+        calls.push({
+          command,
+          args,
+          ...(options?.env ? { env: options.env } : {}),
+          timeoutMs: options?.timeoutMs,
+        })
         if (command.endsWith('powershell.exe'))
           return {
             code: answer.code ?? 0,
@@ -133,8 +143,11 @@ describe('owner-only folder ACL', () => {
       expect(calls[3]?.env).toEqual({
         SystemRoot: 'D:\\Win',
         PATH: 'D:\\Win\\System32',
+        PSModulePath: 'D:\\Win\\System32\\WindowsPowerShell\\v1.0\\Modules',
         ATOMIC_HOST_STEP_PATH: dir,
       })
+      // In the background, so a slow cold PowerShell gets time.
+      expect(calls[3]?.timeoutMs).toBe(120_000)
       // What atc accepts, the core's executor accepts.
       expect(judgeWindowsAcl(owned, dir, 'directory')).toBeNull()
     })
@@ -171,13 +184,24 @@ describe('owner-only folder ACL', () => {
   })
 
   // Started from pwsh, the server inherits PowerShell 7's module path; Windows PowerShell then finds
-  // Get-Acl's module there, cannot load it (CouldNotAutoloadMatchingModule) and the read fails.
-  it('drops PSModulePath in any case so Windows PowerShell uses its own modules', () => {
+  // Get-Acl's module there and cannot load it (CouldNotAutoloadMatchingModule). Its default path holds
+  // every module installed for it, which a cold command lookup searches for past 30 s on a slow
+  // machine. Only its own modules folder, where Get-Acl's module lives, is searched.
+  it.each([
+    [{ SystemRoot: 'D:\\Win' }, 'D:\\Win'],
+    [{ SYSTEMROOT: 'E:\\W\\' }, 'E:\\W'],
+    [{}, 'C:\\Windows'],
+  ])("points PSModulePath at Windows PowerShell's own modules for %j", (root, expected) => {
     expect(
       windowsPowerShellEnv(
-        { Path: 'C:\\Windows', PSModulePath: 'C:\\pwsh7', psmodulepath: 'C:\\other' },
+        { Path: 'C:\\Windows', PSModulePath: 'C:\\pwsh7', psmodulepath: 'C:\\other', ...root },
         { ATOMIC_HOST_STEP_PATH: 'C:\\d' }
       )
-    ).toEqual({ Path: 'C:\\Windows', ATOMIC_HOST_STEP_PATH: 'C:\\d' })
+    ).toEqual({
+      Path: 'C:\\Windows',
+      ...root,
+      PSModulePath: `${expected}\\System32\\WindowsPowerShell\\v1.0\\Modules`,
+      ATOMIC_HOST_STEP_PATH: 'C:\\d',
+    })
   })
 })
