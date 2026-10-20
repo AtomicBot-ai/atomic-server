@@ -1,9 +1,11 @@
 /**
  * What a GGUF setup plan is made of, gathered now: the Bonsai families and the compatibility verdict
  * from the core, the Hub's size and hash for a file no family pins, the PrismML catalog when the
- * verdict involves PrismML, and free space. Then `planGgufSetup` decides.
+ * verdict involves PrismML (asked with the file's requirements), and free space. Then `planGgufSetup` decides.
  */
+import { AtomicCoreError } from '@atomic-chat/core'
 import type {
+  BackendCatalogRequest,
   BackendCatalogResponse,
   ModelCompatibilityResponse,
   PrismFamiliesResponse,
@@ -82,9 +84,30 @@ export async function planFor(deps: GgufFactsDeps, request: ModelSetupPlanReques
       ...(commit ? { revision: commit } : {}),
     }
   }
-  const prism =
-    verdict.provider === 'atomic-prism'
-      ? await link.request<BackendCatalogResponse>('POST', '/backends/atomic-prism/catalog', {})
-      : undefined
+  const prism = verdict.provider === 'atomic-prism' ? await prismCatalog(link, verdict) : undefined
   return planGgufSetup({ request, verdict, family, ...(hubFile ? { hubFile } : {}), prism, freeBytes })
+}
+
+/**
+ * The PrismML catalog for this verdict. A file that needs a build sends its `requires` and
+ * `min_prism_build`, so the core's `recommended` is a build that runs it; `null` when the core has none
+ * (`BACKEND_BUILD_UNAVAILABLE`). A compatible file asks without requirements for `recommended_installed`.
+ */
+async function prismCatalog(
+  link: CoreLink,
+  verdict: ModelCompatibilityResponse
+): Promise<BackendCatalogResponse | null> {
+  const needsBuild = verdict.outcome === 'engine_required' || verdict.outcome === 'engine_update_required'
+  const body: BackendCatalogRequest = needsBuild
+    ? {
+        requires: verdict.requires,
+        ...(verdict.min_prism_build !== undefined ? { min_build: verdict.min_prism_build } : {}),
+      }
+    : {}
+  try {
+    return await link.request<BackendCatalogResponse>('POST', '/backends/atomic-prism/catalog', body)
+  } catch (error) {
+    if (error instanceof AtomicCoreError && error.code === 'BACKEND_BUILD_UNAVAILABLE') return null
+    throw error
+  }
 }

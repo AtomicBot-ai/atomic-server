@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest'
-import { icaclsPath, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
+import { judgeWindowsAcl } from '@atomic-chat/core/host'
+import type { WindowsAcl } from '@atomic-chat/core/host'
+import { describe, expect, it, vi } from 'vitest'
+import { icaclsPath, overlayWindowsEnv, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
+import type { ExecFn } from './exec.js'
 
 describe('owner-only folder ACL', () => {
   it('removes inherited entries and grants this user, SYSTEM and Administrators by SID', () => {
@@ -21,59 +24,180 @@ describe('owner-only folder ACL', () => {
       calls.push(`${command} ${args[0]}`)
       return { code: 5, stdout: '', stderr: 'Access is denied.', timedOut: false }
     }
-    expect(await restrictToOwner('/d/atc', { platform: 'linux', user: 'u', exec })).toBeUndefined()
+    expect(
+      await restrictToOwner('/d/atc', {
+        platform: 'linux',
+        user: 'u',
+        exec,
+        env: {},
+        checked: () => undefined,
+      })
+    ).toBeUndefined()
     expect(calls).toEqual([])
     expect(
-      await restrictToOwner('C:\\d\\atc', { platform: 'win32', user: 'u', exec, systemRoot: 'D:\\Win\\' })
+      await restrictToOwner('C:\\d\\atc', {
+        platform: 'win32',
+        user: 'u',
+        exec,
+        systemRoot: 'D:\\Win\\',
+        env: {},
+        checked: () => undefined,
+      })
     ).toBe('Access is denied.')
     expect(calls).toEqual(['D:\\Win\\System32\\icacls.exe C:\\d\\atc'])
     expect(icaclsPath(undefined)).toBe('C:\\Windows\\System32\\icacls.exe')
   })
 
-  it('removes the broad groups by SID, then reads the folder back for anyone else left', async () => {
+  // The folder is read back through the core's `readWindowsAcl` (Get-Acl by SID, any system
+  // language) and must pass the core executor's judge, and grant nobody else even read access.
+  describe('reading the folder back', () => {
     const dir = 'C:\\a (I) dir\\atc'
-    const listing = (aces: string[]) => ({
-      code: 0,
-      stdout: `${dir} ${aces.join('\n      ')}\n\nSuccessfully processed 1 files; Failed processing 0 files\n`,
-      stderr: '',
-      timedOut: false,
-    })
-    const owned = listing([
-      'HOST\\alice:(OI)(CI)(F)',
-      'NT AUTHORITY\\SYSTEM:(OI)(CI)(F)',
-      'BUILTIN\\Administrators:(OI)(CI)(F)',
-    ])
-    // What the windows-11-arm runner listed: no (I), but the drive's groups as the folder's own.
-    const explicit = listing([
-      'NT AUTHORITY\\Authenticated Users:(M)',
-      'HOST\\alice:(OI)(CI)(F)',
-      'NT AUTHORITY\\SYSTEM:(OI)(CI)(F)',
-      'BUILTIN\\Administrators:(OI)(CI)(F)',
-      'BUILTIN\\Users:(OI)(CI)(RX)',
-    ])
-    const inherited = listing(['HOST\\alice:(OI)(CI)(F)', 'BUILTIN\\Users:(I)(OI)(CI)(RX)'])
-    const run = async (read: typeof owned) => {
-      const calls: string[][] = []
-      const result = await restrictToOwner(dir, {
+    const USER = 'S-1-5-21-1-2-3-1001'
+    const FULL = 2032127
+    const READ = 1179817
+    const owned: WindowsAcl = {
+      reparse: false,
+      directory: true,
+      owner: USER,
+      rules: [
+        { sid: USER, allow: true, rights: FULL },
+        { sid: 'S-1-5-18', allow: true, rights: FULL },
+        { sid: 'S-1-5-32-544', allow: true, rights: FULL },
+      ],
+    }
+    const run = async (acl: unknown, answer: { code?: number; stderr?: string } = {}) => {
+      const calls: Array<{
+        command: string
+        args: readonly string[]
+        env?: NodeJS.ProcessEnv
+        timeoutMs?: number | undefined
+      }> = []
+      const exec: ExecFn = async (command, args, options) => {
+        calls.push({
+          command,
+          args,
+          ...(options?.env ? { env: options.env } : {}),
+          timeoutMs: options?.timeoutMs,
+        })
+        if (command.endsWith('powershell.exe'))
+          return {
+            code: answer.code ?? 0,
+            stdout: JSON.stringify(acl),
+            stderr: answer.stderr ?? '',
+            timedOut: false,
+          }
+        return { code: 0, stdout: 'processed 1 files', stderr: '', timedOut: false }
+      }
+      let checked: (problem: string | undefined) => void = () => undefined
+      const check = new Promise<string | undefined>((resolve) => (checked = resolve))
+      const granted = await restrictToOwner(dir, {
         platform: 'win32',
         user: 'HOST\\alice',
-        exec: async (_c, args) => {
-          calls.push([...args])
-          return args.length === 1 ? read : { ...owned, stdout: 'processed 1 files' }
+        exec,
+        systemRoot: 'D:\\Win',
+        env: {
+          SystemRoot: 'D:\\Win',
+          PATH: 'D:\\Win\\System32',
+          PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
         },
+        checked,
       })
-      return { result, calls }
+      return { result: granted ?? (await check), calls }
     }
-    const ok = await run(owned)
-    expect(ok.result).toBeUndefined()
-    expect(ok.calls[1]).toEqual([dir, '/remove:g', '*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'])
-    expect((await run(explicit)).result).toMatch(
-      /still grants more .*Authenticated Users:\(M\).*BUILTIN\\Users/
-    )
-    expect((await run(inherited)).result).toMatch(/still grants more .*BUILTIN\\Users:\(I\)/)
-    // Nothing listed, or UTF-16: not taken for an owner-only folder.
-    expect((await run({ ...owned, stdout: '' })).result).toMatch(/did not list the folder/)
-    const utf16 = { ...explicit, stdout: [...explicit.stdout].join('\0') }
-    expect((await run(utf16)).result).toMatch(/still grants more/)
+
+    // A cold Windows PowerShell takes seconds (past the server's start budget on windows-11-arm); the
+    // grants are what the keys need before they are written, so only they are waited for.
+    it('returns after the grants and reports the read-back later', async () => {
+      let answer: (value: Awaited<ReturnType<ExecFn>>) => void = () => undefined
+      const exec: ExecFn = async (command) =>
+        command.endsWith('powershell.exe')
+          ? new Promise((resolve) => (answer = resolve))
+          : { code: 0, stdout: '', stderr: '', timedOut: false }
+      const reported: Array<string | undefined> = []
+      const granted = await restrictToOwner(dir, {
+        platform: 'win32',
+        user: 'HOST\\alice',
+        exec,
+        env: {},
+        checked: (problem) => reported.push(problem),
+      })
+      expect(granted).toBeUndefined()
+      expect(reported).toEqual([])
+      answer({ code: 0, stdout: JSON.stringify(owned), stderr: '', timedOut: false })
+      await vi.waitFor(() => expect(reported).toEqual([undefined]))
+    })
+
+    it('grants by icacls, then reads the ACL with PowerShell by its full path and the inherited env', async () => {
+      const { result, calls } = await run(owned)
+      expect(result).toBeUndefined()
+      expect(calls.map((c) => c.command)).toEqual([
+        'D:\\Win\\System32\\icacls.exe',
+        'D:\\Win\\System32\\icacls.exe',
+        'D:\\Win\\System32\\icacls.exe',
+        'D:\\Win\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      ])
+      expect(calls[1]?.args).toEqual([dir, '/remove:g', '*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'])
+      // From an elevated session the folder's owner is Administrators, and the core's judge would take
+      // this user's own grant for another writer: the user becomes the owner.
+      expect(calls[2]?.args).toEqual([dir, '/setowner', 'HOST\\alice'])
+      expect(calls[3]?.env).toEqual({
+        SystemRoot: 'D:\\Win',
+        PATH: 'D:\\Win\\System32',
+        PSModulePath: 'D:\\Win\\System32\\WindowsPowerShell\\v1.0\\Modules',
+        ATOMIC_HOST_STEP_PATH: dir,
+      })
+      // In the background, so a slow cold PowerShell gets time.
+      expect(calls[3]?.timeoutMs).toBe(120_000)
+      // What atc accepts, the core's executor accepts.
+      expect(judgeWindowsAcl(owned, dir, 'directory')).toBeNull()
+    })
+
+    it('accepts CREATOR OWNER, and refuses a read-only grant to Users by its SID', async () => {
+      const creator = { ...owned, rules: [...owned.rules, { sid: 'S-1-3-0', allow: true, rights: FULL }] }
+      expect((await run(creator)).result).toBeUndefined()
+      const users = { ...owned, rules: [...owned.rules, { sid: 'S-1-5-32-545', allow: true, rights: READ }] }
+      // The executor's judge looks at writers only; atc keeps the keys and chats unreadable too.
+      expect(judgeWindowsAcl(users, dir, 'directory')).toBeNull()
+      expect((await run(users)).result).toMatch(/S-1-5-32-545/)
+      const denied = { ...owned, rules: [...owned.rules, { sid: 'S-1-1-0', allow: false, rights: FULL }] }
+      expect((await run(denied)).result).toBeUndefined()
+    })
+
+    it.each([
+      [
+        'a writer the core refuses',
+        { ...owned, rules: [...owned.rules, { sid: 'S-1-5-11', allow: true, rights: 1245631 }] },
+        /writable by S-1-5-11/,
+      ],
+      ['a reparse point', { ...owned, reparse: true }, /reparse point/],
+      ['a broad owner', { ...owned, owner: 'S-1-1-0' }, /owned by S-1-1-0/],
+      ['an answer without an owner', { reparse: false, directory: true, rules: [] }, /without an owner/],
+    ])('refuses %s', async (_name, acl, reason) => {
+      expect((await run(acl)).result).toMatch(reason)
+    })
+
+    it('reports a PowerShell that fails instead of throwing', async () => {
+      expect((await run(owned, { code: 1, stderr: 'Access denied' })).result).toMatch(
+        /cannot read the folder's ACL back: .*Access denied/
+      )
+    })
+  })
+
+  // Started from pwsh, the server inherits PowerShell 7's module path (Get-Acl then fails with
+  // CouldNotAutoloadMatchingModule); the core's readWindowsAcl sets Windows PowerShell's own, and that
+  // one must win whatever case the inherited name is in.
+  it('lays the extra names over the base ones in any case and keeps the rest', () => {
+    expect(
+      overlayWindowsEnv(
+        { Path: 'C:\\Windows', TEMP: 'C:\\t', PSModulePath: 'C:\\pwsh7', psmodulepath: 'C:\\other' },
+        { PSMODULEPATH: 'C:\\ps51', ATOMIC_HOST_STEP_PATH: 'C:\\d' }
+      )
+    ).toEqual({
+      Path: 'C:\\Windows',
+      TEMP: 'C:\\t',
+      PSMODULEPATH: 'C:\\ps51',
+      ATOMIC_HOST_STEP_PATH: 'C:\\d',
+    })
+    expect(overlayWindowsEnv({ Path: 'C:\\Windows' })).toEqual({ Path: 'C:\\Windows' })
   })
 })

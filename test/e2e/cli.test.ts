@@ -6,7 +6,9 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { judgeWindowsAcl, readWindowsAcl } from '@atomic-chat/core/host'
 import { afterAll, describe, expect, it } from 'vitest'
+import { overlayWindowsEnv } from '../../src/host/index.js'
 import { ATC, ROOT } from '../helpers/binary.js'
 
 const command = [...ATC]
@@ -217,7 +219,7 @@ describe(`atc (${command.join(' ')})`, () => {
 
   it.runIf(process.platform === 'win32')(
     "keeps atc's folder to this user on Windows, even outside the profile",
-    () => {
+    async () => {
       // Inside the checkout the folder would inherit BUILTIN\\Users from the drive.
       const folder = join(ROOT, '.e2e-acl', 'data')
       try {
@@ -234,12 +236,33 @@ describe(`atc (${command.join(' ')})`, () => {
           [acl, icacls(), icacls('config.json'), icacls('logs'), run('logs', '-n', '50').stdout].join('\n')
         expect(acl, why()).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
         expect(acl.toLowerCase()).toContain((process.env['USERNAME'] ?? '').toLowerCase())
+        // The server accepted the folder, and the core's executor would trust it as well. The server
+        // reads the folder back after it started (a cold PowerShell takes seconds), so wait for it.
+        let log = ''
+        for (const deadline = Date.now() + 90_000; Date.now() < deadline;) {
+          log = run('logs', '-n', '50').stdout
+          if (/restricted .+ to this user|could not restrict/.test(log)) break
+          await new Promise((r) => setTimeout(r, 500))
+        }
+        expect(log, why()).toMatch(/restricted .+ to this user/)
+        expect(log, why()).not.toContain('could not restrict')
+        const dir = join(folder, 'atc')
+        const read = await readWindowsAcl(dir, {
+          exec: async (exe, args, options) => {
+            const r = spawnSync(exe, args, {
+              encoding: 'utf8',
+              env: overlayWindowsEnv(process.env, options?.env),
+            })
+            return { code: r.status, stdout: r.stdout, stderr: r.stderr }
+          },
+        })
+        expect(judgeWindowsAcl(read, dir, 'directory'), JSON.stringify(read)).toBeNull()
         run('stop', '--force', '--kill')
       } finally {
         rmSync(join(ROOT, '.e2e-acl'), { recursive: true, force: true })
       }
     },
-    60_000
+    180_000
   )
 
   it('prints a completion script', () => {

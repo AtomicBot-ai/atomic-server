@@ -4,7 +4,7 @@ import type {
   PrismFamily,
 } from '@atomic-chat/core/contracts'
 import { describe, expect, it } from 'vitest'
-import { choosePrismBuild, defaultModelId, matchFamily, planGgufSetup } from './gguf-plan.js'
+import { defaultModelId, matchFamily, planGgufSetup } from './gguf-plan.js'
 import type { GgufPlanInput } from './gguf-plan.js'
 
 const verdict = (over: Partial<ModelCompatibilityResponse> = {}): ModelCompatibilityResponse => ({
@@ -118,7 +118,7 @@ describe('planGgufSetup', () => {
       planGgufSetup(bonsai({ verdict: verdict({ outcome: 'legacy_artifact', replacement: 'new.gguf' }) }))
         .blockers[0]
     ).toMatchObject({ code: 'legacy_artifact', replacement: 'new.gguf' })
-    expect(codes(bonsai({ prism: catalog({ available: [] }) }))).toEqual(['no_engine_build'])
+    expect(codes(bonsai({ prism: catalog({ recommended: null }) }))).toEqual(['no_engine_build'])
     expect(codes(bonsai({ freeBytes: 1000 }))).toEqual(['insufficient_disk_space'])
   })
 
@@ -130,21 +130,61 @@ describe('planGgufSetup', () => {
   })
 })
 
-describe('choosePrismBuild', () => {
+// The core picks the build for the file (`requires`/`min_build` in the catalog request); the plan
+// takes its `recommended` as it is and only reads whether it is on disk and how big it is.
+describe('the PrismML build', () => {
+  const engine = (input: GgufPlanInput) => {
+    const plan = planGgufSetup(input)
+    return { engine: plan.engine, blockers: plan.blockers.map((b) => b.code) }
+  }
+
   it.each([
-    ['the recommended build when it is new enough', 11, 'prism-b12-bbbbbbb', false, 300],
-    ['the newest build when the recommended one is too old', 13, 'prism-b14-aaaaaaa', false, 400],
-    ['nothing when no build is new enough', 15, null, false, 0],
-  ])('picks %s', (_name, minBuild, version, installed, size) => {
-    const build = choosePrismBuild(catalog(), minBuild)
-    expect(
-      build && { version: build.version, installed: build.installed, size: build.download_size }
-    ).toEqual(version === null ? null : { version, installed, size })
+    ['the recommended build', catalog(), 'prism-b12-bbbbbbb', false, 300],
+    [
+      'the recommended build even below min_prism_build: the core already applied it',
+      catalog({ recommended: 'prism-b10-ccccccc/macos-arm64' }),
+      'prism-b10-ccccccc',
+      false,
+      0,
+    ],
+    [
+      'an installed recommended build with nothing to download',
+      catalog({ installed: [{ version: 'prism-b12-bbbbbbb', backend: 'macos-arm64' }] }),
+      'prism-b12-bbbbbbb',
+      true,
+      0,
+    ],
+  ])('takes %s', (_name, prism, version, installed, size) => {
+    expect(engine(bonsai({ prism }))).toEqual({
+      engine: { provider: 'atomic-prism', version, backend: 'macos-arm64', installed, download_size: size },
+      blockers: [],
+    })
   })
 
-  it('downloads nothing for a build already on disk', () => {
-    const disk = catalog({ installed: [{ version: 'prism-b12-bbbbbbb', backend: 'macos-arm64' }] })
-    expect(choosePrismBuild(disk, 11)).toMatchObject({ installed: true, download_size: 0 })
+  it.each([
+    ['the core found no build for the file (BACKEND_BUILD_UNAVAILABLE)', null],
+    ['an empty catalog', catalog({ available: [], recommended: null })],
+    ['a malformed recommendation', catalog({ recommended: 'prism-b12-bbbbbbb' })],
+  ])('blocks with no_engine_build on %s', (_name, prism) => {
+    expect(engine(bonsai({ prism }))).toEqual({ engine: null, blockers: ['no_engine_build'] })
+  })
+
+  it('runs a compatible file on the installed build the catalog recommends', () => {
+    const compatible = verdict({ outcome: 'compatible', provider: 'atomic-prism' })
+    expect(
+      engine(
+        bonsai({
+          verdict: compatible,
+          prism: catalog({ recommended_installed: 'prism-b10-ccccccc/macos-arm64' }),
+        })
+      ).engine
+    ).toEqual({
+      provider: 'atomic-prism',
+      version: 'prism-b10-ccccccc',
+      backend: 'macos-arm64',
+      installed: true,
+      download_size: 0,
+    })
   })
 })
 

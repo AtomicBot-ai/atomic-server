@@ -28,6 +28,7 @@ the code disagree, fix the page.
 | `atc daemon` (hidden) | until `atc stop`, `POST /shutdown` or a signal | Owns the data folder through the core's lock. Runs the core in-process, the admin server, the hardware push, the host-step loop; writes `daemon.json`; cleans up on exit. Spawned by `start` and `admin`; run in place by `atc start --foreground` (containers, OS services). Users know it as "the server" ([`concepts.md`](concepts.md)). |
 | engines | per session | Children of the daemon, journalled by the core in `processes.json`; a later owner reaps orphans. |
 | `atc host-step exec` (hidden) | seconds | The privileged half of a managed-runtime step: file in, file out, no network. |
+| `atc foundry-host …` (hidden) | per Foundry Local session | The core's Foundry Local host, started by the core as `<this binary> foundry-host …`. `src/bin.ts` hands that argv to `@atomic-chat/core/foundry-host` before parsing any command, so its stdout carries the host protocol alone; the binary carries the core's FFI module. |
 
 Crashes: the daemon is the core; they fall together. Recovery is the core's model — the next command
 respawns, the new owner reaps orphans, managed operations recover from the core's store. Supervision

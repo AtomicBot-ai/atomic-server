@@ -3,18 +3,23 @@
  * with (0600 keys, admin token, chats) mean nothing. A data folder outside the profile (`--data-folder
  * C:\atc`) would otherwise inherit the drive's ACL, which lets every local user read. The folder gets
  * no inherited entries, no explicit ones for the broad groups (a folder may carry the drive's entries
- * as its own), and full control for this user, SYSTEM and Administrators. Everyone is named by SID, so
- * nothing depends on the system language; its files inherit that.
+ * as its own), full control for this user, SYSTEM and Administrators, and this user as its owner.
+ * Everyone is named by SID, so nothing depends on the system language; its files inherit that. The
+ * result is read back through the core (`readWindowsAcl`, Get-Acl by SID) and judged twice: by the core
+ * executor's `judgeWindowsAcl`, so a folder atc accepts is one the executor trusts, and by atc's own
+ * rule that nobody else may even read.
  */
 
+import { judgeWindowsAcl, readWindowsAcl } from '@atomic-chat/core/host'
+import type { WindowsAcl } from '@atomic-chat/core/host'
 import type { ExecFn } from './exec.js'
 
 /** SYSTEM and BUILTIN\Administrators. */
 const WELL_KNOWN = ['*S-1-5-18', '*S-1-5-32-544'] as const
 /** Everyone, Authenticated Users, BUILTIN\Users and CREATOR OWNER. */
 const BROAD = ['*S-1-1-0', '*S-1-5-11', '*S-1-5-32-545', '*S-1-3-0'] as const
-/** The entries an owner-only folder lists: the well-known two and this user. */
-const OWNER_ONLY_ENTRIES = WELL_KNOWN.length + 1
+/** Who besides the owner may hold an allow rule: SYSTEM, Administrators and CREATOR OWNER. */
+const TRUSTED = ['S-1-5-18', 'S-1-5-32-544', 'S-1-3-0'] as const
 
 export function ownerOnlyAclArgs(dir: string, user: string): string[] {
   const grants = [...WELL_KNOWN, user].flatMap((who) => ['/grant:r', `${who}:(OI)(CI)F`])
@@ -26,51 +31,104 @@ export function removeBroadAclArgs(dir: string): string[] {
   return [dir, '/remove:g', ...BROAD]
 }
 
+/**
+ * This user as the folder's owner. From an elevated session a new folder is owned by Administrators;
+ * the core's judge then takes this user's own grant for another writer. Full control includes taking
+ * ownership for oneself, so no privilege is needed.
+ */
+export function setOwnerAclArgs(dir: string, user: string): string[] {
+  return [dir, '/setowner', user]
+}
+
 /** icacls by its full path: never one found on PATH, and no name resolution to go wrong. */
 export function icaclsPath(systemRoot: string | undefined): string {
   return `${(systemRoot ?? 'C:\\Windows').replace(/[\\/]+$/, '')}\\System32\\icacls.exe`
 }
 
 /**
- * The entries `icacls <dir>` lists for the folder, or why it lists none: the listing must name the
- * folder, so an empty or foreign output is not read as an owner-only folder. NULs are dropped in case
- * it wrote UTF-16. An entry is a line with `name:(flags)`; `(I)` marks an inherited one in every
- * language.
+ * `base` with `extra` laid over it, for a child on Windows, where a name means the same in any case:
+ * each name in `extra` replaces the base's in every case. The core's `readWindowsAcl` sets
+ * `PSModulePath` to Windows PowerShell's own modules folder in `extra`; started from pwsh, atc
+ * inherits PowerShell 7's path, and with both names in the environment the inherited one could win.
  */
-export function readListing(stdout: string, dir: string): { entries: string[] } | { unreadable: string } {
-  const text = stdout.replace(/\0/g, '')
-  if (!text.includes(dir)) return { unreadable: JSON.stringify(text.slice(0, 300)) }
-  // The folder's own name may contain anything; only what follows it is an entry.
-  const entries = text
-    .split(dir)
-    .join('')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.includes(':('))
-  return { entries }
+export function overlayWindowsEnv(
+  base: NodeJS.ProcessEnv,
+  extra: Record<string, string> = {}
+): NodeJS.ProcessEnv {
+  const names = new Set(Object.keys(extra).map((key) => key.toUpperCase()))
+  return {
+    ...Object.fromEntries(Object.entries(base).filter(([key]) => !names.has(key.toUpperCase()))),
+    ...extra,
+  }
 }
 
 /**
- * Apply it on Windows; elsewhere the file modes already say it. Returns why it failed, if it did. The
- * folder is read back: an exit code of 0 alone does not prove that only the owner is left.
+ * Why `acl` is not an owner-only folder, or `undefined` when it is: the core executor's judge (no
+ * reparse point, a directory, an owner that is not a broad group, no other writer), then no allow rule
+ * for anyone but the owner, SYSTEM, Administrators and CREATOR OWNER — read access included.
+ */
+export function judgeOwnerOnly(acl: WindowsAcl, dir: string): string | undefined {
+  const problem = judgeWindowsAcl(acl, dir, 'directory')
+  if (problem) return problem
+  const trusted = new Set<string>([acl.owner, ...TRUSTED])
+  const others = [...new Set(acl.rules.filter((r) => r.allow && !trusted.has(r.sid)).map((r) => r.sid))]
+  return others.length === 0
+    ? undefined
+    : `the folder still grants more than this user, SYSTEM and Administrators: ${others.join(', ')}`
+}
+
+/**
+ * Apply it on Windows; elsewhere the file modes already say it. Returns why the grants failed, if they
+ * did. The folder is then read back — an exit code of 0 alone does not prove that only the owner is
+ * left — and `checked` gets why it is not owner-only, or `undefined`. The read-back starts Windows
+ * PowerShell, seconds on a cold machine, so nothing waits for it.
  */
 export async function restrictToOwner(
   dir: string,
-  options: { platform: NodeJS.Platform; user: string; exec: ExecFn; systemRoot?: string | undefined }
+  options: {
+    platform: NodeJS.Platform
+    user: string
+    exec: ExecFn
+    systemRoot?: string | undefined
+    /**
+     * The environment PowerShell inherits. Required: the core's `exec` adds `ATOMIC_HOST_STEP_PATH` to
+     * it, while atc's `exec` replaces the child's environment with what it is given.
+     */
+    env: NodeJS.ProcessEnv
+    checked: (problem: string | undefined) => void
+  }
 ): Promise<string | undefined> {
   if (options.platform !== 'win32') return undefined
   const icacls = icaclsPath(options.systemRoot)
-  for (const args of [ownerOnlyAclArgs(dir, options.user), removeBroadAclArgs(dir)]) {
+  for (const args of [
+    ownerOnlyAclArgs(dir, options.user),
+    removeBroadAclArgs(dir),
+    setOwnerAclArgs(dir, options.user),
+  ]) {
     const r = await options.exec(icacls, args, { timeoutMs: 30_000 })
     if (r.error || r.code !== 0) return (r.error ?? r.stderr.trim()) || `icacls exit code ${r.code}`
   }
-  const check = await options.exec(icacls, [dir], { timeoutMs: 30_000 })
-  if (check.error || check.code !== 0)
-    return `cannot read the folder's ACL back: ${check.error ?? check.stderr.trim()}`
-  const listing = readListing(check.stdout, dir)
-  if ('unreadable' in listing) return `icacls exited 0 but did not list the folder: ${listing.unreadable}`
-  const { entries } = listing
-  if (entries.some((e) => e.includes('(I)')) || entries.length > OWNER_ONLY_ENTRIES)
-    return `the folder still grants more than this user, SYSTEM and Administrators: ${entries.join('; ')}`
+  void readOwnerOnly(dir, options).then(options.checked)
   return undefined
+}
+
+async function readOwnerOnly(
+  dir: string,
+  options: { exec: ExecFn; systemRoot?: string | undefined; env: NodeJS.ProcessEnv }
+): Promise<string | undefined> {
+  try {
+    const acl = await readWindowsAcl(dir, {
+      exec: async (command, args, o) => {
+        const r = await options.exec(command, args, {
+          timeoutMs: o?.timeoutMs ?? 120_000,
+          env: overlayWindowsEnv(options.env, o?.env),
+        })
+        return { code: r.error ? null : r.code, stdout: r.stdout, stderr: r.error ?? r.stderr }
+      },
+      ...(options.systemRoot ? { systemRoot: options.systemRoot } : {}),
+    })
+    return judgeOwnerOnly(acl, dir)
+  } catch (error) {
+    return `cannot read the folder's ACL back: ${error instanceof Error ? error.message : String(error)}`
+  }
 }
