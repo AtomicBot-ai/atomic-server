@@ -3,7 +3,8 @@ import { AtcError, defineCommand } from '../cli/index.js'
 import { operation } from './control.js'
 import { engineStatus } from './engine-status.js'
 import { acceleratorsCommand, prepareAccelerators } from './foundry-commands.js'
-import { installManagedEngine, removeManagedEngine } from './managed-engine.js'
+import { installManagedEngine } from './managed-engine.js'
+import { removeManagedEngine } from './managed-remove.js'
 
 const isManaged = (engine: string | undefined) =>
   engine !== undefined && (ENGINE_KINDS as Readonly<Record<string, string>>)[engine] === 'managed'
@@ -99,6 +100,11 @@ export const enginesCommand = defineCommand({
       options: {
         'build': { type: 'string', description: 'Required version/variant (not for a managed engine)' },
         'keep-models': { type: 'boolean', description: 'Keep the shared model store of a managed engine' },
+        'approve': {
+          type: 'string',
+          description: 'Agree only to the removal plan with this digest',
+          placeholder: 'sha256:<digest>',
+        },
         'detach': { type: 'boolean', description: 'Start the removal without following it' },
         'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
       },

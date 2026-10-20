@@ -13,6 +13,8 @@ import { blockerLines, engineView, formatSize, phaseText } from '../workspace-vi
 import { workspace } from './control.js'
 
 type Row = EngineVersions & { managed?: ManagedEngineState & { state: EngineView } }
+/** A managed engine the core does not register on this platform (macOS): shown, never offered. */
+type Absent = { engine: string; kind: 'managed'; available: false }
 
 const isManaged = (engine: string) => (ENGINE_KINDS as Readonly<Record<string, string>>)[engine] === 'managed'
 
@@ -81,12 +83,20 @@ export async function engineStatus(ctx: CommandContext, only?: string): Promise<
       },
     })
   }
-  ctx.out.result({ engines: rows }, () => {
+  const absent: Absent[] = only
+    ? []
+    : Object.keys(ENGINE_KINDS)
+        .filter((e) => isManaged(e) && !engines.some((x) => x.engine === e))
+        .map((engine) => ({ engine, kind: 'managed', available: false }))
+  ctx.out.result({ engines: [...rows, ...absent] }, () => {
     if (only) for (const row of rows) detail(ctx, row)
     else
       ctx.out.table(
         [{ header: 'ENGINE' }, { header: 'KIND' }, { header: 'STATE' }],
-        rows.map((r) => [r.engine, r.kind, r.managed ? r.managed.state.summary : buildSummary(r)])
+        [
+          ...rows.map((r) => [r.engine, r.kind, r.managed ? r.managed.state.summary : buildSummary(r)]),
+          ...absent.map((a) => [a.engine, a.kind, 'not available on this platform']),
+        ]
       )
   })
   return 0

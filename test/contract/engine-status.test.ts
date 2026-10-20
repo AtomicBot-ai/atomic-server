@@ -8,6 +8,7 @@ import type { TestRun } from '../helpers/test-context.js'
 let t: TestRun
 afterEach(() => t?.cleanup())
 const out = () => t.io.out.join('')
+const err = () => t.io.err.join('')
 
 /** Ubuntu with an NVIDIA driver and no Docker: every managed engine can be set up, with system changes. */
 function linuxWithoutDocker(): ManagedHost {
@@ -95,6 +96,29 @@ describe('atc engines status', () => {
   })
 })
 
+describe('managed engines where the core registers none (macOS)', () => {
+  it('lists each as not available on this platform', async () => {
+    const h = linuxWithoutDocker()
+    h.versions = [{ engine: 'llamacpp-upstream' as never, kind: 'llamacpp' }]
+    expect(await t.run(['engines', 'status'])).toBe(0)
+    for (const engine of ['vllm', 'sglang', 'tensorrt-llm'])
+      expect(out()).toMatch(new RegExp(`${engine}.*not available on this platform`))
+    t.io.out.length = 0
+    expect(await t.run(['engines', 'status', '--json'])).toBe(0)
+    expect(JSON.parse(out()).engines).toEqual(
+      expect.arrayContaining([expect.objectContaining({ engine: 'vllm', available: false })])
+    )
+  })
+
+  it('refuses to install one, saying so, instead of an internal error', async () => {
+    const h = linuxWithoutDocker()
+    h.versions = [{ engine: 'llamacpp-upstream' as never, kind: 'llamacpp' }]
+    expect(await t.run(['engines', 'install', 'vllm', '--yes'])).toBe(2)
+    expect(err()).toContain('not available on this platform')
+    expect(err()).not.toContain('ATC_INTERNAL')
+  })
+})
+
 describe('atc engines list', () => {
   it('offers the update of a managed engine', async () => {
     const h = linuxWithoutDocker()
@@ -111,7 +135,10 @@ describe('atc engines list', () => {
         },
       },
     ]
-    expect(await t.run(['engines', 'list'])).toBe(0)
-    expect(out()).toContain('update available: vllm-2026.11.1')
+    expect(await t.run(['engines', 'list', '--json'])).toBe(0)
+    const vllm = (
+      JSON.parse(out()) as { engines: Array<{ engine: string; managed?: { state: { summary: string } } }> }
+    ).engines.find((e) => e.engine === 'vllm')
+    expect(vllm?.managed?.state.summary).toContain('update available: vllm-2026.11.1')
   })
 })

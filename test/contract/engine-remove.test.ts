@@ -68,3 +68,31 @@ describe('atc engines rm <managed>', () => {
     expect(err()).toContain('--build')
   })
 })
+
+describe('atc engines rm <managed> --approve', () => {
+  function removal(h: ManagedHost) {
+    h.onBegin = (op) => void h.play(op.operation_id, [{ phase: 'awaiting-consent', plan_digest: DIGEST_B }])
+    h.onResume = (op) => void h.play(op.operation_id, [{ phase: 'removing' }, { phase: 'removed' }])
+  }
+
+  it('prints the removal plan’s digest and removes with that digest approved', async () => {
+    const h = host()
+    h.env = { ...h.env, installations: [installation('vllm')] }
+    removal(h)
+    expect(await t.run(['engines', 'rm', 'vllm', '--approve', DIGEST_B])).toBe(0)
+    expect(out()).toContain(`Removal digest: ${DIGEST_B}`)
+    expect(h.resumed).toEqual([
+      { operation_id: 'op-vllm', body: { expected_revision: 2, approved_plan_digest: DIGEST_B } },
+    ])
+  })
+
+  it('refuses another digest, cancels the removal it began, and removes nothing', async () => {
+    const h = host()
+    h.env = { ...h.env, installations: [installation('vllm')] }
+    removal(h)
+    expect(await t.run(['engines', 'rm', 'vllm', '--approve', `sha256:${'c'.repeat(64)}`])).not.toBe(0)
+    expect(err()).toContain('MANAGED_PLAN_CHANGED')
+    expect(h.resumed).toEqual([])
+    expect(t.link.calls.some((c) => c.path === '/environments/operations/op-vllm/cancel')).toBe(true)
+  })
+})

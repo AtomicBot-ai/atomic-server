@@ -104,6 +104,11 @@ async function consentFor(s: ManagedSession, op: EnvironmentOperation, approval?
       printRemoval(s, state)
       if (!(await agreeRemoval(s, engine))) return nothingChanged(s)
     }
+    s.ctx.out.line(`Removal digest: ${offered ?? 'none offered'}`)
+    if (s.consent.kind === 'approve' && s.consent.digest !== offered) {
+      await s.service.execute('engines.cancel', { operation_id: op.operation_id })
+      throw planChanged(op)
+    }
     digest = offered
   } else {
     printState(s, state)
@@ -130,49 +135,19 @@ export function nothingChanged(s: ManagedSession): number {
   return 0
 }
 
-function printRemoval(s: ManagedSession, state: ManagedEngineState, keepModels?: boolean): void {
+export function printRemoval(s: ManagedSession, state: ManagedEngineState, keepModels?: boolean): void {
   if (s.ctx.flags.json) s.ctx.io.stdout(`${JSON.stringify({ removal: state })}\n`)
   else for (const line of removalLines(state, keepModels)) s.ctx.out.line(line)
 }
 
 /** Consent to a removal: `--yes`, a "yes" on the terminal, or a usage error. */
-async function agreeRemoval(s: ManagedSession, engine: string): Promise<boolean> {
-  if (s.consent.kind === 'yes') return true
+export async function agreeRemoval(s: ManagedSession, engine: string): Promise<boolean> {
+  // --approve: the core offers the removal plan's digest once it begins; it is compared then.
+  if (s.consent.kind === 'yes' || s.consent.kind === 'approve') return true
   if (s.consent.kind === 'ask') return s.ctx.prompt.confirm(`Remove ${engine}?`, { danger: true })
   throw new AtcError('ATC_USAGE', `Removing ${engine} needs your consent to the plan above.`, {
     hint: 'run it on a terminal, or add --yes to agree to it',
   })
-}
-
-/** `atc engines rm <managed> [--keep-models]`: the removal described, agreed to, then followed. */
-export async function removeManagedEngine(
-  ctx: CommandContext,
-  engine: string,
-  values: Record<string, unknown>
-): Promise<number> {
-  const s = await managedSession(ctx, values)
-  try {
-    const state = await engineState(s, engine)
-    if (state.operation) {
-      if (state.operation.kind === 'remove') return await continueOperation(s, state.operation)
-      throw new AtcError('ATC_USAGE', `The ${state.operation.kind} of ${engine} is still running.`, {
-        hint: `cancel it with atc engines install --cancel ${state.operation.operation_id}`,
-      })
-    }
-    if (!state.installation) throw new AtcError('ATC_USAGE', `${engine} is not installed.`)
-    const keep = values['keep-models'] === true
-    printRemoval(s, state, keep)
-    if (!(await agreeRemoval(s, engine))) return nothingChanged(s)
-    const op = (await s.service.execute('engines.operate', {
-      engine,
-      kind: 'remove',
-      request_id: typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID(),
-      retain_models: keep,
-    })) as EnvironmentOperation
-    return await run(s, op, { kind: 'remove' })
-  } finally {
-    s.close()
-  }
 }
 
 /** An operation found by id or left from before: join it where it stands. */

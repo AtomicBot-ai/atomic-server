@@ -72,7 +72,15 @@ async function installManaged(
   request: Record<string, unknown>
 ): Promise<ManagedInstallResult> {
   const versions = await engineVersions(link, engine)
-  if (!versions?.active) return { engine, status: 'plan', state: await managedEngineState(link, engine) }
+  if (!versions)
+    throw new AtcError(
+      'ATC_USAGE',
+      `${engine} is not available on this platform: the core does not offer it here.`,
+      {
+        hint: 'see atc engines status',
+      }
+    )
+  if (!versions.active) return { engine, status: 'plan', state: await managedEngineState(link, engine) }
   if (!versions.update?.needed) return { engine, status: 'ready', active: versions.active }
   const target = versions.update.target?.version ?? ''
   if (request['approved_update'] !== target)
