@@ -57,9 +57,27 @@ describe('a managed load in the TUI chat', () => {
     expect(t.execute).toHaveBeenCalledWith('models.cancel', { provider: 'vllm', model_id: MODEL })
   })
 
+  it('shows the stage of a model loading in place of the chat’s current one, and cancels that load', async () => {
+    const t = chat({ model: 'old/model', workspace: loading as never })
+    expect(t.screen()).toMatch(/Loading Qwen\/Qwen3\.5-2B on vllm: Starting the container/)
+    await activate('cancel-load', t.ctx)
+    expect(t.execute).toHaveBeenCalledWith('models.cancel', { provider: 'vllm', model_id: MODEL })
+  })
+
   it('shows the stage in the cockpit too', () => {
     const t = chat({ page: 'server', workspace: loading as never })
     expect(t.screen()).toMatch(/vllm .*Starting the container/)
+  })
+
+  it('shows a failed load in the cockpit with the last attempt’s log, and comes back there', async () => {
+    const t = chat({
+      page: 'server',
+      loadError: { provider: 'vllm', model: MODEL, message: 'The container exited.' },
+    })
+    expect(t.screen()).toMatch(/Load failed: Qwen\/Qwen3\.5-2B on vllm: The container exited\./)
+    expect(t.targets()).toContain('load-log')
+    await activate('load-log', t.ctx)
+    expect(t.get()).toMatchObject({ page: 'tools', operation: 'models.logs', operationReturn: 'server' })
   })
 
   it('offers the last attempt’s log after a failed load', async () => {

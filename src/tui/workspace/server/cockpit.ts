@@ -18,7 +18,9 @@ export function cockpitStatus(s: WorkspaceState): EyeStatus {
  * The privileged steps the server waits on, with the command to run as administrator, and the managed
  * engine operations in progress — from the snapshot; before the first one, the steps the daemon reported.
  */
-export function cockpitNotices(s: WorkspaceState): Array<{ text: string; command: boolean }> {
+export function cockpitNotices(
+  s: WorkspaceState
+): Array<{ text: string; command: boolean; id?: string; hint?: string }> {
   const steps = s.workspace?.host_steps ?? (s.base.daemon.kind === 'up' ? s.base.daemon.pending : [])
   return [
     ...steps.flatMap((step) => [
@@ -32,6 +34,17 @@ export function cockpitNotices(s: WorkspaceState): Array<{ text: string; command
       text: `${l.provider}  ${l.model_id}  · ${loadStageText({ ...l, elapsed_ms: l.elapsed_ms + Math.max(0, Date.now() - l.at) })}`,
       command: false,
     })),
+    // This terminal's failed load: the core keeps no failure, so only the client that loaded knows it.
+    ...(s.loadError
+      ? [
+          {
+            text: `Load failed: ${s.loadError.model} on ${s.loadError.provider}: ${s.loadError.message}`,
+            command: false,
+            id: 'load-log',
+            hint: 'View the last attempt’s log',
+          },
+        ]
+      : []),
   ]
 }
 const metric = (value: number | null | undefined, unit: string) =>
@@ -67,7 +80,11 @@ export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, second
   const notices = cockpitNotices(s)
   notices
     .slice(0, Math.max(1, height - 4))
-    .forEach((n, i) => text(c, x, i + 1, n.text, n.command ? COLORS.green : COLORS.text, width))
+    .forEach((n, i) =>
+      n.id
+        ? button(c, n.id, x, i + 1, n.text.slice(0, Math.max(0, width - 2)), n.hint ?? '', focus)
+        : text(c, x, i + 1, n.text, n.command ? COLORS.green : COLORS.text, width)
+    )
   const top = 1 + Math.min(notices.length, Math.max(1, height - 4))
   rows
     .slice(0, Math.max(0, height - 3 - top))

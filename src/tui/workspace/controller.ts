@@ -133,9 +133,9 @@ export class WorkspaceController {
   async initializeKeys() {
     await this.keys.initialize(this.deps.apiKey)
   }
+  /** Through the server's `models.load`: the server drops the load's stage when it fails (no core event says so). */
   async loadModel(provider: string, model: string) {
-    const link = await this.deps.base.attach({ launch: true, log: this.log })
-    await link.models.load(provider, model)
+    await this.runtime.execute('models.load', { provider, model_id: model })
     await this.api(true, false)
   }
   async localEndpoint(): Promise<string> {
@@ -219,7 +219,7 @@ export class WorkspaceController {
               (await this.engineSelection.read()) || manifest?.engine.provider || '',
               selected.provider
             )
-            await link.models.load(provider, selected.id)
+            await this.runtime.execute('models.load', { provider, model_id: selected.id })
           }
         }
         await startApi(link, config, await this.localKey())

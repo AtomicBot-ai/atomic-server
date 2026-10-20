@@ -1,6 +1,6 @@
 /**
  * A managed engine's load as the TUI chat shows it (spec managed-models-server, "Этапы загрузки в TUI и
- * admin"): the snapshot's last stage of the current model's load with the time so far and Cancel load;
+ * admin"): the snapshot's last stage of a load with the model, the time so far and Cancel load;
  * after a failed load, its error and View log (`models.logs`, the last attempt's log).
  */
 
@@ -11,9 +11,13 @@ import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 
-/** The load in progress of `model`, its elapsed time counted on from when the stage was seen. */
+/**
+ * The load in progress of the chat's model, else the newest one (a model loading in its place: the chat
+ * switches to it only once it is ready); its elapsed time counted on from when the stage was seen.
+ */
 export function currentLoad(s: WorkspaceState, now = Date.now()) {
-  const load = s.workspace?.loads?.find((l) => l.model_id === s.model)
+  const loads = s.workspace?.loads ?? []
+  const load = loads.find((l) => l.model_id === s.model) ?? [...loads].sort((a, b) => b.at - a.at)[0]
   return load ? { ...load, elapsed_ms: load.elapsed_ms + Math.max(0, now - load.at) } : undefined
 }
 
@@ -27,7 +31,7 @@ export function drawLoadLine(
 ) {
   const load = currentLoad(s)
   if (load) {
-    const label = `Loading on ${load.provider}: ${loadStageText(load)}`
+    const label = `Loading ${load.model_id} on ${load.provider}: ${loadStageText(load)}`
     text(c, x, y, label, COLORS.gold, Math.max(0, width - 16))
     button(
       c,
@@ -74,7 +78,7 @@ export async function loadAction(id: string, ctx: ActionContext): Promise<boolea
       operationInput: JSON.stringify({ provider, model_id: model }),
       operationResult: '',
       page: 'tools',
-      operationReturn: 'chat',
+      operationReturn: v.page === 'server' ? 'server' : 'chat',
       focus: 'operation-run',
       edit: '',
       selected: 0,
