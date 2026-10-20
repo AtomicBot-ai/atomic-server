@@ -189,6 +189,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           uptime_ms: now() - startedAt,
         },
         daemon: { pid: process.pid, started_at: startedAt, data_folder: paths.dataFolder },
+        launch: startingRecord.launch ?? 'terminal',
         admin: { host: admin?.host ?? '', port: admin?.port ?? 0, url: admin?.url ?? '' },
         api: snapshot.server,
         sessions: snapshot.sessions,

@@ -8,6 +8,7 @@ import { describeError } from '@/services/admin-api'
 import { ModelInstall } from './ModelInstall'
 import { Downloads } from './Downloads'
 import { EngineSettings } from './EngineSettings'
+import { EngineSetup } from './EngineSetup'
 import { InstalledModels } from './InstalledModels'
 
 export function Catalog({
@@ -27,6 +28,7 @@ export function Catalog({
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<RecordValue | null>(null)
   const [settingsProvider, setSettingsProvider] = useState('')
+  const [managed, setManaged] = useState('')
   const { execute } = w
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -149,8 +151,15 @@ export function Catalog({
                 key={text(engine.engine)}
                 title={text(engine.engine)}
                 actions={
-                  <Action onClick={() => execute('engines.install', { engine: engine.engine })}>
-                    {engine.active ? 'Update' : 'Install'}
+                  // A managed engine's setup is a plan to agree to: the modal, never a direct install.
+                  <Action
+                    onClick={() =>
+                      engine.kind === 'managed'
+                        ? setManaged(text(engine.engine))
+                        : execute('engines.install', { engine: engine.engine })
+                    }
+                  >
+                    {engine.active ? (engine.kind === 'managed' ? 'Manage' : 'Update') : 'Install'}
                   </Action>
                 }
               >
@@ -205,6 +214,7 @@ export function Catalog({
         </>
       )}
       {tab === 'downloads' && <Downloads workspace={w} />}
+      {managed && <EngineSetup workspace={w} engine={managed} onClose={() => setManaged('')} />}
       {settingsProvider && (
         <EngineSettings provider={settingsProvider} workspace={w} onClose={() => setSettingsProvider('')} />
       )}

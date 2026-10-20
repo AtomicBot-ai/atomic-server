@@ -3,6 +3,7 @@
  * imports from the rest of `atc`. Core shapes come from `atomic-chat-core/contracts`.
  */
 
+import type { ServerLaunch } from './managed.js'
 import type { LocalApiServerState, SessionInfo } from '@atomic-chat/core/contracts'
 import type { AtcConfig, ConfigSource, FieldType } from '../config/index.js'
 
@@ -19,6 +20,8 @@ export interface AdminStatus {
     instructions: string
     updated_at: number
   }>
+  /** How the server was started: what a new sign-in for the docker group takes for it. */
+  launch?: ServerLaunch
 }
 
 export interface AdminConfigField {
