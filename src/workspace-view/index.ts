@@ -33,5 +33,5 @@ export {
   gpuLabel,
   parseSettingValue,
 } from './settings-form.js'
-export { engineApproval, engineRefreshKey, liveEngineState } from './engine-live.js'
+export { engineApproval, engineRefreshKey, liveEngineState, updateLine } from './engine-live.js'
 export type { EngineApproval } from './engine-live.js'

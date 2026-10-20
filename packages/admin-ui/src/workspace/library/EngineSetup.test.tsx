@@ -124,6 +124,43 @@ describe('the managed engine modal', () => {
     )
   })
 
+  it('shows the new release’s plan before an update, and reinstalls only after Agree', async () => {
+    const offer = {
+      engine: 'vllm',
+      status: 'update',
+      from: 'vllm-1',
+      target: 'vllm-2',
+      state: state({ plan: plan('vllm', { plan_digest: DIGEST_B as never }) }),
+    }
+    const { workspace, execute } = workspaceFixture(
+      {
+        'engines.plan': state({
+          installation: installation('vllm'),
+          update: {
+            needed: true,
+            target: { version: 'vllm-2', variant: 'linux/amd64' },
+            apply: 'reinstall',
+          } as never,
+        }),
+        'engines.install': (i: Record<string, unknown>) =>
+          (i['request'] as Record<string, unknown>)['approved_update'] ? { status: 'updating' } : offer,
+      },
+      { engines: [{ engine: 'vllm', installation: installation('vllm'), operation: null }] }
+    )
+    render(<EngineSetup workspace={workspace} engine="vllm" onClose={() => {}} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Update' }))
+    expect(await screen.findByText(/vllm-1 → vllm-2/)).toBeInTheDocument()
+    expect(screen.getByText(DIGEST_B, { exact: false })).toBeInTheDocument()
+    expect(execute.mock.calls.filter(([n]) => n === 'engines.install')).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Agree and update' }))
+    await waitFor(() =>
+      expect(execute).toHaveBeenCalledWith('engines.install', {
+        engine: 'vllm',
+        request: { request_id: expect.stringMatching(/^admin-/), approved_update: 'vllm-2' },
+      })
+    )
+  })
+
   it('opens the modal from the Engines tab instead of installing at once', async () => {
     const { workspace, execute } = workspaceFixture({
       'engines.list': enginesList(['llamacpp-upstream', 'vllm'], ['llamacpp-upstream']),

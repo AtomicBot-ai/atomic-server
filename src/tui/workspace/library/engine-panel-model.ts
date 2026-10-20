@@ -14,6 +14,7 @@ import {
   engineRefreshKey,
   engineView,
   liveEngineState,
+  updateLine,
   fieldText,
   fieldValue,
   formFields,
@@ -50,6 +51,8 @@ export interface EnginePanel {
   foundry: FoundryPanelData | null
   /** Opened by guided setup: once the engine is ready it offers to go on to the models. */
   inSetup?: boolean
+  /** An update the core offers, shown for consent before its reinstall removes the installed image. */
+  offer?: { from: string; target: string; state: ManagedEngineState } | null
   /** `engines.plan`'s answer; `null` until it came. */
   state: ManagedEngineState | null
   busy: boolean
@@ -181,6 +184,14 @@ export function enginePanelModel(
       break
     case 'ready':
     case 'update':
+      if (p.offer) {
+        say(updateLine(p.engine, p.offer.from, p.offer.target), 'warn')
+        for (const line of planLines(p.offer.state)) say(line)
+        const digest = p.offer.state.plan?.plan_digest
+        if (digest) add('engine-update-confirm', 'Agree and update', 'Agree to exactly this plan', digest)
+        add('engine-update-cancel', 'Back', 'Keep the installed release')
+        break
+      }
       if (p.removing) {
         for (const line of removalLines(state, p.keepModels)) say(line)
         add('engine-keep-models', `Keep models: ${p.keepModels ? 'on' : 'off'}`, 'Keep the shared models')

@@ -51,3 +51,7 @@ export function engineApproval(state: ManagedEngineState): EngineApproval | null
   if (!state.plan || planBlocked(state.plan) || state.plan.availability === 'unsupported') return null
   return { via: 'operate', kind: 'setup', digest: state.plan.plan_digest }
 }
+
+/** What an update does, before the person agrees to it: the reinstall's removal comes first. */
+export const updateLine = (engine: string, from: string, target: string) =>
+  `${engine} ${from} → ${target}: the core removes the installed image (models stay), then sets up the new one by this plan.`

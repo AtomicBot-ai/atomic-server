@@ -28,6 +28,7 @@ export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
         request: request({
           task_id: {},
           request_id: {},
+          approved_update: { type: 'string' },
           target: { type: 'object' },
           force: { type: 'boolean' },
           proxy: { type: 'object' },

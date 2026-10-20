@@ -13,6 +13,7 @@ import type { CommandContext } from '../cli/index.js'
 import { AtcError } from '../cli/index.js'
 import type { ManagedEngineState, ManagedInstallResult } from '../contract/index.js'
 import { readDaemonRecord } from '../core-link/index.js'
+import { followUpdate, updateWithConsent } from './managed-update.js'
 import { planBlocked, rebootLines, reloginLines, removalLines } from '../workspace-view/index.js'
 import type { ManagedSession } from './managed-session.js'
 import {
@@ -45,7 +46,11 @@ export async function run(s: ManagedSession, op: EnvironmentOperation, approval?
   return settle(s, last, approval)
 }
 
-async function settle(s: ManagedSession, op: EnvironmentOperation, approval?: Approval): Promise<number> {
+export async function settle(
+  s: ManagedSession,
+  op: EnvironmentOperation,
+  approval?: Approval
+): Promise<number> {
   const engine = engineOf(op)
   const say = (text: string) => s.ctx.out.line(text)
   switch (op.phase) {
@@ -109,7 +114,8 @@ async function consentFor(s: ManagedSession, op: EnvironmentOperation, approval?
       (s.consent.kind === 'approve' && s.consent.digest !== offered)
     )
       throw planChanged(op)
-    digest = await agree(s, `Installing ${engine}`, offered)
+    // An update's setup offers the plan the person agreed to before the reinstall: not asked twice.
+    digest = s.agreed === offered ? offered : await agree(s, `Installing ${engine}`, offered)
     if (digest === null) return nothingChanged(s)
   }
   const resumed = (await s.service.execute('engines.resume', {
@@ -119,7 +125,7 @@ async function consentFor(s: ManagedSession, op: EnvironmentOperation, approval?
   return run(s, resumed, { kind: op.kind === 'remove' ? 'remove' : 'setup', ...(digest ? { digest } : {}) })
 }
 
-function nothingChanged(s: ManagedSession): number {
+export function nothingChanged(s: ManagedSession): number {
   s.ctx.out.line('Nothing was changed.')
   return 0
 }
@@ -229,24 +235,6 @@ async function setup(
   return run(s, op, { kind: 'setup', digest })
 }
 
-/** The core's reinstall: its removal keeps the models, then a setup under `<request_id>:setup`. */
-async function update(s: ManagedSession, engine: string, operationId: string, requestId: string) {
-  const removal = (await s.service.execute('engines.operation', {
-    operation_id: operationId,
-  })) as EnvironmentOperation
-  const { op, detached } = await track(s, removal)
-  if (detached) return printDetached(s, op)
-  if (op.phase !== 'removed') return settle(s, op)
-  for (let tries = 0; tries < 60 && !s.signal.aborted; tries++) {
-    const next = (await engineState(s, engine)).operation
-    if (next?.request_id === `${requestId}:setup`) return continueOperation(s, next)
-    await new Promise((r) => setTimeout(r, Math.min(1000, 50 * (tries + 1))))
-  }
-  throw new AtcError('ATC_INTERNAL', `The core did not begin the new setup of ${engine}.`, {
-    hint: `run atc engines install ${engine} again`,
-  })
-}
-
 export async function installManagedEngine(
   ctx: CommandContext,
   engine: string | undefined,
@@ -285,7 +273,10 @@ export async function installManagedEngine(
       return 0
     }
     // Awaited here: the Ctrl-C handler must stay until the following ends.
-    if (result.status === 'updating') return await update(s, engine, result.operation_id, result.request_id)
+    if (result.status === 'updating')
+      return await followUpdate(s, engine, result.operation_id, result.request_id)
+    if (result.status === 'update')
+      return await updateWithConsent(s, result, requestId, values['dry-run'] === true)
     return await setup(s, engine, requestId, values['dry-run'] === true, result.state)
   } finally {
     s.close()

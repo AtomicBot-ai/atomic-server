@@ -15,7 +15,7 @@ import type { WorkspaceState } from '../state.js'
 import { settingsAction } from './engine-settings.js'
 import { foundryAction, refreshFoundry } from './foundry-actions.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
-import type { ManagedEngineState, ServerLaunch } from '../../../contract/index.js'
+import type { ManagedEngineState, ManagedInstallResult, ServerLaunch } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
 import { enginePanelModel, panelOperation, panelRefreshKey } from './engine-panel-model.js'
 import type { EnginePanel } from './engine-panel-model.js'
@@ -92,6 +92,7 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
   if (id === 'engine-remove') return (set({ removing: true }), true)
   if (id === 'engine-remove-cancel') return (set({ removing: false }), true)
   if (id === 'engine-keep-models') return (set({ keepModels: !p.keepModels }), true)
+  if (id === 'engine-update-cancel') return (set({ offer: null }), true)
   if (p.busy) return true
   const op = panelOperation(p, s.workspace)
   const approve = enginePanelModel(p, s.workspace).buttons.find((b) => b.id === 'engine-approve')
@@ -110,8 +111,22 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
           }),
     'engine-cancel': () => c.runtime.execute('engines.cancel', { operation_id: op!.operation_id }),
     'engine-resume': () => c.runtime.execute('engines.resume', { operation_id: op!.operation_id }),
-    'engine-update': () =>
-      c.runtime.execute('engines.install', { engine: p.engine, request: { request_id: requestId() } }),
+    // The core's answer to an update is its plan; the reinstall waits for Agree (`approved_update`).
+    'engine-update': async () => {
+      const offer = (await c.runtime.execute('engines.install', {
+        engine: p.engine,
+        request: { request_id: requestId() },
+      })) as ManagedInstallResult
+      if (offer.status === 'update')
+        set({ offer: { from: offer.from, target: offer.target, state: offer.state } })
+    },
+    'engine-update-confirm': async () => {
+      await c.runtime.execute('engines.install', {
+        engine: p.engine,
+        request: { request_id: requestId(), approved_update: p.offer?.target },
+      })
+      set({ offer: null })
+    },
     'engine-remove-confirm': () =>
       c.runtime.execute('engines.operate', {
         engine: p.engine,

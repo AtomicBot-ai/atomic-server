@@ -61,9 +61,10 @@ export async function ensureArtifactEngine(
 }
 
 /**
- * A managed engine is never installed without consent: not installed — its plan, for the person to
- * agree to (`engines.operate`); installed with a newer release — the core's reinstall, whose setup
- * then waits for consent like any setup; otherwise — ready, and nothing begins.
+ * A managed engine is never installed or replaced without consent: not installed — its plan, for the
+ * person to agree to (`engines.operate`); installed with a newer release — the new release's plan, and
+ * the core's reinstall (whose first step removes the installed image, keeping the models) only when the
+ * request names that release in `approved_update`; otherwise — ready, and nothing begins.
  */
 async function installManaged(
   link: CoreLink,
@@ -73,6 +74,15 @@ async function installManaged(
   const versions = await engineVersions(link, engine)
   if (!versions?.active) return { engine, status: 'plan', state: await managedEngineState(link, engine) }
   if (!versions.update?.needed) return { engine, status: 'ready', active: versions.active }
+  const target = versions.update.target?.version ?? ''
+  if (request['approved_update'] !== target)
+    return {
+      engine,
+      status: 'update',
+      from: versions.active.version,
+      target,
+      state: await managedEngineState(link, engine, target),
+    }
   const requestId = typeof request['request_id'] === 'string' ? request['request_id'] : randomUUID()
   const started = await link.request<{ operation_id: string }>('POST', `/engines/${segment(engine)}/update`, {
     request_id: requestId,

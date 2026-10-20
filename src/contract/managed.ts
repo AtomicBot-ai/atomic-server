@@ -51,6 +51,8 @@ export interface ManagedEngineState {
  */
 export type ManagedInstallResult =
   | { engine: string; status: 'plan'; state: ManagedEngineState }
+  /** An update offered: the new release's plan; the reinstall begins only with `approved_update: target`. */
+  | { engine: string; status: 'update'; from: string; target: string; state: ManagedEngineState }
   | { engine: string; status: 'updating'; operation_id: string; request_id: string }
   | { engine: string; status: 'ready'; active: EngineBuildKey }
 

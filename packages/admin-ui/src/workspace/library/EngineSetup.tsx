@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { ManagedEngineState } from '@contract'
+import type { ManagedEngineState, ManagedInstallResult } from '@contract'
 import {
   engineApproval,
   engineName,
@@ -12,6 +12,7 @@ import {
   rebootLines,
   reloginLines,
   removalLines,
+  updateLine,
 } from '@view'
 import { describeError } from '@/services/admin-api'
 import { useStatusStore } from '@/stores/status-store'
@@ -44,6 +45,8 @@ export function EngineSetup({
   const [notice, setNotice] = useState('')
   const [removing, setRemoving] = useState(false)
   const [keepModels, setKeepModels] = useState(false)
+  // An update the core offers: its plan, agreed to before the reinstall removes the installed image.
+  const [offer, setOffer] = useState<Extract<ManagedInstallResult, { status: 'update' }> | null>(null)
   const { execute } = w
   const key = engineRefreshKey(engine, w.snapshot)
   const read = useCallback(async () => {
@@ -143,6 +146,12 @@ export function EngineSetup({
                 {op?.error?.message ?? 'The setup failed.'}
               </p>
             )}
+            {view.kind === 'update' && offer && (
+              <>
+                <p className="notice">{updateLine(engine, offer.from, offer.target)}</p>
+                {lines(planLines(offer.state))}
+              </>
+            )}
             {(view.kind === 'ready' || view.kind === 'update') && removing && (
               <>
                 {lines(removalLines(merged, keepModels))}
@@ -204,15 +213,41 @@ export function EngineSetup({
               {view?.kind === 'failed' ? 'Retry' : 'Continue'}
             </Action>
           )}
-          {view?.kind === 'update' && !removing && (
+          {view?.kind === 'update' && !removing && !offer && (
             <Action
               disabled={busy}
               onClick={() =>
-                act(() => execute('engines.install', { engine, request: { request_id: requestId() } }))
+                act(async () => {
+                  const answer = await execute<ManagedInstallResult>('engines.install', {
+                    engine,
+                    request: { request_id: requestId() },
+                  })
+                  if (answer.status === 'update') setOffer(answer)
+                })
               }
             >
               Update
             </Action>
+          )}
+          {view?.kind === 'update' && offer?.state.plan && (
+            <>
+              <Action
+                primary
+                disabled={busy}
+                onClick={() =>
+                  act(async () => {
+                    await execute('engines.install', {
+                      engine,
+                      request: { request_id: requestId(), approved_update: offer.target },
+                    })
+                    setOffer(null)
+                  })
+                }
+              >
+                Agree and update
+              </Action>
+              <Action onClick={() => setOffer(null)}>Back</Action>
+            </>
           )}
           {(view?.kind === 'ready' || view?.kind === 'update') &&
             (removing ? (

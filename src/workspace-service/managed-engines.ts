@@ -68,13 +68,18 @@ async function held(link: CoreLink) {
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 /** Everything a client shows about one managed engine; reads only. */
-export async function managedEngineState(link: CoreLink, engine: string): Promise<ManagedEngineState> {
+/** `descriptorId`: the release to plan for — an update's target; by default the installed one, else the engine's. */
+export async function managedEngineState(
+  link: CoreLink,
+  engine: string,
+  descriptorId?: string
+): Promise<ManagedEngineState> {
   const { environment, operations } = await held(link)
   let plan: RequirementPlan | null = null
   let planError: string | null = null
   try {
     plan = (await link.environments.probe({
-      descriptor_id: descriptorHint(environment, engine),
+      descriptor_id: descriptorId ?? descriptorHint(environment, engine),
       target: runtimeTarget(engine),
     })) as RequirementPlan
   } catch (error) {

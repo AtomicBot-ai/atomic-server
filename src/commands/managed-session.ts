@@ -30,6 +30,8 @@ export interface ManagedSession {
   detach: boolean
   signal: AbortSignal
   interrupted(): boolean
+  /** A plan digest the person agreed to in this call that no operation carries yet (an update's setup). */
+  agreed?: string
   /** Runs or prints a privileged step the server left to a person. */
   onState(op: EnvironmentOperation): void
   close(): void
@@ -149,6 +151,12 @@ export function planChanged(op: EnvironmentOperation): AtomicCoreError {
 export async function agree(s: ManagedSession, what: string, digest: string): Promise<string | null> {
   switch (s.consent.kind) {
     case 'approve':
+      // Approval binds to one plan: another digest than the one printed is refused before anything begins.
+      if (s.consent.digest !== digest)
+        throw AtomicCoreError.fromBody({
+          code: 'MANAGED_PLAN_CHANGED',
+          message: `--approve names ${s.consent.digest}, but the plan above is ${digest}. Review it and approve that digest.`,
+        })
       return s.consent.digest
     case 'yes':
       return digest

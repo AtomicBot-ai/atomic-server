@@ -6,6 +6,7 @@ import { activate } from '../actions.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
 import { createWorkspace } from '../state.js'
+import { enginePanelModel } from './engine-panel-model.js'
 
 const state = (over: Partial<ManagedEngineState> = {}): ManagedEngineState => ({
   engine: 'vllm',
@@ -121,7 +122,8 @@ describe('the engine panel’s actions', () => {
     expect(t.get().enginePanel?.removing).toBe(false)
   })
 
-  it('starts an update through engines.install', async () => {
+  it('shows the new release’s plan before an update, and reinstalls only after Agree', async () => {
+    const newPlan = plan('vllm', { plan_digest: DIGEST_A, descriptor_id: 'vllm-2' })
     const t = tui(
       state({
         installation: installation('vllm'),
@@ -130,12 +132,28 @@ describe('the engine panel’s actions', () => {
           target: { version: 'vllm-2', variant: 'linux/amd64' },
           apply: 'reinstall',
         } as never,
-      })
+      }),
+      (name, input) =>
+        name === 'engines.install' && !(input['request'] as Record<string, unknown>)['approved_update']
+          ? {
+              engine: 'vllm',
+              status: 'update',
+              from: 'vllm-1',
+              target: 'vllm-2',
+              state: state({ plan: newPlan }),
+            }
+          : { engine: 'vllm', status: 'updating', operation_id: 'op-remove', request_id: 'r' }
     )
     await activate('library-row:0', t.ctx)
     await activate('engine-update', t.ctx)
-    expect(calls(t.execute, 'engines.install')).toEqual([
-      { engine: 'vllm', request: { request_id: expect.stringMatching(/^terminal-/) } },
-    ])
+    expect(calls(t.execute, 'engines.install')).toHaveLength(1)
+    const model = enginePanelModel(t.get().enginePanel!, null)
+    expect(model.lines.map((l) => l.text).join('\n')).toContain('vllm-1 → vllm-2')
+    expect(model.buttons.find((b) => b.id === 'engine-update-confirm')?.digest).toBe(DIGEST_A)
+    await activate('engine-update-confirm', t.ctx)
+    expect(calls(t.execute, 'engines.install').at(-1)).toEqual({
+      engine: 'vllm',
+      request: { request_id: expect.stringMatching(/^terminal-/), approved_update: 'vllm-2' },
+    })
   })
 })
