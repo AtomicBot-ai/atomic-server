@@ -169,6 +169,28 @@ After you were added to the `docker` group the server needs a new sign-in and `a
 signs anyone out or restarts the machine); the operation then continues. `atc engines install <engine>` on
 an installed engine with a newer release updates it the same way, keeping the models.
 
+## Models for managed engines
+
+Managed engines run Hugging Face safetensors checkpoints from one store the core keeps for all of them
+(`<data>/managed-models` on Linux, a folder in the WSL distribution on Windows). `atc` asks the core
+whether a model runs here before it downloads a byte:
+
+```bash
+atc models check Qwen/Qwen3.5-2B                 # each managed engine's verdict, with the numbers
+atc models catalog --engine vllm                 # the models the engine's release was measured with
+atc models search qwen3 --engine sglang          # Hugging Face, narrowed to what could run here
+atc models pull Qwen/Qwen3.5-2B --engine vllm    # verified download into the store; model.yml last
+atc models pull --cancel <request-id>            # stop it; the same --request-id continues it later
+atc models list                                  # a store model once, with every engine that lists it
+atc run Qwen/Qwen3.5-2B --engine vllm
+atc models rm Qwen/Qwen3.5-2B                    # through the core: it goes for every managed engine
+```
+
+A model downloaded once is there for every managed engine. The download runs in the server: closing the
+terminal does not stop it, and a server restart shows it as interrupted until the same `--request-id`
+continues it. Gated repositories need `HF_TOKEN` in the server's environment. `atc models pull <repo>`
+of a repository without GGUF files names the engines that would take it.
+
 ## Where data lives
 
 ```
