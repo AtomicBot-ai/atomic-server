@@ -21,27 +21,10 @@ import { listJobs } from './managed-jobs.js'
 import { nodeStoreFiles } from './managed-model-setups.js'
 import { underRoot } from './managed-model-plan.js'
 import { SerialWork } from './serial.js'
+import { variantLabel } from '../workspace-view/index.js'
 
 const MAX_RELINKS = 3
 const ACTIVE = ['queued', 'downloading', 'verifying']
-const LABELS: Record<string, string> = {
-  cpu: 'CPU',
-  cuda: 'CUDA',
-  webgpu: 'WebGPU',
-  openvino: 'OpenVINO',
-  qnn: 'QNN',
-  vitisai: 'Vitis AI',
-}
-
-/** How a variant is named: its accelerator, and the device where the accelerator has more than one. */
-export function variantLabel(v: { execution_provider: string; device: string }): string {
-  const accelerator = LABELS[v.execution_provider] ?? v.execution_provider
-  return v.device === 'npu' || (v.execution_provider === 'openvino' && v.device === 'gpu')
-    ? `${accelerator} ${v.device.toUpperCase()}`
-    : accelerator
-}
-
-/** `model.yml` of a variant, as the core's `ModelYmlFoundryLocal` reads it. */
 export function foundryModelYml(plan: FoundryModelPlan): string {
   return serializeModelYml({
     model_path: `foundry-local/models/${plan.variant_id}`,

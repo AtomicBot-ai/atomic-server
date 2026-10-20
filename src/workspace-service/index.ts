@@ -6,4 +6,3 @@ export type { WorkspaceOperation, WorkspaceSnapshot, WorkspaceInput } from '../c
 export * from './client.js'
 export { sanitized as sanitizeWorkspaceData } from './validation.js'
 export type { FoundrySearchResult, FoundryModelRow, FoundryVariantRow } from './foundry-catalog.js'
-export { variantLabel } from './foundry-model-setups.js'

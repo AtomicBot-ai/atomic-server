@@ -11,9 +11,8 @@ import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import { randomUUID } from 'node:crypto'
 import type { FoundryAcceleratorsView, FoundryModelPlan } from '../contract/index.js'
-import { variantLabel } from '../workspace-service/index.js'
 import type { FoundrySearchResult } from '../workspace-service/index.js'
-import { formatSize } from '../workspace-view/index.js'
+import { formatSize, foundryVerdictText, prepareResultLines, variantLabel } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
 import { follow, followDisplay } from './follow.js'
 import { followSetup } from './managed-model-commands.js'
@@ -77,10 +76,7 @@ export async function prepareAccelerators(ctx: CommandContext, names: string[] =
   const last = result.value.kind === 'status' ? result.value.view : undefined
   if (last?.last_error) throw new AtcError('ATC_USAGE', `Preparing accelerators failed: ${last.last_error}`)
   ctx.out.result(last?.last_result ?? {}, () => {
-    for (const a of last?.last_result?.accelerators ?? [])
-      ctx.out.line(
-        `${a.name}: ${a.prepared ? 'prepared' : `not prepared${a.reason ? ` — ${a.reason}` : ''}`}`
-      )
+    for (const line of prepareResultLines(last?.last_result ?? { accelerators: [] })) ctx.out.line(line)
   })
   return 0
 }
@@ -133,15 +129,6 @@ export const acceleratorsCommand = defineCommand({
   },
 })
 
-const LABELS: Record<string, string> = {
-  cpu: 'CPU',
-  cuda: 'CUDA',
-  webgpu: 'WebGPU',
-  openvino: 'OpenVINO',
-  qnn: 'QNN',
-  vitisai: 'Vitis AI',
-}
-
 /** `atc models search [query] --engine foundry-local`: models, their variants here, the core's verdicts. */
 export async function foundryListing(ctx: CommandContext, query: string): Promise<number> {
   const { service } = await attachWorkspace(ctx)
@@ -163,23 +150,10 @@ export async function foundryListing(ctx: CommandContext, query: string): Promis
         `${m.name} (${m.model_id})${m.unverified ? ' — Microsoft catalog, not verified by Atomic Chat' : ''}`
       )
       for (const v of m.variants) {
-        const device =
-          v.device === 'npu' || (v.execution_provider === 'openvino' && v.device === 'gpu')
-            ? ` ${v.device.toUpperCase()}`
-            : ''
-        const verdict =
-          v.verdict.verdict === 'ok'
-            ? 'ok'
-            : `${v.verdict.verdict}${v.verdict.reason ? ` — ${v.verdict.reason}` : ''}${
-                v.verdict.verdict === 'accelerator-not-prepared'
-                  ? ' (atc engines accelerators foundry-local --prepare)'
-                  : v.verdict.verdict === 'engine-not-installed'
-                    ? ' (atc engines install foundry-local)'
-                    : ''
-              }`
+        const verdict = foundryVerdictText(v.verdict)
         const mark = v.id === m.default_variant ? '*' : ' '
         ctx.out.line(
-          `  ${mark} ${v.id}  ${LABELS[v.execution_provider] ?? v.execution_provider}${device}  ${v.size_bytes ? formatSize(v.size_bytes) : '?'}  ${verdict}`
+          `  ${mark} ${v.id}  ${variantLabel(v)}  ${v.size_bytes ? formatSize(v.size_bytes) : '?'}  ${verdict}`
         )
       }
     }

@@ -12,17 +12,11 @@ import type { CoreEventMessage } from '@atomic-chat/core/client'
 import type { CommandContext } from '../cli/index.js'
 import { AtcError } from '../cli/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
+import { loadStageText } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
 
 const SUBSCRIBE_WAIT_MS = 3000
 const LAST_STAGE_WAIT_MS = 300
-
-const STAGES: Record<string, string> = {
-  'stopping-previous': 'Stopping the previous model',
-  'starting-container': 'Starting the container',
-  'initializing-engine': 'Initializing the engine',
-  'ready': 'Ready',
-}
 
 interface StoreRow {
   id: string
@@ -84,8 +78,7 @@ export async function runModel(
     if (data.provider !== provider || data.model_id !== model) return
     if (data.stage === 'ready') sawReady()
     if (ctx.flags.json) ctx.io.stdout(`${JSON.stringify({ load: data })}\n`)
-    else if (!ctx.flags.quiet)
-      ctx.io.stderr(`${STAGES[data.stage] ?? data.stage} (${Math.round(data.elapsed_ms / 1000)}s)\n`)
+    else if (!ctx.flags.quiet) ctx.io.stderr(`${loadStageText(data)}\n`)
   }
   // Subscribed before the load is asked for: the stream replays from its snapshot's cursor, so a fast
   // load's stages are not lost; a stream that cannot connect does not hold the load up.

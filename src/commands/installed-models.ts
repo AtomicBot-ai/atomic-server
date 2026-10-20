@@ -8,8 +8,7 @@
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { ManagedModelDeletion } from '@atomic-chat/core/contracts'
 import type { CommandContext } from '../cli/index.js'
-import { variantLabel } from '../workspace-service/index.js'
-import { formatSize } from '../workspace-view/index.js'
+import { formatSize, variantLabel } from '../workspace-view/index.js'
 import { workspace } from './control.js'
 
 interface InstalledRow {

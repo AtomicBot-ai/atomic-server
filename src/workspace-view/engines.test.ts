@@ -153,6 +153,7 @@ describe('sign-in and restart instructions', () => {
     ['terminal', ['sign out', 'atc restart']],
     ['systemd-user', ['systemd --user', 'end all your sessions', 'systemctl --user start atc']],
     ['systemd-system', ['system service', 'sudo systemctl restart atc']],
+    ['launchd', ['Sign out and in again', 'atc restart']],
   ] as const)('a server run as %s', (launch, texts) => {
     const lines = reloginLines(launch, 'op-1').join('\n')
     for (const text of texts) expect(lines).toContain(text)
