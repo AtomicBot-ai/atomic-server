@@ -2,6 +2,7 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import { describe, expect, it } from 'vitest'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
+import { DIGEST_A, plan } from '../../test/helpers/managed-fixtures.js'
 import { coreOperation } from './core-operations.js'
 import { ensureArtifactEngine, installEngine } from './engine-install.js'
 
@@ -33,11 +34,55 @@ describe('installEngine', () => {
     await expect(installEngine(link, 'llamacpp-upstream')).rejects.toThrow('No compatible engine build')
     expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
   })
+})
 
-  it('treats every managed engine the core lists as managed, sglang included', async () => {
+describe('installEngine, managed engines', () => {
+  it('answers the plan of an engine that is not installed, sglang included, and begins nothing', async () => {
     const link = fakeCoreLink()
     link.responses['POST /engines/versions'] = versions('sglang')
-    await expect(installEngine(link, 'sglang')).rejects.toThrow('environments.probe')
+    link.responses['POST /environments/probe'] = plan('sglang')
+    const result = await installEngine(link, 'sglang')
+    expect(result).toMatchObject({
+      engine: 'sglang',
+      status: 'plan',
+      state: { plan: { plan_digest: DIGEST_A }, installation: null },
+    })
+    expect(link.calls.some((c) => c.path.endsWith('/update') || c.path.endsWith('/operations'))).toBe(false)
+  })
+
+  it('starts the update of an installed engine the core offers one for, and answers its operation', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = versions('vllm', {
+      active: { version: 'vllm-2026.10.1', variant: 'linux/amd64' },
+      update: {
+        needed: true,
+        target: { version: 'vllm-2026.11.1', variant: 'linux/amd64' },
+        apply: 'reinstall',
+      },
+    })
+    link.responses['POST /engines/vllm/update'] = { operation_id: 'op-remove' }
+    const result = await installEngine(link, 'vllm', { request_id: 'r-9' })
+    expect(result).toEqual({
+      engine: 'vllm',
+      status: 'updating',
+      operation_id: 'op-remove',
+      request_id: 'r-9',
+    })
+    expect(link.calls.find((c) => c.path === '/engines/vllm/update')?.body).toEqual({ request_id: 'r-9' })
+  })
+
+  it('says an installed engine with nothing newer is ready, and begins nothing', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = versions('tensorrt-llm', {
+      active: { version: 'tensorrt-llm-2026.10.1', variant: 'linux/amd64' },
+      update: { needed: false, target: null, apply: 'reinstall' },
+    })
+    expect(await installEngine(link, 'tensorrt-llm')).toEqual({
+      engine: 'tensorrt-llm',
+      status: 'ready',
+      active: { version: 'tensorrt-llm-2026.10.1', variant: 'linux/amd64' },
+    })
+    expect(link.calls.some((c) => c.path.endsWith('/update') || c.path.endsWith('/operations'))).toBe(false)
   })
 })
 

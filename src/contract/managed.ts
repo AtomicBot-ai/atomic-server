@@ -5,6 +5,7 @@
  */
 
 import type {
+  EngineBuildKey,
   EngineUpdateOffer,
   EnvironmentOperation,
   ExecutorKind,
@@ -38,3 +39,12 @@ export interface ManagedEngineState {
   /** `POST /engines/versions`' offer for this engine; `null` when it was not asked or not answered. */
   update: EngineUpdateOffer | null
 }
+
+/**
+ * `engines.install` for a managed engine: the plan to agree to, the update the core began (a removal
+ * that keeps the models, then a setup under `<request_id>:setup` that waits for consent), or ready.
+ */
+export type ManagedInstallResult =
+  | { engine: string; status: 'plan'; state: ManagedEngineState }
+  | { engine: string; status: 'updating'; operation_id: string; request_id: string }
+  | { engine: string; status: 'ready'; active: EngineBuildKey }

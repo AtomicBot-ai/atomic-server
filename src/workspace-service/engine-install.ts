@@ -3,6 +3,8 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineKind, EngineVersions, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { CoreLink } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
+import type { ManagedInstallResult } from '../contract/index.js'
+import { managedEngineState } from './managed-engines.js'
 import { object, segment } from './validation.js'
 
 /** How the core installs an engine (`ENGINE_KINDS`); `undefined` for a name it does not know. */
@@ -20,15 +22,7 @@ export async function installEngine(link: CoreLink, engine: string, request: Rec
   const update = (body: Record<string, unknown>) =>
     link.request('POST', `/engines/${segment(engine)}/update`, body)
   const kind = engineKind(engine)
-  if (kind === 'managed') {
-    if (!(await engineVersions(link, engine))?.active)
-      throw new AtcError(
-        'ATC_USAGE',
-        'Prepare this managed engine through environments.probe, then environments.begin using the reviewed plan.',
-        { hint: 'Managed host steps require the plan digest and explicit approval.' }
-      )
-    return update({ request_id: randomUUID(), ...request })
-  }
+  if (kind === 'managed') return installManaged(link, engine, request)
   const body = { task_id: randomUUID(), ...request }
   if (kind === 'engine-build' || (kind === 'llamacpp' && request['target'])) return update(body)
   if (kind !== 'llamacpp') throw new AtcError('ATC_USAGE', 'Choose an engine from engines.list.')
@@ -52,4 +46,24 @@ export async function ensureArtifactEngine(link: CoreLink, engine: string, taskI
     if (Object.keys(object(catalog['active'])).length) return
   }
   await installEngine(link, engine, { task_id: taskId })
+}
+
+/**
+ * A managed engine is never installed without consent: not installed — its plan, for the person to
+ * agree to (`engines.operate`); installed with a newer release — the core's reinstall, whose setup
+ * then waits for consent like any setup; otherwise — ready, and nothing begins.
+ */
+async function installManaged(
+  link: CoreLink,
+  engine: string,
+  request: Record<string, unknown>
+): Promise<ManagedInstallResult> {
+  const versions = await engineVersions(link, engine)
+  if (!versions?.active) return { engine, status: 'plan', state: await managedEngineState(link, engine) }
+  if (!versions.update?.needed) return { engine, status: 'ready', active: versions.active }
+  const requestId = typeof request['request_id'] === 'string' ? request['request_id'] : randomUUID()
+  const started = await link.request<{ operation_id: string }>('POST', `/engines/${segment(engine)}/update`, {
+    request_id: requestId,
+  })
+  return { engine, status: 'updating', operation_id: started.operation_id, request_id: requestId }
 }
