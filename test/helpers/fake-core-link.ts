@@ -100,13 +100,16 @@ export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
       stop: async () => ({ ...link.snapshotValue.server, running: false }),
     },
     disk: { available: async () => 10 * 1024 ** 3 },
+    // The same routes `HttpCoreLink` calls, recorded and answered like `request`.
     environments: {
-      list: async () => [],
-      probe: async () => ({}),
-      begin: async () => ({}),
-      get: async () => ({}),
-      cancel: async () => ({}),
-      resume: async () => ({}),
+      list: async () =>
+        ((await link.request<{ environments?: unknown[] }>('GET', '/environments')).environments ??
+          []) as never,
+      probe: (input) => link.request('POST', '/environments/probe', input),
+      begin: (id, input) => link.request('POST', `/environments/${id}/operations`, input),
+      get: (op) => link.request('GET', `/environments/operations/${op}`),
+      cancel: (op) => link.request('POST', `/environments/operations/${op}/cancel`),
+      resume: (op, input) => link.request('POST', `/environments/operations/${op}/resume`, input),
       hostStepResult: async (op, receipt) => {
         link.calls.push({
           method: 'POST',

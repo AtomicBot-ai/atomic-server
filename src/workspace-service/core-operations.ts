@@ -4,7 +4,8 @@ import type { CoreLink } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { modelIdPath, object, segment } from './validation.js'
-export const NOT_CORE = Symbol('not-core')
+import { managedEngineOperation } from './managed-engines.js'
+export { NOT_CORE } from './not-core.js'
 export async function coreOperation(link: CoreLink, name: string, input: WorkspaceInput): Promise<unknown> {
   const request = object(input['request']),
     id = () => segment(input['id']),
@@ -151,6 +152,6 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
     case 'media.router.run':
       return post('/decision/score', request)
     default:
-      return NOT_CORE
+      return managedEngineOperation(link, name, input)
   }
 }

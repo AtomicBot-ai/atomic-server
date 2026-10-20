@@ -52,6 +52,60 @@ export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
     required: ['engine', 'version', 'variant'],
   }),
   operation(
+    'engines.plan',
+    'Managed engine state',
+    'read',
+    "Read one managed engine (tensorrt-llm, vllm, sglang): the core's plan for this machine (system changes, download and disk, elevation, sign-in or restart, blockers, warnings), the descriptor's notices, the installation, its operation in progress, another engine's operation it would wait for, the last failed setup and the update offer. Probing changes nothing.",
+    { properties: { engine: { type: 'string' } }, required: ['engine'] }
+  ),
+  operation(
+    'engines.operate',
+    'Set up or remove managed engine',
+    'download',
+    'Begin the durable setup or removal of a managed engine. request_id makes a retry join the same operation; approved_plan_digest is the plan_digest of the plan the person agreed to (without it the operation waits in awaiting-consent). A removal keeps the shared models when retain_models is true or another managed engine is installed.',
+    {
+      properties: {
+        engine: { type: 'string' },
+        kind: { type: 'string', enum: ['setup', 'remove'] },
+        request_id: { type: 'string' },
+        approved_plan_digest: { type: 'string' },
+        retain_models: { type: 'boolean' },
+      },
+      required: ['engine', 'kind', 'request_id'],
+    }
+  ),
+  operation(
+    'engines.operation',
+    'Managed engine operation',
+    'read',
+    'Read one managed-engine operation: its phase, progress, pending privileged step, plan digests and error.',
+    { properties: { operation_id: { type: 'string' } }, required: ['operation_id'] }
+  ),
+  operation(
+    'engines.resume',
+    'Continue managed engine operation',
+    'configure',
+    'Continue a managed-engine operation that waits for consent, a sign-in, a restart, or that failed or was cancelled. In awaiting-consent, approved_plan_digest approves the plan on offer; elsewhere it may only restate the current one.',
+    {
+      properties: { operation_id: { type: 'string' }, approved_plan_digest: { type: 'string' } },
+      required: ['operation_id'],
+    }
+  ),
+  operation(
+    'engines.cancel',
+    'Cancel managed engine operation',
+    'interrupt',
+    'Ask the core to cancel a managed-engine operation; work that cannot stop safely is cancelled at its next safe boundary.',
+    { properties: { operation_id: { type: 'string' } }, required: ['operation_id'] }
+  ),
+  operation(
+    'engines.diagnostics',
+    'Managed engine diagnostics',
+    'read',
+    "Read the core's read-only report on the managed environment: the snapshot with its blockers and GPUs, where its documents come from, every operation on disk and recent warnings.",
+    { properties: { engine: { type: 'string' } }, required: ['engine'] }
+  ),
+  operation(
     'settings.schema',
     'Engine setting controls',
     'read',
