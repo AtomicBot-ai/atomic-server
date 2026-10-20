@@ -36,6 +36,19 @@ export function icaclsPath(systemRoot: string | undefined): string {
 }
 
 /**
+ * The environment for Windows PowerShell (`powershell.exe`): `base` plus `extra`, without
+ * `PSModulePath`. Started from pwsh, atc inherits PowerShell 7's module path, where Windows PowerShell
+ * finds `Get-Acl`'s module but cannot load it; without the variable it uses its own default.
+ */
+export function windowsPowerShellEnv(
+  base: NodeJS.ProcessEnv,
+  extra: Record<string, string> = {}
+): NodeJS.ProcessEnv {
+  const env = Object.fromEntries(Object.entries(base).filter(([key]) => key.toUpperCase() !== 'PSMODULEPATH'))
+  return { ...env, ...extra }
+}
+
+/**
  * Why `acl` is not an owner-only folder, or `undefined` when it is: the core executor's judge (no
  * reparse point, a directory, an owner that is not a broad group, no other writer), then no allow rule
  * for anyone but the owner, SYSTEM, Administrators and CREATOR OWNER — read access included.
@@ -80,7 +93,7 @@ export async function restrictToOwner(
       exec: async (command, args, o) => {
         const r = await options.exec(command, args, {
           timeoutMs: o?.timeoutMs ?? 30_000,
-          env: { ...options.env, ...o?.env },
+          env: windowsPowerShellEnv(options.env, o?.env),
         })
         return { code: r.error ? null : r.code, stdout: r.stdout, stderr: r.error ?? r.stderr }
       },

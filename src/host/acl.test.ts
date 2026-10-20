@@ -1,7 +1,7 @@
 import { judgeWindowsAcl } from '@atomic-chat/core/host'
 import type { WindowsAcl } from '@atomic-chat/core/host'
 import { describe, expect, it } from 'vitest'
-import { icaclsPath, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
+import { icaclsPath, ownerOnlyAclArgs, restrictToOwner, windowsPowerShellEnv } from './acl.js'
 import type { ExecFn } from './exec.js'
 
 describe('owner-only folder ACL', () => {
@@ -74,7 +74,11 @@ describe('owner-only folder ACL', () => {
         user: 'HOST\\alice',
         exec,
         systemRoot: 'D:\\Win',
-        env: { SystemRoot: 'D:\\Win', PATH: 'D:\\Win\\System32' },
+        env: {
+          SystemRoot: 'D:\\Win',
+          PATH: 'D:\\Win\\System32',
+          PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
+        },
       })
       return { result, calls }
     }
@@ -126,5 +130,16 @@ describe('owner-only folder ACL', () => {
         /cannot read the folder's ACL back: .*Access denied/
       )
     })
+  })
+
+  // Started from pwsh, the server inherits PowerShell 7's module path; Windows PowerShell then finds
+  // Get-Acl's module there, cannot load it (CouldNotAutoloadMatchingModule) and the read fails.
+  it('drops PSModulePath in any case so Windows PowerShell uses its own modules', () => {
+    expect(
+      windowsPowerShellEnv(
+        { Path: 'C:\\Windows', PSModulePath: 'C:\\pwsh7', psmodulepath: 'C:\\other' },
+        { ATOMIC_HOST_STEP_PATH: 'C:\\d' }
+      )
+    ).toEqual({ Path: 'C:\\Windows', ATOMIC_HOST_STEP_PATH: 'C:\\d' })
   })
 })
