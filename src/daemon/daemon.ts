@@ -63,9 +63,12 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     exec: host.exec,
     systemRoot: io.env['SystemRoot'] ?? io.env['SYSTEMROOT'],
     env: io.env,
+    checked: (problem) =>
+      problem
+        ? log.warn(`could not restrict ${paths.atcDir} to this user: ${problem}`)
+        : log.info(`restricted ${paths.atcDir} to this user`),
   })
   if (denied) log.warn(`could not restrict ${paths.atcDir} to this user: ${denied}`)
-  else if (host.facts.platform === 'win32') log.info(`restricted ${paths.atcDir} to this user`)
   const keys = new ClientKeys(paths.atcDir)
   // Before the core: with no keyring the public server would check no key at all.
   await keys.initialize(io.env['ATC_API_KEY'] ?? '')

@@ -74,8 +74,10 @@ export function judgeOwnerOnly(acl: WindowsAcl, dir: string): string | undefined
 }
 
 /**
- * Apply it on Windows; elsewhere the file modes already say it. Returns why it failed, if it did. The
- * folder is read back: an exit code of 0 alone does not prove that only the owner is left.
+ * Apply it on Windows; elsewhere the file modes already say it. Returns why the grants failed, if they
+ * did. The folder is then read back — an exit code of 0 alone does not prove that only the owner is
+ * left — and `checked` gets why it is not owner-only, or `undefined`. The read-back starts Windows
+ * PowerShell, seconds on a cold machine, so nothing waits for it.
  */
 export async function restrictToOwner(
   dir: string,
@@ -89,6 +91,7 @@ export async function restrictToOwner(
      * it, while atc's `exec` replaces the child's environment with what it is given.
      */
     env: NodeJS.ProcessEnv
+    checked: (problem: string | undefined) => void
   }
 ): Promise<string | undefined> {
   if (options.platform !== 'win32') return undefined
@@ -101,9 +104,16 @@ export async function restrictToOwner(
     const r = await options.exec(icacls, args, { timeoutMs: 30_000 })
     if (r.error || r.code !== 0) return (r.error ?? r.stderr.trim()) || `icacls exit code ${r.code}`
   }
-  let acl: WindowsAcl
+  void readOwnerOnly(dir, options).then(options.checked)
+  return undefined
+}
+
+async function readOwnerOnly(
+  dir: string,
+  options: { exec: ExecFn; systemRoot?: string | undefined; env: NodeJS.ProcessEnv }
+): Promise<string | undefined> {
   try {
-    acl = await readWindowsAcl(dir, {
+    const acl = await readWindowsAcl(dir, {
       exec: async (command, args, o) => {
         const r = await options.exec(command, args, {
           timeoutMs: o?.timeoutMs ?? 30_000,
@@ -113,8 +123,8 @@ export async function restrictToOwner(
       },
       ...(options.systemRoot ? { systemRoot: options.systemRoot } : {}),
     })
+    return judgeOwnerOnly(acl, dir)
   } catch (error) {
     return `cannot read the folder's ACL back: ${error instanceof Error ? error.message : String(error)}`
   }
-  return judgeOwnerOnly(acl, dir)
 }

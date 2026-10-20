@@ -236,8 +236,14 @@ describe(`atc (${command.join(' ')})`, () => {
           [acl, icacls(), icacls('config.json'), icacls('logs'), run('logs', '-n', '50').stdout].join('\n')
         expect(acl, why()).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
         expect(acl.toLowerCase()).toContain((process.env['USERNAME'] ?? '').toLowerCase())
-        // The server accepted the folder, and the core's executor would trust it as well.
-        const log = run('logs', '-n', '50').stdout
+        // The server accepted the folder, and the core's executor would trust it as well. The server
+        // reads the folder back after it started (a cold PowerShell takes seconds), so wait for it.
+        let log = ''
+        for (const deadline = Date.now() + 45_000; Date.now() < deadline;) {
+          log = run('logs', '-n', '50').stdout
+          if (/restricted .+ to this user|could not restrict/.test(log)) break
+          await new Promise((r) => setTimeout(r, 500))
+        }
         expect(log, why()).toMatch(/restricted .+ to this user/)
         expect(log, why()).not.toContain('could not restrict')
         const dir = join(folder, 'atc')
@@ -256,7 +262,7 @@ describe(`atc (${command.join(' ')})`, () => {
         rmSync(join(ROOT, '.e2e-acl'), { recursive: true, force: true })
       }
     },
-    60_000
+    120_000
   )
 
   it('prints a completion script', () => {

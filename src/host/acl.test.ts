@@ -1,6 +1,6 @@
 import { judgeWindowsAcl } from '@atomic-chat/core/host'
 import type { WindowsAcl } from '@atomic-chat/core/host'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { icaclsPath, ownerOnlyAclArgs, restrictToOwner, windowsPowerShellEnv } from './acl.js'
 import type { ExecFn } from './exec.js'
 
@@ -24,7 +24,15 @@ describe('owner-only folder ACL', () => {
       calls.push(`${command} ${args[0]}`)
       return { code: 5, stdout: '', stderr: 'Access is denied.', timedOut: false }
     }
-    expect(await restrictToOwner('/d/atc', { platform: 'linux', user: 'u', exec, env: {} })).toBeUndefined()
+    expect(
+      await restrictToOwner('/d/atc', {
+        platform: 'linux',
+        user: 'u',
+        exec,
+        env: {},
+        checked: () => undefined,
+      })
+    ).toBeUndefined()
     expect(calls).toEqual([])
     expect(
       await restrictToOwner('C:\\d\\atc', {
@@ -33,6 +41,7 @@ describe('owner-only folder ACL', () => {
         exec,
         systemRoot: 'D:\\Win\\',
         env: {},
+        checked: () => undefined,
       })
     ).toBe('Access is denied.')
     expect(calls).toEqual(['D:\\Win\\System32\\icacls.exe C:\\d\\atc'])
@@ -69,7 +78,9 @@ describe('owner-only folder ACL', () => {
           }
         return { code: 0, stdout: 'processed 1 files', stderr: '', timedOut: false }
       }
-      const result = await restrictToOwner(dir, {
+      let checked: (problem: string | undefined) => void = () => undefined
+      const check = new Promise<string | undefined>((resolve) => (checked = resolve))
+      const granted = await restrictToOwner(dir, {
         platform: 'win32',
         user: 'HOST\\alice',
         exec,
@@ -79,9 +90,32 @@ describe('owner-only folder ACL', () => {
           PATH: 'D:\\Win\\System32',
           PSModulePath: 'C:\\Program Files\\PowerShell\\7\\Modules',
         },
+        checked,
       })
-      return { result, calls }
+      return { result: granted ?? (await check), calls }
     }
+
+    // A cold Windows PowerShell takes seconds (past the server's start budget on windows-11-arm); the
+    // grants are what the keys need before they are written, so only they are waited for.
+    it('returns after the grants and reports the read-back later', async () => {
+      let answer: (value: Awaited<ReturnType<ExecFn>>) => void = () => undefined
+      const exec: ExecFn = async (command) =>
+        command.endsWith('powershell.exe')
+          ? new Promise((resolve) => (answer = resolve))
+          : { code: 0, stdout: '', stderr: '', timedOut: false }
+      const reported: Array<string | undefined> = []
+      const granted = await restrictToOwner(dir, {
+        platform: 'win32',
+        user: 'HOST\\alice',
+        exec,
+        env: {},
+        checked: (problem) => reported.push(problem),
+      })
+      expect(granted).toBeUndefined()
+      expect(reported).toEqual([])
+      answer({ code: 0, stdout: JSON.stringify(owned), stderr: '', timedOut: false })
+      await vi.waitFor(() => expect(reported).toEqual([undefined]))
+    })
 
     it('grants by icacls, then reads the ACL with PowerShell by its full path and the inherited env', async () => {
       const { result, calls } = await run(owned)
