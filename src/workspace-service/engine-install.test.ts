@@ -50,7 +50,30 @@ describe('installEngine, managed engines', () => {
     expect(link.calls.some((c) => c.path.endsWith('/update') || c.path.endsWith('/operations'))).toBe(false)
   })
 
-  it('starts the update of an installed engine the core offers one for, and answers its operation', async () => {
+  it('offers the update of an installed engine with the new release’s plan, and begins nothing', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = versions('vllm', {
+      active: { version: 'vllm-2026.10.1', variant: 'linux/amd64' },
+      update: {
+        needed: true,
+        target: { version: 'vllm-2026.11.1', variant: 'linux/amd64' },
+        apply: 'reinstall',
+      },
+    })
+    const result = await installEngine(link, 'vllm', { request_id: 'r-9' })
+    expect(result).toMatchObject({
+      engine: 'vllm',
+      status: 'update',
+      from: 'vllm-2026.10.1',
+      target: 'vllm-2026.11.1',
+    })
+    expect(link.calls.find((c) => c.path === '/environments/probe')?.body).toMatchObject({
+      descriptor_id: 'vllm-2026.11.1',
+    })
+    expect(link.calls.some((c) => c.path === '/engines/vllm/update')).toBe(false)
+  })
+
+  it('begins the reinstall once the request names the release the person agreed to', async () => {
     const link = fakeCoreLink()
     link.responses['POST /engines/versions'] = versions('vllm', {
       active: { version: 'vllm-2026.10.1', variant: 'linux/amd64' },
@@ -61,7 +84,7 @@ describe('installEngine, managed engines', () => {
       },
     })
     link.responses['POST /engines/vllm/update'] = { operation_id: 'op-remove' }
-    const result = await installEngine(link, 'vllm', { request_id: 'r-9' })
+    const result = await installEngine(link, 'vllm', { request_id: 'r-9', approved_update: 'vllm-2026.11.1' })
     expect(result).toEqual({
       engine: 'vllm',
       status: 'updating',
