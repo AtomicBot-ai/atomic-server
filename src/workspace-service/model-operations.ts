@@ -16,6 +16,7 @@ import type { ManagedModelSetups } from './managed-model-setups.js'
 import { managedCatalog, managedSearch } from './managed-catalog.js'
 import { isManagedEngine } from './managed-engines.js'
 import { checkModel } from './managed-models.js'
+import { storeModels } from './managed-store.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import { importedModelId } from './validation.js'
@@ -80,6 +81,7 @@ export async function modelOperation(
           name: String(m.yml.name ?? m.id),
           provider: 'mlx',
         })),
+        ...(await storeModels(link)),
       ]
     case 'models.remove': {
       const id = String(input['model_id']),

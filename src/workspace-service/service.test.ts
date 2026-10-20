@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
@@ -190,5 +193,34 @@ describe('workspace operations', () => {
     }
     await service.execute('setup.complete', { model_id: 'selected-decision' })
     expect(link.calls).toContainEqual(expect.objectContaining({ path: '/decision/decide' }))
+  })
+  it('lists a model of the managed store once, with each managed provider that lists it, and its size', async () => {
+    const { service, link, paths } = context()
+    const root = join(paths.dataFolder, 'managed-models')
+    mkdirSync(join(root, 'Qwen', 'Qwen3.5-2B'), { recursive: true })
+    writeFileSync(join(root, 'Qwen', 'Qwen3.5-2B', 'model.safetensors'), Buffer.alloc(1000))
+    writeFileSync(join(root, 'Qwen', 'Qwen3.5-2B', 'model.yml'), '{"repository":"Qwen/Qwen3.5-2B"}')
+    mkdirSync(join(root, 'still', 'downloading'), { recursive: true })
+    link.responses['POST /engines/versions'] = {
+      engines: ['llamacpp-upstream', 'tensorrt-llm', 'vllm', 'sglang'].map((engine) => ({ engine })),
+    }
+    link.responses['GET /managed-models/location'] = { root, free_bytes: null }
+    link.responses['GET /models/vllm/Qwen/Qwen3.5-2B/capabilities'] = { model_id: 'Qwen/Qwen3.5-2B' }
+    link.responses['GET /models/tensorrt-llm/Qwen/Qwen3.5-2B/capabilities'] = { model_id: 'Qwen/Qwen3.5-2B' }
+    link.responses['GET /models/sglang/Qwen/Qwen3.5-2B/capabilities'] = new AtomicCoreError(
+      'MODEL_NOT_FOUND',
+      'no'
+    )
+    const installed = (await service.execute('models.installed')) as Array<Record<string, unknown>>
+    expect(installed.filter((m) => m['store'] === 'managed')).toEqual([
+      {
+        id: 'Qwen/Qwen3.5-2B',
+        name: 'Qwen/Qwen3.5-2B',
+        provider: 'tensorrt-llm',
+        providers: ['tensorrt-llm', 'vllm'],
+        store: 'managed',
+        size_bytes: 1000 + '{"repository":"Qwen/Qwen3.5-2B"}'.length,
+      },
+    ])
   })
 })

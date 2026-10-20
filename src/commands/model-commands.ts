@@ -7,6 +7,7 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { operation, printOperation, workspace } from './control.js'
+import { listInstalled, removeInstalled } from './installed-models.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
@@ -118,7 +119,7 @@ export const modelsCommand = defineCommand({
       summary: 'Installed models',
       options: { loaded: { type: 'boolean', description: 'Only running services' } },
       run: async (inv, ctx) => {
-        if (!inv.values['loaded']) return operation(ctx, 'models.installed')
+        if (!inv.values['loaded']) return listInstalled(ctx)
         const rows = (await (await workspace(ctx)).snapshot()).services
         ctx.out.result({ services: rows }, () => ctx.out.line(JSON.stringify(rows, null, 2)))
         return 0
@@ -228,10 +229,7 @@ export const modelsCommand = defineCommand({
       name: 'rm',
       summary: 'Remove a downloaded model',
       positionals: [{ name: 'model', description: 'Installed model ID', required: true }],
-      run: async (inv, ctx) => {
-        if (!(await ctx.prompt.confirm(`Delete model ${inv.positionals[0]}?`, { danger: true }))) return 0
-        return operation(ctx, 'models.remove', { model_id: inv.positionals[0] })
-      },
+      run: (inv, ctx) => removeInstalled(ctx, inv.positionals[0]!),
     }),
   ],
 })
