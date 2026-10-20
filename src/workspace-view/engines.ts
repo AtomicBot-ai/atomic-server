@@ -128,3 +128,29 @@ export function operationView(op: EnvironmentOperation): {
     total: bytes?.total ?? null,
   }
 }
+
+/**
+ * What removing a managed engine does (spec "Удаление managed-движка"): its containers, image and
+ * caches go; the shared store's models stay for every other managed engine installed, or when kept.
+ * `keepModels` is the person's choice, `undefined` when it was made when the removal began.
+ */
+export function removalLines(state: ManagedEngineState, keepModels?: boolean): string[] {
+  const descriptor = state.installation?.active_descriptor_id
+  const lines = [
+    `Plan to remove ${state.engine}${descriptor ? ` (${descriptor})` : ''}:`,
+    `  - Unload any loaded ${state.engine} model and remove its containers.`,
+    '  - Remove the engine image and the caches built for it.',
+  ]
+  if (state.models_kept_for.length)
+    lines.push(`  - Models in the shared store stay: kept for ${state.models_kept_for.join(', ')}.`)
+  else if (keepModels === true) lines.push('  - Models in the shared store stay: kept as asked.')
+  else if (keepModels === false)
+    lines.push('  - Models in the shared store are removed: no other managed engine uses them.')
+  else lines.push('  - Models in the shared store stay or go as chosen when this removal began.')
+  if (state.plan?.required_disk_bytes)
+    lines.push(
+      `  Frees up to about ${formatSize(state.plan.required_disk_bytes)} of engine image and caches.`
+    )
+  lines.push('  Docker itself, other containers and other WSL distributions are not touched.')
+  return lines
+}

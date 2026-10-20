@@ -1,7 +1,7 @@
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import { operation } from './control.js'
-import { installManagedEngine } from './managed-engine.js'
+import { installManagedEngine, removeManagedEngine } from './managed-engine.js'
 
 const isManaged = (engine: string | undefined) =>
   engine !== undefined && (ENGINE_KINDS as Readonly<Record<string, string>>)[engine] === 'managed'
@@ -82,9 +82,17 @@ export const enginesCommand = defineCommand({
     defineCommand({
       name: 'rm',
       summary: 'Remove one unused engine build',
+      description:
+        'A managed engine is removed whole by a durable operation after you agree to it; the shared model store stays while another managed engine is installed, or with --keep-models.',
       positionals: [{ name: 'engine', description: 'Engine ID', required: true }],
-      options: { build: { type: 'string', description: 'Required version/variant' } },
+      options: {
+        'build': { type: 'string', description: 'Required version/variant (not for a managed engine)' },
+        'keep-models': { type: 'boolean', description: 'Keep the shared model store of a managed engine' },
+        'detach': { type: 'boolean', description: 'Start the removal without following it' },
+        'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
+      },
       run: async (inv, ctx) => {
+        if (isManaged(inv.positionals[0])) return removeManagedEngine(ctx, inv.positionals[0]!, inv.values)
         const [version, ...variant] = String(inv.values['build'] ?? '').split('/')
         if (!version || !variant.length)
           throw new AtcError('ATC_USAGE', 'Choose --build version/variant from engines list.')

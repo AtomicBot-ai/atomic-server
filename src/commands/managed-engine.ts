@@ -12,7 +12,7 @@ import type { EnvironmentOperation } from '@atomic-chat/core/contracts'
 import type { CommandContext } from '../cli/index.js'
 import { AtcError } from '../cli/index.js'
 import type { ManagedEngineState, ManagedInstallResult } from '../contract/index.js'
-import { planBlocked } from '../workspace-view/index.js'
+import { planBlocked, removalLines } from '../workspace-view/index.js'
 import type { ManagedSession } from './managed-session.js'
 import {
   agree,
@@ -27,14 +27,24 @@ import {
 const engineOf = (op: EnvironmentOperation) =>
   op.target.kind === 'runtime' ? op.target.engine_id : 'the managed environment'
 
-/** Follow `op` and act where it stops: done, failed, or waiting for consent, a sign-in or a restart. */
-export async function run(s: ManagedSession, op: EnvironmentOperation, approved?: string): Promise<number> {
-  const { op: last, detached } = await track(s, op)
-  if (detached) return printDetached(s, last)
-  return settle(s, last, approved)
+/**
+ * What the person agreed to in this call: a setup plan by its digest, or a removal (whose plan the
+ * core offers only once it began). `digest` is the one already sent, so the core asking for it again
+ * is an error rather than a reason to agree again.
+ */
+export interface Approval {
+  kind: 'setup' | 'remove'
+  digest?: string
 }
 
-async function settle(s: ManagedSession, op: EnvironmentOperation, approved?: string): Promise<number> {
+/** Follow `op` and act where it stops: done, failed, or waiting for consent, a sign-in or a restart. */
+export async function run(s: ManagedSession, op: EnvironmentOperation, approval?: Approval): Promise<number> {
+  const { op: last, detached } = await track(s, op)
+  if (detached) return printDetached(s, last)
+  return settle(s, last, approval)
+}
+
+async function settle(s: ManagedSession, op: EnvironmentOperation, approval?: Approval): Promise<number> {
   const engine = engineOf(op)
   const say = (text: string) => s.ctx.out.line(text)
   switch (op.phase) {
@@ -45,7 +55,7 @@ async function settle(s: ManagedSession, op: EnvironmentOperation, approved?: st
       say(`${engine} was removed.`)
       return 0
     case 'awaiting-consent':
-      return consentFor(s, op, approved)
+      return consentFor(s, op, approval)
     case 'relogin-required':
       say(`${engine}: you were added to the docker group; it applies to the server from your next sign-in.`)
       say(`Sign out and in again, run \`atc restart\`, then: atc engines install --resume ${op.operation_id}`)
@@ -67,15 +77,13 @@ async function settle(s: ManagedSession, op: EnvironmentOperation, approved?: st
 
 /**
  * The core waits for consent: to a plan nobody approved yet, or to a new one after the machine
- * changed. The plan is read and printed again; an approval of another plan does not carry over.
+ * changed. The plan is read and printed again; an approval of another plan does not carry over. A
+ * removal the person agreed to in this call is approved as the core offers it.
  */
-async function consentFor(s: ManagedSession, op: EnvironmentOperation, approved?: string): Promise<number> {
+async function consentFor(s: ManagedSession, op: EnvironmentOperation, approval?: Approval): Promise<number> {
   const engine = engineOf(op)
-  const state = await engineState(s, engine)
-  printState(s, state)
   const offered = op.plan_digest
-  const shown = state.plan?.plan_digest
-  if (approved !== undefined && approved === offered)
+  if (offered && approval?.digest === offered)
     throw new AtcError(
       'ATC_INTERNAL',
       `The core asked again for consent to the plan already approved for ${engine}.`,
@@ -83,24 +91,81 @@ async function consentFor(s: ManagedSession, op: EnvironmentOperation, approved?
         hint: `see atc engines status ${engine}`,
       }
     )
-  if (
-    !offered ||
-    shown !== offered ||
-    (approved !== undefined && approved !== offered) ||
-    (s.consent.kind === 'approve' && s.consent.digest !== offered)
-  )
-    throw planChanged(op)
-  const verb = op.kind === 'remove' ? `Removing ${engine}` : `Installing ${engine}`
-  const digest = await agree(s, verb, offered)
-  if (digest === null) {
-    s.ctx.out.line('Nothing was changed.')
-    return 0
+  const state = await engineState(s, engine)
+  let digest: string | null
+  if (op.kind === 'remove') {
+    if (approval?.kind !== 'remove') {
+      printRemoval(s, state)
+      if (!(await agreeRemoval(s, engine))) return nothingChanged(s)
+    }
+    digest = offered
+  } else {
+    printState(s, state)
+    if (
+      !offered ||
+      state.plan?.plan_digest !== offered ||
+      approval?.digest !== undefined ||
+      (s.consent.kind === 'approve' && s.consent.digest !== offered)
+    )
+      throw planChanged(op)
+    digest = await agree(s, `Installing ${engine}`, offered)
+    if (digest === null) return nothingChanged(s)
   }
   const resumed = (await s.service.execute('engines.resume', {
     operation_id: op.operation_id,
     approved_plan_digest: digest,
   })) as EnvironmentOperation
-  return run(s, resumed, digest)
+  return run(s, resumed, { kind: op.kind === 'remove' ? 'remove' : 'setup', ...(digest ? { digest } : {}) })
+}
+
+function nothingChanged(s: ManagedSession): number {
+  s.ctx.out.line('Nothing was changed.')
+  return 0
+}
+
+function printRemoval(s: ManagedSession, state: ManagedEngineState, keepModels?: boolean): void {
+  if (s.ctx.flags.json) s.ctx.io.stdout(`${JSON.stringify({ removal: state })}\n`)
+  else for (const line of removalLines(state, keepModels)) s.ctx.out.line(line)
+}
+
+/** Consent to a removal: `--yes`, a "yes" on the terminal, or a usage error. */
+async function agreeRemoval(s: ManagedSession, engine: string): Promise<boolean> {
+  if (s.consent.kind === 'yes') return true
+  if (s.consent.kind === 'ask') return s.ctx.prompt.confirm(`Remove ${engine}?`, { danger: true })
+  throw new AtcError('ATC_USAGE', `Removing ${engine} needs your consent to the plan above.`, {
+    hint: 'run it on a terminal, or add --yes to agree to it',
+  })
+}
+
+/** `atc engines rm <managed> [--keep-models]`: the removal described, agreed to, then followed. */
+export async function removeManagedEngine(
+  ctx: CommandContext,
+  engine: string,
+  values: Record<string, unknown>
+): Promise<number> {
+  const s = await managedSession(ctx, values)
+  try {
+    const state = await engineState(s, engine)
+    if (state.operation) {
+      if (state.operation.kind === 'remove') return await continueOperation(s, state.operation)
+      throw new AtcError('ATC_USAGE', `The ${state.operation.kind} of ${engine} is still running.`, {
+        hint: `cancel it with atc engines install --cancel ${state.operation.operation_id}`,
+      })
+    }
+    if (!state.installation) throw new AtcError('ATC_USAGE', `${engine} is not installed.`)
+    const keep = values['keep-models'] === true
+    printRemoval(s, state, keep)
+    if (!(await agreeRemoval(s, engine))) return nothingChanged(s)
+    const op = (await s.service.execute('engines.operate', {
+      engine,
+      kind: 'remove',
+      request_id: typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID(),
+      retain_models: keep,
+    })) as EnvironmentOperation
+    return await run(s, op, { kind: 'remove' })
+  } finally {
+    s.close()
+  }
 }
 
 /** An operation found by id or left from before: join it where it stands. */
@@ -153,17 +218,14 @@ async function setup(
     })
   if (dryRun) return 0
   const digest = await agree(s, `Installing ${engine}`, plan.plan_digest)
-  if (digest === null) {
-    s.ctx.out.line('Nothing was changed.')
-    return 0
-  }
+  if (digest === null) return nothingChanged(s)
   const op = (await s.service.execute('engines.operate', {
     engine,
     kind: 'setup',
     request_id: requestId,
     approved_plan_digest: digest,
   })) as EnvironmentOperation
-  return run(s, op, digest)
+  return run(s, op, { kind: 'setup', digest })
 }
 
 /** The core's reinstall: its removal keeps the models, then a setup under `<request_id>:setup`. */

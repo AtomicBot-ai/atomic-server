@@ -12,7 +12,9 @@ import type {
   RequirementPlan,
 } from '@atomic-chat/core/contracts'
 import type { FakeCoreLink } from './fake-core-link.js'
-import { environment, operation } from './managed-fixtures.js'
+import { DIGEST_A, environment, operation, plan } from './managed-fixtures.js'
+import { testRun } from './test-context.js'
+import type { TestRun } from './test-context.js'
 
 export interface ManagedHost {
   env: EnvironmentSnapshot
@@ -32,8 +34,21 @@ export interface ManagedHost {
 }
 
 export function managedHost(link: FakeCoreLink, env: EnvironmentSnapshot = environment()): ManagedHost {
+  const sync = () => {
+    link.snapshotValue = {
+      ...link.snapshotValue,
+      environments: [env],
+      environment_operations: [...host.operations.values()],
+    }
+  }
   const host: ManagedHost = {
-    env,
+    get env() {
+      return env
+    },
+    set env(next) {
+      env = next
+      sync()
+    },
     plans: {},
     versions: [],
     operations: new Map(),
@@ -43,11 +58,7 @@ export function managedHost(link: FakeCoreLink, env: EnvironmentSnapshot = envir
     onResume: () => {},
     set(op) {
       host.operations.set(op.operation_id, op)
-      link.snapshotValue = {
-        ...link.snapshotValue,
-        environments: [host.env],
-        environment_operations: [...host.operations.values()],
-      }
+      sync()
       link.responses[`GET /environments/operations/${op.operation_id}`] = () =>
         host.operations.get(op.operation_id)
       // As the core's reducer (`state.ts`): an approval or a resume looks at the machine again first.
@@ -89,7 +100,7 @@ export function managedHost(link: FakeCoreLink, env: EnvironmentSnapshot = envir
       }
     },
   }
-  link.snapshotValue = { ...link.snapshotValue, environments: [env], environment_operations: [] }
+  sync()
   link.responses['GET /environments'] = () => ({ environments: [host.env] })
   link.responses['POST /environments/probe'] = (body: unknown) => {
     const engine = (body as { target: { engine_id: string } }).target.engine_id
@@ -116,4 +127,33 @@ export function managedHost(link: FakeCoreLink, env: EnvironmentSnapshot = envir
     return op
   }
   return host
+}
+
+export const IMAGE = { label: 'image', unit: 'bytes' as const }
+
+/** A test run on a host where `engine` can be set up: its plan, its descriptor's notice, nothing installed. */
+export function managedRun(
+  engine = 'vllm',
+  over: Parameters<typeof testRun>[0] = {}
+): { t: TestRun; h: ManagedHost } {
+  const t = testRun(over)
+  const h = managedHost(t.link)
+  h.plans[engine] = plan(engine)
+  h.versions = [{ engine: engine as never }]
+  t.link.responses[`GET /environments/descriptors/${engine}-2026.10.1`] = {
+    descriptor_id: `${engine}-2026.10.1`,
+    notices: ['Use of the engine image is subject to the NVIDIA terms.'],
+  }
+  return { t, h }
+}
+
+/** After a begin, the core checks, pulls the image with its bytes and ends ready. */
+export function toReady(h: ManagedHost): void {
+  h.onBegin = (op) =>
+    void h.play(op.operation_id, [
+      { phase: 'pulling-image', plan_digest: DIGEST_A, progress: { ...IMAGE, completed: 1e9, total: 4e9 } },
+      { phase: 'pulling-image', progress: { ...IMAGE, completed: 4e9, total: 4e9 } },
+      { phase: 'verifying', progress: null },
+      { phase: 'ready' },
+    ])
 }

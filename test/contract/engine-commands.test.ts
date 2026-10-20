@@ -1,43 +1,21 @@
 /** `atc engines install|rm|status` for managed engines against a scripted core (spec managed-engines-server). */
 import { afterEach, describe, expect, it } from 'vitest'
 import { DIGEST_A, DIGEST_B, installation, operation, plan } from '../helpers/managed-fixtures.js'
-import { managedHost } from '../helpers/managed-host.js'
+import { IMAGE, managedRun, toReady } from '../helpers/managed-host.js'
 import type { ManagedHost } from '../helpers/managed-host.js'
-import { testRun } from '../helpers/test-context.js'
 import type { TestRun } from '../helpers/test-context.js'
 import { waitFor } from '../helpers/wait-for.js'
 
 let t: TestRun
 afterEach(() => t?.cleanup())
+function host(engine = 'vllm', over: Parameters<typeof managedRun>[1] = {}): ManagedHost {
+  const run = managedRun(engine, over)
+  t = run.t
+  return run.h
+}
 
 const out = () => t.io.out.join('')
 const err = () => t.io.err.join('')
-const IMAGE = { label: 'vllm image', unit: 'bytes' as const }
-
-/** A host where `engine` can be set up, with its plan and nothing installed. */
-function host(engine = 'vllm', over: Parameters<typeof testRun>[0] = {}): ManagedHost {
-  t = testRun(over)
-  const h = managedHost(t.link)
-  h.plans[engine] = plan(engine)
-  h.versions = [{ engine: engine as never }]
-  t.link.responses[`GET /environments/descriptors/${engine}-2026.10.1`] = {
-    descriptor_id: `${engine}-2026.10.1`,
-    notices: ['Use of the engine image is subject to the NVIDIA terms.'],
-  }
-  return h
-}
-
-/** After a begin, the core checks, pulls the image with its bytes and ends ready. */
-function toReady(h: ManagedHost) {
-  h.onBegin = (op) =>
-    void h.play(op.operation_id, [
-      { phase: 'pulling-image', plan_digest: DIGEST_A, progress: { ...IMAGE, completed: 1e9, total: 4e9 } },
-      { phase: 'pulling-image', progress: { ...IMAGE, completed: 4e9, total: 4e9 } },
-      { phase: 'verifying', progress: null },
-      { phase: 'ready' },
-    ])
-}
-
 describe('atc engines install <managed>', () => {
   it('prints the whole plan, begins with the printed digest under --yes, and follows the pull to ready', async () => {
     const h = host()
