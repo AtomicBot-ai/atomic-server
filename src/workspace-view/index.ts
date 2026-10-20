@@ -5,16 +5,17 @@ export {
   blockerLines,
   engineView,
   formatSize,
+  operationEngine,
   operationView,
+  otherOperationLine,
   PHASE_LABELS,
   phaseText,
   planBlocked,
   planLines,
-  rebootLines,
-  reloginLines,
   removalLines,
   verdictLine,
 } from './engines.js'
+export { rebootLines, reloginLines } from './engine-restart.js'
 export type { EngineView, EngineViewKind } from './engines.js'
 export {
   acceleratorLabel,

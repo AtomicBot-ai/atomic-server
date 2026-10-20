@@ -5,15 +5,16 @@ import { DIGEST_A, installation, operation, plan } from '../../test/helpers/mana
 import {
   engineView,
   formatSize,
+  operationEngine,
   operationView,
+  otherOperationLine,
   PHASE_LABELS,
   phaseText,
   planLines,
-  rebootLines,
-  reloginLines,
   removalLines,
   verdictLine,
 } from './engines.js'
+import { rebootLines, reloginLines } from './engine-restart.js'
 
 function state(over: Partial<ManagedEngineState> = {}): ManagedEngineState {
   return {
@@ -145,6 +146,16 @@ describe('phases', () => {
       '8.4 GiB',
       'unknown',
     ])
+  })
+})
+
+describe('another engine’s operation', () => {
+  it('names its engine, what it does and where it is', () => {
+    const other = operation('sglang', 'pulling-image')
+    expect(operationEngine(other)).toBe('sglang')
+    expect(otherOperationLine(other, 'vllm')).toBe(
+      `The setup of sglang runs first (${PHASE_LABELS['pulling-image']}): the core changes one managed engine at a time; vllm is next.`
+    )
   })
 })
 

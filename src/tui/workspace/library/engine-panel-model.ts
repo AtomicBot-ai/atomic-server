@@ -6,7 +6,7 @@
  * plan these lines show, and none while the operation waits for consent to a plan not shown.
  */
 
-import type { EnvironmentOperation, GpuFacts, SettingDescriptor } from '@atomic-chat/core/contracts'
+import type { GpuFacts, SettingDescriptor } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ServerLaunch, WorkspaceSnapshot } from '../../../contract/index.js'
 import {
   engineApproval,
@@ -22,6 +22,7 @@ import {
   operationView,
   planLines,
   rebootLines,
+  otherOperationLine,
   reloginLines,
   removalLines,
 } from '../../../workspace-view/index.js'
@@ -80,8 +81,6 @@ export interface PanelButton {
   digest?: string
 }
 
-const engineOf = (op: EnvironmentOperation) => (op.target.kind === 'runtime' ? op.target.engine_id : '')
-
 /** This engine's operation as the panel shows it: the snapshot's, else the one the core last named. */
 export const panelOperation = (p: EnginePanel, live: WorkspaceSnapshot | null) =>
   p.state ? liveEngineState(p.state, live).operation : null
@@ -136,11 +135,7 @@ export function enginePanelModel(
     case 'installable': {
       for (const line of planLines(state)) say(line)
       const other = state.other_operation
-      if (other)
-        say(
-          `The ${other.kind} of ${engineOf(other)} runs first: the core changes one managed engine at a time; ${p.engine} is next.`,
-          'warn'
-        )
+      if (other) say(otherOperationLine(other, p.engine), 'warn')
       else if (approval)
         add('engine-approve', 'Approve and install', 'Agree to exactly this plan', approval.digest)
       break

@@ -10,7 +10,7 @@ import type {
   ManagedPhase,
   RequirementPlan,
 } from '@atomic-chat/core/contracts'
-import type { ManagedEngineState, ManagedVerdict, ServerLaunch } from '../contract/index.js'
+import type { ManagedEngineState, ManagedVerdict } from '../contract/index.js'
 
 const UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
 
@@ -111,6 +111,15 @@ export const PHASE_LABELS: Readonly<Record<ManagedPhase, string>> = {
 }
 
 /** The phase of an operation as a person reads it, with the step it waits on and a pending cancel. */
+/** The managed engine an operation changes (an environment-wide one names the environment). */
+export const operationEngine = (op: EnvironmentOperation): string =>
+  op.target.kind === 'runtime' ? op.target.engine_id : 'the managed environment'
+
+/** Why `engine` waits: the core changes one managed engine at a time, and another one's runs. */
+export function otherOperationLine(other: EnvironmentOperation, engine: string): string {
+  return `The ${other.kind} of ${operationEngine(other)} runs first (${phaseText(other)}): the core changes one managed engine at a time; ${engine} is next.`
+}
+
 export function phaseText(op: EnvironmentOperation): string {
   const label =
     op.phase === 'preparing-host' && op.pending_host_step !== null
@@ -236,42 +245,6 @@ export function engineView(state: ManagedEngineState): EngineView {
     summary: `not installed; install ${plan.system_changes.length ? 'needs system changes' : 'needs no system changes'}`,
     operation: null,
   }
-}
-
-/**
- * After the person was added to the `docker` group (`relogin-required`): how the group reaches this
- * server, by the way it was started (design D5). `atc` never signs anyone out or restarts the machine.
- */
-export function reloginLines(launch: ServerLaunch, operationId: string, service = 'atc'): string[] {
-  const steps: Record<ServerLaunch, string[]> = {
-    'terminal': [
-      'The server was started from a terminal: sign out and in again (a new SSH session too),',
-      'then run `atc restart` from the new session.',
-    ],
-    'launchd': ['Sign out and in again, then run `atc restart`.'],
-    'systemd-user': [
-      'The server runs as a systemd --user service, which keeps the groups of your user manager:',
-      'end all your sessions (or restart the machine yourself), sign in again,',
-      `then \`systemctl --user start ${service}\` if it is not running.`,
-    ],
-    'systemd-system': [
-      `The server runs as a system service: restart it with \`sudo systemctl restart ${service}\`.`,
-    ],
-  }
-  return [
-    'You were added to the docker group; it reaches the server only once the server starts again with it.',
-    ...steps[launch],
-    `The operation then continues by itself; follow it with: atc engines install --resume ${operationId}`,
-  ]
-}
-
-/** After WSL was turned on (`reboot-required`, Windows): the next start of the server continues. */
-export function rebootLines(operationId: string): string[] {
-  return [
-    'Windows needs a restart to finish turning on WSL.',
-    'After the restart, `atc start` (or the service) continues the operation with the import of the distribution;',
-    `follow it with: atc engines install --resume ${operationId}`,
-  ]
 }
 
 /** One managed engine's verdict on a checkpoint, on one line, with the core's numbers. */

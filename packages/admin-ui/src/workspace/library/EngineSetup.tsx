@@ -8,6 +8,7 @@ import {
   formatSize,
   liveEngineState,
   operationView,
+  otherOperationLine,
   planLines,
   rebootLines,
   reloginLines,
@@ -105,10 +106,7 @@ export function EngineSetup({
             {(view.kind === 'installable' || view.kind === 'blocked' || view.kind === 'unsupported') &&
               lines(planLines(merged))}
             {view.kind === 'installable' && merged.other_operation && (
-              <p className="ew-muted">
-                The {merged.other_operation.kind} of another managed engine runs first: the core changes one
-                at a time; {engine} is next.
-              </p>
+              <p className="ew-muted">{otherOperationLine(merged.other_operation, engine)}</p>
             )}
             {view.kind === 'consent' &&
               (op?.kind === 'remove' ? (

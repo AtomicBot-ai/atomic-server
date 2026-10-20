@@ -14,7 +14,13 @@ import { AtcError } from '../cli/index.js'
 import type { ManagedEngineState, ManagedInstallResult } from '../contract/index.js'
 import { readDaemonRecord } from '../core-link/index.js'
 import { followUpdate, updateWithConsent } from './managed-update.js'
-import { planBlocked, rebootLines, reloginLines, removalLines } from '../workspace-view/index.js'
+import {
+  operationEngine,
+  planBlocked,
+  rebootLines,
+  reloginLines,
+  removalLines,
+} from '../workspace-view/index.js'
 import type { ManagedSession } from './managed-session.js'
 import {
   agree,
@@ -25,9 +31,6 @@ import {
   printState,
   track,
 } from './managed-session.js'
-
-const engineOf = (op: EnvironmentOperation) =>
-  op.target.kind === 'runtime' ? op.target.engine_id : 'the managed environment'
 
 /**
  * What the person agreed to in this call: a setup plan by its digest, or a removal (whose plan the
@@ -51,7 +54,7 @@ export async function settle(
   op: EnvironmentOperation,
   approval?: Approval
 ): Promise<number> {
-  const engine = engineOf(op)
+  const engine = operationEngine(op)
   const say = (text: string) => s.ctx.out.line(text)
   switch (op.phase) {
     case 'ready':
@@ -88,7 +91,7 @@ export async function settle(
  * removal the person agreed to in this call is approved as the core offers it.
  */
 async function consentFor(s: ManagedSession, op: EnvironmentOperation, approval?: Approval): Promise<number> {
-  const engine = engineOf(op)
+  const engine = operationEngine(op)
   const offered = op.plan_digest
   if (offered && approval?.digest === offered)
     throw new AtcError(
@@ -170,7 +173,7 @@ const PERSON: readonly string[] = ['awaiting-consent', 'relogin-required', 'rebo
 
 async function waitForOther(s: ManagedSession, other: EnvironmentOperation, engine: string) {
   s.ctx.io.stderr(
-    `Waiting for the ${other.kind} of ${engineOf(other)} (${other.phase}) to finish: the core changes one managed engine at a time; ${engine} is next.\n`
+    `Waiting for the ${other.kind} of ${operationEngine(other)} (${other.phase}) to finish: the core changes one managed engine at a time; ${engine} is next.\n`
   )
   const { op, detached } = await track(s, other)
   if (detached) printDetached(s, op)
@@ -193,7 +196,7 @@ async function setup(
     if (PERSON.includes(other.phase))
       throw new AtcError(
         'ATC_USAGE',
-        `The ${other.kind} of ${engineOf(other)} waits for you (${other.phase}); the core changes one managed engine at a time.`,
+        `The ${other.kind} of ${operationEngine(other)} waits for you (${other.phase}); the core changes one managed engine at a time.`,
         {
           hint: `continue it with atc engines install --resume ${other.operation_id}, or stop it with --cancel ${other.operation_id}`,
         }

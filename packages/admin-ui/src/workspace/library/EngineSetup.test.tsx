@@ -59,6 +59,16 @@ describe('the managed engine modal', () => {
     expect(await screen.findByText(/installed \(vllm-2026\.10\.1\)/)).toBeInTheDocument()
   })
 
+  it('names the other engine whose operation runs first, and its phase', async () => {
+    const { workspace } = workspaceFixture({ 'engines.plan': state() })
+    workspace.snapshot = snapshotFixture({
+      engines: [{ engine: 'sglang', installation: null, operation: operation('sglang', 'pulling-image') }],
+    } as Partial<WorkspaceSnapshot>)
+    render(<EngineSetup workspace={workspace} engine="vllm" onClose={() => {}} />)
+    expect(await screen.findByText(/The setup of sglang runs first/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Agree and install' })).not.toBeInTheDocument()
+  })
+
   it('asks again when the plan changed before consent, and approves only the new one', async () => {
     let digest: string = DIGEST_A
     const { workspace, execute } = workspaceFixture({
