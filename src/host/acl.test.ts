@@ -24,10 +24,16 @@ describe('owner-only folder ACL', () => {
       calls.push(`${command} ${args[0]}`)
       return { code: 5, stdout: '', stderr: 'Access is denied.', timedOut: false }
     }
-    expect(await restrictToOwner('/d/atc', { platform: 'linux', user: 'u', exec })).toBeUndefined()
+    expect(await restrictToOwner('/d/atc', { platform: 'linux', user: 'u', exec, env: {} })).toBeUndefined()
     expect(calls).toEqual([])
     expect(
-      await restrictToOwner('C:\\d\\atc', { platform: 'win32', user: 'u', exec, systemRoot: 'D:\\Win\\' })
+      await restrictToOwner('C:\\d\\atc', {
+        platform: 'win32',
+        user: 'u',
+        exec,
+        systemRoot: 'D:\\Win\\',
+        env: {},
+      })
     ).toBe('Access is denied.')
     expect(calls).toEqual(['D:\\Win\\System32\\icacls.exe C:\\d\\atc'])
     expect(icaclsPath(undefined)).toBe('C:\\Windows\\System32\\icacls.exe')

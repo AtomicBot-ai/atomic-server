@@ -61,8 +61,11 @@ export async function restrictToOwner(
     user: string
     exec: ExecFn
     systemRoot?: string | undefined
-    /** The environment PowerShell inherits; the core's `exec` only adds to it. */
-    env?: NodeJS.ProcessEnv | undefined
+    /**
+     * The environment PowerShell inherits. Required: the core's `exec` adds `ATOMIC_HOST_STEP_PATH` to
+     * it, while atc's `exec` replaces the child's environment with what it is given.
+     */
+    env: NodeJS.ProcessEnv
   }
 ): Promise<string | undefined> {
   if (options.platform !== 'win32') return undefined
