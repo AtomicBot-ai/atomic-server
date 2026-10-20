@@ -1,6 +1,6 @@
 /**
  * The `models.*` operations of the workspace: the catalog, Hub search, installed models of every
- * provider, removal and import. `NOT_CORE` for any other name, and for a removal that is the core's
+ * provider (Foundry Local variants among them), removal and import. `NOT_CORE` for any other name, and for a removal that is the core's
  * (a model of the managed store).
  */
 
@@ -18,6 +18,7 @@ import { managedCatalog, managedSearch } from './managed-catalog.js'
 import { isManagedEngine } from './managed-engines.js'
 import { checkModel } from './managed-models.js'
 import { storeModels } from './managed-store.js'
+import { foundryStoreModels, removeFoundryModel } from './foundry-store.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import { importedModelId } from './validation.js'
@@ -97,6 +98,7 @@ export async function modelOperation(
           provider: 'mlx',
         })),
         ...(await storeModels(link)),
+        ...(await foundryStoreModels(paths.layout)),
       ]
     case 'models.remove': {
       const id = String(input['model_id']),
@@ -104,7 +106,8 @@ export async function modelOperation(
         mlx = new ModelRegistry(paths.layout, 'mlx'),
         entry = await local.find(id),
         registry = entry ? local : mlx
-      if (!entry && !(await mlx.find(id))) return NOT_CORE
+      if (!entry && !(await mlx.find(id)))
+        return (await removeFoundryModel(link, paths.layout, id)) ?? NOT_CORE
       if ((await link.models.sessions()).some((s) => s.model_id === id))
         throw new AtcError('ATC_USAGE', 'Unload this model before removing it.')
       await registry.remove(id)

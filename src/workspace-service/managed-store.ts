@@ -22,7 +22,8 @@ export interface StoreModel {
   size_bytes: number
 }
 
-async function bytesUnder(dir: string): Promise<number> {
+/** Bytes of every file under `dir`, recursively; 0 for a folder that cannot be read. */
+export async function bytesUnder(dir: string): Promise<number> {
   let total = 0
   for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
     const path = join(dir, entry.name)

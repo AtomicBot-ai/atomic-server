@@ -1,4 +1,6 @@
 /** `atc run` and `atc models …` against a fake core: which provider a load goes to, what is refused. */
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { FixtureHttpServer } from '../helpers/fixture-http-server.js'
 import { qwenFiles, serveRepository } from '../helpers/hf-hub.js'
@@ -117,5 +119,55 @@ describe('atc models check', () => {
     expect(t.io.err.join('')).toContain(REPO)
     expect(t.io.err.join('')).toContain('HF_TOKEN')
     expect(t.link.calls.some((c) => c.path.endsWith('/check'))).toBe(false)
+  })
+})
+
+describe('Foundry Local models', () => {
+  const VARIANT = 'gemma-4-e2b-it-openvino-npu'
+  /** One downloaded variant under the data folder's Foundry Local root. */
+  function variant() {
+    t = testRun()
+    const dir = join(t.io.env['ATC_DATA_FOLDER'] as string, 'foundry-local', 'models', VARIANT)
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'model.onnx'), Buffer.alloc(2048))
+    writeFileSync(
+      join(dir, 'model.yml'),
+      JSON.stringify({
+        model_path: `foundry-local/models/${VARIANT}`,
+        name: 'Gemma 4 E2B (OpenVINO NPU)',
+        foundry_local: {
+          model_id: 'gemma-4-e2b-it',
+          variant_id: VARIANT,
+          execution_provider: 'openvino',
+          device: 'npu',
+        },
+      })
+    )
+    return dir
+  }
+
+  it('lists a variant with foundry-local, its accelerator and device, and its size', async () => {
+    variant()
+    expect(await t.run(['models', 'list'])).toBe(0)
+    const line = t.io.out
+      .join('')
+      .split('\n')
+      .find((l) => l.startsWith(VARIANT))
+    expect(line).toContain('foundry-local (OpenVINO NPU)')
+    expect(line).toMatch(/\b2\.\d KiB\b/)
+  })
+
+  it('removes a loaded variant: unloaded first, folder deleted, the space freed printed', async () => {
+    const dir = variant()
+    t.link.snapshotValue.sessions = [{ provider: 'foundry-local', model_id: VARIANT, port: 0 } as never]
+    expect(await t.run(['models', 'rm', VARIANT, '--yes'])).toBe(0)
+    expect(t.io.out.join('')).toMatch(/Removed gemma-4-e2b-it-openvino-npu \(unloaded first\); freed \d/)
+    expect(existsSync(dir)).toBe(false)
+  })
+
+  it('runs a variant on foundry-local without --engine', async () => {
+    variant()
+    expect(await t.run(['run', VARIANT])).toBe(0)
+    expect(loads(t).map((c) => c.path)).toEqual([`/models/foundry-local/${VARIANT}/load`])
   })
 })

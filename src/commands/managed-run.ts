@@ -4,7 +4,8 @@
  * with `--json`), cancels the load on Ctrl-C, and prints the tail of the last attempt's log when the
  * load fails. A provider without stages (llama.cpp, Foundry Local) just waits for the answer. For a
  * model of the managed store the engine is the one named, the default when it lists the model, or the
- * one installed engine that does; several are a usage error that names them.
+ * one installed engine that does; several are a usage error that names them. A downloaded Foundry Local
+ * variant goes to `foundry-local`.
  */
 
 import type { CoreEventMessage } from '@atomic-chat/core/client'
@@ -29,15 +30,15 @@ interface StoreRow {
   providers?: string[]
 }
 
-/** The engine a store model goes to when none is named, or `undefined` when it is not a store model. */
+/** The engine a store model or Foundry Local variant goes to when none is named; else `undefined`. */
 async function storeEngine(
   service: WorkspaceClient,
   model: string,
   fallback: string
 ): Promise<string | undefined> {
-  const row = ((await service.execute('models.installed')) as StoreRow[]).find(
-    (m) => m.id === model && m.store === 'managed'
-  )
+  const rows = (await service.execute('models.installed')) as StoreRow[]
+  if (rows.some((m) => m.id === model && m.store === 'foundry-local')) return 'foundry-local'
+  const row = rows.find((m) => m.id === model && m.store === 'managed')
   if (!row) return undefined
   const providers = row.providers ?? []
   if (providers.includes(fallback)) return fallback

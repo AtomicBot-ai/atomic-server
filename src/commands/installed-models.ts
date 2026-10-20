@@ -1,12 +1,14 @@
 /**
  * `atc models list` and `atc models rm`: every installed model once, with the providers that list it
  * and its size where known; a model of the managed engines' shared store is removed through the core,
- * which stops it first, after saying that it goes for every managed engine.
+ * which stops it first, after saying that it goes for every managed engine; a Foundry Local variant is
+ * listed with its accelerator and device, and removed by the server, which unloads it first.
  */
 
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { ManagedModelDeletion } from '@atomic-chat/core/contracts'
 import type { CommandContext } from '../cli/index.js'
+import { variantLabel } from '../workspace-service/index.js'
 import { formatSize } from '../workspace-view/index.js'
 import { workspace } from './control.js'
 
@@ -16,7 +18,14 @@ interface InstalledRow {
   providers?: string[]
   store?: string
   size_bytes?: number
+  device?: string
+  execution_provider?: string
 }
+
+const providersOf = (m: InstalledRow) =>
+  m.store === 'foundry-local' && m.device && m.execution_provider
+    ? `foundry-local (${variantLabel({ device: m.device, execution_provider: m.execution_provider })})`
+    : (m.providers ?? [m.provider]).join(', ') || '(none lists it)'
 
 export async function listInstalled(ctx: CommandContext): Promise<number> {
   const result = (await (await workspace(ctx)).execute('models.installed')) as InstalledRow[]
@@ -24,11 +33,7 @@ export async function listInstalled(ctx: CommandContext): Promise<number> {
   ctx.out.result(envelope, () =>
     ctx.out.table(
       [{ header: 'MODEL' }, { header: 'PROVIDERS' }, { header: 'SIZE', align: 'right' }],
-      result.map((m) => [
-        m.id,
-        (m.providers ?? [m.provider]).join(', ') || '(none lists it)',
-        m.size_bytes !== undefined ? formatSize(m.size_bytes) : '',
-      ])
+      result.map((m) => [m.id, providersOf(m), m.size_bytes !== undefined ? formatSize(m.size_bytes) : ''])
     )
   )
   return 0
@@ -54,7 +59,8 @@ export async function removeInstalled(ctx: CommandContext, id: string): Promise<
       })
     throw error
   }
-  const deletion = row?.store === 'managed' ? (result as ManagedModelDeletion) : undefined
+  const deletion =
+    row?.store === 'managed' || row?.store === 'foundry-local' ? (result as ManagedModelDeletion) : undefined
   ctx.out.result(result, () =>
     ctx.out.line(
       deletion
