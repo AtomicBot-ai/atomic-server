@@ -21,7 +21,7 @@ export function ManagedModelInstall({
   workspace: Workspace
   repository: string
   onClose: () => void
-  onStarted?: () => void
+  onStarted?: (id: string) => void
   onInstallEngine: (engine: string) => void
 }) {
   const dialog = useDialog(onClose)
@@ -134,11 +134,9 @@ export function ManagedModelInstall({
                 disabled={plan.blockers.length > 0}
                 onClick={() =>
                   run(async () => {
-                    await execute('managed.install', {
-                      request_id: `admin-${crypto.randomUUID()}`,
-                      plan_digest: plan.digest,
-                    })
-                    onStarted?.()
+                    const id = `admin-${crypto.randomUUID()}`
+                    await execute('managed.install', { request_id: id, plan_digest: plan.digest })
+                    onStarted?.(id)
                     onClose()
                   })
                 }

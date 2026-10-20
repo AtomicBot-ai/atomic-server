@@ -37,7 +37,7 @@ export function FoundryModelInstall({
   workspace: Workspace
   model: FoundryModel
   onClose: () => void
-  onStarted?: () => void
+  onStarted?: (id: string) => void
   onFoundry: () => void
 }) {
   const dialog = useDialog(onClose)
@@ -132,11 +132,9 @@ export function FoundryModelInstall({
                 disabled={plan.blockers.length > 0}
                 onClick={() =>
                   run(async () => {
-                    await w.execute('foundry.install', {
-                      request_id: `admin-${crypto.randomUUID()}`,
-                      plan_digest: plan.digest,
-                    })
-                    onStarted?.()
+                    const id = `admin-${crypto.randomUUID()}`
+                    await w.execute('foundry.install', { request_id: id, plan_digest: plan.digest })
+                    onStarted?.(id)
                     onClose()
                   })
                 }
