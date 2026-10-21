@@ -2,6 +2,7 @@ import { newSetup, setupWait } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
 import type { WorkspaceController } from '../controller.js'
+import { explained } from '../../controller.js'
 import { engineSetupAction, isPathAction, pathKind } from './engine-setup.js'
 const operations = new WeakMap<WorkspaceController, AbortController>()
 export async function setupAction(
@@ -281,7 +282,7 @@ export async function setupAction(
       }))
     }
   } catch (e) {
-    patch({ error: e instanceof Error ? e.message : 'Installation could not continue. Retry.' })
+    patch({ error: e instanceof Error ? explained(e) : 'Installation could not continue. Retry.' })
   } finally {
     patch({ busy: false })
   }

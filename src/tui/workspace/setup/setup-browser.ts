@@ -1,8 +1,13 @@
-import { button, COLORS, text } from '../draw/canvas.js'
+import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
+import type { SetupView } from '../../../terminal-setup/index.js'
 import { computeRowWindow } from '../../row-window.js'
 import { engineFamily, engineName } from '../../../workspace-view/index.js'
+/** No catalogs and an error: the check itself failed (say, the server did not start), not every engine. */
+export function engineCheckFailed(v: SetupView): boolean {
+  return v.stage === 'engine' && !v.busy && !v.catalogs.length && v.error !== ''
+}
 /** What each llama.cpp engine is for: descriptions only; which engines exist is the core's answer. */
 const LLAMA: Readonly<Record<string, string>> = {
   'llamacpp-upstream': 'Standard GGUF models',
@@ -24,6 +29,15 @@ export function drawSetupBrowser(
   }
   const b = (id: string, row: number, label: string, hint: string, selected = false) =>
     button(c, id, x, y + row, label.slice(0, width - 2), hint, focus, selected)
+  if (engineCheckFailed(v)) {
+    put(3, 'Engines could not be checked.', COLORS.text)
+    let row = 5
+    for (const [i, line] of v.error.split('\n').entries())
+      for (const part of wrap(line, width)) put(row++, part, i === 0 ? COLORS.red : COLORS.text)
+    put(row + 1, 'Fix the cause above, then choose Refresh.')
+    button(c, 'setup-refresh', x, bottom, 'Refresh', 'Retry live engine detection.', focus)
+    return
+  }
   if (v.stage === 'engine') {
     put(3, v.busy ? 'Finding compatible builds...' : 'Choose your inference engine.', COLORS.text)
     let row = 5

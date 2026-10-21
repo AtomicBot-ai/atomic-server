@@ -5,6 +5,7 @@ import { newSetup } from '../../../terminal-setup/index.js'
 import type { SetupSelection } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
+import { AtcError } from '../../../errors/index.js'
 const selection = {
   request: { repo: 'AtomicChat/model', file: 'model.gguf' },
   requestId: 'one',
@@ -99,4 +100,36 @@ it('confirms an engine into models and a model into the review before installing
   await setupAction('setup-install', ctx)
   expect(ctx.get().setup?.stage).toBe('download')
   expect(begin).toHaveBeenCalledOnce()
+})
+
+// A server that dies while starting (a busy admin port): the engine screen says why, not "no build".
+it('keeps the reason and hint when the server does not start for the engine check', async () => {
+  let state = createWorkspace('setup')
+  state.setup = { ...newSetup('server'), busy: true }
+  const failure = new AtcError('ATC_DAEMON_START_FAILED', 'The server did not start.', {
+    details: 'error: The admin could not listen on 127.0.0.1:1338.\n  the port is in use',
+    hint: 'see `atc logs`',
+  })
+  const ctx: ActionContext = {
+    get: () => state,
+    update: (fn) => {
+      state = fn(state)
+    },
+    controller: {
+      initializeKeys: async () => undefined,
+      setup: {
+        catalogs: vi.fn(async () => Promise.reject(failure)),
+        engines: vi.fn(async () => Promise.reject(failure)),
+        installed: vi.fn(async () => Promise.reject(failure)),
+      },
+    } as unknown as WorkspaceController,
+    send: vi.fn(),
+    cancel: vi.fn(),
+    copy: vi.fn(),
+  }
+  await setupAction('setup-refresh', ctx)
+  expect(state.setup).toMatchObject({ busy: false, catalogs: [] })
+  expect(state.setup!.error).toBe(
+    'The server did not start.\nerror: The admin could not listen on 127.0.0.1:1338.\n  the port is in use\nHint: see `atc logs`'
+  )
 })
