@@ -66,6 +66,20 @@ export async function ensureArtifactEngine(
  * the core's reinstall (whose first step removes the installed image, keeping the models) only when the
  * request names that release in `approved_update`; otherwise — ready, and nothing begins.
  */
+/**
+ * The new release's plan, as the person agrees to it. The core's probe of it still sees the installed
+ * release ("installed-with-other-descriptor"); the reinstall removes that one first, so it blocks nothing
+ * here. Every other blocker stays. The digest is the core's, unchanged.
+ */
+async function updatePlan(link: CoreLink, engine: string, target: string) {
+  const state = await managedEngineState(link, engine, target)
+  if (!state.plan?.blockers) return state
+  const blockers = state.plan.blockers.filter(
+    (b) => (b as { reason?: unknown }).reason !== 'installed-with-other-descriptor'
+  )
+  return { ...state, plan: { ...state.plan, blockers } }
+}
+
 async function installManaged(
   link: CoreLink,
   engine: string,
@@ -89,7 +103,7 @@ async function installManaged(
       status: 'update',
       from: versions.active.version,
       target,
-      state: await managedEngineState(link, engine, target),
+      state: await updatePlan(link, engine, target),
     }
   const requestId = typeof request['request_id'] === 'string' ? request['request_id'] : randomUUID()
   const started = await link.request<{ operation_id: string }>('POST', `/engines/${segment(engine)}/update`, {

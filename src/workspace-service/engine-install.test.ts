@@ -73,6 +73,35 @@ describe('installEngine, managed engines', () => {
     expect(link.calls.some((c) => c.path === '/engines/vllm/update')).toBe(false)
   })
 
+  // Recorded on Ubuntu 26.04 (RTX 5090 Laptop, driver 595.99): the core's probe of the new release
+  // finds the installed one; the reinstall removes it first, so only the driver blocks this update.
+  it('leaves out the installed release from the update plan’s blockers, keeping the others', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = versions('tensorrt-llm', {
+      active: { version: 'tensorrt-llm-1.2.1-r1', variant: 'linux/amd64' },
+      update: { needed: true, target: { version: 'tensorrt-llm-1.3.0rc29-r3' }, apply: 'reinstall' },
+    })
+    const driver = {
+      code: 'MANAGED_PREREQUISITE_BLOCKED',
+      message: 'The NVIDIA driver is too old: this engine needs 615.0 or newer, this machine has 595.99.02.',
+      reason: 'driver-too-old',
+    }
+    const installed = {
+      code: 'MANAGED_OPERATION_CONFLICT',
+      message:
+        'This engine is already installed from tensorrt-llm-1.2.1-r1; remove it before setting up tensorrt-llm-1.3.0rc29-r3.',
+      reason: 'installed-with-other-descriptor',
+    }
+    link.responses['POST /environments/probe'] = plan('tensorrt-llm', {
+      availability: 'prerequisite-blocked',
+      blockers: [driver, installed] as never,
+    })
+    const result = await installEngine(link, 'tensorrt-llm', { request_id: 'r-1' })
+    expect(result).toMatchObject({ status: 'update' })
+    const offered = (result as { state: { plan: { blockers: unknown[] } } }).state.plan
+    expect(offered.blockers).toEqual([driver])
+  })
+
   it('begins the reinstall once the request names the release the person agreed to', async () => {
     const link = fakeCoreLink()
     link.responses['POST /engines/versions'] = versions('vllm', {
