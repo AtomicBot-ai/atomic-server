@@ -40,6 +40,25 @@ describe('acceleratorLines', () => {
     ])
   })
 
+  it('gives the reason of an accelerator a prepare could not load instead of offering the same prepare', () => {
+    const missing =
+      "EP: failed to load 'libonnxruntime-genai-cuda.so' (libcublasLt.so.12: cannot open shared object file)"
+    const lines = acceleratorLines(
+      view({
+        accelerators: [
+          {
+            name: 'CUDAExecutionProvider',
+            execution_provider: 'cuda',
+            device: 'gpu',
+            prepared: false,
+            reason: missing,
+          },
+        ] as never,
+      })
+    )
+    expect(lines[0]).toBe(`CUDA GPU: not prepared — ${missing}`)
+  })
+
   it('says a prepare is running, and why the last one failed', () => {
     const lines = acceleratorLines(view({ preparing: true, last_error: 'disk full' }))
     expect(lines).toContain('Preparing accelerators in the server…')

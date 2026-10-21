@@ -64,8 +64,16 @@ export function foundryModel(p: EnginePanel): {
       add('foundry-models-back', 'Back', 'Return to the accelerators')
     }
   } else {
-    say(p.summary || 'Not installed', 'muted')
     const view = f?.view
+    // The library's answer when there is one: the row the panel opened from predates an install.
+    say(
+      view
+        ? view.installed
+          ? `Installed: ${view.build ?? ''}`
+          : 'Not installed'
+        : p.summary || 'Not installed',
+      'muted'
+    )
     if (!view) say(p.busy ? 'Reading the accelerators…' : 'No answer from the library yet.', 'muted')
     for (const line of view ? acceleratorLines(view) : []) say(line)
     if (view && !view.installed)

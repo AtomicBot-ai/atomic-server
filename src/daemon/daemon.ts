@@ -10,7 +10,7 @@ import { WorkspaceService, sanitizeWorkspaceData } from '../workspace-service/in
 import { ClientKeys } from '../terminal-data/index.js'
 import { telemetryConsent } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
-import { CoreClient } from '@atomic-chat/core/client'
+import { patientCoreClient } from '../core-link/index.js'
 import { ADMIN_BUILD_ID, AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
 import type { AdminConfigView, AdminStatus } from '../contract/index.js'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
@@ -115,7 +115,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     await writeDaemonRecord(paths.daemonRecord, startingRecord)
     const relay = new RelayHub()
     const controlUrl = `http://${core.control.host}:${core.control.port}`
-    const client = new CoreClient({ baseUrl: controlUrl, token: core.controlToken, name: 'atc-daemon' })
+    const client = patientCoreClient({ baseUrl: controlUrl, token: core.controlToken, name: 'atc-daemon' })
     const link = new HttpCoreLink({
       endpoint: { baseUrl: controlUrl, instanceId: core.instanceId, version: CORE_VERSION, pid: process.pid },
       client,

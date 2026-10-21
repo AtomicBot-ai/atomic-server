@@ -142,6 +142,14 @@ describe('Foundry Local in the TUI', () => {
     expect(t.ids()).not.toContain('foundry-prepare')
   })
 
+  it('says what is installed by the library’s answer, not by the row it was opened from', async () => {
+    const t = tui(accelerators({ build: 'v2.1.0/linux-x64' }))
+    t.ctx.update((v) => ({ ...v, libraryRows: [{ ...v.libraryRows[0]!, description: 'Not installed' }] }))
+    await activate('library-row:0', t.ctx)
+    expect(t.text()).toContain('Installed: v2.1.0/linux-x64')
+    expect(t.text()).not.toContain('Not installed')
+  })
+
   it('installs Foundry Local when it is not installed, then prepares its accelerators', async () => {
     const t = tui(accelerators({ installed: false, accelerators: [] }))
     await activate('library-row:0', t.ctx)

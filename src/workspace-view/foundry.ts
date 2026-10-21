@@ -38,7 +38,8 @@ export function acceleratorLines(view: FoundryAcceleratorsView): string[] {
   if (view.error && view.accelerators.length === 0) return [`The library was not probed: ${view.error}`]
   const lines = view.accelerators.map((a) => {
     if (a.execution_provider === null) return `${a.name}: not offered${a.reason ? ` (${a.reason})` : ''}`
-    return `${acceleratorLabel(a)}: ${a.prepared ? 'prepared' : `not prepared — ${PREPARE}`}`
+    // A reason means a prepare got this far and the library could not load it: the same prepare would too.
+    return `${acceleratorLabel(a)}: ${a.prepared ? 'prepared' : `not prepared — ${a.reason || PREPARE}`}`
   })
   if (!view.accelerators.some((a) => a.execution_provider !== null && a.execution_provider !== 'cpu'))
     lines.push('Models run on the CPU; nothing needs preparing.')
