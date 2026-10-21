@@ -161,6 +161,11 @@ describe('the daemon owns the folder', () => {
     expect(coreOptions?.publicApiKeys?.()).toEqual([expect.stringMatching(/^atc_[0-9a-f]{64}$/)])
   })
 
+  // ADR 2026-10-21-foundry-local-1ds-off-on-linux: on Linux the core and every process it starts get it.
+  it('hands the core TF_BUILD=True on Linux only, so Foundry Local sends no 1DS telemetry there', () => {
+    expect(coreOptions?.env?.['TF_BUILD']).toBe(process.platform === 'linux' ? 'True' : undefined)
+  })
+
   it('never serves the public API without a key, even if nobody opened the terminal UI', async () => {
     // The server created the keyring when it started; the API started here passes no key itself.
     const keys = JSON.parse(readFileSync(join(paths.atcDir, 'client-keys.json'), 'utf8')) as {

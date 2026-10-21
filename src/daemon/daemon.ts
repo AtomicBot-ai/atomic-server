@@ -23,6 +23,7 @@ import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
 import { ATC_BUILD_DATE, ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
+import { coreEnv } from './core-env.js'
 
 export interface DaemonOptions {
   paths: AtcPaths
@@ -86,7 +87,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     dataFolder: paths.dataFolder,
     controlPort: options.controlPort,
     ...(options.controlHost ? { controlHost: options.controlHost } : {}),
-    env: io.env,
+    // TF_BUILD=True on Linux: Foundry Local's 1DS upload crashes its host there (ADR 2026-10-21).
+    env: coreEnv(io.env, host.facts.platform),
     logger: (level, message) => coreLog[level](message),
     telemetry: {
       host: 'atc',
