@@ -59,6 +59,39 @@ describe('acceleratorLines', () => {
     expect(lines[0]).toBe(`CUDA GPU: not prepared — ${missing}`)
   })
 
+  // Recorded on Ubuntu 26.04: the CUDA accelerator links the CUDA 12 runtime, which the driver does not
+  // bring, and Ubuntu's own 12.4 lacks what it calls.
+  const CUDA =
+    'the CUDA accelerator needs NVIDIA’s CUDA 12 runtime, 12.8 or newer (Ubuntu’s own 12.4 is too old): install cuda-cudart-12-9 and libcublas-12-9 from NVIDIA’s CUDA repository'
+  it.each([
+    ['libcublasLt.so.12: cannot open shared object file: No such file or directory', CUDA],
+    ['undefined symbol: cudaLibraryGetKernel, version libcudart.so.12', CUDA],
+    [
+      'libfoo.so.3: cannot open shared object file: No such file or directory',
+      'libfoo.so.3 is missing on this machine: install the package that provides it',
+    ],
+    [
+      'undefined symbol: foo_new, version libfoo.so.3',
+      'libfoo.so.3 on this machine is older than this accelerator needs',
+    ],
+  ])('says what to install when the library could not load it: %s', (why, hint) => {
+    const reason = `EP: failed to load 'libonnxruntime_providers_cuda.so' (${why})`
+    const lines = acceleratorLines(
+      view({
+        accelerators: [
+          {
+            name: 'CUDAExecutionProvider',
+            execution_provider: 'cuda',
+            device: 'gpu',
+            prepared: false,
+            reason,
+          },
+        ] as never,
+      })
+    )
+    expect(lines[1]).toBe(`  → ${hint}`)
+  })
+
   it('says a prepare is running, and why the last one failed', () => {
     const lines = acceleratorLines(view({ preparing: true, last_error: 'disk full' }))
     expect(lines).toContain('Preparing accelerators in the server…')

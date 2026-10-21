@@ -32,14 +32,37 @@ export function acceleratorLabel(a: {
   return `${LABELS[a.execution_provider] ?? a.execution_provider} ${a.device.toUpperCase()}`
 }
 
+const CUDA_12 = /^lib(cudart|cublas|cublasLt)\.so\.12$/
+const CUDA_RUNTIME =
+  'the CUDA accelerator needs NVIDIA’s CUDA 12 runtime, 12.8 or newer (Ubuntu’s own 12.4 is too old): install cuda-cudart-12-9 and libcublas-12-9 from NVIDIA’s CUDA repository'
+
+/**
+ * What to install when the library could not load an accelerator for a shared library: the CUDA
+ * accelerator links the CUDA 12 runtime, which the NVIDIA driver does not bring, and needs a newer one
+ * than Ubuntu packages (recorded on Ubuntu 26.04: `undefined symbol: cudaLibraryGetKernel` with 12.4).
+ */
+export function missingLibraryHint(reason: string | undefined): string | undefined {
+  const text = reason ?? ''
+  const missing = /([\w.+-]+\.so(?:\.\d+)*): cannot open shared object file/.exec(text)?.[1]
+  const tooOld = /undefined symbol: \w+, version (lib[\w.+-]+\.so(?:\.\d+)*)/.exec(text)?.[1]
+  const library = missing ?? tooOld
+  if (!library) return undefined
+  if (CUDA_12.test(library)) return CUDA_RUNTIME
+  return missing
+    ? `${library} is missing on this machine: install the package that provides it`
+    : `${library} on this machine is older than this accelerator needs`
+}
+
 /** What the library found: each accelerator prepared or not, a prepare running, the last one's failure. */
 export function acceleratorLines(view: FoundryAcceleratorsView): string[] {
   if (!view.installed) return [`Foundry Local is not installed: ${INSTALL}`]
   if (view.error && view.accelerators.length === 0) return [`The library was not probed: ${view.error}`]
-  const lines = view.accelerators.map((a) => {
-    if (a.execution_provider === null) return `${a.name}: not offered${a.reason ? ` (${a.reason})` : ''}`
+  const lines = view.accelerators.flatMap((a) => {
+    if (a.execution_provider === null) return [`${a.name}: not offered${a.reason ? ` (${a.reason})` : ''}`]
     // A reason means a prepare got this far and the library could not load it: the same prepare would too.
-    return `${acceleratorLabel(a)}: ${a.prepared ? 'prepared' : `not prepared — ${a.reason || PREPARE}`}`
+    const line = `${acceleratorLabel(a)}: ${a.prepared ? 'prepared' : `not prepared — ${a.reason || PREPARE}`}`
+    const hint = a.prepared ? undefined : missingLibraryHint(a.reason)
+    return hint ? [line, `  → ${hint}`] : [line]
   })
   if (!view.accelerators.some((a) => a.execution_provider !== null && a.execution_provider !== 'cpu'))
     lines.push('Models run on the CPU; nothing needs preparing.')
