@@ -1,3 +1,5 @@
+import type { GpuFacts } from '@atomic-chat/core/contracts'
+import { gpuLabel } from '@view'
 import { Field } from '../Controls'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
@@ -7,11 +9,16 @@ export function EngineSettingField({
   values,
   saved,
   update,
+  gpus = [],
+  managed = false,
 }: {
   field: RecordValue
   values: RecordValue
   saved: RecordValue
   update: (name: string, value: unknown) => void
+  /** The environment's cards: a managed engine's `gpu_id` is one of them, never typed. */
+  gpus?: GpuFacts[]
+  managed?: boolean
 }) {
   const name = text(field.key),
     props = record(field.controllerProps),
@@ -21,7 +28,21 @@ export function EngineSettingField({
   return (
     <div className={`engine-setting ${values[name] !== saved[name] ? 'setting-changed' : ''}`}>
       <Field label={text(field.title, name)}>
-        {field.controllerType === 'checkbox' ? (
+        {name === 'gpu_id' && managed ? (
+          <select
+            aria-label="GPU card"
+            disabled={Boolean(disabled) || !gpus.length}
+            value={text(value, '')}
+            onChange={(e) => update(name, e.target.value)}
+          >
+            <option value="">Card with the most free memory</option>
+            {gpus.map((g) => (
+              <option key={g.gpu_id} value={g.gpu_id}>
+                {gpuLabel(g)}
+              </option>
+            ))}
+          </select>
+        ) : field.controllerType === 'checkbox' ? (
           <select
             disabled={Boolean(disabled)}
             value={String(value)}

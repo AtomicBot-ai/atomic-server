@@ -75,12 +75,18 @@ for (const { bun: target, triple, platform } of targets) {
     // Which binary this is, so `atc update` fetches the same variant (baseline, musl) the installer chose.
     '--define',
     `__ATC_TARGET__=${JSON.stringify(triple)}`,
-    // The core labels its error reports with this; unset, a release would report as "source".
+    // The core and atc label their error reports with this; unset, a release would report as "source".
     ...(process.env.ATC_SENTRY_ENVIRONMENT
       ? [
           '--define',
           `__ATOMIC_CORE_SENTRY_ENVIRONMENT__=${JSON.stringify(process.env.ATC_SENTRY_ENVIRONMENT)}`,
+          '--define',
+          `__ATC_SENTRY_ENVIRONMENT__=${JSON.stringify(process.env.ATC_SENTRY_ENVIRONMENT)}`,
         ]
+      : []),
+    // atc's own Sentry project (src/telemetry/config.ts); unset, the binary sends no atc reports.
+    ...(process.env.ATC_SENTRY_DSN
+      ? ['--define', `__ATC_SENTRY_DSN__=${JSON.stringify(process.env.ATC_SENTRY_DSN)}`]
       : []),
     ENTRY,
     '--outfile',

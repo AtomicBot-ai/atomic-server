@@ -1,5 +1,5 @@
 import { useDialog } from '../useDialog'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Execute, RecordValue } from '../types'
 import { bytes, record, rows, text } from '../types'
 import { Action, Field, JsonResult } from '../Controls'
@@ -14,6 +14,7 @@ export function ModelInstall({
   execute,
   onClose,
   onStarted,
+  onNoGguf,
 }: {
   expectedEngine?: string
   technical?: boolean
@@ -22,6 +23,8 @@ export function ModelInstall({
   execute: Execute
   onClose: () => void
   onStarted?: (result: unknown) => void
+  /** A repository with no GGUF file: the managed engines' path, when the host has one. */
+  onNoGguf?: (repository: string) => void
 }) {
   const dialog = useDialog(onClose)
   const id = text(model.id ?? model.model_name ?? model.repo, '')
@@ -32,6 +35,9 @@ export function ModelInstall({
   const [plan, setPlan] = useState<RecordValue | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(gguf)
+  // The latest callback, read when the lookup answers: the lookup itself runs once per model.
+  const noGguf = useRef(onNoGguf)
+  noGguf.current = onNoGguf
   const source = record(model.source)
   const quants = Array.isArray(record(source.transformer).quants)
     ? (record(source.transformer).quants as unknown[])
@@ -52,7 +58,11 @@ export function ModelInstall({
           }
         })
         .catch((e) => {
-          if (active) setError(describeError(e))
+          if (!active) return
+          const missing =
+            (e as { code?: string }).code === 'MODEL_NOT_FOUND' && /no gguf/i.test(describeError(e))
+          if (missing && noGguf.current) noGguf.current(id)
+          else setError(describeError(e))
         })
         .finally(() => {
           if (active) setLoading(false)

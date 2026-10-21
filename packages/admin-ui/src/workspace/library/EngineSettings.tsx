@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import type { GpuFacts } from '@atomic-chat/core/contracts'
+import { engineFamily } from '@view'
 import { useDialog } from '../useDialog'
 import type { Workspace } from '../useWorkspace'
 import { Action, Field } from '../Controls'
@@ -34,6 +36,14 @@ export function EngineSettings({
   }
   const dialog = useDialog(close),
     { execute } = w
+  const [gpus, setGpus] = useState<GpuFacts[]>([])
+  useEffect(() => {
+    if (engineFamily(provider) !== 'managed') return
+    void execute('environments.list').then(
+      (list) => setGpus((rows(list)[0]?.gpus as GpuFacts[]) ?? []),
+      () => {}
+    )
+  }, [provider, execute])
   useEffect(() => {
     let active = true
     void Promise.all([execute('settings.get', { provider }), execute('settings.schema', { provider })])
@@ -154,6 +164,8 @@ export function EngineSettings({
               values={values}
               saved={saved}
               update={update}
+              gpus={gpus}
+              managed={engineFamily(provider) === 'managed'}
             />
           ))}
         </div>

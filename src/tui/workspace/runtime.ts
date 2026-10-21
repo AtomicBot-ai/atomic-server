@@ -1,3 +1,4 @@
+import type { ServerLaunch } from '../../contract/index.js'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { createWorkspaceClient, readWorkspaceSetup } from '../../workspace-service/index.js'
 import type { AtcConfig } from '../../config/index.js'
@@ -43,6 +44,15 @@ export class WorkspaceRuntime {
   }
   async execute(name: string, input: Record<string, unknown> = {}) {
     return (await this.connect(true)).execute(name, input)
+  }
+  /** A read that never starts the server: it fails with `ATC_DAEMON_NOT_RUNNING` when none runs. */
+  async read(name: string, input: Record<string, unknown> = {}) {
+    return (await this.connect(false)).execute(name, input)
+  }
+  /** How the server was started and its systemd unit (its record): what a new sign-in takes for it. */
+  async start(): Promise<{ launch: ServerLaunch; service?: string }> {
+    const record = await readDaemonRecord(this.deps.paths.daemonRecord)
+    return { launch: record?.launch ?? 'terminal', ...(record?.service ? { service: record.service } : {}) }
   }
   async openAdmin() {
     const record = await readDaemonRecord(this.deps.paths.daemonRecord)

@@ -2,6 +2,8 @@ import { newSetup, setupWait } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
 import type { WorkspaceController } from '../controller.js'
+import { explained } from '../../controller.js'
+import { engineSetupAction, isPathAction, pathKind } from './engine-setup.js'
 const operations = new WeakMap<WorkspaceController, AbortController>()
 export async function setupAction(
   id: string,
@@ -47,6 +49,19 @@ export async function setupAction(
       message: '',
     }))
     id = 'setup-refresh'
+    const job = await Promise.resolve()
+      .then(() => c.setup.readPath())
+      .catch(() => null)
+    const kind = job ? pathKind(job.engine) : null
+    if (job && kind) {
+      change({
+        stage: 'download',
+        engine: job.engine,
+        path: { engine: job.engine, kind, rows: [], plan: null, job },
+      })
+      focus('setup-cancel')
+      return true
+    }
     if (get().setupComplete) {
       const manifest = await c.setup.read()
       if (manifest && !manifest.complete) {
@@ -64,6 +79,7 @@ export async function setupAction(
   if (!id.startsWith('setup-')) return false
   const view = get().setup
   if (!view) return true
+  if (isPathAction(id, view) && (await engineSetupAction(id, ctx))) return true
   if (id === 'setup-intro') {
     if (get().setupComplete) return setupAction('library-close', ctx)
     operations.get(c)?.abort()
@@ -117,15 +133,23 @@ export async function setupAction(
   try {
     if (id === 'setup-refresh') {
       await wait(c.initializeKeys())
-      const catalogs = await wait(c.setup.catalogs(), 20000)
+      const [catalogs, registered, installed] = await wait(
+        Promise.all([c.setup.catalogs(), c.setup.engines(), c.setup.installed()]),
+        20000
+      )
       const first = catalogs.find((cat) => cat.provider === 'llamacpp-upstream') ?? catalogs[0]!
       const build =
         first.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first.available[0]!
-      patch({ catalogs, engine: view.engine || `${first.provider}|${build.version}|${build.backend}` })
+      patch({
+        catalogs,
+        registered,
+        installed,
+        engine: view.engine || `${first.provider}|${build.version}|${build.backend}`,
+      })
       if (!operation.signal.aborted)
         focus(`setup-engine:${view.engine || `${first.provider}|${build.version}|${build.backend}`}`)
     } else if (id.startsWith('setup-engine:')) {
-      patch({ engine: id.slice(13), busy: false })
+      patch({ engine: id.slice(13), busy: false, path: null })
       return setupAction('setup-models', ctx)
     } else if (['setup-models', 'setup-search', 'setup-catalog'].includes(id)) {
       const query = id === 'setup-catalog' ? '' : view.query
@@ -258,7 +282,7 @@ export async function setupAction(
       }))
     }
   } catch (e) {
-    patch({ error: e instanceof Error ? e.message : 'Installation could not continue. Retry.' })
+    patch({ error: e instanceof Error ? explained(e) : 'Installation could not continue. Retry.' })
   } finally {
     patch({ busy: false })
   }

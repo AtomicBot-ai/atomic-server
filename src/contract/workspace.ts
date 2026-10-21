@@ -1,4 +1,10 @@
 /** Shared operation contract for the terminal, browser and unattended clients. */
+import type {
+  EnvironmentOperation,
+  LocalProviderId,
+  RuntimeInstallation,
+  SessionLoadStage,
+} from '@atomic-chat/core/contracts'
 export type WorkspaceInput = Record<string, unknown>
 export interface WorkspaceField {
   type?: 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array'
@@ -78,4 +84,31 @@ export interface WorkspaceSnapshot {
   }
   requests: WorkspaceRequest[]
   errors: Array<{ source: string; message: string }>
+  /** Managed engines with an installation or an unfinished operation, by engine id. */
+  engines: WorkspaceEngine[]
+  /** Privileged steps the server could not run itself, with the command to run as administrator. */
+  host_steps: WorkspaceHostStep[]
+  /** The last stage of each load in progress (`session:load-progress`); gone at `ready` or on failure. */
+  loads: WorkspaceLoad[]
+}
+export interface WorkspaceEngine {
+  engine: string
+  installation: RuntimeInstallation | null
+  /** Its setup, update or removal in progress: phase, progress, `plan_digest`, `error`. */
+  operation: EnvironmentOperation | null
+}
+export interface WorkspaceHostStep {
+  step_id: string
+  operation_id: string
+  instructions: string
+  updated_at: number
+}
+export interface WorkspaceLoad {
+  provider: LocalProviderId
+  model_id: string
+  generation: string
+  stage: SessionLoadStage
+  elapsed_ms: number
+  /** When the stage was seen, ms since the epoch. */
+  at: number
 }

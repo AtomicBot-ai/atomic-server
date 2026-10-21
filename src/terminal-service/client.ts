@@ -54,9 +54,15 @@ export async function streamChat(options: {
     body: JSON.stringify({ model: options.model, messages: options.messages, stream: true }),
   })
   if (!response.ok) {
-    await response.body?.cancel()
+    // The server's own words (an OpenAI error body) say more than the status: a context overflow, say.
+    const said = await response
+      .json()
+      .then((b: unknown) => (b as { error?: { message?: unknown } })?.error?.message)
+      .catch(() => undefined)
     throw new Error(
-      `Request returned HTTP ${response.status}. Check the model, endpoint, and access settings.`
+      typeof said === 'string' && said
+        ? said
+        : `Request returned HTTP ${response.status}. Check the model, endpoint, and access settings.`
     )
   }
   if (!response.body) throw new Error('The server returned an empty response.')

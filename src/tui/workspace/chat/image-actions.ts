@@ -2,6 +2,10 @@ import type { ActionContext } from '../actions.js'
 export async function imageAction(id: string, ctx: ActionContext): Promise<boolean> {
   const { get, update, controller } = ctx,
     s = get()
+  if ((id === 'images' || id === 'image-add') && s.modelVision === false) {
+    update((v) => ({ ...v, message: `${s.model} does not take images.` }))
+    return true
+  }
   if (id === 'images') {
     if (s.images.length) update((v) => ({ ...v, overlay: 'images', focus: 'image-add' }))
     else return imageAction('image-add', ctx)

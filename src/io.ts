@@ -7,7 +7,8 @@
 import { readFile } from 'node:fs/promises'
 import { createInterface } from 'node:readline/promises'
 import { Writable } from 'node:stream'
-import { openInBrowser } from '@atomic-chat/core/host'
+import { openInBrowser, processHandlersFor } from '@atomic-chat/core/host'
+import type { ErrorSink } from '@atomic-chat/core/host'
 
 export interface TtyFacts {
   stdin: boolean
@@ -42,17 +43,46 @@ export interface AtcIo {
   openUrl: (url: string) => Promise<void>
   /** Present only when stdin and stdout are both a terminal: what `atc tui` renders on. */
   terminal?: TerminalStreams
+  /**
+   * Run `handler` on Ctrl-C instead of exiting, until the returned function is called: for a command
+   * that only follows work the server does, so it can say how to follow again. Absent: Ctrl-C exits.
+   */
+  onInterrupt?: (handler: () => void) => () => void
+  /** Resolve once stdout and stderr have handed everything written to the OS; before `process.exit`. */
+  flush?: () => Promise<void>
+  /**
+   * For a process that is the server: a throw nothing caught is said on stderr, reported (up to 2 s)
+   * and ends the process with 1, as it would without handlers. Absent in tests.
+   */
+  catchFatal?: (reporter: ErrorSink & { flush(timeoutMs?: number): Promise<void> }) => void
 }
 
 export function nodeIo(): AtcIo {
   const interactive = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY)
+  // A write a pipe could not take at once: the Bun binary's `process.exit` drops it unless 'drain' came.
+  const waiting = new Map<NodeJS.WriteStream, Promise<void>>()
+  const write = (stream: NodeJS.WriteStream) => (text: string) => {
+    if (stream.write(text) || waiting.has(stream)) return
+    waiting.set(
+      stream,
+      new Promise<void>((resolve) =>
+        stream.once('drain', () => {
+          waiting.delete(stream)
+          resolve()
+        })
+      )
+    )
+  }
   return {
     ...(interactive
       ? { terminal: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr } }
       : {}),
     inputLines: () => createInterface({ input: process.stdin, crlfDelay: Infinity }),
-    stdout: (text) => process.stdout.write(text),
-    stderr: (text) => process.stderr.write(text),
+    stdout: write(process.stdout),
+    stderr: write(process.stderr),
+    flush: async () => {
+      while (waiting.size) await Promise.all(waiting.values())
+    },
     env: process.env,
     cwd: process.cwd(),
     isTTY: {
@@ -69,6 +99,16 @@ export function nodeIo(): AtcIo {
       ),
     question: (prompt, options) => askOnTerminal(prompt, options?.secret === true),
     openUrl: (url) => openInBrowser(url),
+    catchFatal: (reporter) =>
+      processHandlersFor(
+        process,
+        (text) => process.stderr.write(text),
+        (code) => process.exit(code)
+      )({ reporter }),
+    onInterrupt: (handler) => {
+      process.once('SIGINT', handler)
+      return () => process.off('SIGINT', handler)
+    },
     waitForShutdown: (onStop) =>
       new Promise<void>((resolve) => {
         const stop = () => {

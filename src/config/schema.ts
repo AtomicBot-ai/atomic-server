@@ -4,6 +4,9 @@
  * it, so a field is added in exactly one place.
  */
 
+import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
+import type { LocalProviderId } from '@atomic-chat/core/contracts'
+
 export type FieldType = 'string' | 'number' | 'boolean' | 'string[]' | 'enum'
 
 export interface FieldSpec {
@@ -40,7 +43,7 @@ export interface AtcConfig {
     autoStart: boolean
   }
   admin: { host: string; port: number; openOnStart: boolean; autoStart: boolean }
-  engines: { autoInstall: boolean; default: 'llamacpp-upstream' | 'llamacpp' | 'mlx' }
+  engines: { autoInstall: boolean; default: LocalProviderId }
   models: { autoLoad: string[] }
   managed: { mode: 'off' | 'docker-tensorrt'; image?: string }
   proxy: { url?: string; noProxy: string[]; ignoreSsl: boolean }
@@ -49,7 +52,8 @@ export interface AtcConfig {
   log: { level: 'debug' | 'info' | 'warn' | 'error'; maxFiles: number; maxSizeMb: number }
 }
 
-const PROVIDERS = ['llamacpp-upstream', 'llamacpp', 'mlx'] as const
+/** Every local provider of the core `atc` embeds: what a load may name (spec `server-engine-settings`). */
+const PROVIDERS: readonly string[] = LOCAL_PROVIDER_IDS
 
 export const FIELDS: readonly FieldSpec[] = [
   {

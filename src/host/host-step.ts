@@ -10,7 +10,13 @@ import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { resultPathFor } from '@atomic-chat/core/host'
 import type { Logger } from '../output/index.js'
-import type { ElevationContext, Elevator, HostStepRequestFile, HostStepResultFile } from './elevator.js'
+import type {
+  ElevationContext,
+  Elevator,
+  HostStepReport,
+  HostStepRequestFile,
+  HostStepResultFile,
+} from './elevator.js'
 import { MANAGED_HOST_ACTIONS } from './managed-types.js'
 import type {
   EnvironmentOperationView,
@@ -207,6 +213,22 @@ export class HostStepExecutor {
   }
 }
 
+/**
+ * The steps a person still has to run by hand: journaled as manual, and still the step their
+ * operation waits on. The journal keeps a step after its operation moved on (cancelled, resumed
+ * without it); those are not shown.
+ */
+export function waitingHostSteps(
+  entries: readonly HostStepJournalEntry[],
+  operations: readonly Pick<EnvironmentOperationView, 'operation_id' | 'pending_host_step'>[]
+): HostStepJournalEntry[] {
+  return entries.filter(
+    (e) =>
+      e.state === 'pending-manual' &&
+      operations.some((o) => o.operation_id === e.operation_id && o.pending_host_step?.step_id === e.step_id)
+  )
+}
+
 export async function readResultFile(requestPath: string): Promise<HostStepResultFile | undefined> {
   try {
     const path = resultPathFor(requestPath)
@@ -214,4 +236,15 @@ export async function readResultFile(requestPath: string): Promise<HostStepResul
   } catch {
     return undefined
   }
+}
+
+/**
+ * Record what the elevator saw when the helper never wrote a result (a dismissed prompt in the command's
+ * own terminal): the daemon's poll finds it beside the request and posts the receipt, its one writer.
+ */
+export async function writeStepReport(requestPath: string, report: HostStepReport): Promise<void> {
+  const path = resultPathFor(requestPath)
+  if (!path) throw new Error(`not a host-step request: ${requestPath}`)
+  await writeFile(`${path}.tmp`, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 })
+  await rename(`${path}.tmp`, path)
 }

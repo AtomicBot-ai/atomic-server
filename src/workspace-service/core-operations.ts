@@ -1,11 +1,20 @@
 import { randomUUID } from 'node:crypto'
 import { engineKind, installEngine, ensureArtifactEngine } from './engine-install.js'
 import type { CoreLink } from '../core-link/index.js'
+import type { ProxyConfig } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { modelIdPath, object, segment } from './validation.js'
-export const NOT_CORE = Symbol('not-core')
-export async function coreOperation(link: CoreLink, name: string, input: WorkspaceInput): Promise<unknown> {
+import { managedEngineOperation } from './managed-engines.js'
+import { orderEngines } from '../workspace-view/index.js'
+export { NOT_CORE } from './not-core.js'
+export async function coreOperation(
+  link: CoreLink,
+  name: string,
+  input: WorkspaceInput,
+  /** atc's download proxy, for the engine builds an install or a load fetches. */
+  proxy: ProxyConfig | null = null
+): Promise<unknown> {
   const request = object(input['request']),
     id = () => segment(input['id']),
     model = () => `/models/${segment(input['provider'])}/${modelIdPath(input['model_id'])}`
@@ -14,7 +23,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
   switch (name) {
     case 'models.load':
       if (engineKind(String(input['provider'])) === 'llamacpp')
-        await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`)
+        await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`, proxy)
       return link.models.load(String(input['provider']), String(input['model_id']), object(input['options']))
     case 'models.unload':
       return link.models.unload(String(input['provider']), String(input['model_id']))
@@ -26,8 +35,13 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
       return get(`${model()}/logs`)
     case 'models.remove':
       return link.request('DELETE', `/managed-models/${modelIdPath(input['model_id'])}`)
-    case 'engines.list':
-      return post('/engines/versions', input)
+    case 'engines.list': {
+      // The core lists engines by id; every client shows them in one order (managed as the desktop app).
+      const answer = (await post('/engines/versions', input)) as { engines?: Array<{ engine: string }> }
+      if (!Array.isArray(answer?.engines)) return answer
+      const order = orderEngines(answer.engines.map((e) => e.engine))
+      return { ...answer, engines: order.map((id) => answer.engines!.find((e) => e.engine === id)!) }
+    }
     case 'engines.catalog': {
       const engine = String(input['engine'])
       const kind = engineKind(engine)
@@ -40,7 +54,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
       )
     }
     case 'engines.install':
-      return installEngine(link, String(input['engine']), request)
+      return installEngine(link, String(input['engine']), request, proxy)
     case 'engines.activate':
       return post(
         `/engines/${segment(input['engine'])}/builds/${segment(input['version'])}/${segment(input['variant'])}/activate`
@@ -54,6 +68,7 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
       return get(`/settings/${segment(input['provider'])}`)
     case 'settings.update':
       // The core switches builds in the load queue's turn and unloads the old one's sessions.
+      // core-boundary: version_backend — named only to refuse it, so the build goes through engines.activate
       if ('version_backend' in object(input['values']))
         throw new AtcError('ATC_USAGE', 'Choose the engine build with engines.activate, not a setting.')
       return link.request('PATCH', `/settings/${segment(input['provider'])}`, {
@@ -151,6 +166,6 @@ export async function coreOperation(link: CoreLink, name: string, input: Workspa
     case 'media.router.run':
       return post('/decision/score', request)
     default:
-      return NOT_CORE
+      return managedEngineOperation(link, name, input)
   }
 }

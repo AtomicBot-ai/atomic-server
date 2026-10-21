@@ -1,6 +1,7 @@
 // Lifted from atomic-chat-core/src/downloads/downloader.ts @ 8a38521 (v0.17.0); adapted: progress goes to `snapshot()` and an `onProgress` callback instead of core events, a hash-pinned file of `minRangedBytes` and more comes over parallel ranges written in place (`ranges.ts`), and verification runs on the partial before it is renamed, so a cancel there keeps every byte.
 /**
- * atc's model downloader. `save_path` is relative to the data folder and must stay inside it; the
+ * atc's model downloader. `save_path` is relative to the data folder and must stay inside it, or an
+ * absolute path inside one of the call's `allowedRoots` (the managed-model store the core names); the
  * partial is `<file>.tmp` beside `<file>.url` (and `<file>.ranges` for a ranged download), the same
  * sidecars the core and the desktop app write, so either can continue the other's partial. Preflight:
  * the Windows path limit and free space for what is left plus 512 MiB. After every file is complete
@@ -8,7 +9,7 @@
  */
 
 import { rename, rm, rmdir } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { dirname, isAbsolute, resolve } from 'node:path'
 import { checkFreeSpace, checkPathWithinLimit, remainingBytes } from './disk.js'
 import {
   canonicalizeExistingPrefix,
@@ -30,17 +31,24 @@ import type { FileJob } from './request.js'
 
 export { DOWNLOAD_CANCELLED } from './local.js'
 
+/** The `code` of a refusal to start because the configured proxy is invalid: the person's to fix. */
+export const PROXY_CONFIG_INVALID = 'PROXY_CONFIG_INVALID'
+
 export interface DownloadItem {
   url: string
-  /** Relative to the data folder. */
+  /** Relative to the data folder, or absolute inside one of `DownloadOptions.allowedRoots`. */
   save_path: string
   sha256?: string | null
   size?: number | null
   proxy?: ProxyConfig | null
+  /** What a partial belongs to, when a file's link changes between attempts (an expiring SAS link). */
+  resume_key?: string
 }
 export interface DownloadOptions {
   headers?: Record<string, string>
   resume?: boolean
+  /** Absolute folders outside the data folder this call may also write into. */
+  allowedRoots?: string[]
 }
 export interface DownloadProgress {
   taskId: string
@@ -63,6 +71,8 @@ export interface DownloaderDeps {
   retryBaseMs?: number
   verify?: VerifyDeps
   onProgress?: (progress: DownloadProgress) => void
+  /** A download that failed for any reason but a cancel (or a superseding call). */
+  onFailure?: (error: unknown) => void
   log?: (level: 'info' | 'warn', message: string) => void
 }
 
@@ -109,6 +119,9 @@ export class Downloader {
     this.tasks.set(taskId, task)
     try {
       await this.run(task, items, options)
+    } catch (error) {
+      if (!(error instanceof Error && error.message === DOWNLOAD_CANCELLED)) this.deps.onFailure?.(error)
+      throw error
     } finally {
       if (this.tasks.get(taskId) === task) this.tasks.delete(taskId)
     }
@@ -126,7 +139,7 @@ export class Downloader {
     const minRanged = this.deps.minRangedBytes ?? MIN_RANGED_BYTES
     for (const item of items) {
       const problem = item.proxy ? validateProxyConfig(item.proxy) : undefined
-      if (problem) throw new Error(`Error: ${problem}`)
+      if (problem) throw Object.assign(new Error(`Error: ${problem}`), { code: PROXY_CONFIG_INVALID })
     }
     const fetchOf = (item: DownloadItem) => (this.deps.fetchFor ?? policyFetchFor)(item, this.deps.fetch)
     const sizes: number[] = []
@@ -140,27 +153,35 @@ export class Downloader {
     const total = sizes.reduce((a, b) => a + b, 0)
     const ranged = items.map((item, i) => streams > 1 && !!item.sha256 && (sizes[i] ?? 0) >= minRanged)
 
-    const root = await canonicalizeExistingPrefix(dataFolder)
+    const roots = await allowedRoots(dataFolder, options.allowedRoots ?? [])
     const savePaths: string[] = []
-    const partials: number[] = []
+    // Free space is asked of the volume holding each root the files go to, for what goes there.
+    const remaining = new Map<string, { total: number; partials: number[] }>()
     for (const [i, item] of items.entries()) {
       const savePath = resolve(dataFolder, item.save_path)
       const limit = checkPathWithinLimit(savePath, platform)
       if (limit) throw new Error(limit)
-      if (!isInside(await canonicalizeExistingPrefix(savePath), root))
-        throw new Error(`Path ${savePath} is outside of the data folder ${dataFolder}`)
+      const canonical = await canonicalizeExistingPrefix(savePath)
+      const root = roots.find((r) => isInside(canonical, r.canonical))
+      if (!root) throw new Error(`Path ${savePath} is outside of the data folder ${dataFolder}`)
+      const share = remaining.get(root.given) ?? { total: 0, partials: [] }
+      share.total += sizes[i] ?? 0
+      remaining.set(root.given, share)
       savePaths.push(savePath)
       // Core 0.16's parallel parts (atc 0.1.0): nothing resumes them, so they go before the space check.
       await rm(`${savePath}.segments`, { recursive: true, force: true })
       if (!resume) continue
-      const state = ranged[i] ? await readRangeState(savePath, item.url, sizes[i] ?? 0) : undefined
-      partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, item.url)) ?? 0))
+      const identity = item.resume_key ?? item.url
+      const state = ranged[i] ? await readRangeState(savePath, identity, sizes[i] ?? 0) : undefined
+      share.partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, identity)) ?? 0))
     }
-    const space = checkFreeSpace(
-      await (this.deps.availableSpace ?? defaultAvailableSpace)(dataFolder),
-      remainingBytes(total, partials)
-    )
-    if (space) throw new Error(space)
+    for (const [root, share] of remaining) {
+      const space = checkFreeSpace(
+        await (this.deps.availableSpace ?? defaultAvailableSpace)(root),
+        remainingBytes(share.total, share.partials)
+      )
+      if (space) throw new Error(space)
+    }
 
     const done = new Map<number, number>()
     let reported = -PROGRESS_STEP_BYTES
@@ -181,6 +202,7 @@ export class Downloader {
           const job: FileJob = {
             fetch: fetchOf(item),
             url: item.url,
+            identity: item.resume_key ?? item.url,
             headers,
             signal,
             sleep,
@@ -239,4 +261,14 @@ export class Downloader {
     }
     publish(true)
   }
+}
+
+/** The data folder first, then each extra root; every one absolute, compared by its canonical path. */
+async function allowedRoots(dataFolder: string, extra: string[]) {
+  const roots = [{ given: dataFolder, canonical: await canonicalizeExistingPrefix(dataFolder) }]
+  for (const root of extra) {
+    if (!isAbsolute(root)) throw new Error(`Allowed root ${root} must be absolute`)
+    roots.push({ given: root, canonical: await canonicalizeExistingPrefix(root) })
+  }
+  return roots
 }

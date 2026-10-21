@@ -115,16 +115,16 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Server | `atc start` / `stop` / `restart` | The server: core, API and web admin in the background; `start --foreground` runs it in place | works |
 | Server | `atc status` | The server, the API endpoint, running models, the admin URL | works (`--watch` is a stub) |
 | Server | `atc logs` | Tail of the server log; `-f` follows it | works |
-| Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on the active engine; stop it | stub (iteration 2) |
-| Models & engines | `atc models search\|pull\|list\|rm\|info` | The catalog and the model files | stub (`pull`: iteration 2; the rest: 3) |
-| Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, TensorRT-LLM) and their builds; installing one prepares what it needs | stub (`install`: iteration 2; the rest: 4) |
+| Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on an engine (`--engine`; a managed engine shows its load stages); stop it | works |
+| Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines' and Foundry Local's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local)) |
+| Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, Foundry Local, the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs | works (see [Managed engines](#managed-engines)) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
 | Access | `atc chat` | Send a message to an OpenAI-compatible model | works |
 | Access | `atc api key show\|set\|rotate\|clear` | The keyring from the command line (the terminal UI manages it today; `--api-key` adds one) | stub (iteration 3) |
 | Access | `atc admin [open\|status\|token]` | Sign-in link, where the admin listens, token rotation | works |
 | Access | `atc tui` | The terminal UI, explicitly (what bare `atc` opens on a terminal) | works |
-| System | `atc config get\|set\|unset\|list\|path` | `atc` settings | works (`engine.*` keys are a stub) |
+| System | `atc config get\|set\|unset\|list\|path` | `atc` settings, and engine settings of the running server's core | works |
 | System | `atc doctor` | Diagnostic table with hints | works (GPU: NVIDIA only; Docker check skipped) |
 | System | `atc service install\|uninstall\|status\|start\|stop\|restart` | The server as an OS service (systemd, launchd, Task Scheduler) | works |
 | System | `atc update` | Self-update from GitHub Releases: checksum and signature checked, the server restarted onto it; a deb, rpm or AUR install is left to its package manager | works |
@@ -142,6 +142,77 @@ JSON document on stdout; an error is `{"error":{"code","message","details?","hin
 
 Exit codes: `0` success, `1` runtime error, `2` usage (also bare `atc` and bare groups such as `atc models`),
 `3` not implemented in this build, `130` interrupted.
+
+## Managed engines
+
+TensorRT-LLM, vLLM and SGLang run in a container the core manages: on the system Docker on Linux, in its
+own WSL distribution on Windows (not on macOS). `atc` sets one up only after you agree to the core's plan:
+
+```bash
+atc engines install vllm                 # prints the plan, asks, then follows the setup to ready
+atc engines install vllm --dry-run       # the plan only
+atc engines install vllm --yes           # agree to the plan this command prints
+atc engines install vllm --approve sha256:<digest>   # agree to that exact plan only (configuration management)
+atc engines install --resume <operation> # follow it again, or continue after a sign-in or a restart
+atc engines install --cancel <operation> # stops at the core's next safe boundary
+atc engines status vllm                  # plan, blockers, installation, operation, update offer
+atc engines rm vllm [--keep-models]      # the shared models stay while another managed engine is installed
+```
+
+The plan lists every system change (Docker, the NVIDIA Container Toolkit, the `docker` group), the
+download and the disk it needs, whether one privileged step, a new sign-in or a restart may follow, the
+blockers with the commands that fix them, and the plan digest your consent is bound to. Without a terminal
+and without `--yes` or `--approve` nothing begins. The setup is a durable operation in the server: Ctrl-C
+or `--detach` only stops following it. The privileged step runs through `atc host-step exec` — `sudo` in
+your terminal, `pkexec` on a desktop, UAC on Windows, or a command `atc status` prints for you to run.
+After you were added to the `docker` group the server needs a new sign-in and `atc restart` (`atc` never
+signs anyone out or restarts the machine); the operation then continues. `atc engines install <engine>` on
+an installed engine with a newer release updates it the same way, keeping the models.
+
+## Models for managed engines
+
+Managed engines run Hugging Face safetensors checkpoints from one store the core keeps for all of them
+(`<data>/managed-models` on Linux, a folder in the WSL distribution on Windows). `atc` asks the core
+whether a model runs here before it downloads a byte:
+
+```bash
+atc models check Qwen/Qwen3.5-2B                 # each managed engine's verdict, with the numbers
+atc models catalog --engine vllm                 # the models the engine's release was measured with
+atc models search qwen3 --engine sglang          # Hugging Face, narrowed to what could run here
+atc models pull Qwen/Qwen3.5-2B --engine vllm    # verified download into the store; model.yml last
+atc models pull --cancel <request-id>            # stop it; the same --request-id continues it later
+atc models list                                  # a store model once, with every engine that lists it
+atc run Qwen/Qwen3.5-2B --engine vllm
+atc models rm Qwen/Qwen3.5-2B                    # through the core: it goes for every managed engine
+```
+
+A model downloaded once is there for every managed engine. The download runs in the server: closing the
+terminal does not stop it, and a server restart shows it as interrupted until the same `--request-id`
+continues it. Gated repositories need `HF_TOKEN` in the server's environment. `atc models pull <repo>`
+of a repository without GGUF files names the engines that would take it.
+
+## Foundry Local
+
+Foundry Local runs ONNX variants of a model on the NPU, the GPU or the CPU through Microsoft's library,
+where the core registers it (Windows x64/arm64, macOS 15+ on Apple Silicon, Linux x64/arm64 with glibc
+2.28+). A variant runs only on a prepared accelerator; `atc` prepares them after the install, as the app
+does:
+
+```bash
+atc engines install foundry-local                    # the build, then every accelerator it can prepare
+atc engines accelerators foundry-local [--refresh]   # what the library found, prepared or not
+atc models search gemma --engine foundry-local       # Atomic Chat's list, then Microsoft's catalog
+atc models pull gemma-4-e2b-it --engine foundry-local [--device npu|gpu|cpu]
+atc models pull --cancel <request-id> --engine foundry-local
+atc run gemma-4-e2b-it-openvino-npu                  # a downloaded variant loads with foundry-local
+atc models rm gemma-4-e2b-it-openvino-npu            # unloaded first, then its folder is deleted
+```
+
+Without `--device` the pull takes the NPU variant, then GPU, then CPU, among those that run here or will
+once prepared, and downloads only one the core says runs (`ok`). Files come with sizes and sha256 from
+Atomic Chat's list; a Microsoft catalog model is marked unverified. A download runs in the server into
+`<data>/foundry-local/models/<variant>/`, continues across an expired Azure link, and writes `model.yml`
+last. The list is cached for an hour; `ATC_FOUNDRY_LOCAL_MODELS_URL` names another one.
 
 ## Where data lives
 
@@ -180,7 +251,10 @@ atc config path
 
 Keys are `api.*`, `admin.*`, `engines.*` (`engines.default` is the engine `atc run` falls back on),
 `models.*`, `managed.*`, `proxy.*`, `update.*`, `telemetry.*`, `log.*` (the table is `src/config/schema.ts`). Engine parameters
-(`engine.<provider>.<key>`) belong to the core's settings; forwarding them through `atc config` is a stub.
+(`engine.<provider>.<key>`, e.g. `atc config set engine.tensorrt-llm.context_length 16384`) belong to the
+core of the running server: checked against the provider's schema, written with the revision read first,
+applied from the next model load; `atc config list` shows those of the providers this host registers. The
+engine build is not one of them: `atc engines activate`.
 A config file written by a newer `atc` is refused with a hint rather than half-read; an older one is
 migrated (version 2 dropped the `serve.*` keys along with the `serve` command; version 4 dropped
 `api.requireKey`, since every API client needs a key from the keyring).

@@ -16,6 +16,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(root, './src'),
       '@contract': path.resolve(contract, 'index.ts'),
+      // The view selectors the terminal UI and the commands share (browser-safe, like the contract).
+      '@view': path.resolve(repoRoot, 'src/workspace-view/index.ts'),
     },
   },
   server: {

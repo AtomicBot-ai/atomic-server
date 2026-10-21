@@ -102,6 +102,7 @@ export async function runSetup(
   // The core checks a file on disk only by `model_id`, so it is registered first. What this setup
   // registered it takes back; a model that was there before stays as it was. The mark is saved before
   // the write, so a restart between the write and the verdict still knows whose registration it is.
+  // core-boundary: model.yml — only whether it exists, to know whose registration it is; ModelRegistry writes it
   const registry = new ModelRegistry(paths.layout)
   const yml = join(modelDir(paths, plan), 'model.yml')
   const registeredBefore =

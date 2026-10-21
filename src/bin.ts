@@ -24,5 +24,10 @@ if (process.argv[2] === 'foundry-host') {
   const io = nodeIo()
   runCli(process.argv.slice(2), io, {
     spawnDaemon: (paths, log, args) => spawnDaemon({ paths, selfCommand: selfCommand(), log, args }),
-  }).then((code) => process.exit(code), crash(io.stderr))
+  })
+    // A pipe may still hold part of the output: the Bun binary's exit drops it (a `--json` cut at 64 KiB).
+    .then(async (code) => {
+      await io.flush?.()
+      process.exit(code)
+    }, crash(io.stderr))
 }

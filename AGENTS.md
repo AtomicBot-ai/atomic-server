@@ -68,7 +68,7 @@ when this table is stale or a module's `index.ts` has no comment):
 | `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
 | `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
 | `src/output/` | Everything a command prints: colours, tables, the printer, progress, prompts and the logger. |
-| `src/telemetry/` | Error reports: what the core is told, and the one-time notice. |
+| `src/telemetry/` | Error reports: what the core is told, atc's own reports beside the core's, and the one-time notice. |
 | `src/terminal-data/` | Client documents in the data folder: the cross-process store, API keys and chat history. |
 | `src/terminal-service/` | Public OpenAI-compatible calls for the terminal UI and `atc chat`: models, streamed chat, images. |
 | `src/terminal-setup/` | Guided model setup: engine choice, the curated catalog, durable setup records and bounded UI waits. |
@@ -143,7 +143,7 @@ are stripped once by `splitGlobalFlags` before the command parses its own.
 A stub is `notImplemented(spec)`: same strict parsing and help, `run` throws `ATC_NOT_IMPLEMENTED` naming
 the iteration from `PLANNED` in `src/cli/not-implemented.ts`. `not-implemented.test.ts` asserts that every
 stub in the tree is registered and every registry entry is a stub. Partial stubs of working commands
-(`logs --follow`, `update apply`, `config engine.*`) are in `PLANNED_PARTIAL`.
+go in `PLANNED_PARTIAL`.
 
 `run` gets a `CommandContext`: `io`, `flags`, `paths`, `config()` (lazy), `out` (printer: `result(json,
 humanFn)`), `log`, `prompt`, `core.attach({ launch })`, `host`, `now`, `signal`. Output goes through
@@ -224,6 +224,12 @@ files are the client's to download (`src/downloads/`); a missing export is a cha
 here. `src/host/managed-types.ts` re-exports the managed-runtime contract and keeps only the slice of an
 operation the host-step executor reads. The core probes the hardware itself and is the
 only source of hardware facts; `atc` never sends `PUT /hardware/override`.
+
+Lint holds the line. eslint takes the core only through its package `exports`.
+`scripts/check-core-boundary.mjs` refuses a string in `src/` naming what the core owns (its `CORE_OWNED`)
+unless the file says why: `// core-boundary: <name> — <reason>`. A core bug is fixed in the core (a
+`core:` task in atomic-chat-spec). A stopgap here is marked `// core-workaround: <name> until core X.Y.Z
+— <reason>`, and lint fails once that core is pinned.
 
 ---
 

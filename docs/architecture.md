@@ -141,6 +141,33 @@ the foreground process, and changes nothing above:
   `CoreLinkFactory.attach` takes the UI's logger and its messages go to the status line. `q`, Esc, Ctrl+C
   or SIGTERM unmount it and give the terminal back; the daemon keeps running.
 
+### Engines, models and chat in the terminal UI
+
+The terminal UI shows managed engines, Foundry Local and their models through the same workspace
+operations as the commands, and polls the workspace snapshot every 2.5 s for what changes on its own
+(`engines`, `host_steps`, `loads` in `WorkspaceSnapshot`); words and states come from
+`src/workspace-view/` so the commands and both UIs say the same thing.
+
+- **Library → Engines** opens an engine panel (`src/tui/workspace/library/engine-panel*.ts`) for every
+  local provider. A managed engine shows its state, the whole plan with Approve bound to the digest
+  shown, phases and image bytes, the privileged step's command, sign-in or restart, Resume, Cancel,
+  update and removal with "keep models"; the core's state is read again whenever the live operation
+  changes phase. Foundry Local shows its accelerators, Prepare with each accelerator's step, Install,
+  and its models with variants and verdicts (`foundry-*.ts`). Every panel has the settings form
+  (`engine-settings.ts`): the core's schema without `version_backend`, `gpu_id` from the environment's
+  cards, Save with the revision read at open.
+- **Guided setup** lists the engines the core registers; a managed engine or Foundry Local takes its own
+  path (`setup/engine-setup.ts`): installed first in its panel, then its models, the core's verdict and
+  plan, the server's download job (its id in `<atc>/setup-path.json`), and a load with that engine.
+- **Catalog** filters text models by format; a repository without GGUF goes through `models.check` to an
+  installed engine's plan or to installing the engine that takes it. Installed models show every provider
+  that lists them (`models.installed`); a store model's removal warns that every managed engine loses it.
+- **Chat** offers each installed engine and each model under each provider that lists it; an engine
+  switch keeps the model when the new provider lists it; "+ Image" follows `models.info`'s `vision`; the
+  load line shows the stage and time with Cancel load, and the last attempt's log after a failure.
+- **Overview** lists the privileged step the server waits on, with its command, and engine operations
+  and loads in progress.
+
 ## Daemon startup
 
 `src/daemon/daemon.ts`, `startDaemon()`:
@@ -149,7 +176,9 @@ the foreground process, and changes nothing above:
    hostVersion, enabled? } })` — takes `instance.lock`, writes `control-token`, starts the control API.
    `enabled` is passed only when the person chose (`--telemetry`, or `telemetry.enabled` set in the
    config); otherwise the core's own precedence applies (`DO_NOT_TRACK`, `ATOMIC_CORE_TELEMETRY`, its
-   stored consent, then on). `src/telemetry/`.
+   stored consent, then on). `src/telemetry/`. Before this, `runDaemon` (`run.ts`) arms atc's own
+   reporter (its own Sentry project, the same consent; the core's live state decides once it runs) and
+   `io.catchFatal`; the reporter reaches the admin API and the downloader.
 2. `RelayHub` (the admin's event ring) and the daemon's own `HttpCoreLink` over a `CoreClient` with the
    facade's token and `InProcessEvents` (the emitter, not SSE to itself). The facade exposes no hardware,
    backends, disk or environments methods, so the daemon calls its own core over loopback for those.
@@ -266,7 +295,7 @@ an export request in the core branch.
 
 `src/cli/not-implemented.ts` is the registry: `PLANNED` maps each stub command to an iteration, and
 `PLANNED_PARTIAL` names the stubbed features of working commands (`logs --follow`, `update apply`,
-`config engine.*`, `host-step recipes`). A unit test keeps the registry and the command tree in agreement,
+`host-step recipes`, `config engine.*` in their time). A unit test keeps the registry and the command tree in agreement,
 and `docs/commands.md` (generated) shows the status of every command. The iteration map: **I2** a first
 model answering (`engines install`, `models pull`, `run`, `unload`, `api start|stop`, `start
 --foreground`); **I3** the catalog, resumable pulls, model management and API keys; **I4** engines and

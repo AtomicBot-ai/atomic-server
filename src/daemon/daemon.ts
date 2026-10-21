@@ -9,19 +9,21 @@ import { mkdir } from 'node:fs/promises'
 import { WorkspaceService, sanitizeWorkspaceData } from '../workspace-service/index.js'
 import { ClientKeys } from '../terminal-data/index.js'
 import { telemetryConsent } from '../telemetry/index.js'
+import type { AtcErrorReporter } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
-import { CoreClient } from '@atomic-chat/core/client'
+import { patientCoreClient } from '../core-link/index.js'
 import { ADMIN_BUILD_ID, AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
 import type { AdminConfigView, AdminStatus } from '../contract/index.js'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { FIELDS, getAt } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
-import { HostStepExecutor, HostStepJournal, restrictToOwner } from '../host/index.js'
+import { HostStepExecutor, HostStepJournal, readServerLaunch, restrictToOwner } from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
 import { ATC_BUILD_DATE, ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
+import { coreEnv } from './core-env.js'
 
 export interface DaemonOptions {
   paths: AtcPaths
@@ -33,6 +35,8 @@ export interface DaemonOptions {
   controlHost?: string
   admin: { enabled: boolean; host?: string; port?: number }
   telemetry?: boolean
+  /** atc's own error reports; the core's consent decides for them once it runs. */
+  errors?: Pick<AtcErrorReporter, 'capture' | 'flush' | 'follow'>
   now?: () => number
   /** Test seam: how the core is created (the tests record the options it is given). */
   createCore?: typeof AtomicCore.create
@@ -83,7 +87,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     dataFolder: paths.dataFolder,
     controlPort: options.controlPort,
     ...(options.controlHost ? { controlHost: options.controlHost } : {}),
-    env: io.env,
+    // TF_BUILD=True on Linux: Foundry Local's 1DS upload crashes its host there (ADR 2026-10-21).
+    env: coreEnv(io.env, host.facts.platform),
     logger: (level, message) => coreLog[level](message),
     telemetry: {
       host: 'atc',
@@ -98,6 +103,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     () => core.shutdown(),
     () => removeDaemonRecord(paths.daemonRecord, core.instanceId),
   ]
+  options.errors?.follow(core.telemetry)
   try {
     // Published before anything slow: a command attaching now must see an atc daemon, not a foreign owner.
     const startingRecord: DaemonRecord = {
@@ -110,11 +116,12 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       control_url: `http://${core.control.host}:${core.control.port}`,
       admin_url: null,
       started_at: startedAt,
+      ...(await readServerLaunch(host.facts.platform, io.env)),
     }
     await writeDaemonRecord(paths.daemonRecord, startingRecord)
     const relay = new RelayHub()
     const controlUrl = `http://${core.control.host}:${core.control.port}`
-    const client = new CoreClient({ baseUrl: controlUrl, token: core.controlToken, name: 'atc-daemon' })
+    const client = patientCoreClient({ baseUrl: controlUrl, token: core.controlToken, name: 'atc-daemon' })
     const link = new HttpCoreLink({
       endpoint: { baseUrl: controlUrl, instanceId: core.instanceId, version: CORE_VERSION, pid: process.pid },
       client,
@@ -132,6 +139,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       selfCommand: host.selfCommand,
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
       env: io.env,
+      ...(options.errors ? { errors: options.errors } : {}),
     })
     // A failed move leaves media where it was: its records still name those paths, so it still loads.
     await workspace
@@ -188,6 +196,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           uptime_ms: now() - startedAt,
         },
         daemon: { pid: process.pid, started_at: startedAt, data_folder: paths.dataFolder },
+        launch: startingRecord.launch ?? 'terminal',
         admin: { host: admin?.host ?? '', port: admin?.port ?? 0, url: admin?.url ?? '' },
         api: snapshot.server,
         sessions: snapshot.sessions,
@@ -225,6 +234,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         config: configView,
         workspace,
         log: log.child('admin'),
+        ...(options.errors ? { errors: options.errors } : {}),
       })
     }
 
@@ -269,30 +279,4 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         .catch(() => undefined)
     throw error
   }
-}
-
-/** Run as the foreground process until a signal or a control-API shutdown; the exit code. */
-export async function runDaemon(options: DaemonOptions & { printReadyLine?: boolean }): Promise<number> {
-  // Listen before starting: a signal during startup (the core, the admin bind)
-  // would otherwise kill the process with Node's default handler and leave `daemon.json` behind.
-  const started: { daemon?: RunningDaemon } = {}
-  let stopRequested = false
-  let stopping: Promise<void> | undefined
-  const stop = (d: RunningDaemon) => (stopping ??= d.shutdown())
-  const signalled = options.io.waitForShutdown(async () => {
-    stopRequested = true
-    if (started.daemon) await stop(started.daemon)
-  })
-  const daemon = await startDaemon(options)
-  started.daemon = daemon
-  if (stopRequested) {
-    await stop(daemon)
-    return 0
-  }
-  if (options.printReadyLine !== false)
-    options.io.stdout(
-      `${JSON.stringify({ ...daemon.core.readyLine(), admin_url: daemon.record.admin_url })}\n`
-    )
-  await Promise.race([signalled, daemon.stopped])
-  return 0
 }

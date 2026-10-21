@@ -108,6 +108,8 @@ jobs:
           BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-cache
           ATC_GIT_SHA: ${{ github.sha }}
           ATC_SENTRY_ENVIRONMENT: ${{ needs.version.outputs.prerelease == 'true' && 'prerelease' || 'production' }}
+          # atc's own Sentry project; a public ingest key, kept as a secret only so forks build without it.
+          ATC_SENTRY_DSN: ${{ secrets.ATC_SENTRY_DSN }}
         run: |
           set -euo pipefail
           for triple in ${{ matrix.targets }}; do node scripts/build-binaries.mjs --target "$triple"; done

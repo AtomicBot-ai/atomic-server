@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { engineName } from '@view'
+import { useEngines } from '../useEngines'
 import { Action, Field } from '../Controls'
 import type { Workspace } from '../useWorkspace'
-import { record, rows, text } from '../types'
+import { record, text } from '../types'
 import type { RecordValue } from '../types'
-import { describeError } from '@/services/admin-api'
 
+/** What each engine is for; its name and whether it exists here are the core's answer. */
 const LABELS: Record<string, string> = {
-  'llamacpp-upstream': 'llama.cpp — standard GGUF models',
-  'llamacpp': 'TurboQuant — GGUF models with additional tuning',
-  'atomic-prism': 'Atomic Prism — models that require Prism',
-  'mlx': 'MLX — Apple Silicon models',
-  'sd-cpp': 'stable-diffusion.cpp — image and video models',
+  'llamacpp-upstream': 'standard GGUF models',
+  'llamacpp': 'GGUF models with additional tuning',
+  'atomic-prism': 'models that require Prism',
+  'mlx': 'Apple Silicon models',
+  'sd-cpp': 'image and video models',
+  'vllm': 'safetensors models in a container (NVIDIA)',
+  'sglang': 'safetensors models in a container (NVIDIA)',
+  'tensorrt-llm': 'safetensors and NVFP4 models in a container (NVIDIA)',
+  'foundry-local': 'ONNX models on the NPU, GPU or CPU',
 }
 export function SetupEngine({
   workspace: w,
@@ -25,35 +31,15 @@ export function SetupEngine({
   setEngine: (value: string) => void
   onContinue: () => void
 }) {
-  const [engines, setEngines] = useState<RecordValue[]>([])
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
   const [revision, setRevision] = useState(0)
-  const { execute } = w
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError('')
-    void execute('engines.list')
-      .then((result) => {
-        if (active) setEngines(rows(result))
-      })
-      .catch((e) => {
-        if (active) setError(describeError(e))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [execute, revision])
+  const { engines, loading, error } = useEngines(w.execute, revision)
   const choices = engines.filter((entry) => {
     const id = text(entry.engine)
     if (category === 'image' || category === 'video') return id === 'sd-cpp'
     if (category === 'decision') return id === 'llamacpp'
     if (category === 'embedding') return ['llamacpp-upstream', 'llamacpp'].includes(id)
-    return ['llamacpp-upstream', 'llamacpp', 'atomic-prism', 'mlx'].includes(id)
+    // Chat engines: llama.cpp's family, MLX, the managed engines and Foundry Local (by the core's kind).
+    return text(entry.kind) !== 'engine-build' || id === 'mlx' || id === 'foundry-local'
   })
   const selected = choices.find((entry) => entry.engine === engine)
   const available = (entry: RecordValue) => Boolean(entry.active || entry.latest)
@@ -72,7 +58,8 @@ export function SetupEngine({
           <option value="">{loading ? 'Checking engines for this computer…' : 'Choose an engine'}</option>
           {choices.map((entry) => (
             <option key={text(entry.engine)} value={text(entry.engine)} disabled={!available(entry)}>
-              {LABELS[text(entry.engine)] ?? text(entry.engine)}
+              {engineName(text(entry.engine))}
+              {LABELS[text(entry.engine)] ? ` — ${LABELS[text(entry.engine)]}` : ''}
               {available(entry) ? '' : ' · unavailable on this computer'}
             </option>
           ))}

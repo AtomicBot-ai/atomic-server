@@ -3,6 +3,7 @@ import type { CommandRun } from '../cli/index.js'
 import { ClientKeys } from '../terminal-data/index.js'
 import { startApi, streamChat, listChatModels } from '../terminal-service/index.js'
 import { workspace } from './control.js'
+import { contextExceeded } from '../workspace-service/index.js'
 import { defaultConfig } from '../config/index.js'
 export const apiStart: CommandRun = async (inv, ctx) => {
   const config = structuredClone((await ctx.config()).values)
@@ -93,18 +94,28 @@ export const chatCommand = defineCommand({
     if (!model)
       throw new AtcError('ATC_USAGE', 'No model is available. Connect Atomic Chat and load a model first.')
     let reply = ''
-    await streamChat({
-      endpoint,
-      model,
-      key,
-      request: ctx.io.fetch,
-      signal: ctx.signal,
-      messages: [{ role: 'user', content: inv.positionals.join(' ') }],
-      onText: (text) => {
-        reply += text
-        if (!ctx.flags.json) ctx.io.stdout(text)
-      },
-    })
+    try {
+      await streamChat({
+        endpoint,
+        model,
+        key,
+        request: ctx.io.fetch,
+        signal: ctx.signal,
+        messages: [{ role: 'user', content: inv.positionals.join(' ') }],
+        onText: (text) => {
+          reply += text
+          if (!ctx.flags.json) ctx.io.stdout(text)
+        },
+      })
+    } catch (error) {
+      // A managed engine's or Foundry Local's overflow: the limit, the request's length, the setting.
+      const said = error instanceof Error ? error.message : String(error)
+      const link = await ctx.core.attach({ launch: false }).catch(() => undefined)
+      const provider = (await link?.models.sessions().catch(() => []))?.find(
+        (s) => s.model_id === model
+      )?.provider
+      throw (provider && contextExceeded(provider, said)) || error
+    }
     if (ctx.flags.json) ctx.out.result({ model, reply }, () => undefined)
     else ctx.io.stdout('\n')
     return 0

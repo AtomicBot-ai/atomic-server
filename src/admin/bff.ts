@@ -19,6 +19,7 @@ import { sseFrame } from './relay.js'
 import type { RelayHub } from './relay.js'
 import { tokensMatch } from './token.js'
 import { sanitizeWorkspaceData } from '../workspace-service/index.js'
+import { adminFailureReport, captureReport, type ErrorSink } from '../telemetry/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { serveWorkspaceAsset } from './workspace-assets.js'
 
@@ -101,6 +102,8 @@ export interface BffDeps {
   loopbackOnly: boolean
   pingMs?: number
   workspace?: WorkspaceClient
+  /** atc's own error reports: a bug behind this API goes there. */
+  errors?: ErrorSink
 }
 
 type Req = IncomingMessage
@@ -268,6 +271,7 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
     } catch (error) {
       const status = statusFor(error)
       if (status >= 500 && status !== 501) deps.log.error(`admin ${method} ${path} failed: ${String(error)}`)
+      captureReport(deps.errors, adminFailureReport({ error, status, method, path }))
       sendError(res, status, error)
       return true
     }

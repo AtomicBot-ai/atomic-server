@@ -34,7 +34,12 @@ export async function callPublic(
   if (!response.ok)
     throw new AtcError(
       'ATC_USAGE',
-      String(object(object(result)['error'])['message'] ?? `API returned HTTP ${response.status}.`)
+      // OpenAI's `{error: {message}}`, or an engine's own `{object: "error", message}` (`trtllm-serve`).
+      String(
+        object(object(result)['error'])['message'] ??
+          object(result)['message'] ??
+          `API returned HTTP ${response.status}.`
+      )
     )
   return { result, latency_ms: Date.now() - start }
 }

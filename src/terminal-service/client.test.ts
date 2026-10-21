@@ -107,3 +107,24 @@ it('sends vision content parts unchanged and renders attachment labels without e
   )
   expect(messageText(content)).toBe('Describe this\n[Image]')
 })
+
+describe('a refused chat request', () => {
+  it('says what the server answered, not only the status', async () => {
+    const answer = {
+      error: {
+        message: "This model's maximum context length is 4096 tokens, but the request has 5120 tokens.",
+        code: 'context_length_exceeded',
+      },
+    }
+    await expect(
+      streamChat({
+        endpoint: 'http://host/v1',
+        model: 'm',
+        messages: [{ role: 'user', content: 'Hi' }],
+        request: vi.fn(async () => new Response(JSON.stringify(answer), { status: 400 })) as typeof fetch,
+        signal: new AbortController().signal,
+        onText: () => {},
+      })
+    ).rejects.toThrow('maximum context length is 4096 tokens')
+  })
+})

@@ -1,3 +1,4 @@
+import type { FoundryModelPlan, ManagedModelPlan, ManagedVerdict } from '../contract/index.js'
 import type { BackendCatalogResponse } from '@atomic-chat/core'
 import type { ModelSetup, ModelSetupPlan, ModelSetupPlanRequest } from '../contract/index.js'
 export type { BackendCatalogResponse, ModelSetup, ModelSetupPlan, ModelSetupPlanRequest }
@@ -49,6 +50,12 @@ export interface SetupView {
   stage: 'engine' | 'models' | 'review' | 'download' | 'ready'
   mode: 'personal' | 'server'
   catalogs: BackendCatalogResponse[]
+  /** Every engine the core registers here, in display order (`engines.list`). */
+  registered: string[]
+  /** The registered engines installed here (an active build or installation). */
+  installed: string[]
+  /** Setup with a managed engine or Foundry Local instead of a GGUF download. */
+  path: EngineSetupPath | null
   engine: string
   query: string
   repositories: HubRepository[]
@@ -67,6 +74,9 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
     stage: 'engine',
     mode,
     catalogs: [],
+    registered: [],
+    installed: [],
+    path: null,
     engine: '',
     query: '',
     repositories: [],
@@ -80,4 +90,28 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
     pending: null,
     preparing: false,
   }
+}
+
+/** A managed engine's or Foundry Local's model download that guided setup started (its request id). */
+export interface EngineSetupJob {
+  id: string
+  kind: 'managed-model' | 'foundry-model'
+  engine: string
+  /** The model id the engine loads: the repository, or the Foundry Local variant. */
+  model: string
+}
+export interface EngineSetupRow {
+  id: string
+  title: string
+  detail: string
+}
+/** Guided setup with a managed engine or Foundry Local: its model list, the reviewed plan, the job. */
+export interface EngineSetupPath {
+  engine: string
+  kind: 'managed' | 'foundry'
+  rows: EngineSetupRow[]
+  plan: ManagedModelPlan | FoundryModelPlan | null
+  /** The core's verdict of every managed engine on the reviewed checkpoint (`models.check`). */
+  verdicts?: ManagedVerdict[]
+  job: EngineSetupJob | null
 }

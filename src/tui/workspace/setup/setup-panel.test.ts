@@ -77,3 +77,52 @@ it('gives the default engine no persistent accent when another control has focus
   expect(styles[0]).toEqual(styles[1])
   expect(styles[1]).toEqual(styles[2])
 })
+
+it('offers the managed engines and Foundry Local the core registers beside llama.cpp, in order', () => {
+  const s = createWorkspace('setup')
+  s.setup = {
+    ...newSetup('server'),
+    catalogs: catalogs.slice(0, 1),
+    registered: ['llamacpp-upstream', 'vllm', 'tensorrt-llm', 'foundry-local'],
+    engine: 'llamacpp-upstream|v1|metal',
+  }
+  const screen = workspaceFrame(s, 120, 36, 0)
+    .cells.map((row) => row.map((c) => c.char).join(''))
+    .join('\n')
+  const at = (name: string) => screen.indexOf(name)
+  for (const name of ['vLLM', 'TensorRT-LLM', 'Foundry Local'])
+    expect(at(name)).toBeGreaterThan(at('llama.cpp'))
+  expect(at('vLLM')).toBeLessThan(at('TensorRT-LLM'))
+  expect(at('TensorRT-LLM')).toBeLessThan(at('Foundry Local'))
+  expect(screen).not.toContain('Atomic Prism')
+})
+
+it('offers no managed engine where the core registers none (macOS)', () => {
+  const s = createWorkspace('setup')
+  s.setup = {
+    ...newSetup('server'),
+    catalogs,
+    registered: ['llamacpp-upstream', 'llamacpp', 'atomic-prism', 'mlx'],
+  }
+  const screen = workspaceFrame(s, 120, 36, 0)
+    .cells.map((row) => row.map((c) => c.char).join(''))
+    .join('\n')
+  for (const name of ['vLLM', 'SGLang', 'TensorRT-LLM']) expect(screen).not.toContain(name)
+})
+
+it('shows why the engine check failed instead of calling every engine incompatible', () => {
+  const s = createWorkspace('setup')
+  s.setup = {
+    ...newSetup('server'),
+    error:
+      'The server did not start.\nerror: The admin could not listen on 127.0.0.1:1338.\n  the port is in use\nHint: see `atc logs`',
+  }
+  const f = workspaceFrame(s, 80, 24, 0)
+  const screen = f.cells.map((row) => row.map((c) => c.char).join('')).join('\n')
+  expect(screen).toContain('The server did not start.')
+  expect(screen).toContain('the port is in use')
+  expect(screen).toContain('Hint: see `atc logs`')
+  expect(screen).not.toContain('No compatible build available')
+  expect(f.targets.filter((t) => t.id.startsWith('setup-engine:'))).toHaveLength(0)
+  expect(f.targets.some((t) => t.id === 'setup-refresh')).toBe(true)
+})

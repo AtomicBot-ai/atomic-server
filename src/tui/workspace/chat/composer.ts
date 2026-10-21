@@ -99,8 +99,8 @@ export function drawComposer(
     x + width - 12,
     y + 4,
     9,
-    s.images.length ? `Images ${s.images.length}` : '+ Image',
-    'Attach a local image | Requires a vision model',
+    s.modelVision === false ? 'No image' : s.images.length ? `Images ${s.images.length}` : '+ Image',
+    s.modelVision === false ? 'This model takes no images' : 'Attach a local image | Requires a vision model',
     COLORS.engineButton,
     COLORS.composer
   )

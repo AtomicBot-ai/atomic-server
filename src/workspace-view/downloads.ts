@@ -53,7 +53,10 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
     // event must not reappear as a separate download after verification succeeds.
     matching.forEach((transfer) => used.add(taskId(transfer)))
     if (completed.has(phase)) continue
-    const size = Number(plan['total_download_bytes'] ?? plan['total_bytes'] ?? total(job))
+    // A GGUF or media plan counts `total_download_bytes`; a store or Foundry Local plan `download_bytes`.
+    const size = Number(
+      plan['total_download_bytes'] ?? plan['total_bytes'] ?? plan['download_bytes'] ?? total(job)
+    )
     let done = matching.length
       ? matching.reduce((sum, transfer) => sum + transferred(transfer), 0)
       : transferred(job)
@@ -65,6 +68,8 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
     result.push({
       ...job,
       id,
+      // What both lists name the row by: a store job's repository, a Foundry Local job's variant.
+      model_id: job['model_id'] ?? plan['variant_id'] ?? plan['repository'] ?? plan['model_id'],
       total: size,
       transferred: done,
       state: phase || 'queued',

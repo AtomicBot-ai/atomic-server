@@ -1,4 +1,13 @@
-import { downloadRows } from '../../../workspace-view/index.js'
+import { downloadRows, verdictLine } from '../../../workspace-view/index.js'
+import type { ManagedVerdict } from '../../../contract/index.js'
+import { libraryFormats } from './catalog-actions.js'
+import type { LibraryFormat } from './catalog-actions.js'
+
+const FORMAT_NAMES: Record<LibraryFormat, string> = {
+  gguf: 'GGUF',
+  safetensors: 'Safetensors',
+  foundry: 'Foundry Local',
+}
 import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
@@ -36,12 +45,29 @@ export function drawLibrary(
         ) + 1
     }
     row += 2
+    const formats = s.libraryCategory === 'text' ? libraryFormats(s.libraryEngines) : []
+    if (formats.length > 1) {
+      bx = x
+      for (const f of formats)
+        bx +=
+          button(
+            c,
+            `format:${f}`,
+            bx,
+            row - 1,
+            FORMAT_NAMES[f],
+            `Show ${FORMAT_NAMES[f]} models`,
+            focus,
+            s.libraryFormat === f
+          ) + 1
+      row += 1
+    }
   }
   if (s.libraryView === 'installed') {
     const items = [
       ...s.installed.map((m, i) => ({
         id: `installed:${i}`,
-        name: `${s.models.includes(m.id) ? '●' : '○'} ${m.id}`,
+        name: `${s.models.includes(m.id) ? '●' : '○'} ${m.id}${m.providers?.length ? `  ${m.providers.join(', ')}` : ''}`,
       })),
       ...s.models
         .filter((m) => !s.installed.some((i) => i.id === m))
@@ -121,6 +147,9 @@ export function drawLibrary(
     ['library-refresh', 'Refresh', 'Refresh live list'],
     ['library-search', 'Search', 'Search model catalogs'],
     ['tools:models', 'Manage ▾', 'All engine and model controls'],
+    ...(s.libraryView === 'installed' && s.installed.length
+      ? [['library-remove', 'Remove', 'Remove the selected installed model']]
+      : []),
   ]) {
     bx += button(c, id!, bx, bottom, label!, hint!, focus) + 1
   }
@@ -134,6 +163,24 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
   c.targets = []
   const p = s.libraryPlan ?? {}
   text(c, x + 2, y + 1, 'Review installation', COLORS.gold)
+  if (s.libraryRequest['managed']) {
+    // A store download for a managed engine: the core's verdict of every managed engine, the bytes, any blockers.
+    const blockers = Array.isArray(p['blockers']) ? (p['blockers'] as string[]) : []
+    const checked = s.libraryRequest['verdicts']
+    const verdicts = Array.isArray(checked) ? (checked as ManagedVerdict[]) : [p['verdict'] as ManagedVerdict]
+    const lines = [
+      String(s.libraryRequest['repository'] ?? ''),
+      ...verdicts.map(verdictLine),
+      `Download: ${bytes(Number(p['download_bytes'] ?? 0))}`,
+    ]
+    ;[...lines, ...blockers].forEach((l, i) =>
+      text(c, x + 2, y + 3 + i, l, i >= lines.length ? COLORS.red : COLORS.text, width - 4)
+    )
+    if (!blockers.length)
+      button(c, 'library-install', x + 2, y + height - 3, 'Download', 'Download in the server', focus)
+    button(c, 'close', x + 16, y + height - 3, 'Cancel', 'Return without downloading', focus)
+    return
+  }
   text(
     c,
     x + 2,

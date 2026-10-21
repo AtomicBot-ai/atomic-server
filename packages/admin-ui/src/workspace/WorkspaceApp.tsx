@@ -4,6 +4,7 @@ import { useServiceHub } from '@/hooks/useServiceHub'
 import { useStatusStore } from '@/stores/status-store'
 import { useWorkspace } from './useWorkspace'
 import { Cockpit } from './Cockpit'
+import { HostStepBanner } from './HostStepBanner'
 import { Server } from './server/Server'
 import { Catalog } from './library/Catalog'
 import { Chat } from './chat/Chat'
@@ -92,6 +93,7 @@ export function WorkspaceApp() {
         </div>
       )}
       <main className={`workspace-content ${page === 'playground' && task === 'chat' ? 'chat-page' : ''}`}>
+        {page === 'server' && <HostStepBanner workspace={workspace} />}
         {page === 'server' && (
           <Server workspace={workspace} openCommand={setCommand} openSetup={() => setWizard(true)} />
         )}

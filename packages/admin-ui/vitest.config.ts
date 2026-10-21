@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@contract': path.resolve(__dirname, '../../src/contract/index.ts'),
+      '@view': path.resolve(__dirname, '../../src/workspace-view/index.ts'),
     },
   },
   test: {

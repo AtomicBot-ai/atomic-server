@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SETUP_GOALS } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
-import { ModelInstall } from '../library/ModelInstall'
 import { Downloads } from '../library/Downloads'
 import { SetupChoices } from './SetupChoices'
 import { useDialog } from '../useDialog'
-import { record, rows, text } from '../types'
+import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { SetupReady } from './SetupReady'
 import { SetupResume } from './SetupResume'
 import { SetupDetails } from './SetupDetails'
+import { useSetupVerify } from './useSetupVerify'
+import { SetupReview } from './SetupReview'
+import { SetupEngineInstall } from './SetupEngineInstall'
+import { engineDialog, setupModels } from './setup-data'
+import { useEngines } from '../useEngines'
 import { Eye } from '../Eye'
 import { describeError } from '@/services/admin-api'
 
@@ -39,8 +43,10 @@ export function SetupWizard({
   const [loading, setLoading] = useState(true)
   const [access, setAccess] = useState('local')
   const [target, setTarget] = useState('')
-  const [verifying, setVerifying] = useState(false)
-  const attempted = useRef('')
+  const [enginesRevision, setEnginesRevision] = useState(0)
+  const installed = useEngines(w.execute, enginesRevision)
+    .engines.filter((e) => e.active)
+    .map((e) => text(e.engine))
   const dialog = useDialog(onClose)
   const progress = step === 0 ? (engineConfirmed ? 1 : 0) : step + 1
   const { execute } = w
@@ -51,9 +57,9 @@ export function SetupWizard({
     setError('')
     setModels([])
     setChoice('')
-    void execute('models.catalog', { category })
+    void setupModels(execute, engine, category)
       .then((result) => {
-        if (active) setModels(rows(result))
+        if (active) setModels(result)
       })
       .catch((e) => {
         if (active) setError(describeError(e))
@@ -64,46 +70,17 @@ export function SetupWizard({
     return () => {
       active = false
     }
-  }, [category, execute, revision, engineConfirmed, step])
-  const targetJob = w.snapshot?.setups.map(record).find((job) => (job.id ?? job.setup_id) === target)
+  }, [category, execute, revision, engineConfirmed, step, engine])
   const recoverable = w.snapshot?.setups.map(record).filter((job) => job.id || job.setup_id) ?? []
-  const verify = async () => {
-    if (!targetJob || targetJob.stage !== 'ready') return
-    setVerifying(true)
-    setError('')
-    try {
-      const plan = record(targetJob.plan)
-      if (!plan.model_id) throw new Error('The selected download has no model ID. Check Downloads.')
-      await execute(
-        plan.category ? 'artifacts.load' : 'models.load',
-        plan.category ? { id: target } : { provider: engine || plan.provider, model_id: plan.model_id }
-      )
-      const config = record(record(await execute('config.get')).values)
-      const api = record(config.api)
-      const host =
-        access === 'saved' ? text(api.host, '127.0.0.1') : access === 'lan' ? '0.0.0.0' : '127.0.0.1'
-      if (
-        !w.snapshot?.api.running ||
-        w.snapshot.api.host !== host ||
-        w.snapshot.api.port !== api.port ||
-        w.snapshot.api.prefix !== api.prefix
-      )
-        await execute(w.snapshot?.api.running ? 'api.restart' : 'api.start', { request: { host } })
-      await execute('setup.complete', { model_id: plan.model_id })
-      setStep(3)
-    } catch (e) {
-      setError(describeError(e))
-    } finally {
-      setVerifying(false)
-    }
-  }
-  useEffect(() => {
-    if (!targetJob || targetJob.stage !== 'ready' || attempted.current === target || step !== 2) return
-    attempted.current = target
-    void verify()
-    // A durable job is verified once; explicit Retry is available after a failure.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetJob?.stage, target, step])
+  const { verify, verifying, targetJob, attempted } = useSetupVerify({
+    workspace: w,
+    target,
+    engine,
+    access,
+    step,
+    setStep,
+    setError,
+  })
   const manual = async () => {
     await execute('setup.manual')
     onClose()
@@ -193,6 +170,13 @@ export function SetupWizard({
                 setStep(2)
               }}
             />
+            {engineConfirmed && engineDialog(engine) && !installed.includes(engine) ? (
+              <SetupEngineInstall
+                workspace={w}
+                engine={engine}
+                onDone={() => setEnginesRevision((v) => v + 1)}
+              />
+            ) : null}
             <SetupChoices
               workspace={w}
               technical={method === 'technical'}
@@ -269,21 +253,29 @@ export function SetupWizard({
           <SetupReady goal={goal} endpoint={w.snapshot?.api.endpoint ?? ''} onOpenGoal={onOpenGoal} />
         )}
         {review && (
-          <ModelInstall
+          <SetupReview
+            workspace={w}
             model={review}
             category={category}
-            expectedEngine={engine}
+            engine={engine}
             technical={method === 'technical'}
-            execute={execute}
             onClose={() => {
               setReview(null)
               setStep((current) => (current === 1 ? 0 : current))
             }}
-            onStarted={(result) => {
-              const job = record(result)
+            onStarted={(id) => {
               attempted.current = ''
-              setTarget(text(job.id ?? job.setup_id, ''))
+              setTarget(id)
               setStep(2)
+            }}
+            onEngine={(id) => {
+              // The engine that would take the model: chosen, and its install shown in the wizard.
+              setReview(null)
+              setStep(0)
+              setEngine(id)
+              setChoice('')
+              setQuery('')
+              setEngineConfirmed(true)
             }}
           />
         )}

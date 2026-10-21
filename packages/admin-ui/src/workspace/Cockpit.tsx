@@ -1,4 +1,6 @@
 import type { Workspace } from './useWorkspace'
+import { HostStepBanner } from './HostStepBanner'
+import { loadStageText } from '@view'
 import type { Page } from './types'
 import { Action } from './Controls'
 import { Eye } from './Eye'
@@ -33,7 +35,17 @@ export function Cockpit({
         <button className="endpoint-link" onClick={() => navigate('server')}>
           {s?.api.endpoint ?? 'Connecting…'}
         </button>
+        <HostStepBanner workspace={w} />
         <div className="cockpit-services">
+          {(s?.loads ?? []).map((l) => (
+            <span key={`${l.provider}/${l.model_id}`} className="service-chip">
+              <b>{l.provider}</b>
+              <span>{l.model_id}</span>
+              <small>
+                {loadStageText({ ...l, elapsed_ms: l.elapsed_ms + Math.max(0, Date.now() - l.at) })}
+              </small>
+            </span>
+          ))}
           {s?.services.length ? (
             s.services.map((service) => (
               <button

@@ -1,3 +1,5 @@
+import type { LibraryFormat } from './library/catalog-actions.js'
+import type { EnginePanel } from './library/engine-panel-model.js'
 import { WORKSPACE_NAVIGATION } from '../../contract/index.js'
 import type { LibraryRow, LibraryView } from './library/library-model.js'
 import type { WorkspaceSnapshot, WorkspaceOperation } from '../../contract/index.js'
@@ -45,7 +47,19 @@ export interface WorkspaceState {
   libraryCategory: string
   libraryRows: LibraryRow[]
   libraryQuery: string
+  /** The text catalog's format: GGUF, a managed engine's safetensors, or Foundry Local. */
+  libraryFormat: LibraryFormat
+  /** Every engine the core registers here, for the formats the catalog offers. */
+  libraryEngines: string[]
+  /** The installed model a confirmation removes. */
+  libraryRemove: string
+  /** Whether the chat's model takes images (`models.info`); `null` when unknown. */
+  modelVision: boolean | null
+  /** The last load from the chat that failed, for its log. */
+  loadError: { provider: string; model: string; message: string } | null
   libraryPlan: Record<string, unknown> | null
+  /** The managed engine panel of Library → Engines, while it is open. */
+  enginePanel: EnginePanel | null
   libraryRequest: Record<string, unknown>
   workspace: WorkspaceSnapshot | null
   operations: WorkspaceOperation[]
@@ -64,7 +78,8 @@ export interface WorkspaceState {
   historyFilter: string
   clientKeys: ClientKeyView[]
   secret: string
-  installed: { id: string; provider: string; name: string }[]
+  /** `providers`: every provider the core says lists the model; `provider` the first. */
+  installed: { id: string; provider: string; name: string; providers?: string[]; store?: string }[]
   modelsUpdated: number
   modelsError: string
   engine: string
@@ -95,6 +110,8 @@ export interface WorkspaceState {
     | 'console'
     | 'agent-setup'
     | 'install-review'
+    | 'engine-panel'
+    | 'remove-model'
     | 'images'
     | 'setup-goal'
     | null
@@ -126,7 +143,13 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     libraryCategory: 'text',
     libraryRows: [],
     libraryQuery: '',
+    libraryFormat: 'gguf',
+    libraryEngines: [],
+    libraryRemove: '',
+    modelVision: null,
+    loadError: null,
     libraryPlan: null,
+    enginePanel: null,
     libraryRequest: {},
     workspace: null,
     operations: [],

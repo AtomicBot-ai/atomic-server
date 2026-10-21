@@ -1,12 +1,19 @@
-import { button, COLORS, text } from '../draw/canvas.js'
+import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
+import type { SetupView } from '../../../terminal-setup/index.js'
 import { computeRowWindow } from '../../row-window.js'
-const engines = [
-  ['llamacpp-upstream', 'llama.cpp', 'Standard GGUF models'],
-  ['llamacpp', 'llama.cpp TurboQuant', 'Atomic Chat’s TurboQuant engine'],
-  ['atomic-prism', 'Atomic Prism', 'Bonsai models'],
-] as const
+import { engineFamily, engineName } from '../../../workspace-view/index.js'
+/** No catalogs and an error: the check itself failed (say, the server did not start), not every engine. */
+export function engineCheckFailed(v: SetupView): boolean {
+  return v.stage === 'engine' && !v.busy && !v.catalogs.length && v.error !== ''
+}
+/** What each llama.cpp engine is for: descriptions only; which engines exist is the core's answer. */
+const LLAMA: Readonly<Record<string, string>> = {
+  'llamacpp-upstream': 'Standard GGUF models',
+  'llamacpp': 'Atomic Chat’s TurboQuant engine',
+  'atomic-prism': 'Bonsai models',
+}
 export function drawSetupBrowser(
   c: Canvas,
   s: WorkspaceState,
@@ -22,10 +29,23 @@ export function drawSetupBrowser(
   }
   const b = (id: string, row: number, label: string, hint: string, selected = false) =>
     button(c, id, x, y + row, label.slice(0, width - 2), hint, focus, selected)
+  if (engineCheckFailed(v)) {
+    put(3, 'Engines could not be checked.', COLORS.text)
+    let row = 5
+    for (const [i, line] of v.error.split('\n').entries())
+      for (const part of wrap(line, width)) put(row++, part, i === 0 ? COLORS.red : COLORS.text)
+    put(row + 1, 'Fix the cause above, then choose Refresh.')
+    button(c, 'setup-refresh', x, bottom, 'Refresh', 'Retry live engine detection.', focus)
+    return
+  }
   if (v.stage === 'engine') {
     put(3, v.busy ? 'Finding compatible builds...' : 'Choose your inference engine.', COLORS.text)
     let row = 5
-    for (const [provider, name, detail] of engines) {
+    // The core's engines when it answered; llama.cpp's three until then.
+    const registered = v.registered.length ? v.registered : Object.keys(LLAMA)
+    for (const provider of registered.filter((e) => engineFamily(e) === 'llamacpp')) {
+      const name = engineName(provider),
+        detail = LLAMA[provider] ?? 'GGUF models'
       const catalog = v.catalogs.find((cat) => cat.provider === provider)
       const build =
         catalog?.available.find((p) => `${p.version}/${p.backend}` === catalog.recommended) ??
@@ -47,6 +67,15 @@ export function drawSetupBrowser(
         if (bottom - y >= 17) put(row++, `    ${build.version} / ${build.backend}  •  Recommended`)
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
+    for (const engine of registered.filter((e) => ['managed', 'foundry'].includes(engineFamily(e))))
+      b(
+        `setup-engine:${engine}`,
+        row++,
+        `${engineName(engine)}${v.installed.includes(engine) ? '' : '  /  not installed'}`,
+        v.installed.includes(engine)
+          ? 'Installed. Enter chooses a model for it.'
+          : 'Not installed. Enter installs it here first, then you choose a model.'
+      )
     if (y + row < bottom - 1)
       b(
         'setup-engine-info',

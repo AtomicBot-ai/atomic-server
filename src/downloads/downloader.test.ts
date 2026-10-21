@@ -94,6 +94,20 @@ describe('Downloader, one stream', () => {
     expect(server.requests.at(-1)?.range).toBe(`bytes=${2 * 1024 * 1024}-`)
   })
 
+  it('tells onFailure about a failed download, but not about a cancelled one', async () => {
+    const failures: unknown[] = []
+    server.files.set('/hold.bin', { body, holdAfterBytes: 1024 * 1024 })
+    const { dl, out } = await make({ onFailure: (error) => failures.push(error) })
+    const held = dl.download('t', [item('/hold.bin')])
+    await waitFor(async () => (await stat(`${out}.tmp`).catch(() => null))?.size === 1024 * 1024)
+    dl.cancel('t')
+    await expect(held).rejects.toThrow(DOWNLOAD_CANCELLED)
+    server.release()
+    server.files.set('/bad.bin', { body })
+    await expect(dl.download('t', [item('/bad.bin', { sha256: 'f'.repeat(64) })])).rejects.toThrow()
+    expect(failures).toEqual([expect.objectContaining({ message: HASH_MISMATCH_MESSAGE })])
+  })
+
   it('removes the file and its sidecars when the hash does not match', async () => {
     server.files.set('/bad.bin', { body })
     const { dl, out } = await make()
@@ -121,6 +135,74 @@ describe('Downloader, one stream', () => {
     await expect(dl.download('t', [item('/ok.bin', { save_path: '../escape.gguf' })])).rejects.toThrow(
       'outside of the data folder'
     )
+  })
+
+  it('writes into an allowed root outside the data folder, its partial beside the file, its space checked there', async () => {
+    server.files.set('/hold.bin', { body, holdAfterBytes: 1024 * 1024 })
+    const root = await mkdtemp(join(tmpdir(), 'atc-store-'))
+    const asked: string[] = []
+    const { dl } = await make({
+      availableSpace: async (path) => {
+        asked.push(path)
+        return undefined
+      },
+    })
+    const out = join(root, 'Qwen/Qwen3-0.6B/model.safetensors')
+    const running = dl.download('t', [item('/hold.bin', { save_path: out })], { allowedRoots: [root] })
+    await waitFor(async () => (await stat(`${out}.tmp`).catch(() => null))?.size === 1024 * 1024)
+    server.release()
+    await running
+    expect((await readFile(out)).equals(body)).toBe(true)
+    expect(await readdir(dirname(out))).toEqual(['model.safetensors'])
+    expect(asked).toEqual([root])
+  })
+
+  it('refuses a path outside the data folder and every allowed root, and a `..` out of a root', async () => {
+    server.files.set('/ok.bin', { body })
+    const root = await mkdtemp(join(tmpdir(), 'atc-store-'))
+    const elsewhere = await mkdtemp(join(tmpdir(), 'atc-elsewhere-'))
+    const { dl } = await make()
+    const outside = join(elsewhere, 'model.safetensors')
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: outside })], { allowedRoots: [root] })
+    ).rejects.toThrow('outside of the data folder')
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: `${root}/../escape.safetensors` })], {
+        allowedRoots: [root],
+      })
+    ).rejects.toThrow('outside of the data folder')
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: join(root, 'm.safetensors') })])
+    ).rejects.toThrow('outside of the data folder')
+    expect(server.requests.filter((r) => r.method === 'GET')).toEqual([])
+    expect(await exists(join(elsewhere, 'model.safetensors.tmp'))).toBe(false)
+  })
+
+  it('refuses a relative allowed root', async () => {
+    server.files.set('/ok.bin', { body })
+    const { dl } = await make()
+    await expect(
+      dl.download('t', [item('/ok.bin', { save_path: 'store/m.safetensors' })], { allowedRoots: ['store'] })
+    ).rejects.toThrow('must be absolute')
+  })
+
+  it('continues a partial under a new link when the resume key is the same (an expired SAS link)', async () => {
+    server.files.set('/old.bin', { body, holdAfterBytes: 2 * 1024 * 1024 })
+    const { dl, out } = await make()
+    const first = dl.download('t', [item('/old.bin', { resume_key: 'foundry/v/model.onnx' })])
+    await waitFor(async () => (await stat(`${out}.tmp`).catch(() => null))?.size === 2 * 1024 * 1024)
+    dl.cancel('t')
+    await expect(first).rejects.toThrow(DOWNLOAD_CANCELLED)
+    server.release()
+    server.files.set('/new.bin?sig=fresh', { body })
+    await dl.download('t', [item('/new.bin?sig=fresh', { resume_key: 'foundry/v/model.onnx' })], {
+      resume: true,
+    })
+    expect((await readFile(out)).equals(body)).toBe(true)
+    expect(server.requests.at(-1)).toMatchObject({
+      path: '/new.bin?sig=fresh',
+      range: `bytes=${2 * 1024 * 1024}-`,
+    })
   })
 
   it('starts again when the partial belongs to another URL', async () => {

@@ -1,0 +1,50 @@
+// Lifted from atomic-chat-core/test/helpers/fake-nvidia-smi.mjs @ 98a39a76 (v0.18.5); adapted: none.
+/**
+ * A stand-in for `nvidia-smi --query-gpu=… --format=csv,noheader,nounits`, for the hardware e2e on
+ * Linux and the `tensorrt-llm` provider e2e's test host: one RTX 4090 with the driver 581.42.
+ * Wrapped by a `#!/bin/sh` script named `nvidia-smi` in a directory the test prepends to PATH (or
+ * the test host's `bin/`).
+ *
+ *   FAKE_NVIDIA_SMI_MODE  modern (default) | legacy — `legacy` refuses `compute_cap` the way a
+ *                         driver older than 470 does, so the probe has to retry with the legacy fields.
+ *   FAKE_NVIDIA_SMI_GPUS  a JSON array of per-card field overrides (`{"uuid": …, "memory.free": …}`),
+ *                         one line per card in that order, each over the default card's fields —
+ *                         a multi-GPU host (task 2.21: the default card is the one with the most
+ *                         free memory). Unset: the one default card.
+ */
+const mode = process.env.FAKE_NVIDIA_SMI_MODE ?? 'modern'
+const query = process.argv.find((arg) => arg.startsWith('--query-gpu='))
+if (!query) {
+  process.stderr.write('fake-nvidia-smi: only --query-gpu is supported\n')
+  process.exit(2)
+}
+const fields = query.slice('--query-gpu='.length).split(',')
+if (mode === 'legacy' && fields.includes('compute_cap')) {
+  process.stderr.write(
+    'Field "compute_cap" is not a valid field to query.\n\nPlease run \'nvidia-smi --help-query-gpu\' for a list of available fields.\n'
+  )
+  process.exit(2)
+}
+const values = {
+  'index': '0',
+  'name': 'NVIDIA GeForce RTX 4090',
+  'uuid': 'GPU-0b6f4f4e-6c1c-3a54-8f2d-1b0d2f4d6a11',
+  'memory.total': '24564',
+  'memory.free': '24000',
+  'driver_version': '581.42',
+  'compute_cap': '8.9',
+  'pci.bus_id': '00000000:01:00.0',
+}
+const unknown = fields.filter((field) => !(field in values))
+if (unknown.length) {
+  process.stderr.write(`Field "${unknown[0]}" is not a valid field to query.\n`)
+  process.exit(2)
+}
+const cards = process.env.FAKE_NVIDIA_SMI_GPUS
+  ? JSON.parse(process.env.FAKE_NVIDIA_SMI_GPUS).map((overrides, index) => ({
+      ...values,
+      index: String(index),
+      ...overrides,
+    }))
+  : [values]
+process.stdout.write(cards.map((card) => fields.map((field) => card[field]).join(', ') + '\n').join(''))

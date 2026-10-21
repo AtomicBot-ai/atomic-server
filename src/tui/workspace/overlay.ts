@@ -1,4 +1,5 @@
 import { drawInstallReview } from './library/library-panel.js'
+import { drawEnginePanel } from './library/engine-panel.js'
 import { drawGoalSetup } from './setup/goal-setup.js'
 import { drawOperationOverlay } from './operations/operation-panel.js'
 import { AGENTS } from '../../agent-launch/index.js'
@@ -22,6 +23,10 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     }
   if (s.overlay === 'install-review') {
     drawInstallReview(c, s, focus)
+    return
+  }
+  if (s.overlay === 'engine-panel') {
+    drawEnginePanel(c, s, focus)
     return
   }
   if (drawOperationOverlay(c, s, focus)) return
@@ -71,6 +76,18 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
       'Confirm this action.'
     )
     button(c, 'close', x + 25, y + h - 3, 'Keep it', 'Cancel without making changes.', focus)
+    return
+  } else if (s.overlay === 'remove-model') {
+    const model = s.installed.find((m) => m.id === s.libraryRemove)
+    put(2, `Remove ${s.libraryRemove}?`, COLORS.gold)
+    wrap(
+      model?.store === 'managed'
+        ? `It is in the managed engines' shared store: removing it removes it for every managed engine (${(model.providers ?? []).join(', ')}), loaded or not.`
+        : 'Its files are deleted from this server; a loaded model is unloaded first.',
+      w - 4
+    ).forEach((line, i) => put(4 + i, line))
+    b('remove-model-confirm', h - 3, 'Remove model', 'Delete it now.')
+    button(c, 'close', x + 20, y + h - 3, 'Keep it', 'Cancel without making changes.', focus)
     return
   } else if (s.overlay === 'menu' && !s.setupComplete) {
     put(2, 'Prepare your workspace first', COLORS.gold)

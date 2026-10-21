@@ -38,3 +38,19 @@ describe('plain terminal operations', () => {
     expect(JSON.parse(t.io.out.join(''))).toEqual({ model: 'test-model', reply: 'Hello' })
   })
 })
+
+describe('atc chat with a managed model', () => {
+  it('turns a context overflow into the limit, the request length and the setting to raise', async () => {
+    const message =
+      "This model's maximum context length is 4096 tokens, but the request has 5120 tokens. Shorten the conversation or the requested output."
+    const request = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: { message, code: 'context_length_exceeded' } }), { status: 400 })
+    )
+    t = testRun({ io: { fetch: request as typeof fetch } })
+    t.link.snapshotValue.sessions = [{ provider: 'vllm', model_id: 'qwen', port: 0 } as never]
+    expect(await t.run(['chat', '--endpoint', 'http://fixture/v1', '--model', 'qwen', 'hi'])).not.toBe(0)
+    expect(t.io.err.join('')).toContain('(5120 tokens)')
+    expect(t.io.err.join('')).toContain('atc config set engine.vllm.context_length')
+  })
+})

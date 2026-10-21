@@ -112,3 +112,32 @@ Engines & Models sections as the terminal UI, in the order `src/contract` sets
 (ADR 2026-10-13 "Shared server workspaces and agent controls"). There is no URL router: navigation is
 workspace state, as in the terminal (ADR 2026-10-15 "Retire the pre-workspace screens"). Every action is a
 workspace operation from the shared registry, called through `workspace/workspace-api.ts`.
+
+### Engines, models and loads
+
+The admin shows managed engines and Foundry Local with the words of the commands: `@view` is an alias
+for `src/workspace-view/` (browser-safe, shared with the terminal UI and the commands), and live state
+comes from the workspace snapshot the SPA polls (`engines`, `host_steps`, `loads`).
+
+- **Engines tab** (`library/EnginesTab.tsx`) lists what `engines.list` registers, in the order of
+  `orderEngines`. A managed engine opens `EngineSetup.tsx`: its state, the whole plan with Agree bound to
+  the digest shown (asked again when the plan changed), phases and image bytes, the privileged step's
+  command to copy, sign-in or restart, continue and cancel, update, and removal with "keep models"; the
+  core's state is read again whenever the live operation moves on (`workspace-view/engine-live.ts`).
+  Foundry Local opens `FoundryLocal.tsx`: the library's accelerators, Prepare per accelerator with each
+  step's progress, Install that prepares after it. Engine settings pick a managed engine's `gpu_id`
+  among the environment's cards.
+- **Catalog and model install** filter chat models by format. GGUF opens `ModelInstall.tsx` as before;
+  a managed engine's checkpoint opens `ManagedModelInstall.tsx` (every engine's verdict; Download only
+  through an installed engine that takes it, otherwise "Install <engine>"); a Foundry Local model opens
+  `FoundryModelInstall.tsx` (variants with verdicts, unverified catalog models, Prepare or Install when
+  the verdict asks for it). Installed models list each model's own providers to load with, and removal
+  warns that a store model goes for every managed engine. Downloads resume and cancel each job with its
+  owner's operations.
+- **Setup wizard** offers every registered chat engine; a managed engine or Foundry Local not installed
+  yet is installed inside the wizard, then its own models are listed and the download is verified with
+  that engine.
+- **Banner and loads.** `HostStepBanner.tsx` shows the privileged step the server waits on, with its
+  command, in the Cockpit and on the Server page. A managed engine's load shows its stage and time on
+  the installed model's row and in the Cockpit, with Cancel loading, and after a failure the error and
+  the last attempt's log; the chat picker loads an installed model with the provider chosen.

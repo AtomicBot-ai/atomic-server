@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LIBRARY_SECTIONS } from '@contract'
 import type { Workspace } from '../useWorkspace'
-import { Action, Empty, Field, Panel } from '../Controls'
-import { record, rows, text } from '../types'
+import { Action, Empty, Field } from '../Controls'
+import { rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
 import { ModelInstall } from './ModelInstall'
 import { Downloads } from './Downloads'
 import { EngineSettings } from './EngineSettings'
+import { EngineSetup } from './EngineSetup'
+import { EnginesTab } from './EnginesTab'
+import { FoundryLocal } from './FoundryLocal'
+import { FoundryModelInstall } from './FoundryModelInstall'
+import { ManagedModelInstall } from './ManagedModelInstall'
+import { catalogCards, catalogFormats } from './catalog-data'
+import type { CatalogFormat } from './catalog-data'
+import { useEngines } from '../useEngines'
 import { InstalledModels } from './InstalledModels'
 
 export function Catalog({
@@ -27,6 +35,14 @@ export function Catalog({
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<RecordValue | null>(null)
   const [settingsProvider, setSettingsProvider] = useState('')
+  const [managed, setManaged] = useState('')
+  const [foundry, setFoundry] = useState(false)
+  const [format, setFormat] = useState<CatalogFormat>('gguf')
+  const [managedRepo, setManagedRepo] = useState('')
+  const [managedEngine, setManagedEngine] = useState('')
+  const { engines: registered } = useEngines(w.execute)
+  const managedEngines = registered.filter((e) => e.kind === 'managed').map((e) => text(e.engine))
+  const engineForModels = managedEngines.includes(managedEngine) ? managedEngine : (managedEngines[0] ?? '')
   const { execute } = w
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -36,13 +52,19 @@ export function Catalog({
       else if (tab === 'installed') {
         const [chat, media] = await Promise.all([execute('models.installed'), execute('artifacts.list')])
         setInstalled([...rows(chat), ...rows(media).filter((model) => model.stage === 'ready')])
-      } else if (tab === 'catalog') setCatalog(rows(await execute('models.catalog', { category })))
+      } else if (tab === 'catalog' && format === 'safetensors' && engineForModels)
+        setCatalog(catalogCards(await execute('models.catalog', { engine: engineForModels }), format))
+      else if (tab === 'catalog' && format === 'foundry')
+        setCatalog(
+          catalogCards(await execute('models.search', { engine: 'foundry-local', query: '' }), format)
+        )
+      else if (tab === 'catalog') setCatalog(rows(await execute('models.catalog', { category })))
     } catch (e) {
       setError(describeError(e))
     } finally {
       setLoading(false)
     }
-  }, [tab, category, execute])
+  }, [tab, category, execute, format, engineForModels])
   useEffect(() => {
     void refresh()
   }, [refresh])
@@ -82,9 +104,12 @@ export function Catalog({
           <div className="catalog-filters">
             <Field label="Task">
               <select
+                aria-label="Task"
                 value={category}
                 onChange={(e) => {
                   setCategory(e.target.value)
+                  // Formats are chat models' only: another task lists its own catalog.
+                  setFormat('gguf')
                   setQuery('')
                 }}
               >
@@ -95,6 +120,40 @@ export function Catalog({
                 <option value="decision">Decisions & routing</option>
               </select>
             </Field>
+            {category === 'text' && catalogFormats(registered).length > 1 && (
+              <Field label="Format">
+                <select
+                  aria-label="Format"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value as CatalogFormat)}
+                >
+                  {catalogFormats(registered).map((f) => (
+                    <option key={f} value={f}>
+                      {
+                        {
+                          gguf: 'GGUF',
+                          safetensors: 'Safetensors (managed engines)',
+                          foundry: 'Foundry Local',
+                        }[f]
+                      }
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            {format === 'safetensors' && managedEngines.length > 1 && (
+              <Field label="Engine">
+                <select
+                  aria-label="Engine"
+                  value={engineForModels}
+                  onChange={(e) => setManagedEngine(e.target.value)}
+                >
+                  {managedEngines.map((e) => (
+                    <option key={e}>{e}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Filter catalog">
               <input
                 value={query}
@@ -105,7 +164,19 @@ export function Catalog({
             {category === 'text' && (
               <Action
                 disabled={!query.trim()}
-                onClick={async () => setCatalog(rows(await execute('models.search', { query })))}
+                onClick={async () =>
+                  setCatalog(
+                    format === 'gguf'
+                      ? rows(await execute('models.search', { query }))
+                      : catalogCards(
+                          await execute('models.search', {
+                            engine: format === 'foundry' ? 'foundry-local' : engineForModels,
+                            query,
+                          }),
+                          format
+                        )
+                  )
+                }
               >
                 Search Hugging Face
               </Action>
@@ -137,79 +208,71 @@ export function Catalog({
           loading={loading}
           openCommand={openCommand}
           browse={() => setTab('catalog')}
+          onChanged={refresh}
         />
       )}
       {tab === 'engines' && (
-        <>
-          {loading ? (
-            <Empty>Checking engines…</Empty>
-          ) : (
-            engines.map((engine) => (
-              <Panel
-                key={text(engine.engine)}
-                title={text(engine.engine)}
-                actions={
-                  <Action onClick={() => execute('engines.install', { engine: engine.engine })}>
-                    {engine.active ? 'Update' : 'Install'}
-                  </Action>
-                }
-              >
-                <p className="ew-muted">
-                  {text(engine.kind)} ·{' '}
-                  {engine.active ? `Active: ${text(record(engine.active).version)}` : 'Not installed'}
-                </p>
-                {Boolean(engine.source_error) && <p className="ew-muted">{text(engine.source_error)}</p>}
-                {rows(engine.builds).map((build) => (
-                  <div className="installed-row" key={`${text(build.version)}-${text(build.variant)}`}>
-                    <div>
-                      <strong>{text(build.version)}</strong>
-                      <small>
-                        {text(build.variant)}
-                        {build.in_use ? ' · In use' : ''}
-                      </small>
-                    </div>
-                    <div className="ew-actions">
-                      <Action
-                        disabled={Boolean(build.active) || engine.active_choice !== 'client'}
-                        onClick={() =>
-                          execute('engines.activate', {
-                            engine: engine.engine,
-                            version: build.version,
-                            variant: build.variant,
-                          })
-                        }
-                      >
-                        {build.active ? 'Active' : 'Activate'}
-                      </Action>
-                      <Action
-                        disabled={!build.removable}
-                        title={text(build.not_removable_reason, '')}
-                        onClick={() => {
-                          if (window.confirm('Remove this engine build?'))
-                            return execute('engines.remove', {
-                              engine: engine.engine,
-                              version: build.version,
-                              variant: build.variant,
-                            })
-                        }}
-                      >
-                        Remove
-                      </Action>
-                    </div>
-                  </div>
-                ))}
-                <Action onClick={() => setSettingsProvider(text(engine.engine))}>Engine settings</Action>
-              </Panel>
-            ))
-          )}
-        </>
+        <EnginesTab
+          engines={engines}
+          loading={loading}
+          execute={execute}
+          onManaged={setManaged}
+          onFoundry={() => setFoundry(true)}
+          onSettings={setSettingsProvider}
+        />
       )}
       {tab === 'downloads' && <Downloads workspace={w} />}
+      {foundry && <FoundryLocal workspace={w} onClose={() => setFoundry(false)} />}
+      {managed && <EngineSetup workspace={w} engine={managed} onClose={() => setManaged('')} />}
       {settingsProvider && (
         <EngineSettings provider={settingsProvider} workspace={w} onClose={() => setSettingsProvider('')} />
       )}
-      {selected && (
+      {selected && format === 'safetensors' && category === 'text' && (
+        <ManagedModelInstall
+          workspace={w}
+          repository={text(selected.id)}
+          onClose={() => setSelected(null)}
+          onStarted={() => setTab('downloads')}
+          onInstallEngine={(engine) => {
+            setSelected(null)
+            setManaged(engine)
+          }}
+        />
+      )}
+      {selected && format === 'foundry' && category === 'text' && (
+        <FoundryModelInstall
+          workspace={w}
+          model={selected.foundry as never}
+          onClose={() => setSelected(null)}
+          onStarted={() => setTab('downloads')}
+          onFoundry={() => {
+            setSelected(null)
+            setFoundry(true)
+          }}
+        />
+      )}
+      {managedRepo && (
+        <ManagedModelInstall
+          workspace={w}
+          repository={managedRepo}
+          onClose={() => setManagedRepo('')}
+          onStarted={() => setTab('downloads')}
+          onInstallEngine={(engine) => {
+            setManagedRepo('')
+            setManaged(engine)
+          }}
+        />
+      )}
+      {selected && (format === 'gguf' || category !== 'text') && (
         <ModelInstall
+          onNoGguf={
+            catalogFormats(registered).includes('safetensors')
+              ? (repo) => {
+                  setSelected(null)
+                  setManagedRepo(repo)
+                }
+              : undefined
+          }
           model={selected}
           category={category}
           execute={execute}

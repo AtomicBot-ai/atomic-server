@@ -1,9 +1,12 @@
+import type { WorkspaceState } from './state.js'
 import { WorkspaceRuntime } from './runtime.js'
+import { contextExceeded } from '../../workspace-service/index.js'
+import { AtcError } from '../../errors/index.js'
+import { installedModels } from '../../terminal-setup/index.js'
 import { dirname } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
 import {
   TerminalSetup,
-  installedModels,
   ModelCatalog,
   modelFiles,
   EngineSelection,
@@ -105,8 +108,18 @@ export class WorkspaceController {
   image(path: string) {
     return readChatImage(path)
   }
-  installed() {
-    return installedModels(this.deps.base.paths.layout)
+  /**
+   * Every installed model with the providers that list it, as the server's core says
+   * (`models.installed`). Without a running server there is no core to ask: the models on disk, each
+   * with the provider its format names.
+   */
+  async installed(): Promise<WorkspaceState['installed']> {
+    try {
+      return (await this.runtime.read('models.installed')) as WorkspaceState['installed']
+    } catch (error) {
+      if (!(error instanceof AtcError && error.code === 'ATC_DAEMON_NOT_RUNNING')) throw error
+      return installedModels(this.deps.base.paths.layout)
+    }
   }
   hub(query: string, signal: AbortSignal = this.abort.signal, onRefresh?: (rows: HubRepository[]) => void) {
     return this.catalog.list(query, AbortSignal.any([signal, this.abort.signal]), onRefresh)
@@ -120,9 +133,9 @@ export class WorkspaceController {
   async initializeKeys() {
     await this.keys.initialize(this.deps.apiKey)
   }
+  /** Through the server's `models.load`: the server drops the load's stage when it fails (no core event says so). */
   async loadModel(provider: string, model: string) {
-    const link = await this.deps.base.attach({ launch: true, log: this.log })
-    await link.models.load(provider, model)
+    await this.runtime.execute('models.load', { provider, model_id: model })
     await this.api(true, false)
   }
   async localEndpoint(): Promise<string> {
@@ -178,6 +191,16 @@ export class WorkspaceController {
         signal: AbortSignal.any([turn.signal, this.abort.signal, AbortSignal.timeout(600000)]),
         onText,
       })
+    } catch (error) {
+      // A managed engine's or Foundry Local's overflow: say the limit, the length and the setting to raise.
+      const link = await this.deps.base.attach({ launch: false, log: this.log }).catch(() => undefined)
+      const provider = (await link?.models.sessions().catch(() => []))?.find(
+        (s) => s.model_id === model
+      )?.provider
+      const context = provider
+        ? contextExceeded(provider, error instanceof Error ? error.message : String(error))
+        : undefined
+      throw context ? new Error(`${context.message} ${context.hint ?? ''}`.trim()) : error
     } finally {
       if (this.turn === turn) this.turn = undefined
     }
@@ -196,7 +219,7 @@ export class WorkspaceController {
               (await this.engineSelection.read()) || manifest?.engine.provider || '',
               selected.provider
             )
-            await link.models.load(provider, selected.id)
+            await this.runtime.execute('models.load', { provider, model_id: selected.id })
           }
         }
         await startApi(link, config, await this.localKey())

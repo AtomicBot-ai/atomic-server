@@ -4,6 +4,8 @@ import { AtcError } from '../errors/index.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import { object } from './validation.js'
 import { callPublic } from './public-api.js'
+import { chatRequestFor, contextExceeded } from './chat-request.js'
+import { foundryTakesTools } from './foundry-store.js'
 import { publicEndpoint } from './snapshot.js'
 export async function completeChat(
   options: WorkspaceServiceOptions,
@@ -15,9 +17,23 @@ export async function completeChat(
   const body = object(input['request'])
   if (!Array.isArray(body['messages']) || !body['model'])
     throw new AtcError('ATC_USAGE', 'Choose a model and provide messages.')
-  const { result } = await callPublic(options.link, options.config, keys, request, '/chat/completions', {
-    ...body,
-    stream: false,
+  const provider =
+    (await options.link.models.sessions()).find((s) => s.model_id === body['model'])?.provider ?? ''
+  const { result } = await callPublic(
+    options.link,
+    options.config,
+    keys,
+    request,
+    '/chat/completions',
+    chatRequestFor(
+      provider,
+      { ...body, stream: false },
+      provider === 'foundry-local'
+        ? { tools: await foundryTakesTools(options.paths.layout, String(body['model'])) }
+        : {}
+    )
+  ).catch((error: unknown) => {
+    throw contextExceeded(provider, error instanceof Error ? error.message : String(error)) ?? error
   })
   let chat = input['conversation_id'] ? await history.load(String(input['conversation_id'])) : null
   chat ??= history.create(

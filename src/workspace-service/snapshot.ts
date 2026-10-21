@@ -1,6 +1,9 @@
 import type { CoreLink } from '../core-link/index.js'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
-import type { WorkspaceSnapshot, WorkspaceServiceRow } from '../contract/index.js'
+import type { WorkspaceEngine, WorkspaceSnapshot, WorkspaceServiceRow } from '../contract/index.js'
+import { MANAGED_FINISHED_PHASES } from '../contract/index.js'
+import type { CoreSnapshot } from '@atomic-chat/core/client'
+import { HostStepJournal, waitingHostSteps } from '../host/index.js'
 import type { ClientKeys } from '../terminal-data/index.js'
 import { object, sanitized } from './validation.js'
 import { readWorkspaceSetup } from './state.js'
@@ -17,6 +20,30 @@ export function publicEndpoint(server: Record<string, unknown>, config: AtcConfi
     port,
     prefix,
     endpoint: `http://${connectHost.includes(':') ? `[${connectHost}]` : connectHost}:${port}${prefix}`,
+  }
+}
+/**
+ * Managed engines with an installation or an operation still running, in the core's snapshot, and the
+ * privileged steps those operations wait on (the daemon's journal, as `atc status` reads it).
+ */
+async function managedState(snap: CoreSnapshot, journalPath: string) {
+  const operations = (snap.environment_operations ?? []).filter(
+    (o) => !(MANAGED_FINISHED_PHASES as readonly string[]).includes(o.phase)
+  )
+  const engines = new Map<string, WorkspaceEngine>()
+  const entry = (engine: string) =>
+    engines.get(engine) ?? engines.set(engine, { engine, installation: null, operation: null }).get(engine)!
+  for (const i of snap.environments?.[0]?.installations ?? []) entry(i.engine_id).installation = i
+  for (const o of operations) if (o.target.kind === 'runtime') entry(o.target.engine_id).operation = o
+  const journal = await new HostStepJournal(journalPath).load()
+  return {
+    engines: [...engines.values()].sort((a, b) => a.engine.localeCompare(b.engine)),
+    host_steps: waitingHostSteps(journal, operations).map((e) => ({
+      step_id: e.step_id,
+      operation_id: e.operation_id,
+      instructions: e.instructions ?? '',
+      updated_at: e.updated_at,
+    })),
   }
 }
 export async function workspaceSnapshot(
@@ -109,5 +136,7 @@ export async function workspaceSnapshot(
     keys: await keys.list(),
     ...statistics,
     errors,
+    ...(await managedState(snap, paths.hostStepsJournal)),
+    loads: [],
   }
 }

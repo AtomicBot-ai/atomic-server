@@ -1,3 +1,4 @@
+import { AtomicCoreError } from '@atomic-chat/core'
 import { fetchHfGgufFiles, parseGgufShard, ModelRegistry } from '@atomic-chat/core/models'
 import type { DataLayout } from '@atomic-chat/core/host'
 import type { HubRepository } from './types.js'
@@ -60,3 +61,7 @@ export async function installedModels(layout: DataLayout) {
     name: String(e.yml.name ?? e.id),
   }))
 }
+
+/** The core's answer for a repository that has no GGUF file at all (not a failure to read it). */
+export const isNoGguf = (error: unknown): boolean =>
+  error instanceof AtomicCoreError && error.code === 'MODEL_NOT_FOUND' && /no gguf/i.test(error.message)

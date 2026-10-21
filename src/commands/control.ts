@@ -3,16 +3,26 @@ import type { CommandContext } from '../cli/index.js'
 import { parseControlInput } from '../agent-control/index.js'
 import { createWorkspaceClient, WORKSPACE_OPERATIONS } from '../workspace-service/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
+import type { CoreLink } from '../core-link/index.js'
 
 export async function workspace(ctx: CommandContext, launch = true): Promise<WorkspaceClient> {
+  return (await attachWorkspace(ctx, launch)).service
+}
+/** The workspace and the link it runs over, for a command that also follows the core's events. */
+export async function attachWorkspace(
+  ctx: CommandContext,
+  launch = true
+): Promise<{ link: CoreLink; service: WorkspaceClient }> {
   const [link, config] = await Promise.all([ctx.core.attach({ launch }), ctx.config()])
-  return createWorkspaceClient({
+  const service = await createWorkspaceClient({
     link,
     paths: ctx.paths,
     config: config.values,
     fetch: ctx.io.fetch,
     selfCommand: ctx.host.selfCommand,
+    env: ctx.io.env,
   })
+  return { link, service }
 }
 export async function inputFile(ctx: CommandContext, value: unknown): Promise<Record<string, unknown>> {
   if (typeof value !== 'string') return {}
@@ -25,7 +35,10 @@ export async function operation(
   name: string,
   input: Record<string, unknown> = {}
 ): Promise<number> {
-  const result = await (await workspace(ctx)).execute(name, input)
+  return printOperation(ctx, name, await (await workspace(ctx)).execute(name, input))
+}
+/** An operation's result as `atc control call` prints it: the JSON envelope, or the result as text. */
+export function printOperation(ctx: CommandContext, name: string, result: unknown): number {
   const envelope = { schema_version: 1, operation: name, status: 'ok', result: result ?? null }
   ctx.out.result(envelope, () =>
     ctx.out.line(typeof result === 'string' ? result : JSON.stringify(result, null, 2))

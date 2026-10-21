@@ -32,3 +32,12 @@ describe('engineModels', () => {
     expect(ids(engineModels(embedding, 'llamacpp', 'decision'))).toEqual(['default', 'tuned'])
   })
 })
+
+it('offers no GGUF catalog model to a managed engine or Foundry Local', () => {
+  const models = [
+    { id: 'gguf', source: { format: 'gguf' } },
+    { id: 'mlx', source: { format: 'mlx' } },
+  ]
+  for (const engine of ['vllm', 'sglang', 'tensorrt-llm', 'foundry-local'])
+    expect(engineModels(models, engine, 'text')).toEqual([])
+})

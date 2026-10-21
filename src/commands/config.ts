@@ -1,19 +1,8 @@
-import { AtcError, defineCommand, plannedPartial } from '../cli/index.js'
+import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import { attachIfRunning } from '../core-link/index.js'
 import { fieldFor, FIELDS, getAt, setConfigValue, unsetConfigValue } from '../config/index.js'
-
-const ENGINE_KEY = /^engine\./
-
-function engineStub(key: string): never {
-  throw new AtcError(
-    'ATC_NOT_IMPLEMENTED',
-    `'${key}' is an engine setting the core owns; forwarding it is not implemented yet.`,
-    {
-      details: `planned for ${plannedPartial('config engine.*')}`,
-    }
-  )
-}
+import { engineConfigRows, engineKey, getEngineSetting, setEngineSetting } from './engine-settings.js'
 
 const get = defineCommand({
   name: 'get',
@@ -21,7 +10,7 @@ const get = defineCommand({
   positionals: [{ name: 'key', description: 'Dotted key, e.g. api.port', required: true }],
   run: async (inv, ctx) => {
     const key = inv.positionals[0] as string
-    if (ENGINE_KEY.test(key)) engineStub(key)
+    if (engineKey(key)) return getEngineSetting(ctx, key)
     if (!fieldFor(key))
       throw new AtcError('ATC_USAGE', `Unknown config key '${key}'.`, { hint: 'see `atc config list`' })
     const config = await ctx.config()
@@ -42,10 +31,14 @@ const set = defineCommand({
     { name: 'key', description: 'Dotted key, e.g. api.port', required: true },
     { name: 'value', description: 'Value as text (lists comma-separated)', required: true },
   ],
-  examples: ['atc config set api.port 1337', 'atc config set models.autoLoad qwen3-8b,gemma-4b'],
+  examples: [
+    'atc config set api.port 1337',
+    'atc config set models.autoLoad qwen3-8b,gemma-4b',
+    'atc config set engine.tensorrt-llm.context_length 16384',
+  ],
   run: async (inv, ctx) => {
     const [key, raw] = inv.positionals as [string, string]
-    if (ENGINE_KEY.test(key)) engineStub(key)
+    if (engineKey(key)) return setEngineSetting(ctx, key, raw)
     if (!fieldFor(key))
       throw new AtcError('ATC_USAGE', `Unknown config key '${key}'.`, { hint: 'see `atc config list`' })
     const { value, overriddenByEnv } = await setConfigValue(
@@ -79,18 +72,26 @@ const list = defineCommand({
   summary: 'Every key with its value and where it comes from',
   run: async (_inv, ctx) => {
     const config = await ctx.config()
-    ctx.out.result({ values: config.values, sources: config.sources }, () =>
+    const engine = await engineConfigRows(ctx)
+    const text = (v: unknown) =>
+      v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v)
+    ctx.out.result({ values: config.values, sources: config.sources, engine }, () =>
       ctx.out.table(
         [{ header: 'KEY' }, { header: 'VALUE' }, { header: 'SOURCE' }, { header: 'DESCRIPTION' }],
-        FIELDS.map((f) => {
-          const v = getAt(config.values, f.path)
-          return [
+        [
+          ...FIELDS.map((f) => [
             f.path,
-            v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v),
+            text(getAt(config.values, f.path)),
             config.sources[f.path] ?? 'default',
             f.description,
-          ]
-        })
+          ]),
+          ...engine.map((r) => [
+            r.key,
+            text(r.value),
+            r.source === 'core' ? 'core' : 'default',
+            r.description,
+          ]),
+        ]
       )
     )
     return 0

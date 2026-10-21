@@ -4,7 +4,14 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { createLogger } from '../output/index.js'
 import type { ElevationContext, Elevator, HostStepOutcome, HostStepResultFile } from './elevator.js'
-import { HostStepExecutor, HostStepJournal, receiptFor, validateHostStep } from './host-step.js'
+import {
+  HostStepExecutor,
+  HostStepJournal,
+  readResultFile,
+  receiptFor,
+  validateHostStep,
+  writeStepReport,
+} from './host-step.js'
 import type { EnvironmentOperationView, ManagedHostReceipt, ManagedHostStep } from './managed-types.js'
 
 const dir = mkdtempSync(join(tmpdir(), 'atc-hs-'))
@@ -57,7 +64,7 @@ const completed: HostStepResultFile = {
 function make(
   outcome: HostStepOutcome,
   subdir: string,
-  readResult: () => Promise<HostStepResultFile | undefined> = async () => completed
+  readResult: (path: string) => Promise<HostStepResultFile | undefined> = async () => completed
 ) {
   const posted: Array<[string, ManagedHostReceipt]> = []
   const elevator: Elevator = { select: () => 'root', run: async () => outcome }
@@ -137,5 +144,23 @@ describe('HostStepExecutor', () => {
       outcome: 'completed',
     })
     expect(await second.executor.handle(operation)).toBe('duplicate')
+  })
+
+  // A prompt dismissed in the command's own terminal leaves no result file (the helper never ran): the
+  // command writes the refusal beside the request, and the daemon posts it like any manual result.
+  it('posts a refusal the command recorded for a manual step', async () => {
+    const real = make({ kind: 'pending', instructions: 'sudo …' }, 'e', (path) => readResultFile(path))
+    expect(await real.executor.handle(operation)).toBe('pending')
+    const [entry] = await real.executor.pending()
+    await writeStepReport(entry!.request_path, {
+      schema_version: 1,
+      step_id: 'step-1',
+      outcome: 'declined',
+      exit_code: 1,
+      log_tail: 'sudo: 3 incorrect password attempts',
+      finished_at: 7,
+    })
+    expect(await real.executor.checkPendingResults()).toBe(1)
+    expect(real.posted[0]?.[1]).toMatchObject({ step_id: 'step-1', outcome: 'declined' })
   })
 })

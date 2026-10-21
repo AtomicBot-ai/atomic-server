@@ -3,10 +3,12 @@ import { join } from 'node:path'
 import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import { activateEngine } from './engines.js'
+import { engineCatalogs, installedEngines, registeredEngines } from './engine-catalogs.js'
+import { SetupPathRecord } from './setup-path.js'
 import { sameFiles } from './same-files.js'
-import { setupWait } from './wait.js'
 import type {
   BackendCatalogResponse,
+  EngineSetupJob,
   ModelSetup,
   ModelSetupPlan,
   ModelSetupPlanRequest,
@@ -44,27 +46,26 @@ export class TerminalSetup {
     private workspace: SetupWorkspace
   ) {
     this.path = join(directory, 'setup.json')
+    this.record = new SetupPathRecord(directory)
   }
+  private readonly record: SetupPathRecord
   read(): Promise<SetupManifest | null> {
     return readDocument(this.path, null)
   }
+  /** Every engine the core registers on this host, in display order. */
+  async engines(): Promise<string[]> {
+    return registeredEngines(await this.attach(true))
+  }
+  /** The registered engines installed here. */
+  async installed(): Promise<string[]> {
+    return installedEngines(await this.attach(true))
+  }
+  readPath = () => this.record.read()
+  savePath = (job: EngineSetupJob) => this.record.save(job)
+  clearPath = () => this.record.clear()
+  /** The live build catalog of each llama.cpp engine the core registers here. */
   async catalogs(): Promise<BackendCatalogResponse[]> {
-    const link = await this.attach(true)
-    const outcomes = await Promise.allSettled(
-      ['llamacpp-upstream', 'llamacpp', 'atomic-prism'].map((p) =>
-        setupWait(
-          link.request<BackendCatalogResponse>('POST', `/backends/${p}/catalog`, {}),
-          new AbortController().signal,
-          15000
-        )
-      )
-    )
-    const catalogs = outcomes.flatMap((r) =>
-      r.status === 'fulfilled' && r.value.available.length ? [r.value] : []
-    )
-    if (!catalogs.length)
-      throw new Error('No compatible engine could be found. Check your connection and retry.')
-    return catalogs
+    return engineCatalogs(await this.attach(true))
   }
   async plan(request: ModelSetupPlanRequest, requestId: string = randomUUID()): Promise<SetupSelection> {
     const input = planInput(request)

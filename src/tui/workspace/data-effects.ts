@@ -4,6 +4,9 @@ import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { persistConversation } from './data-actions.js'
 import { setupAction } from './setup/setup-actions.js'
+import { engineAction } from './library/engine-actions.js'
+import { panelRefreshKey } from './library/engine-panel-model.js'
+import { pathJob } from './setup/engine-setup.js'
 import { setupWait } from '../../terminal-setup/index.js'
 type Update = (fn: (s: WorkspaceState) => WorkspaceState) => void
 export function useWorkspaceData(
@@ -20,6 +23,24 @@ export function useWorkspaceData(
     opened.current = s.setup.startedAt
     void setupAction('setup-finish', { controller: c.current, get: () => latest.current, update })
   }, [s.page, s.setup?.stage, s.setup?.busy, s.setup?.error, s.setup?.startedAt, c, latest, update])
+  // Guided setup's engine path: once the server's job is ready, load the model and finish.
+  const finished = useRef('')
+  useEffect(() => {
+    const v = s.setup,
+      job = v?.path?.job
+    if (!v || !job || v.busy || !c.current || finished.current === job.id) return
+    if (pathJob(v, s.workspace)?.stage !== 'ready') return
+    finished.current = job.id
+    void setupAction('setup-path-finish', { controller: c.current, get: () => latest.current, update })
+  }, [s.setup, s.workspace, c, latest, update])
+  // The engine panel reads the core's state again when the live operation starts, moves on or ends.
+  useEffect(() => {
+    const p = s.enginePanel
+    if (s.overlay !== 'engine-panel' || !p || p.busy || !c.current) return
+    if (p.kind === 'managed' && !p.state) return
+    if (panelRefreshKey(p, s.workspace) === p.seen) return
+    void engineAction('engine-refresh', { controller: c.current, get: () => latest.current, update })
+  }, [s.overlay, s.workspace, s.enginePanel, c, latest, update])
   useEffect(() => {
     if (!s.ready || !s.setupComplete) return
     let live = true

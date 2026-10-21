@@ -9,6 +9,7 @@
 
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import type { ServerLaunch } from '../contract/index.js'
 import { replaceFile } from '../terminal-data/index.js'
 import type { RenameFn } from '../terminal-data/index.js'
 
@@ -23,6 +24,10 @@ export interface DaemonRecord {
   control_url: string
   admin_url: string | null
   started_at: number
+  /** How this server was started (absent in a record of an older build: read as `terminal`). */
+  launch?: ServerLaunch
+  /** The systemd unit this server runs as, without `.service` (absent outside systemd). */
+  service?: string
 }
 
 export async function readDaemonRecord(path: string): Promise<DaemonRecord | undefined> {

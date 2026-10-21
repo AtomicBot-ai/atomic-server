@@ -1,7 +1,7 @@
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { ErrorBody as CoreErrorBody } from '@atomic-chat/core'
 import { readFile } from 'node:fs/promises'
-import { readDaemonRecord, waitForDaemonReady } from '../core-link/index.js'
+import { patientFetch, readDaemonRecord, waitForDaemonReady } from '../core-link/index.js'
 import { AtcError, ATC_ERROR_CODES } from '../errors/index.js'
 import type { AtcErrorCode } from '../errors/index.js'
 import type { WorkspaceInput, WorkspaceSnapshot } from '../contract/index.js'
@@ -35,7 +35,8 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
       throw new AtcError('ATC_USAGE', 'The admin address must be local.')
     const token = (await readFile(options.paths.adminToken, 'utf8')).trim()
     const call = async (path: string, body?: unknown) => {
-      const response = await (options.fetch ?? fetch)(`${url.origin}${path}`, {
+      // Its own 15-minute signal ends a call, not the runtime's 300 s (a long load, a prepare).
+      const response = await patientFetch(options.fetch ?? fetch)(`${url.origin}${path}`, {
         method: body ? 'POST' : 'GET',
         redirect: 'error',
         headers: {
@@ -76,7 +77,16 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
     snapshot: () => service.snapshot(),
     execute: async (operation, input = {}) => {
       // Downloads run in the server process; this one may exit before they finish.
-      if (['artifacts.install', 'artifacts.resume', 'models.install', 'setup.resume'].includes(operation))
+      if (
+        [
+          'artifacts.install',
+          'artifacts.resume',
+          'models.install',
+          'setup.resume',
+          'managed.install',
+          'foundry.install',
+        ].includes(operation)
+      )
         throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading models.', {
           hint: 'atc config set admin.autoStart true, then restart the server.',
         })

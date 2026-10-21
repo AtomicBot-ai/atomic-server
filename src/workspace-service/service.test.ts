@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
@@ -31,6 +34,37 @@ describe('workspace operations', () => {
     await expect(service.execute('keys.create', { name: 7 })).rejects.toThrow('name must be string')
     expect(link.calls).toEqual([])
     expect(WORKSPACE_OPERATIONS.find((o) => o.name === 'keys.create')?.mutates).toBe(true)
+  })
+  it('installs an engine build through the configured download proxy', async () => {
+    const tmp = tmpDataFolder()
+    cleanup.push(tmp.cleanup)
+    const link = fakeCoreLink()
+    const config = defaultConfig()
+    config.proxy = { url: 'http://proxy.test:3128', noProxy: ['localhost'], ignoreSsl: true }
+    await new WorkspaceService({ link, paths: tmp.paths, config }).execute('engines.install', {
+      engine: 'foundry-local',
+    })
+    expect(link.calls.find((c) => c.path === '/engines/foundry-local/update')?.body).toMatchObject({
+      proxy: { url: 'http://proxy.test:3128', no_proxy: ['localhost'], ignore_ssl: true },
+    })
+  })
+  it('installs the engine a load needs through the configured download proxy too', async () => {
+    const tmp = tmpDataFolder()
+    cleanup.push(tmp.cleanup)
+    const link = fakeCoreLink()
+    link.responses['GET /backends/llamacpp-upstream'] = { backends: [] }
+    link.responses['POST /engines/versions'] = {
+      engines: [{ engine: 'llamacpp-upstream', latest: { version: 'b1', variant: 'cpu' } }],
+    }
+    const config = defaultConfig()
+    config.proxy = { url: 'http://proxy.test:3128', noProxy: [], ignoreSsl: false }
+    await new WorkspaceService({ link, paths: tmp.paths, config }).execute('models.load', {
+      provider: 'llamacpp-upstream',
+      model_id: 'm',
+    })
+    expect(link.calls.find((c) => c.path === '/engines/llamacpp-upstream/update')?.body).toMatchObject({
+      proxy: { url: 'http://proxy.test:3128' },
+    })
   })
   it('refuses a relative import path instead of resolving it against the server folder', async () => {
     const { service, link } = context()
@@ -190,5 +224,34 @@ describe('workspace operations', () => {
     }
     await service.execute('setup.complete', { model_id: 'selected-decision' })
     expect(link.calls).toContainEqual(expect.objectContaining({ path: '/decision/decide' }))
+  })
+  it('lists a model of the managed store once, with each managed provider that lists it, and its size', async () => {
+    const { service, link, paths } = context()
+    const root = join(paths.dataFolder, 'managed-models')
+    mkdirSync(join(root, 'Qwen', 'Qwen3.5-2B'), { recursive: true })
+    writeFileSync(join(root, 'Qwen', 'Qwen3.5-2B', 'model.safetensors'), Buffer.alloc(1000))
+    writeFileSync(join(root, 'Qwen', 'Qwen3.5-2B', 'model.yml'), '{"repository":"Qwen/Qwen3.5-2B"}')
+    mkdirSync(join(root, 'still', 'downloading'), { recursive: true })
+    link.responses['POST /engines/versions'] = {
+      engines: ['llamacpp-upstream', 'tensorrt-llm', 'vllm', 'sglang'].map((engine) => ({ engine })),
+    }
+    link.responses['GET /managed-models/location'] = { root, free_bytes: null }
+    link.responses['GET /models/vllm/Qwen/Qwen3.5-2B/capabilities'] = { model_id: 'Qwen/Qwen3.5-2B' }
+    link.responses['GET /models/tensorrt-llm/Qwen/Qwen3.5-2B/capabilities'] = { model_id: 'Qwen/Qwen3.5-2B' }
+    link.responses['GET /models/sglang/Qwen/Qwen3.5-2B/capabilities'] = new AtomicCoreError(
+      'MODEL_NOT_FOUND',
+      'no'
+    )
+    const installed = (await service.execute('models.installed')) as Array<Record<string, unknown>>
+    expect(installed.filter((m) => m['store'] === 'managed')).toEqual([
+      {
+        id: 'Qwen/Qwen3.5-2B',
+        name: 'Qwen/Qwen3.5-2B',
+        provider: 'vllm',
+        providers: ['vllm', 'tensorrt-llm'],
+        store: 'managed',
+        size_bytes: 1000 + '{"repository":"Qwen/Qwen3.5-2B"}'.length,
+      },
+    ])
   })
 })

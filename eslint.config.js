@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import js from '@eslint/js'
 import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
@@ -43,6 +43,18 @@ const THROUGH_INDEX = {
   regex: `^(\\.\\./)+(${MODULES.join('|')})/(?!index(\\.js)?$)`,
   message: 'Import sibling modules through their index.ts only.',
 }
+// The core only through its package `exports` (AGENTS.md §8), read from the installed core so a new
+// subpath is allowed the day it is pinned. A deep path (`/dist/…`, `/src/…`) reaches past its contract.
+const CORE_SUBPATHS = Object.keys(
+  JSON.parse(readFileSync(new URL('./node_modules/@atomic-chat/core/package.json', import.meta.url), 'utf8'))
+    .exports
+)
+  .filter((subpath) => subpath !== '.')
+  .map((subpath) => subpath.slice(2))
+const CORE_EXPORTS_ONLY = {
+  regex: `^@atomic-chat/core/(?!(${CORE_SUBPATHS.join('|')})$)`,
+  message: `Import the core through its exports only (${CORE_SUBPATHS.join(', ')}); a missing one is a core change (AGENTS.md §8).`,
+}
 
 export default tseslint.config(
   {
@@ -67,7 +79,7 @@ export default tseslint.config(
         'error',
         { name: 'Bun', message: 'atc code must stay Node-compatible. Use node:* APIs.' },
       ],
-      'no-restricted-imports': ['error', { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN] }],
+      'no-restricted-imports': ['error', { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN, CORE_EXPORTS_ONLY] }],
       'no-restricted-syntax': [
         'error',
         {
@@ -85,7 +97,10 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     rules: {
-      'no-restricted-imports': ['error', { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN, THROUGH_INDEX] }],
+      'no-restricted-imports': [
+        'error',
+        { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN, THROUGH_INDEX, CORE_EXPORTS_ONLY] },
+      ],
     },
   },
   {
@@ -101,7 +116,11 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: [{ group: ['node:*'], message: 'src/contract must stay browser-safe.' }, THROUGH_INDEX],
+          patterns: [
+            { group: ['node:*'], message: 'src/contract must stay browser-safe.' },
+            THROUGH_INDEX,
+            CORE_EXPORTS_ONLY,
+          ],
         },
       ],
     },
