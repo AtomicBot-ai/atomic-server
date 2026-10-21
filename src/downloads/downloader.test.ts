@@ -94,6 +94,20 @@ describe('Downloader, one stream', () => {
     expect(server.requests.at(-1)?.range).toBe(`bytes=${2 * 1024 * 1024}-`)
   })
 
+  it('tells onFailure about a failed download, but not about a cancelled one', async () => {
+    const failures: unknown[] = []
+    server.files.set('/hold.bin', { body, holdAfterBytes: 1024 * 1024 })
+    const { dl, out } = await make({ onFailure: (error) => failures.push(error) })
+    const held = dl.download('t', [item('/hold.bin')])
+    await waitFor(async () => (await stat(`${out}.tmp`).catch(() => null))?.size === 1024 * 1024)
+    dl.cancel('t')
+    await expect(held).rejects.toThrow(DOWNLOAD_CANCELLED)
+    server.release()
+    server.files.set('/bad.bin', { body })
+    await expect(dl.download('t', [item('/bad.bin', { sha256: 'f'.repeat(64) })])).rejects.toThrow()
+    expect(failures).toEqual([expect.objectContaining({ message: HASH_MISMATCH_MESSAGE })])
+  })
+
   it('removes the file and its sidecars when the hash does not match', async () => {
     server.files.set('/bad.bin', { body })
     const { dl, out } = await make()

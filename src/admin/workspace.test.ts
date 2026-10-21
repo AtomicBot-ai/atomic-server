@@ -11,11 +11,12 @@ import { WorkspaceService } from '../workspace-service/index.js'
 import { createBffHandler } from './bff.js'
 import { RelayHub } from './relay.js'
 import { SessionStore } from './auth.js'
+import type { BffDeps } from './bff.js'
 const cleanup: Array<() => Promise<void> | void> = []
 afterEach(async () => {
   for (const fn of cleanup.splice(0).reverse()) await fn()
 })
-async function host() {
+async function host(over: Partial<BffDeps> = {}) {
   const tmp = tmpDataFolder()
   cleanup.push(tmp.cleanup)
   const link = fakeCoreLink()
@@ -31,6 +32,7 @@ async function host() {
     config: async () => ({}) as never,
     log: createLogger(() => {}, { level: 'error' }),
     loopbackOnly: true,
+    ...over,
   })
   const server = createServer((req, res) => {
     void bff(req, res)
@@ -51,6 +53,24 @@ const headers = {
   'content-type': 'application/json',
 }
 describe('authenticated workspace BFF', () => {
+  it("reports a bug behind the admin API to atc's project, and not its own answers", async () => {
+    const captured: unknown[] = []
+    const { url } = await host({
+      status: async () => {
+        throw new TypeError("Cannot read properties of undefined (reading 'pid')")
+      },
+      errors: { capture: (report) => captured.push(report) },
+    })
+    expect((await fetch(`${url}/api/status`, { headers })).status).toBe(500)
+    expect((await fetch(`${url}/api/no-such-route`, { headers })).status).toBe(404)
+    expect(captured).toEqual([
+      expect.objectContaining({
+        level: 'error',
+        tags: expect.objectContaining({ route: 'GET /api/status' }),
+      }),
+    ])
+  })
+
   it('refuses unauthenticated reads and cross-origin mutations, hides keys in state', async () => {
     const { url } = await host()
     expect((await fetch(`${url}/api/workspace`)).status).toBe(401)

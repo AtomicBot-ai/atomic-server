@@ -176,7 +176,9 @@ operations as the commands, and polls the workspace snapshot every 2.5 s for wha
    hostVersion, enabled? } })` — takes `instance.lock`, writes `control-token`, starts the control API.
    `enabled` is passed only when the person chose (`--telemetry`, or `telemetry.enabled` set in the
    config); otherwise the core's own precedence applies (`DO_NOT_TRACK`, `ATOMIC_CORE_TELEMETRY`, its
-   stored consent, then on). `src/telemetry/`.
+   stored consent, then on). `src/telemetry/`. Before this, `runDaemon` (`run.ts`) arms atc's own
+   reporter (its own Sentry project, the same consent; the core's live state decides once it runs) and
+   `io.catchFatal`; the reporter reaches the admin API and the downloader.
 2. `RelayHub` (the admin's event ring) and the daemon's own `HttpCoreLink` over a `CoreClient` with the
    facade's token and `InProcessEvents` (the emitter, not SSE to itself). The facade exposes no hardware,
    backends, disk or environments methods, so the daemon calls its own core over loopback for those.

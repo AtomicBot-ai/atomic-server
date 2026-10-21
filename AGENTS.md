@@ -68,7 +68,7 @@ when this table is stale or a module's `index.ts` has no comment):
 | `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
 | `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
 | `src/output/` | Everything a command prints: colours, tables, the printer, progress, prompts and the logger. |
-| `src/telemetry/` | Error reports: what the core is told, and the one-time notice. |
+| `src/telemetry/` | Error reports: what the core is told, atc's own reports beside the core's, and the one-time notice. |
 | `src/terminal-data/` | Client documents in the data folder: the cross-process store, API keys and chat history. |
 | `src/terminal-service/` | Public OpenAI-compatible calls for the terminal UI and `atc chat`: models, streamed chat, images. |
 | `src/terminal-setup/` | Guided model setup: engine choice, the curated catalog, durable setup records and bounded UI waits. |

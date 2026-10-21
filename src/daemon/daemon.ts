@@ -9,6 +9,7 @@ import { mkdir } from 'node:fs/promises'
 import { WorkspaceService, sanitizeWorkspaceData } from '../workspace-service/index.js'
 import { ClientKeys } from '../terminal-data/index.js'
 import { telemetryConsent } from '../telemetry/index.js'
+import type { AtcErrorReporter } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
 import { patientCoreClient } from '../core-link/index.js'
 import { ADMIN_BUILD_ID, AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
@@ -33,6 +34,8 @@ export interface DaemonOptions {
   controlHost?: string
   admin: { enabled: boolean; host?: string; port?: number }
   telemetry?: boolean
+  /** atc's own error reports; the core's consent decides for them once it runs. */
+  errors?: Pick<AtcErrorReporter, 'capture' | 'flush' | 'follow'>
   now?: () => number
   /** Test seam: how the core is created (the tests record the options it is given). */
   createCore?: typeof AtomicCore.create
@@ -98,6 +101,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     () => core.shutdown(),
     () => removeDaemonRecord(paths.daemonRecord, core.instanceId),
   ]
+  options.errors?.follow(core.telemetry)
   try {
     // Published before anything slow: a command attaching now must see an atc daemon, not a foreign owner.
     const startingRecord: DaemonRecord = {
@@ -133,6 +137,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       selfCommand: host.selfCommand,
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
       env: io.env,
+      ...(options.errors ? { errors: options.errors } : {}),
     })
     // A failed move leaves media where it was: its records still name those paths, so it still loads.
     await workspace
@@ -227,6 +232,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         config: configView,
         workspace,
         log: log.child('admin'),
+        ...(options.errors ? { errors: options.errors } : {}),
       })
     }
 
@@ -271,30 +277,4 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         .catch(() => undefined)
     throw error
   }
-}
-
-/** Run as the foreground process until a signal or a control-API shutdown; the exit code. */
-export async function runDaemon(options: DaemonOptions & { printReadyLine?: boolean }): Promise<number> {
-  // Listen before starting: a signal during startup (the core, the admin bind)
-  // would otherwise kill the process with Node's default handler and leave `daemon.json` behind.
-  const started: { daemon?: RunningDaemon } = {}
-  let stopRequested = false
-  let stopping: Promise<void> | undefined
-  const stop = (d: RunningDaemon) => (stopping ??= d.shutdown())
-  const signalled = options.io.waitForShutdown(async () => {
-    stopRequested = true
-    if (started.daemon) await stop(started.daemon)
-  })
-  const daemon = await startDaemon(options)
-  started.daemon = daemon
-  if (stopRequested) {
-    await stop(daemon)
-    return 0
-  }
-  if (options.printReadyLine !== false)
-    options.io.stdout(
-      `${JSON.stringify({ ...daemon.core.readyLine(), admin_url: daemon.record.admin_url })}\n`
-    )
-  await Promise.race([signalled, daemon.stopped])
-  return 0
 }

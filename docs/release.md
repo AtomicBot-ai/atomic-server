@@ -30,8 +30,9 @@ branch. One run at a time (`concurrency: release`):
    with e2e and the installers, script linters).
 3. **build** — each target on its own runner (macOS arm64 builds both darwin targets; Linux x64 and arm64
    their glibc, musl and baseline builds; Windows x64 and arm64 theirs), then the e2e on that runner's
-   native binary: the uploaded file is the tested file. `ATC_SENTRY_ENVIRONMENT` labels the core's error
-   reports `production` or `prerelease`.
+   native binary: the uploaded file is the tested file. `ATC_SENTRY_ENVIRONMENT` labels the core's and atc's
+   error reports `production` or `prerelease`; the `ATC_SENTRY_DSN` secret names atc's own Sentry
+   project (without it the binary sends no atc reports).
 4. **sign-macos** — `scripts/sign-mac-binary.sh` (Developer ID from a temporary keychain, hardened runtime,
    `scripts/entitlements.mac.plist`, timestamp) and `scripts/notarize-mac-binary.sh` (notarytool with the
    App Store Connect API key, `--wait`, the log on rejection). A bare binary cannot be stapled; Gatekeeper

@@ -31,6 +31,9 @@ import type { FileJob } from './request.js'
 
 export { DOWNLOAD_CANCELLED } from './local.js'
 
+/** The `code` of a refusal to start because the configured proxy is invalid: the person's to fix. */
+export const PROXY_CONFIG_INVALID = 'PROXY_CONFIG_INVALID'
+
 export interface DownloadItem {
   url: string
   /** Relative to the data folder, or absolute inside one of `DownloadOptions.allowedRoots`. */
@@ -68,6 +71,8 @@ export interface DownloaderDeps {
   retryBaseMs?: number
   verify?: VerifyDeps
   onProgress?: (progress: DownloadProgress) => void
+  /** A download that failed for any reason but a cancel (or a superseding call). */
+  onFailure?: (error: unknown) => void
   log?: (level: 'info' | 'warn', message: string) => void
 }
 
@@ -114,6 +119,9 @@ export class Downloader {
     this.tasks.set(taskId, task)
     try {
       await this.run(task, items, options)
+    } catch (error) {
+      if (!(error instanceof Error && error.message === DOWNLOAD_CANCELLED)) this.deps.onFailure?.(error)
+      throw error
     } finally {
       if (this.tasks.get(taskId) === task) this.tasks.delete(taskId)
     }
@@ -131,7 +139,7 @@ export class Downloader {
     const minRanged = this.deps.minRangedBytes ?? MIN_RANGED_BYTES
     for (const item of items) {
       const problem = item.proxy ? validateProxyConfig(item.proxy) : undefined
-      if (problem) throw new Error(`Error: ${problem}`)
+      if (problem) throw Object.assign(new Error(`Error: ${problem}`), { code: PROXY_CONFIG_INVALID })
     }
     const fetchOf = (item: DownloadItem) => (this.deps.fetchFor ?? policyFetchFor)(item, this.deps.fetch)
     const sizes: number[] = []

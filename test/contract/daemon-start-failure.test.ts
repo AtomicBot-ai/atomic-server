@@ -8,7 +8,8 @@ import { AtomicCore } from '@atomic-chat/core'
 import { inspectLock } from '@atomic-chat/core/host'
 import { afterAll, describe, expect, it } from 'vitest'
 import { resolveConfig } from '../../src/config/index.js'
-import { startDaemon } from '../../src/daemon/index.js'
+import { runDaemon, startDaemon } from '../../src/daemon/index.js'
+import { AtcError } from '../../src/errors/index.js'
 import { recordingIo } from '../../src/io.js'
 import { createLogger } from '../../src/output/index.js'
 import { fakeHost } from '../helpers/test-context.js'
@@ -35,4 +36,32 @@ describe('a server that fails while starting', () => {
     expect((await inspectLock(paths.layout)).kind).not.toBe('owned')
     expect(existsSync(paths.daemonRecord)).toBe(false)
   }, 60_000)
+})
+
+describe("a server that cannot start reports it to atc's project", () => {
+  const start = (error: Error, captured: unknown[]) =>
+    runDaemon({
+      paths,
+      io: recordingIo(),
+      config: resolveConfig({ env: {} }),
+      host: fakeHost(),
+      log: createLogger(() => {}, { level: 'silent' }),
+      controlPort: 0,
+      admin: { enabled: false },
+      telemetry: false,
+      createCore: () => Promise.reject(error),
+      errors: { capture: (report) => captured.push(report), flush: async () => {}, follow: () => {} },
+    })
+
+  it('as a fatal start-up failure', async () => {
+    const captured: unknown[] = []
+    await expect(start(new TypeError('boom'), captured)).rejects.toThrow('boom')
+    expect(captured).toEqual([expect.objectContaining({ source: 'startup', level: 'fatal' })])
+  })
+
+  it('but not an answer atc gives on purpose', async () => {
+    const captured: unknown[] = []
+    await expect(start(new AtcError('ATC_ADMIN_BIND_FAILED', 'taken'), captured)).rejects.toThrow('taken')
+    expect(captured).toEqual([])
+  })
 })

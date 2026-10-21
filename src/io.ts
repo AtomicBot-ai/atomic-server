@@ -7,7 +7,8 @@
 import { readFile } from 'node:fs/promises'
 import { createInterface } from 'node:readline/promises'
 import { Writable } from 'node:stream'
-import { openInBrowser } from '@atomic-chat/core/host'
+import { openInBrowser, processHandlersFor } from '@atomic-chat/core/host'
+import type { ErrorSink } from '@atomic-chat/core/host'
 
 export interface TtyFacts {
   stdin: boolean
@@ -49,6 +50,11 @@ export interface AtcIo {
   onInterrupt?: (handler: () => void) => () => void
   /** Resolve once stdout and stderr have handed everything written to the OS; before `process.exit`. */
   flush?: () => Promise<void>
+  /**
+   * For a process that is the server: a throw nothing caught is said on stderr, reported (up to 2 s)
+   * and ends the process with 1, as it would without handlers. Absent in tests.
+   */
+  catchFatal?: (reporter: ErrorSink & { flush(timeoutMs?: number): Promise<void> }) => void
 }
 
 export function nodeIo(): AtcIo {
@@ -93,6 +99,12 @@ export function nodeIo(): AtcIo {
       ),
     question: (prompt, options) => askOnTerminal(prompt, options?.secret === true),
     openUrl: (url) => openInBrowser(url),
+    catchFatal: (reporter) =>
+      processHandlersFor(
+        process,
+        (text) => process.stderr.write(text),
+        (code) => process.exit(code)
+      )({ reporter }),
     onInterrupt: (handler) => {
       process.once('SIGINT', handler)
       return () => process.off('SIGINT', handler)

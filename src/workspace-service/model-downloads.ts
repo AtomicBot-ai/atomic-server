@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { Downloader } from '../downloads/index.js'
+import { captureReport, downloadFailureReport } from '../telemetry/index.js'
 import { ManagedModelSetups } from './managed-model-setups.js'
 import { FoundryModelSetups } from './foundry-model-setups.js'
 import { ArtifactService } from './artifacts.js'
@@ -19,6 +20,7 @@ export function modelDownloads(
     platform: options.platform ?? process.platform,
     fetch: request,
     availableSpace: async (path) => (await options.link.disk.available(path)) ?? undefined,
+    onFailure: (error) => captureReport(options.errors, downloadFailureReport(error)),
   })
   return {
     downloader,

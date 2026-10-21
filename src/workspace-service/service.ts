@@ -28,6 +28,7 @@ import { FoundryAccelerators } from './foundry.js'
 import { foundryOperation } from './foundry-operations.js'
 import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
+import type { ErrorSink } from '../telemetry/index.js'
 import { modelDownloads } from './model-downloads.js'
 import { ChatJobs } from './chat-jobs.js'
 import { importConversations } from './history-transfer.js'
@@ -40,6 +41,8 @@ export interface WorkspaceServiceOptions {
   selfCommand?: readonly string[]
   /** The server's environment: `HF_TOKEN` for gated model downloads. */
   env?: NodeJS.ProcessEnv
+  /** atc's own error reports: failed model downloads go there. */
+  errors?: ErrorSink
 }
 export class WorkspaceService {
   readonly metrics = new WorkspaceMetrics()
