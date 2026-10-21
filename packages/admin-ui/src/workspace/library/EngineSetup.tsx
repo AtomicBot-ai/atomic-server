@@ -5,6 +5,7 @@ import {
   engineName,
   engineRefreshKey,
   engineView,
+  failureLines,
   formatSize,
   liveEngineState,
   operationView,
@@ -140,10 +141,15 @@ export function EngineSetup({
             )}
             {view.kind === 'relogin' && op && lines(reloginLines(launch, op.operation_id))}
             {view.kind === 'reboot' && op && lines(rebootLines(op.operation_id))}
-            {view.kind === 'failed' && (
-              <p role="alert" className="inline-error">
-                {op?.error?.message ?? 'The setup failed.'}
-              </p>
+            {view.kind === 'failed' && op && (
+              <div role="alert" className="inline-error">
+                {failureLines(op).map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            )}
+            {view.kind === 'failed' && merged.other_operation && (
+              <p className="ew-muted">{otherOperationLine(merged.other_operation, engine)}</p>
             )}
             {view.kind === 'update' && offer && (
               <>
@@ -204,14 +210,17 @@ export function EngineSetup({
               Cancel operation
             </Action>
           )}
-          {op && ['relogin', 'reboot', 'failed'].includes(view?.kind ?? '') && (
-            <Action
-              disabled={busy}
-              onClick={() => act(() => execute('engines.resume', { operation_id: op.operation_id }))}
-            >
-              {view?.kind === 'failed' ? 'Retry' : 'Continue'}
-            </Action>
-          )}
+          {/* The core changes one managed engine at a time: a Retry now would only wait behind it. */}
+          {op &&
+            ['relogin', 'reboot', 'failed'].includes(view?.kind ?? '') &&
+            !(view?.kind === 'failed' && merged?.other_operation) && (
+              <Action
+                disabled={busy}
+                onClick={() => act(() => execute('engines.resume', { operation_id: op.operation_id }))}
+              >
+                {view?.kind === 'failed' ? 'Retry' : 'Continue'}
+              </Action>
+            )}
           {view?.kind === 'update' && !removing && !offer && (
             <Action
               disabled={busy}

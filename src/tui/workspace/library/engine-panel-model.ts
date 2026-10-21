@@ -22,6 +22,7 @@ import {
   operationView,
   planLines,
   rebootLines,
+  failureLines,
   otherOperationLine,
   planBlocked,
   reloginLines,
@@ -176,10 +177,14 @@ export function enginePanelModel(
       for (const line of rebootLines(op!.operation_id)) say(line)
       add('engine-resume', 'Continue', 'Continue after the restart')
       break
-    case 'failed':
-      say(op!.error?.message ?? 'The setup failed.', 'error')
-      add('engine-resume', 'Retry', 'Continue the failed setup')
+    case 'failed': {
+      for (const line of failureLines(op!)) say(line, 'error')
+      // The core changes one managed engine at a time: a Retry now would only wait behind it.
+      const other = state.other_operation
+      if (other) say(otherOperationLine(other, p.engine), 'warn')
+      else add('engine-resume', 'Retry', 'Continue the failed setup')
       break
+    }
     case 'ready':
     case 'update':
       if (p.offer) {

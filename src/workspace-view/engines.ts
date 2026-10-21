@@ -115,6 +115,24 @@ export const PHASE_LABELS: Readonly<Record<ManagedPhase, string>> = {
 export const operationEngine = (op: EnvironmentOperation): string =>
   op.target.kind === 'runtime' ? op.target.engine_id : 'the managed environment'
 
+/**
+ * Why an operation failed: the core's message, then its details — Docker's own answer travels there as
+ * JSON (`{"message": "… 403 Forbidden"}`), and it is the line that says what to fix.
+ */
+export function failureLines(op: EnvironmentOperation): string[] {
+  const error = op.error as { message?: string; details?: unknown } | null
+  if (!error?.message) return ['The setup failed.']
+  const details = typeof error.details === 'string' ? error.details.trim() : ''
+  let said = details
+  try {
+    const parsed = JSON.parse(details) as { message?: unknown }
+    if (typeof parsed?.message === 'string') said = parsed.message
+  } catch {
+    // Plain text: shown as it is.
+  }
+  return said ? [error.message, said] : [error.message]
+}
+
 /** Why `engine` waits: the core changes one managed engine at a time, and another one's runs. */
 export function otherOperationLine(other: EnvironmentOperation, engine: string): string {
   return `The ${other.kind} of ${operationEngine(other)} runs first (${phaseText(other)}): the core changes one managed engine at a time; ${engine} is next.`

@@ -5,6 +5,7 @@ import { DIGEST_A, installation, operation, plan } from '../../test/helpers/mana
 import {
   engineView,
   formatSize,
+  failureLines,
   operationEngine,
   operationView,
   otherOperationLine,
@@ -146,6 +147,36 @@ describe('phases', () => {
       '8.4 GiB',
       'unknown',
     ])
+  })
+})
+
+// Recorded on Ubuntu 26.04 (from Russia, nvcr.io refused): the core's message and Docker's own answer.
+const PULL_FAILED = {
+  code: 'IO_ERROR',
+  message: 'Docker image pull failed with status 500.',
+  details:
+    '{"message":"unknown: failed to resolve reference \\"nvcr.io/nvidia/cuda@sha256:605f\\": unexpected status from HEAD request to https://nvcr.io/v2/nvidia/cuda/manifests/sha256:605f: 403 Forbidden"}',
+}
+
+describe('a failed operation', () => {
+  it.each([
+    [
+      'details as Docker’s JSON: its message',
+      PULL_FAILED,
+      [
+        'Docker image pull failed with status 500.',
+        'unknown: failed to resolve reference "nvcr.io/nvidia/cuda@sha256:605f": unexpected status from HEAD request to https://nvcr.io/v2/nvidia/cuda/manifests/sha256:605f: 403 Forbidden',
+      ],
+    ],
+    [
+      'plain details as they are',
+      { code: 'X', message: 'Failed.', details: 'disk full' },
+      ['Failed.', 'disk full'],
+    ],
+    ['no details', { code: 'X', message: 'Failed.' }, ['Failed.']],
+    ['no error', null, ['The setup failed.']],
+  ] as const)('%s', (_name, error, lines) => {
+    expect(failureLines(operation('vllm', 'failed', { error: error as never }))).toEqual(lines)
   })
 })
 

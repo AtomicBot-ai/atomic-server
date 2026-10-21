@@ -69,6 +69,27 @@ describe('the managed engine modal', () => {
     expect(screen.queryByRole('button', { name: 'Agree and install' })).not.toBeInTheDocument()
   })
 
+  it('shows why a failed setup failed, and no Retry while another engine’s setup runs', async () => {
+    const failed = operation('vllm', 'failed', {
+      error: {
+        code: 'IO_ERROR',
+        message: 'Docker image pull failed with status 500.',
+        details: '{"message":"unexpected status from HEAD request to https://nvcr.io/v2/: 403 Forbidden"}',
+      } as never,
+    })
+    const { workspace } = workspaceFixture({ 'engines.plan': state({ failed }) })
+    workspace.snapshot = snapshotFixture({
+      engines: [
+        { engine: 'vllm', installation: null, operation: null },
+        { engine: 'sglang', installation: null, operation: operation('sglang', 'pulling-image') },
+      ],
+    } as Partial<WorkspaceSnapshot>)
+    render(<EngineSetup workspace={workspace} engine="vllm" onClose={() => {}} />)
+    expect(await screen.findByText(/nvcr\.io\/v2\/: 403 Forbidden/)).toBeInTheDocument()
+    expect(screen.getByText(/The setup of sglang runs first/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+  })
+
   it('asks again when the plan changed before consent, and approves only the new one', async () => {
     let digest: string = DIGEST_A
     const { workspace, execute } = workspaceFixture({

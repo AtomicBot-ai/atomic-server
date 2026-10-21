@@ -5,6 +5,7 @@ export {
   blockerLines,
   engineView,
   formatSize,
+  failureLines,
   operationEngine,
   operationView,
   otherOperationLine,

@@ -112,6 +112,29 @@ describe('the managed engine panel', () => {
     expect(ids(m)).toContain('engine-resume')
   })
 
+  it('shows why a failed setup failed (Docker’s answer), and no Retry while another engine’s setup runs', () => {
+    const failed = operation('vllm', 'failed', {
+      error: {
+        code: 'IO_ERROR',
+        message: 'Docker image pull failed with status 500.',
+        details: '{"message":"unexpected status from HEAD request to https://nvcr.io/v2/: 403 Forbidden"}',
+      } as never,
+    })
+    const p = panel({ state: state({ failed }) })
+    const alone = enginePanelModel(p, live([{ engine: 'vllm', installation: null, operation: null }]))
+    expect(text(alone)).toContain('nvcr.io/v2/: 403 Forbidden')
+    expect(ids(alone)).toContain('engine-resume')
+    const busy = enginePanelModel(
+      p,
+      live([
+        { engine: 'vllm', installation: null, operation: null },
+        { engine: 'sglang', installation: null, operation: operation('sglang', 'pulling-image') },
+      ])
+    )
+    expect(text(busy)).toMatch(/The setup of sglang runs first .*vllm is next/)
+    expect(ids(busy)).not.toContain('engine-resume')
+  })
+
   it('offers no Agree and update for a new release this machine cannot run', () => {
     const blocked = state({ plan: plan('vllm', { availability: 'prerequisite-blocked' }) })
     const ready = live([{ engine: 'vllm', installation: installation('vllm'), operation: null }])
