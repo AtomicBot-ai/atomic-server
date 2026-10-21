@@ -68,6 +68,7 @@ export async function coreOperation(
       return get(`/settings/${segment(input['provider'])}`)
     case 'settings.update':
       // The core switches builds in the load queue's turn and unloads the old one's sessions.
+      // core-boundary: version_backend — named only to refuse it, so the build goes through engines.activate
       if ('version_backend' in object(input['values']))
         throw new AtcError('ATC_USAGE', 'Choose the engine build with engines.activate, not a setting.')
       return link.request('PATCH', `/settings/${segment(input['provider'])}`, {
