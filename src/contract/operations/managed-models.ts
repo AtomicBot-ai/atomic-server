@@ -35,6 +35,7 @@ export const MANAGED_MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'managed.install',
     'Download managed model',
     'download',
+    // core-boundary: model.yml — a description: atc downloads the checkpoint into the core's store and writes it last (ADR 2026-10-20-download-managed-models-in-atc)
     'Start or continue (same request_id) the durable download of a reviewed managed.plan into the shared store: files verified by size and sha256, model.yml written last, then the core asked to list the model. It runs in the server and survives the terminal.',
     {
       properties: { request_id: { type: 'string' }, plan_digest: { type: 'string' } },

@@ -46,6 +46,7 @@ export function parseSettingValue(d: SettingDescriptor, raw: string): { value: u
 
 /** Every field a form edits: the schema without `version_backend`. */
 export const formFields = (descriptors: readonly SettingDescriptor[]) =>
+  // core-boundary: version_backend — left out of every form; the build goes through engines.activate
   descriptors.filter((d) => d.key !== 'version_backend')
 
 /** The value a field holds in the form: the draft's, else the core's, else the schema's default. */

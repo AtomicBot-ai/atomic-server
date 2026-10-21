@@ -168,6 +168,7 @@ export class FoundryModelSetups {
       await this.step(job, worker, 'verifying')
       await repairTemplateFile(plan.dir)
       // Last: this file is what turns the folder into a model for the core.
+      // core-boundary: model.yml — atc downloads Foundry Local variants and writes it last with the core's serializeModelYml (ADR 2026-10-20-foundry-local-models-in-atc)
       await files.writeAtomic(underRoot(plan.dir, 'model.yml'), foundryModelYml(plan))
       await this.step(job, worker, 'ready')
     } catch (error) {

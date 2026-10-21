@@ -161,6 +161,7 @@ export class ManagedModelSetups {
           files: plan.files,
         }
         await this.files.writeAtomic(
+          // core-boundary: model.yml — atc downloads checkpoints into the core's store and writes it last (ADR 2026-10-20-download-managed-models-in-atc)
           underRoot(plan.root, plan.repository, 'model.yml'),
           `${JSON.stringify(yml, null, 2)}\n`
         )

@@ -38,6 +38,7 @@ export async function bytesUnder(dir: string): Promise<number> {
 /** Model ids (`/`-separated) under `root`: folders holding `model.yml`, at most three levels down. */
 async function modelIds(root: string, prefix: string[] = []): Promise<string[]> {
   const entries = await readdir(join(root, ...prefix), { withFileTypes: true }).catch(() => [])
+  // core-boundary: model.yml — the store model's record in the core's store, read to list and remove it (ADR 2026-10-20-download-managed-models-in-atc)
   if (prefix.length && entries.some((e) => e.isFile() && e.name === 'model.yml')) return [prefix.join('/')]
   if (prefix.length >= 3) return []
   const ids: string[] = []

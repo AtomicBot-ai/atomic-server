@@ -35,6 +35,7 @@ export const FOUNDRY_OPERATIONS: readonly WorkspaceOperation[] = [
     'foundry.install',
     'Download Foundry Local model',
     'download',
+    // core-boundary: model.yml — a description: atc downloads the variant and writes it with the core's serializer (ADR 2026-10-20-foundry-local-models-in-atc)
     'Start or continue (same request_id) the durable download of a reviewed foundry.plan into the data folder: an expired link is resolved again (up to three times) and the download continues; the chat template is repaired for tools; model.yml with the foundry_local block is written last.',
     {
       properties: { request_id: { type: 'string' }, plan_digest: { type: 'string' } },

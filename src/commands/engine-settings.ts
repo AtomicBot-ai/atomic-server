@@ -72,6 +72,7 @@ export async function getEngineSetting(ctx: CommandContext, raw: string): Promis
 
 export async function setEngineSetting(ctx: CommandContext, raw: string, input: string): Promise<number> {
   const { provider, key } = engineKey(raw)!
+  // core-boundary: version_backend — named only to refuse and hide it; the build goes through engines.activate
   if (key === 'version_backend')
     throw new AtcError('ATC_USAGE', 'The engine build is not a setting.', {
       hint: `choose it with atc engines activate ${provider} --build <version>/<variant>`,

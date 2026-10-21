@@ -65,6 +65,7 @@ export async function managedModelPlan(
   const dir = (path: string) => underRoot(root, meta.repository, path)
   const sizes = await Promise.all(meta.files.map((f) => d.files.size(dir(f.path))))
   const complete = meta.files.map((f, i) => sizes[i] === f.size)
+  // core-boundary: model.yml — atc downloads checkpoints into the core's store and writes it last (ADR 2026-10-20-download-managed-models-in-atc)
   const yml = await d.files.readText(dir('model.yml'))
   const present = yml !== undefined && recordedRevision(yml) === meta.revision && complete.every(Boolean)
   const pending = present ? [] : meta.files.filter((_, i) => !complete[i]).map((f) => f.path)
