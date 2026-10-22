@@ -36,6 +36,24 @@ describe('installEngine', () => {
   })
 })
 
+describe('installEngine, engines of builds', () => {
+  it('installs an engine the core offers here', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = versions('litert-lm')
+    await installEngine(link, 'litert-lm')
+    expect(link.calls.at(-1)).toMatchObject({ method: 'POST', path: '/engines/litert-lm/update' })
+  })
+
+  it('says an engine the core does not offer here is not available on this platform, and begins nothing', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = versions('mlx')
+    await expect(installEngine(link, 'litert-lm')).rejects.toThrow(
+      'litert-lm is not available on this platform'
+    )
+    expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
+  })
+})
+
 describe('installEngine, managed engines', () => {
   it('answers the plan of an engine that is not installed, sglang included, and begins nothing', async () => {
     const link = fakeCoreLink()

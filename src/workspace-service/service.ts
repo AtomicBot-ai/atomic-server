@@ -26,6 +26,8 @@ import type { ManagedModelSetups } from './managed-model-setups.js'
 import { downloadProxy } from './download-proxy.js'
 import { FoundryAccelerators } from './foundry.js'
 import { foundryOperation } from './foundry-operations.js'
+import { LiteRtAccelerators } from './litert.js'
+import { litertOperation } from './litert-operations.js'
 import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
 import type { ErrorSink } from '../telemetry/index.js'
@@ -56,6 +58,7 @@ export class WorkspaceService {
   private managed: ManagedModelSetups
   private foundry: FoundryAccelerators
   private foundryModels: FoundryModelSetups
+  private litert: LiteRtAccelerators
   /** Every model download of this server: GGUF setups, media and MLX. */
   private downloader: Downloader
   private chats: ChatJobs
@@ -72,6 +75,7 @@ export class WorkspaceService {
     this.managed = downloads.managed
     this.foundry = new FoundryAccelerators(options.link)
     this.foundryModels = downloads.foundry
+    this.litert = new LiteRtAccelerators(options.link, { proxy: () => downloadProxy(options.config) })
   }
   /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
   start(): Promise<{ kept: string[] }> {
@@ -81,6 +85,7 @@ export class WorkspaceService {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
     this.foundry.event(name, payload)
+    this.litert.event(name, payload)
   }
   async snapshot() {
     const result = await workspaceSnapshot(
@@ -114,6 +119,8 @@ export class WorkspaceService {
     if (model !== NOT_CORE) return model
     const foundry = foundryOperation(this.foundry, this.foundryModels, operation, input)
     if (foundry !== NOT_CORE) return foundry
+    const litert = litertOperation(this.litert, operation, input)
+    if (litert !== NOT_CORE) return litert
     switch (operation) {
       case 'settings.schema':
         return engineSettingsSchema(String(input['provider']))

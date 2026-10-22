@@ -13,6 +13,11 @@ export function engineKind(engine: string): EngineKind | undefined {
   return (ENGINE_KINDS as Readonly<Record<string, EngineKind>>)[engine]
 }
 
+const unavailable = (engine: string) =>
+  new AtcError('ATC_USAGE', `${engine} is not available on this platform: the core does not offer it here.`, {
+    hint: 'see atc engines status',
+  })
+
 async function engineVersions(link: CoreLink, engine: string): Promise<EngineVersions | undefined> {
   const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
   return engines.find((e) => e.engine === engine)
@@ -31,7 +36,13 @@ export async function installEngine(
   const kind = engineKind(engine)
   if (kind === 'managed') return installManaged(link, engine, request)
   const body = { task_id: randomUUID(), ...(proxy ? { proxy } : {}), ...request }
-  if (kind === 'engine-build' || (kind === 'llamacpp' && request['target'])) return update(body)
+  if (kind === 'engine-build') {
+    // The core answers an engine it does not register here (LiteRT-LM on Windows arm64) with a bare
+    // INVALID_ARGUMENT; its versions list is what says which engines this platform has.
+    if (!(await engineVersions(link, engine))) throw unavailable(engine)
+    return update(body)
+  }
+  if (kind === 'llamacpp' && request['target']) return update(body)
   if (kind !== 'llamacpp') throw new AtcError('ATC_USAGE', 'Choose an engine from engines.list.')
   const latest = (await engineVersions(link, engine))?.latest
   if (!latest) throw new AtcError('ATC_USAGE', 'No compatible engine build is available.')
@@ -86,14 +97,7 @@ async function installManaged(
   request: Record<string, unknown>
 ): Promise<ManagedInstallResult> {
   const versions = await engineVersions(link, engine)
-  if (!versions)
-    throw new AtcError(
-      'ATC_USAGE',
-      `${engine} is not available on this platform: the core does not offer it here.`,
-      {
-        hint: 'see atc engines status',
-      }
-    )
+  if (!versions) throw unavailable(engine)
   if (!versions.active) return { engine, status: 'plan', state: await managedEngineState(link, engine) }
   if (!versions.update?.needed) return { engine, status: 'ready', active: versions.active }
   const target = versions.update.target?.version ?? ''

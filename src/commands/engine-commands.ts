@@ -3,6 +3,7 @@ import { AtcError, defineCommand } from '../cli/index.js'
 import { operation } from './control.js'
 import { engineStatus } from './engine-status.js'
 import { acceleratorsCommand, prepareAccelerators } from './foundry-commands.js'
+import { prepareLiteRtAccelerators } from './litert-commands.js'
 import { installManagedEngine } from './managed-engine.js'
 import { removeManagedEngine } from './managed-remove.js'
 
@@ -62,7 +63,7 @@ export const enginesCommand = defineCommand({
         'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
         'no-accelerators': {
           type: 'boolean',
-          description: 'Foundry Local: do not prepare accelerators after it',
+          description: 'Foundry Local, LiteRT-LM: do not prepare accelerators after it',
         },
       },
       examples: [
@@ -86,8 +87,11 @@ export const enginesCommand = defineCommand({
           request = { target: { version, variant: variant.join('/') } }
         }
         const code = await operation(ctx, 'engines.install', { engine, request })
-        // Foundry Local runs a variant only on a prepared accelerator: prepare them now, as the app does.
-        if (engine === 'foundry-local' && !inv.values['no-accelerators']) return prepareAccelerators(ctx)
+        // Foundry Local runs a variant only on a prepared accelerator, and LiteRT-LM an NPU variant only
+        // on a prepared openvino: prepare them now, as the app does.
+        if (inv.values['no-accelerators']) return code
+        if (engine === 'foundry-local') return prepareAccelerators(ctx)
+        if (engine === 'litert-lm') return prepareLiteRtAccelerators(ctx, [], true)
         return code
       },
     }),

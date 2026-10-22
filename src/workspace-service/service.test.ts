@@ -39,6 +39,7 @@ describe('workspace operations', () => {
     const tmp = tmpDataFolder()
     cleanup.push(tmp.cleanup)
     const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = { engines: [{ engine: 'foundry-local' }] }
     const config = defaultConfig()
     config.proxy = { url: 'http://proxy.test:3128', noProxy: ['localhost'], ignoreSsl: true }
     await new WorkspaceService({ link, paths: tmp.paths, config }).execute('engines.install', {

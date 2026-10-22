@@ -5,22 +5,18 @@
  * offered; a host with nothing but the CPU needs nothing prepared.
  */
 
-import type { CoreEventMessage } from '@atomic-chat/core/client'
-import type { FoundryLocalAcceleratorsEvent } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import { randomUUID } from 'node:crypto'
 import type { FoundryAcceleratorsView, FoundryModelPlan } from '../contract/index.js'
 import type { FoundrySearchResult } from '../workspace-service/index.js'
-import { formatSize, foundryVerdictText, prepareResultLines, variantLabel } from '../workspace-view/index.js'
+import { formatSize, foundryVerdictText, variantLabel } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
-import { follow, followDisplay } from './follow.js'
+import { listLiteRtAccelerators, prepareLiteRtAccelerators } from './litert-commands.js'
+import { followPrepare } from './accelerator-prepare.js'
 import { followSetup } from './managed-model-commands.js'
 
 const CPU_ONLY = 'Only the CPU is here: Foundry Local models run on the CPU, and nothing needs preparing.'
-
-type Step =
-  { kind: 'step'; step: FoundryLocalAcceleratorsEvent } | { kind: 'status'; view: FoundryAcceleratorsView }
 
 const preparable = (view: FoundryAcceleratorsView) =>
   view.accelerators.filter((a) => !a.prepared && a.execution_provider !== null)
@@ -46,48 +42,20 @@ export async function prepareAccelerators(ctx: CommandContext, names: string[] =
     )
     return 0
   }
-  await service.execute('foundry.prepare', wanted.length ? { accelerators: wanted } : {})
-  const display = followDisplay<Step>({ io: ctx.io, progress: ctx.progress, flags: ctx.flags }, (s) =>
-    s.kind === 'step'
-      ? {
-          stage: `${s.step.accelerator}:${s.step.stage}`,
-          text: `${s.step.accelerator}: ${s.step.stage}${s.step.reason ? ` (${s.step.reason})` : ''}`,
-          done: s.step.fraction === null ? null : Math.round(s.step.fraction * 100),
-          total: s.step.fraction === null ? null : 100,
-        }
-      : { stage: 'status', text: s.view.preparing ? 'Preparing accelerators' : 'Prepared' }
+  return followPrepare<FoundryAcceleratorsView>(
+    ctx,
+    link,
+    service,
+    { status: 'foundry.accelerators', prepare: 'foundry.prepare', event: 'foundry-local:accelerators' },
+    wanted
   )
-  const result = await follow<Step>({
-    events: link.events,
-    pick: (m: CoreEventMessage) =>
-      m.event === 'foundry-local:accelerators'
-        ? { kind: 'step', step: m.data as FoundryLocalAcceleratorsEvent }
-        : undefined,
-    poll: async () => ({
-      kind: 'status',
-      view: (await service.execute('foundry.accelerators')) as FoundryAcceleratorsView,
-    }),
-    // The events say a step ended; only the server's state says the whole prepare did.
-    finished: (s) => s.kind === 'status' && !s.view.preparing,
-    show: (s) => display.show(s),
-    signal: ctx.signal,
-    pollMs: 1000,
-    alwaysPoll: true,
-  })
-  display.close(true)
-  const last = result.value.kind === 'status' ? result.value.view : undefined
-  if (last?.last_error) throw new AtcError('ATC_USAGE', `Preparing accelerators failed: ${last.last_error}`)
-  ctx.out.result(last?.last_result ?? {}, () => {
-    for (const line of prepareResultLines(last?.last_result ?? { accelerators: [] })) ctx.out.line(line)
-  })
-  return 0
 }
 
 export const acceleratorsCommand = defineCommand({
   name: 'accelerators',
-  summary: "Foundry Local's accelerators: list, refresh, prepare",
+  summary: "Foundry Local's and LiteRT-LM's accelerators: list, refresh, prepare",
   positionals: [
-    { name: 'engine', description: 'foundry-local', required: true },
+    { name: 'engine', description: 'foundry-local or litert-lm', required: true },
     {
       name: 'accelerator',
       description: 'With --prepare: the ones to prepare (default every one not prepared)',
@@ -95,13 +63,21 @@ export const acceleratorsCommand = defineCommand({
     },
   ],
   options: {
-    refresh: { type: 'boolean', description: 'Ask the library again' },
+    refresh: { type: 'boolean', description: 'Ask the library (Foundry Local) or the core again' },
     prepare: { type: 'boolean', description: 'Download and register accelerators' },
   },
-  examples: ['atc engines accelerators foundry-local', 'atc engines accelerators foundry-local --prepare'],
+  examples: [
+    'atc engines accelerators foundry-local',
+    'atc engines accelerators foundry-local --prepare',
+    'atc engines accelerators litert-lm --prepare',
+  ],
   run: async (inv, ctx) => {
+    if (inv.positionals[0] === 'litert-lm')
+      return inv.values['prepare']
+        ? prepareLiteRtAccelerators(ctx, inv.positionals.slice(1))
+        : listLiteRtAccelerators(ctx)
     if (inv.positionals[0] !== 'foundry-local')
-      throw new AtcError('ATC_USAGE', 'Only Foundry Local has accelerators to prepare.')
+      throw new AtcError('ATC_USAGE', 'Only Foundry Local and LiteRT-LM have accelerators to prepare.')
     if (inv.values['prepare']) return prepareAccelerators(ctx, inv.positionals.slice(1))
     const { service } = await attachWorkspace(ctx)
     const view = (await service.execute('foundry.accelerators', {

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { engineFamily, engineName, orderEngines } from './engine-order.js'
 
 describe('engine order and names', () => {
-  it('puts llama.cpp first, then MLX, the managed engines as the desktop app does, then Foundry Local', () => {
+  it('puts llama.cpp first, then MLX, the managed engines as the desktop app does, then Foundry Local and LiteRT-LM', () => {
     expect(
       orderEngines([
+        'litert-lm',
         'foundry-local',
         'tensorrt-llm',
         'sglang',
@@ -23,6 +24,7 @@ describe('engine order and names', () => {
       'sglang',
       'tensorrt-llm',
       'foundry-local',
+      'litert-lm',
     ])
   })
 
@@ -37,6 +39,7 @@ describe('engine order and names', () => {
     ['sglang', 'SGLang'],
     ['tensorrt-llm', 'TensorRT-LLM'],
     ['foundry-local', 'Foundry Local'],
+    ['litert-lm', 'LiteRT-LM'],
     ['something', 'something'],
   ])('%s is %s', (id, name) => expect(engineName(id)).toBe(name))
 })
@@ -48,6 +51,7 @@ describe('engineFamily', () => {
     ['vllm', 'managed'],
     ['tensorrt-llm', 'managed'],
     ['foundry-local', 'foundry'],
+    ['litert-lm', 'litert'],
     ['mlx', 'build'],
     ['something-new', 'build'],
   ])('%s is %s, by the core’s kinds', (id, family) => expect(engineFamily(id)).toBe(family))

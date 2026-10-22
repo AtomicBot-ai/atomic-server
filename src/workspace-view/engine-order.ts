@@ -1,7 +1,7 @@
 /**
  * Engines in the order and by the names both UIs show them (spec server-engine-settings): llama.cpp's
  * family first, MLX, then the managed engines in the desktop app's order (vLLM, SGLang, TensorRT-LLM),
- * then Foundry Local; an engine this list does not know goes last, as given. Which engines exist is the
+ * then Foundry Local and LiteRT-LM; an engine this list does not know goes last, as given. Which engines exist is the
  * core's answer (`engines.list`), never this list.
  */
 
@@ -16,6 +16,7 @@ const ORDER = [
   'sglang',
   'tensorrt-llm',
   'foundry-local',
+  'litert-lm',
 ] as const
 
 const NAMES: Readonly<Record<string, string>> = {
@@ -27,6 +28,7 @@ const NAMES: Readonly<Record<string, string>> = {
   'sglang': 'SGLang',
   'tensorrt-llm': 'TensorRT-LLM',
   'foundry-local': 'Foundry Local',
+  'litert-lm': 'LiteRT-LM',
   'sd-cpp': 'stable-diffusion.cpp',
 }
 
@@ -43,10 +45,11 @@ export function orderEngines<T extends string>(ids: readonly T[]): T[] {
 
 /**
  * What kind of engine `id` is, by the core's `ENGINE_KINDS`: llama.cpp's family, a managed engine
- * (container, plan, consent), Foundry Local (accelerators, variants), or an engine of builds.
+ * (container, plan, consent), Foundry Local or LiteRT-LM (accelerators, variants), or an engine of builds.
  */
-export function engineFamily(id: string): 'llamacpp' | 'managed' | 'foundry' | 'build' {
+export function engineFamily(id: string): 'llamacpp' | 'managed' | 'foundry' | 'litert' | 'build' {
   if (id === 'foundry-local') return 'foundry'
+  if (id === 'litert-lm') return 'litert'
   const kind = (ENGINE_KINDS as Readonly<Record<string, string>>)[id]
   return kind === 'llamacpp' ? 'llamacpp' : kind === 'managed' ? 'managed' : 'build'
 }

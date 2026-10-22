@@ -117,7 +117,7 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Server | `atc logs` | Tail of the server log; `-f` follows it | works |
 | Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on an engine (`--engine`; a managed engine shows its load stages); stop it | works |
 | Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines' and Foundry Local's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local)) |
-| Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, Foundry Local, the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs | works (see [Managed engines](#managed-engines)) |
+| Models & engines | `atc engines list\|install\|status\|rm\|accelerators` | Engines (llama.cpp, MLX, Foundry Local, LiteRT-LM (`litert-lm`), the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs; `engines accelerators foundry-local\|litert-lm` lists and prepares accelerators | works (see [Managed engines](#managed-engines), [LiteRT-LM](#litert-lm)) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
 | Access | `atc chat` | Send a message to an OpenAI-compatible model | works |
@@ -213,6 +213,22 @@ once prepared, and downloads only one the core says runs (`ok`). Files come with
 Atomic Chat's list; a Microsoft catalog model is marked unverified. A download runs in the server into
 `<data>/foundry-local/models/<variant>/`, continues across an expired Azure link, and writes `model.yml`
 last. The list is cached for an hour; `ATC_FOUNDRY_LOCAL_MODELS_URL` names another one.
+
+## LiteRT-LM
+
+LiteRT-LM runs Google's `.litertlm` models on the CPU, the GPU and an Intel NPU through Google's library,
+where the core registers it (macOS 12+ on Apple Silicon, Linux x64/arm64 with glibc 2.27+, Windows x64);
+elsewhere every `litert-lm` command says the engine is not available on this platform. The build comes
+from PyPI with its sha256 checked. An NPU variant needs OpenVINO, which the core offers only on Windows
+with a Lunar Lake or Panther Lake NPU; `atc` prepares it after the install, as the app does, and nothing
+else is prepared on Linux or macOS:
+
+```bash
+atc engines install litert-lm [--no-accelerators]    # the build, then openvino where an Intel NPU wants it
+atc engines accelerators litert-lm [--refresh]       # the NPU generation and openvino, prepared or not
+atc engines accelerators litert-lm --prepare         # download openvino (about 85 MB) through atc's proxy
+atc engines status litert-lm                         # the active build
+```
 
 ## Where data lives
 
