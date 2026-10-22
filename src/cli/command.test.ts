@@ -14,8 +14,8 @@ const root = defineCommand({
           name: 'pull',
           summary: 'pull',
           options: {
-            quant: { type: 'string', description: 'q' },
-            force: { type: 'boolean', short: 'f', description: 'f' },
+            'quant': { type: 'string', description: 'q' },
+            'force': { type: 'boolean', short: 'f', description: 'f' },
             'no-verify': { type: 'boolean', description: 'n' },
           },
           positionals: [{ name: 'id', description: 'id', required: true }],

@@ -68,7 +68,7 @@ export interface LiteRtModelSetupsDeps extends Omit<LiteRtPlanDeps, 'files'> {
 }
 
 export class LiteRtModelSetups {
-  private readonly running = new Map<string, { cancelled: boolean }>()
+  private readonly running = new Map<string, { cancelled: boolean; done?: Promise<void> }>()
   private readonly mutations = new SerialWork()
   constructor(private readonly d: LiteRtModelSetupsDeps) {}
 
@@ -90,9 +90,13 @@ export class LiteRtModelSetups {
     )
   }
 
-  install(input: WorkspaceInput): Promise<LiteRtModelJob> {
+  async install(input: WorkspaceInput): Promise<LiteRtModelJob> {
     const id = String(input['request_id'])
     const digest = String(input['plan_digest'])
+    // A cancelled worker still unwinding writes its last stage through the same lane: let it end first,
+    // then continue the job afresh.
+    const prior = this.running.get(id)
+    if (prior?.cancelled) await prior.done
     return this.mutations.run(id, async () => {
       const existing = await readDocument<LiteRtModelJob | null>(this.path(id), null)
       if (existing) {
@@ -129,10 +133,10 @@ export class LiteRtModelSetups {
 
   private async start(job: LiteRtModelJob): Promise<LiteRtModelJob> {
     if (job.stage === 'ready' || this.running.has(job.id)) return job
-    const worker = { cancelled: false }
+    const worker: { cancelled: boolean; done?: Promise<void> } = { cancelled: false }
     this.running.set(job.id, worker)
     await this.write(job, 'queued')
-    void this.run(job, worker).finally(() => {
+    worker.done = this.run(job, worker).finally(() => {
       if (this.running.get(job.id) === worker) this.running.delete(job.id)
     })
     return { ...job }

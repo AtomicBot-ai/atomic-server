@@ -11,6 +11,7 @@
 import type { CoreEventMessage } from '@atomic-chat/core/client'
 import type { CommandContext } from '../cli/index.js'
 import { AtcError } from '../cli/index.js'
+import { unavailableHere } from '../workspace-service/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { loadStageText } from '../workspace-view/index.js'
 import { attachWorkspace } from './control.js'
@@ -64,11 +65,7 @@ export async function runModel(
   // litert-lm-server): say so here.
   if (named === 'foundry-local' || named === 'litert-lm') {
     const { engines } = (await service.execute('engines.list')) as { engines: Array<{ engine: string }> }
-    if (!engines.some((e) => e.engine === named))
-      throw new AtcError(
-        'ATC_USAGE',
-        `${named === 'litert-lm' ? 'LiteRT-LM' : 'Foundry Local'} is not available on this platform: the core does not offer it here.`
-      )
+    if (!engines.some((e) => e.engine === named)) throw unavailableHere(named)
   }
   const provider =
     named ??

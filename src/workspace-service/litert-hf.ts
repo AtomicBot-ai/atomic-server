@@ -32,7 +32,11 @@ export function classifyLiteRtFile(path: string): LiteRtFileClass | null {
   const base = name.slice(0, -'.litertlm'.length)
   for (const [suffix, variant] of SUFFIXES) {
     const match = suffix.exec(base)
-    if (match) return { kind: 'variant', stem: base.slice(0, match.index), ...variant }
+    // Another chip's file may end in `_gpu` too (`_mt6993_gpu`): its stem still names that chip.
+    if (match)
+      return NOT_OFFERED.test(base.slice(0, match.index))
+        ? null
+        : { kind: 'variant', stem: base.slice(0, match.index), ...variant }
   }
   if (NOT_OFFERED.test(base)) return null
   return { kind: 'plain', stem: base }
@@ -79,6 +83,19 @@ export function hfVariants(files: readonly HfFile[], allowed: readonly LiteRtLmB
       if (!hasGpuFile) add(c.stem, 'gpu', file)
     }
   return variants.sort((a, b) => ORDER[a.backend] - ORDER[b.backend])
+}
+
+/**
+ * `variants` with ids no other model holds: a taken id is named by its repository (`<name>-<id>`), so
+ * the id a search shows does not depend on which models that search found before it.
+ */
+export function uniqueHfIds(
+  variants: readonly HfVariant[],
+  repo: string,
+  taken: ReadonlySet<string>
+): HfVariant[] {
+  const name = slug(repo.split('/').at(-1) ?? repo)
+  return variants.map((v) => (taken.has(v.id) ? { ...v, id: `${name}-${v.id}` } : v))
 }
 
 export interface HfRepository {

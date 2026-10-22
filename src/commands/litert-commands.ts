@@ -8,7 +8,13 @@
 import { AtcError } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
 import { randomUUID } from 'node:crypto'
-import type { LiteRtAcceleratorsView, LiteRtModelPlan, LiteRtSearchResult } from '../contract/index.js'
+import type {
+  LiteRtAcceleratorsView,
+  LiteRtModelJob,
+  LiteRtModelPlan,
+  LiteRtSearchResult,
+} from '../contract/index.js'
+import type { WorkspaceClient } from '../workspace-service/index.js'
 import { formatSize, liteRtVariantLabel, liteRtVerdictText } from '../workspace-view/index.js'
 import { followPrepare } from './accelerator-prepare.js'
 import { attachWorkspace } from './control.js'
@@ -117,6 +123,13 @@ export async function pullLiteRtModel(
   values: Record<string, unknown>
 ): Promise<number> {
   const { service } = await attachWorkspace(ctx)
+  // A request id that names a job continues that job: planned again, Hugging Face's moved `main` or
+  // another --backend would make another digest, which the job refuses.
+  const rid = values['request-id']
+  const own = (await service.snapshot()).setups.find(
+    (j) => (j as { kind?: string }).kind === 'litert-model' && (j as { id?: string }).id === rid
+  ) as LiteRtModelJob | undefined
+  if (own) return installLiteRtJob(ctx, service, own.plan, own.id, values)
   const plan = (await service.execute('litert.plan', {
     model,
     ...(typeof values['backend'] === 'string' ? { backend: values['backend'] } : {}),
@@ -139,7 +152,18 @@ export async function pullLiteRtModel(
   }
   if (!ctx.flags.json) print()
   if (plan.blockers.length) throw new AtcError('ATC_USAGE', plan.blockers.join(' '))
-  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
+  const id = typeof rid === 'string' ? rid : randomUUID()
+  return installLiteRtJob(ctx, service, plan, id, values)
+}
+
+/** Start or continue job `id` of `plan` in the server, then follow it unless --detach. */
+async function installLiteRtJob(
+  ctx: CommandContext,
+  service: WorkspaceClient,
+  plan: LiteRtModelPlan,
+  id: string,
+  values: Record<string, unknown>
+): Promise<number> {
   await service.execute('litert.install', { request_id: id, plan_digest: plan.digest })
   const cancel = `atc models pull --cancel ${id} --engine litert-lm`
   if (values['detach']) {

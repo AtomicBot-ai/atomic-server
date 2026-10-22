@@ -125,7 +125,7 @@ describe('LiteRT-LM in the admin', () => {
       .map((o) => o.textContent)
     expect(options).toEqual([
       expect.stringMatching(/GPU .* ok/),
-      expect.stringMatching(/NPU \(intel-lnl\) .* accelerator-not-prepared/),
+      expect.stringMatching(/NPU intel-lnl .* accelerator-not-prepared/),
     ])
     await userEvent.selectOptions(
       within(dialog).getByRole('combobox', { name: 'Variant' }),

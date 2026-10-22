@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyLiteRtFile, hfVariants } from './litert-hf.js'
+import { classifyLiteRtFile, hfVariants, uniqueHfIds } from './litert-hf.js'
 
 describe('classifyLiteRtFile', () => {
   it.each([
@@ -26,6 +26,9 @@ describe('classifyLiteRtFile', () => {
     'gemma-4-E2B-it_mt6993.litertlm',
     'gemma-4-E2B-it_qualcomm_sm8750.litertlm',
     'gemma-4-E2B-it_intel_NVL.litertlm',
+    'gemma-4-E2B-it_mt6993_gpu.litertlm',
+    'gemma-4-E2B-it_sm8750-gpu.litertlm',
+    'gemma-4-E2B-it-web_gpu.litertlm',
     'gemma-4-E2B-it.task',
     'README.md',
   ])('offers nothing for %s', (path) => expect(classifyLiteRtFile(path)).toBeNull())
@@ -74,5 +77,19 @@ describe('hfVariants', () => {
 
   it('skips a file without an LFS sha256', () => {
     expect(hfVariants([{ path: 'm.litertlm', size: 10, sha256: null }], ['cpu'])).toEqual([])
+  })
+})
+
+describe('uniqueHfIds', () => {
+  const v = (id: string) => ({
+    id,
+    backend: 'cpu' as const,
+    file: { path: 'm.litertlm', size: 1, sha256: 'a'.repeat(64) },
+  })
+  it('keeps an id nobody else holds, and names a taken one by its repository, whatever came before', () => {
+    expect(uniqueHfIds([v('gemma-cpu')], 'litert-community/Gemma-X', new Set())).toEqual([v('gemma-cpu')])
+    expect(
+      uniqueHfIds([v('gemma-cpu')], 'litert-community/Gemma-X', new Set(['gemma-cpu'])).map((x) => x.id)
+    ).toEqual(['gemma-x-gemma-cpu'])
   })
 })

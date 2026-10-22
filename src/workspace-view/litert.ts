@@ -5,9 +5,9 @@ import { formatSize } from './engines.js'
 const PREPARE = 'atc engines accelerators litert-lm --prepare'
 const INSTALL = 'atc engines install litert-lm'
 
-/** `GPU`, `CPU`, `NPU (intel-lnl)`. */
+/** `GPU`, `CPU`, `NPU intel-lnl`. */
 export function liteRtVariantLabel(v: { backend: string; npu?: string | undefined }): string {
-  return v.npu ? `${v.backend.toUpperCase()} (${v.npu})` : v.backend.toUpperCase()
+  return v.npu ? `${v.backend.toUpperCase()} ${v.npu}` : v.backend.toUpperCase()
 }
 
 /** The core's verdict on a variant, with the command that changes it where there is one. */

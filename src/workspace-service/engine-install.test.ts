@@ -48,7 +48,7 @@ describe('installEngine, engines of builds', () => {
     const link = fakeCoreLink()
     link.responses['POST /engines/versions'] = versions('mlx')
     await expect(installEngine(link, 'litert-lm')).rejects.toThrow(
-      'litert-lm is not available on this platform'
+      'LiteRT-LM is not available on this platform: the core does not offer it here.'
     )
     expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
   })

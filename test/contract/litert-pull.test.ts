@@ -150,4 +150,39 @@ describe('atc models pull --engine litert-lm', () => {
     expect(await t.run(['models', 'pull', '--cancel', 'lr-1', '--engine', 'litert-lm'])).toBe(0)
     expect(out()).toContain('lr-1')
   })
+
+  it('continues a download by its request id even when a new plan would differ', async () => {
+    const models = await server()
+    hub.files.set(`/${REPO}/resolve/${REV}/gemma-4-E4B-it-gpu.litertlm`, { body: GPU, holdAfterBytes: 2 })
+    const args = [
+      'models',
+      'pull',
+      'gemma-4-e4b',
+      '--engine',
+      'litert-lm',
+      '--detach',
+      '--request-id',
+      'lr-2',
+    ]
+    expect(await t.run(args)).toBe(0)
+    expect(await t.run(['models', 'pull', '--cancel', 'lr-2', '--engine', 'litert-lm'])).toBe(0)
+    hub.release()
+    // Planned again, the pull would now take another variant (another digest): the job keeps its own.
+    hub.files.set(`/${REPO}/resolve/${REV}/gemma-4-E4B-it-gpu.litertlm`, { body: GPU })
+    const retry = [
+      'models',
+      'pull',
+      'gemma-4-e4b',
+      '--engine',
+      'litert-lm',
+      '--backend',
+      'cpu',
+      '--request-id',
+      'lr-2',
+    ]
+    const code = await t.run(retry)
+    expect(code, t.io.err.join('')).toBe(0)
+    expect(existsSync(join(models, 'gemma-4-e4b-gpu', 'model.yml'))).toBe(true)
+    expect(existsSync(join(models, 'gemma-4-e4b-cpu'))).toBe(false)
+  })
 })

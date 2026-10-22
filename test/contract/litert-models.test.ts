@@ -115,7 +115,7 @@ describe('atc models catalog --engine litert-lm', () => {
     await server('linux', 'x64')
     t.link.responses['POST /engines/versions'] = { engines: [] }
     expect(await t.run(['models', 'catalog', '--engine', 'litert-lm'])).toBe(2)
-    expect(err()).toContain('LiteRT-LM is not available on this platform')
+    expect(err()).toContain('LiteRT-LM is not available on this platform: the core does not offer it here.')
   })
 })
 

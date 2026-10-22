@@ -10,9 +10,9 @@
 import type { LiteRtLmBackendId, LiteRtLmCheckResult } from '@atomic-chat/core/contracts'
 import type { LiteRtModelRow, LiteRtSearchResult, LiteRtVariantRow } from '../contract/index.js'
 import type { CoreLink } from '../core-link/index.js'
-import { AtcError } from '../errors/index.js'
+import { unavailableHere } from './engine-install.js'
 import type { ConfListOptions } from './conf-list.js'
-import { hfLiteRtRepositories, hfVariants } from './litert-hf.js'
+import { hfLiteRtRepositories, hfVariants, uniqueHfIds } from './litert-hf.js'
 import { fetchLiteRtLmList } from './litert-list.js'
 import type { LiteRtLmPlatform } from './litert-list.js'
 
@@ -27,7 +27,7 @@ export interface LiteRtSearchDeps {
   token?: string | undefined
 }
 
-const unavailable = () => new AtcError('ATC_USAGE', 'LiteRT-LM is not available on this platform.')
+const unavailable = () => unavailableHere('litert-lm')
 
 /** This machine as conf names platforms; `null` where the library does not ship. */
 export function liteRtPlatform(platform: string, arch: string): LiteRtLmPlatform | null {
@@ -80,14 +80,14 @@ export async function liteRtSearch(
     return verdicts.get(key)!
   }
   const rows: LiteRtModelRow[] = []
-  const used = new Set<string>()
+  // conf's ids, on every platform: what a Hugging Face variant must not take, the same for every query.
+  const curatedIds = new Set(listed.list.models.flatMap((m) => m.variants.map((v) => v.id)))
   const add = async (
     base: Omit<LiteRtModelRow, 'variants' | 'default_variant'>,
     variants: Omit<LiteRtVariantRow, 'verdict'>[]
   ) => {
     if (variants.length === 0) return
     const withVerdicts = await Promise.all(variants.map(async (v) => ({ ...v, verdict: await verdictOf(v) })))
-    for (const v of withVerdicts) used.add(v.id)
     rows.push({
       ...base,
       variants: withVerdicts,
@@ -124,7 +124,6 @@ export async function liteRtSearch(
       const repositories = await hfLiteRtRepositories(listed.list.huggingface.orgs, query, d)
       for (const r of repositories) {
         if (curated.has(r.repo.toLowerCase())) continue
-        const org = r.repo.split('/')[0]!.toLowerCase()
         await add(
           {
             origin: 'huggingface',
@@ -137,8 +136,8 @@ export async function liteRtSearch(
             repo: r.repo,
             revision: r.revision,
           },
-          // A variant id names a folder: one another model already holds is told apart by the organisation.
-          hfVariants(r.files, allowed).map((v) => (used.has(v.id) ? { ...v, id: `${org}-${v.id}` } : v))
+          // A variant id names a folder: one conf already holds is told apart by the repository.
+          uniqueHfIds(hfVariants(r.files, allowed), r.repo, curatedIds)
         )
       }
     } catch (error) {

@@ -37,7 +37,7 @@ export interface AcceleratorsRoutes {
   route: string
   /** `<engine>:accelerators`. */
   event: string
-  /** The engine's name in "… is not available on this platform." */
+  /** The engine's name in "… is not available on this platform: the core does not offer it here." */
   label: string
   /** The listing takes `?force=1` to ask the library again. */
   force: boolean
@@ -71,9 +71,13 @@ export class EngineAccelerators<
       .request<Listing>('GET', `${this.routes.route}${query}`)
       .catch((error: unknown) => {
         if (error instanceof AtomicCoreError && error.code === 'PROVIDER_NOT_FOUND')
-          throw new AtcError('ATC_USAGE', `${this.routes.label} is not available on this platform.`, {
-            details: error.message,
-          })
+          throw new AtcError(
+            'ATC_USAGE',
+            `${this.routes.label} is not available on this platform: the core does not offer it here.`,
+            {
+              details: error.message,
+            }
+          )
         throw error
       })
     return {

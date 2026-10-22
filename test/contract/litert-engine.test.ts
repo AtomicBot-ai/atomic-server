@@ -88,7 +88,7 @@ describe('atc engines install litert-lm', () => {
     t = testRun()
     t.link.responses['POST /engines/versions'] = { engines: [] }
     expect(await t.run(['engines', 'install', 'litert-lm'])).toBe(2)
-    expect(err()).toContain('litert-lm is not available on this platform')
+    expect(err()).toContain('LiteRT-LM is not available on this platform: the core does not offer it here.')
     expect(t.link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
   })
 })
@@ -141,5 +141,25 @@ describe('atc engines accelerators litert-lm', () => {
     )
     expect(await t.run(['engines', 'accelerators', 'litert-lm'])).toBe(2)
     expect(err()).toContain('LiteRT-LM is not available on this platform')
+  })
+})
+
+describe('atc engines status|rm litert-lm', () => {
+  it('shows the active build after the install, and removes a build through the engines layer', async () => {
+    linux()
+    const build = { version: '0.18.1', variant: 'linux-x64' }
+    t.link.responses['POST /engines/versions'] = {
+      engines: [
+        { engine: 'litert-lm', kind: 'engine-build', builds: [{ ...build, active: true }], active: build },
+      ],
+    }
+    expect(await t.run(['engines', 'status', 'litert-lm'])).toBe(0)
+    expect(out()).toMatch(/litert-lm[\s\S]*0\.18\.1[\s\S]*linux-x64/)
+    expect(await t.run(['engines', 'rm', 'litert-lm', '--build', '0.18.1/linux-x64', '--yes'])).toBe(0)
+    expect(
+      t.link.calls.some(
+        (c) => c.method === 'DELETE' && c.path === '/engines/litert-lm/builds/0.18.1/linux-x64'
+      )
+    ).toBe(true)
   })
 })

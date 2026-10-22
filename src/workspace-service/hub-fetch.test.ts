@@ -29,6 +29,16 @@ describe('hubAuthorized', () => {
     expect(cdn.requests.at(-1)?.range).toBe('bytes=0-')
   })
 
+  it('keeps a Request’s own headers', async () => {
+    hub.files.set('/repo/resolve/sha/r.litertlm', { body: Buffer.from('abcdef') })
+    const request = hubAuthorized(fetch, hubBase, 'hf_secret')
+    const response = await request(
+      new Request(`${hubBase}/repo/resolve/sha/r.litertlm`, { headers: { Range: 'bytes=2-' } })
+    )
+    expect(await response.text()).toBe('cdef')
+    expect(hub.requests.at(-1)).toMatchObject({ range: 'bytes=2-', authorization: 'Bearer hf_secret' })
+  })
+
   it('is the plain fetch without a token', () => {
     expect(hubAuthorized(fetch, hubBase, undefined)).toBe(fetch)
   })
