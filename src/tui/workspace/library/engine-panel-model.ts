@@ -30,6 +30,8 @@ import {
 } from '../../../workspace-view/index.js'
 import { foundryModel } from './foundry-panel-model.js'
 import type { FoundryPanelData } from './foundry-panel-model.js'
+import { liteRtModel } from './litert-panel-model.js'
+import type { LiteRtPanelData } from './litert-panel-model.js'
 
 /** The settings form of the open panel: the core's schema and values, and the person's edits. */
 export interface EngineForm {
@@ -44,14 +46,16 @@ export interface EngineForm {
 
 export interface EnginePanel {
   engine: string
-  /** A managed engine (plan, operations), Foundry Local (accelerators, variants) or an engine of builds. */
-  kind: 'managed' | 'foundry' | 'build'
+  /** A managed engine (plan, operations), Foundry Local or LiteRT-LM (accelerators, variants), or an engine of builds. */
+  kind: 'managed' | 'foundry' | 'litert' | 'build'
   /** For an engine of builds: its active build as Library lists it. */
   summary: string
   mode: 'engine' | 'settings' | 'models'
   form: EngineForm | null
   /** Foundry Local's accelerators, model list and reviewed plan. */
   foundry: FoundryPanelData | null
+  /** LiteRT-LM's accelerator, model list and reviewed plan. */
+  litert?: LiteRtPanelData | null
   /** Opened by guided setup: once the engine is ready it offers to go on to the models. */
   inSetup?: boolean
   /** An update the core offers, shown for consent before its reinstall removes the installed image. */
@@ -91,6 +95,7 @@ export const panelOperation = (p: EnginePanel, live: WorkspaceSnapshot | null) =
 export function panelRefreshKey(p: EnginePanel, live: WorkspaceSnapshot | null): string {
   // Foundry Local: again at every snapshot while a prepare runs; an engine of builds: never.
   if (p.kind === 'foundry') return p.foundry?.view?.preparing ? `prepare:${live?.captured_at ?? 0}` : p.seen
+  if (p.kind === 'litert') return p.litert?.view?.preparing ? `prepare:${live?.captured_at ?? 0}` : p.seen
   if (p.kind === 'build') return p.seen
   return engineRefreshKey(p.engine, live)
 }
@@ -101,6 +106,7 @@ export function enginePanelModel(
 ): { lines: PanelLine[]; buttons: PanelButton[]; fields?: PanelButton[] } {
   if (p.mode === 'settings') return settingsModel(p)
   if (p.kind === 'foundry') return foundryModel(p)
+  if (p.kind === 'litert') return liteRtModel(p)
   const lines: PanelLine[] = [{ text: engineName(p.engine), tone: 'title' }]
   const buttons: PanelButton[] = []
   const say = (text: string, tone: PanelLine['tone'] = 'text') => lines.push({ text, tone })

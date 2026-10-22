@@ -7,6 +7,7 @@ const FORMAT_NAMES: Record<LibraryFormat, string> = {
   gguf: 'GGUF',
   safetensors: 'Safetensors',
   foundry: 'Foundry Local',
+  litert: 'LiteRT-LM',
 }
 import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'

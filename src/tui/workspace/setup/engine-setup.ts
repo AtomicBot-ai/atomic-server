@@ -1,5 +1,6 @@
 /**
- * Guided setup with a managed engine or Foundry Local (spec managed-models-server, foundry-local-server):
+ * Guided setup with a managed engine, Foundry Local or LiteRT-LM (specs managed-models-server,
+ * foundry-local-server, litert-lm-server):
  * the same workspace operations as `atc models pull --engine`. An engine not installed yet is installed
  * first in its engine panel, which then offers "Choose models >". The Models step lists the engine's
  * curated models (or a search); Review shows the core's verdict and the download plan; the download is
@@ -12,6 +13,7 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type {
   FoundryModelPlan,
+  LiteRtModelPlan,
   ManagedModelPlan,
   ManagedVerdict,
   WorkspaceSnapshot,
@@ -28,9 +30,27 @@ import { engineAction } from '../library/engine-actions.js'
 
 type Context = Pick<ActionContext, 'controller' | 'get' | 'update'>
 
-/** An engine setup takes this path for: a managed engine or Foundry Local. */
+/** An engine setup takes this path for: a managed engine, Foundry Local or LiteRT-LM. */
 export const pathKind = (engine: string): EngineSetupPath['kind'] | null =>
-  ENGINE_KINDS[engine as EngineId] === 'managed' ? 'managed' : engine === 'foundry-local' ? 'foundry' : null
+  ENGINE_KINDS[engine as EngineId] === 'managed'
+    ? 'managed'
+    : engine === 'foundry-local'
+      ? 'foundry'
+      : engine === 'litert-lm'
+        ? 'litert'
+        : null
+
+/** The operations of a path's own downloads: plan, install. */
+const OPS = {
+  foundry: { plan: 'foundry.plan', install: 'foundry.install', job: 'foundry-model' },
+  litert: { plan: 'litert.plan', install: 'litert.install', job: 'litert-model' },
+  managed: { plan: 'managed.plan', install: 'managed.install', job: 'managed-model' },
+} as const
+const JOB_INSTALL: Record<EngineSetupJob['kind'], string> = {
+  'managed-model': 'managed.install',
+  'foundry-model': 'foundry.install',
+  'litert-model': 'litert.install',
+}
 
 /** The job's state as the snapshot shows it: its stage, and its bytes while it downloads. */
 export function pathJob(setup: SetupView, snapshot: WorkspaceSnapshot | null) {
@@ -61,8 +81,8 @@ async function rows(
   path: EngineSetupPath,
   query: string
 ): Promise<EngineSetupRow[]> {
-  if (path.kind === 'foundry') {
-    const found = (await c.runtime.execute('models.search', { engine: 'foundry-local', query })) as {
+  if (path.kind === 'foundry' || path.kind === 'litert') {
+    const found = (await c.runtime.execute('models.search', { engine: path.engine, query })) as {
       models: Array<{ model_id: string; name: string; default_variant: string | null; unverified: boolean }>
     }
     return found.models.map((m) => ({
@@ -150,8 +170,9 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   }
   const current = view.path
   if (!current || !id.startsWith('setup-')) return false
-  // A variant that waits on Foundry Local itself: its panel installs it or prepares the accelerator.
+  // A variant that waits on Foundry Local or LiteRT-LM itself: its panel installs it or prepares the accelerator.
   if (id === 'setup-path-foundry') return openPanel('foundry-local')
+  if (id === 'setup-path-litert') return openPanel('litert-lm')
   if (id === 'setup-search' && view.stage === 'models')
     return run(async () => path({ rows: await rows(c, current, view.query) }))
   if (id.startsWith('setup-path-repo:')) {
@@ -167,7 +188,11 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
           plan: plan as ManagedModelPlan,
           verdicts: (checked as { verdicts: ManagedVerdict[] }).verdicts,
         })
-      } else path({ plan: (await c.runtime.execute('foundry.plan', { model: row.id })) as FoundryModelPlan })
+      } else
+        path({
+          plan: (await c.runtime.execute(OPS[current.kind].plan, { model: row.id })) as
+            FoundryModelPlan | LiteRtModelPlan,
+        })
       change({ stage: 'review' })
       focus('setup-path-install')
     })
@@ -177,13 +202,13 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
     return run(async () => {
       if (plan.blockers.length) throw new Error(plan.blockers.join(' '))
       const requestId = `terminal-${randomUUID()}`
-      await c.runtime.execute(current.kind === 'managed' ? 'managed.install' : 'foundry.install', {
+      await c.runtime.execute(OPS[current.kind].install, {
         request_id: requestId,
         plan_digest: plan.digest,
       })
       const job: EngineSetupJob = {
         id: requestId,
-        kind: current.kind === 'managed' ? 'managed-model' : 'foundry-model',
+        kind: OPS[current.kind].job,
         engine: current.engine,
         model: 'variant_id' in plan ? plan.variant_id : plan.repository,
       }
@@ -198,7 +223,7 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
     const digest = pathJob(view, get().workspace)?.digest
     return run(async () => {
       if (!digest) throw new Error('The server no longer knows this download; choose the model again.')
-      await c.runtime.execute(job.kind === 'managed-model' ? 'managed.install' : 'foundry.install', {
+      await c.runtime.execute(JOB_INSTALL[job.kind], {
         request_id: job.id,
         plan_digest: digest,
       })

@@ -14,6 +14,7 @@ import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import type { WorkspaceState } from '../state.js'
 import { settingsAction } from './engine-settings.js'
 import { foundryAction, refreshFoundry } from './foundry-actions.js'
+import { liteRtAction, refreshLiteRt } from './litert-actions.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ManagedInstallResult, ServerLaunch } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
@@ -51,10 +52,17 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
   const { get, update, controller: c } = ctx
   if (await settingsAction(id, ctx)) return true
   if (await foundryAction(id, ctx)) return true
+  if (await liteRtAction(id, ctx)) return true
   if (id.startsWith('engine-open:')) {
     const engine = id.slice('engine-open:'.length)
     const managed = isManagedEngine(engine)
-    const kind = managed ? 'managed' : engine === 'foundry-local' ? 'foundry' : 'build'
+    const kind = managed
+      ? 'managed'
+      : engine === 'foundry-local'
+        ? 'foundry'
+        : engine === 'litert-lm'
+          ? 'litert'
+          : 'build'
     const started = await c.runtime.start().catch(() => ({ launch: 'terminal' as ServerLaunch }))
     update((v) => ({
       ...v,
@@ -165,6 +173,7 @@ function panel(ctx: PanelContext, engine: string, part: Partial<EnginePanel>) {
 async function refresh(ctx: PanelContext): Promise<void> {
   const p = ctx.get().enginePanel
   if (p?.kind === 'foundry') return refreshFoundry(ctx, panelRefreshKey(p, ctx.get().workspace))
+  if (p?.kind === 'litert') return refreshLiteRt(ctx, panelRefreshKey(p, ctx.get().workspace))
   if (!p || p.kind !== 'managed') return
   panel(ctx, p.engine, { busy: true, seen: panelRefreshKey(p, ctx.get().workspace) })
   try {

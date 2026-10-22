@@ -120,3 +120,31 @@ it('loads a store model with the provider of the row picked', async () => {
   await activate('installed:0:tensorrt-llm', ctx)
   expect(loadModel).toHaveBeenCalledWith('tensorrt-llm', store.id)
 })
+
+it('keeps a LiteRT-LM variant on litert-lm, and asks for another model on llama.cpp', async () => {
+  const { ctx, loadModel } = harness()
+  const variant = {
+    id: 'gemma-4-e4b-gpu',
+    name: 'Gemma 4 E4B (GPU)',
+    provider: 'litert-lm',
+    providers: ['litert-lm'],
+  }
+  const litert = {
+    id: 'litert-lm',
+    provider: 'litert-lm',
+    version: '0.18.1',
+    backend: 'linux-x64',
+    installed: true,
+  }
+  ctx.update((s) => ({ ...s, installed: [variant], model: variant.id }))
+  await activate('choose-engine', ctx)
+  ctx.update((s) => ({ ...s, engines: [litert, s.engines[0]!] }))
+  await activate('pick-engine:0', ctx)
+  expect(loadModel).toHaveBeenCalledWith('litert-lm', 'gemma-4-e4b-gpu')
+  expect(ctx.get().model).toBe('gemma-4-e4b-gpu')
+  await activate('choose-engine', ctx)
+  ctx.update((s) => ({ ...s, engines: [litert, ...s.engines.filter((e) => e.provider !== 'litert-lm')] }))
+  await activate('pick-engine:1', ctx)
+  expect(ctx.get().model).toBe('')
+  expect(ctx.get().message).toContain('Choose a compatible model')
+})

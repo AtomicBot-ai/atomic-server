@@ -1,9 +1,9 @@
 /**
- * The TUI Library for managed engines and Foundry Local (spec managed-models-server, foundry-local-server):
- * the text catalog's format filter, a repository without GGUF led to the managed engine that takes it
+ * The TUI Library for managed engines, Foundry Local and LiteRT-LM (specs managed-models-server,
+ * foundry-local-server, litert-lm-server): the text catalog's format filter, a repository without GGUF led to the managed engine that takes it
  * (its plan when that engine is installed, its panel to install it otherwise) instead of "No GGUF file",
  * removal of an installed model (a store model goes for every managed engine), and Downloads rows of
- * the server's store and Foundry Local jobs opened on Cancel or Resume.
+ * the server's store, Foundry Local and LiteRT-LM jobs opened on Cancel or Resume.
  */
 
 import { randomUUID } from 'node:crypto'
@@ -16,9 +16,10 @@ import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { engineAction } from './engine-actions.js'
 import { foundryAction } from './foundry-actions.js'
+import { liteRtAction } from './litert-actions.js'
 import { record } from './library-model.js'
 
-export type LibraryFormat = 'gguf' | 'safetensors' | 'foundry'
+export type LibraryFormat = 'gguf' | 'safetensors' | 'foundry' | 'litert'
 const managed = (engines: readonly string[]) =>
   engines.filter((e) => ENGINE_KINDS[e as EngineId] === 'managed')
 const ACTIVE = ['queued', 'downloading', 'verifying']
@@ -29,6 +30,7 @@ export function libraryFormats(engines: readonly string[]): LibraryFormat[] {
     'gguf',
     ...(managed(engines).length ? (['safetensors'] as const) : []),
     ...(engines.includes('foundry-local') ? (['foundry'] as const) : []),
+    ...(engines.includes('litert-lm') ? (['litert'] as const) : []),
   ]
 }
 
@@ -110,6 +112,10 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
       await engineAction('engine-open:foundry-local', ctx)
       return foundryAction('foundry-models', ctx)
     }
+    if (format === 'litert') {
+      await engineAction('engine-open:litert-lm', ctx)
+      return liteRtAction('litert-models', ctx)
+    }
     patch({ libraryFormat: format, busy: true, selected: 0 })
     try {
       patch({ libraryRows: await catalogRows(ctx, format) })
@@ -155,11 +161,16 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
   return false
 }
 
-/** A Downloads row of a store or Foundry Local job: the operation runner on Cancel while it runs, else Resume. */
+const JOB_TOOLS: Readonly<Record<string, string>> = {
+  'managed-model': 'managed',
+  'foundry-model': 'foundry',
+  'litert-model': 'litert',
+}
+
+/** A Downloads row of a store, Foundry Local or LiteRT-LM job: the operation runner on Cancel while it runs, else Resume. */
 export function jobRunner(job: Record<string, unknown>): Partial<WorkspaceState> | null {
-  const kind = job['kind']
-  if (kind !== 'managed-model' && kind !== 'foundry-model') return null
-  const prefix = kind === 'managed-model' ? 'managed' : 'foundry'
+  const prefix = JOB_TOOLS[String(job['kind'])]
+  if (!prefix) return null
   const running = ACTIVE.includes(String(job['stage']))
   return {
     operations: [...WORKSPACE_OPERATIONS],

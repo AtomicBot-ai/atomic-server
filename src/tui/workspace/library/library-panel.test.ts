@@ -45,7 +45,15 @@ function tui(answers: Record<string, unknown>, over: Partial<ReturnType<typeof c
       }),
       installed: vi.fn(async () => s.installed),
       models: vi.fn(async () => []),
-      setup: { engines: vi.fn(async () => ['llamacpp-upstream', 'vllm', 'tensorrt-llm', 'foundry-local']) },
+      setup: {
+        engines: vi.fn(async () => [
+          'llamacpp-upstream',
+          'vllm',
+          'tensorrt-llm',
+          'foundry-local',
+          'litert-lm',
+        ]),
+      },
     } as unknown as WorkspaceController,
     send: vi.fn(),
     cancel: vi.fn(),
@@ -184,6 +192,98 @@ describe('the TUI catalog for managed engines', () => {
     expect(t.get()).toMatchObject({
       operation: 'foundry.install',
       operationInput: '{"request_id":"f1","plan_digest":"pd"}',
+    })
+  })
+
+  it('opens LiteRT-LM’s models from the catalog’s format filter, with variants and verdicts', async () => {
+    const variant = (id: string, backend: string, verdict: string) => ({
+      id,
+      backend,
+      file: { path: `${id}.litertlm`, size: 2 * 1024 ** 3, sha256: 'a'.repeat(64) },
+      verdict: { verdict, reason: verdict === 'ok' ? null : 'openvino is not prepared' },
+    })
+    const t = tui({
+      'models.catalog': catalogRow,
+      'litert.accelerators': {
+        installed: true,
+        build: '0.18.1/linux-x64',
+        npu: null,
+        accelerators: [],
+        error: null,
+        preparing: false,
+        last_result: null,
+        last_error: null,
+        steps: [],
+      },
+      'models.search': {
+        platform: 'linux-x64',
+        huggingface_unavailable: false,
+        models: [
+          {
+            model_id: 'gemma-4-e4b',
+            name: 'Gemma 4 E4B',
+            unverified: false,
+            gated: false,
+            default_variant: 'gemma-4-e4b-gpu',
+            variants: [variant('gemma-4-e4b-gpu', 'gpu', 'ok'), variant('gemma-4-e4b-cpu', 'cpu', 'ok')],
+          },
+          {
+            model_id: 'litert-community/Qwen3-4B',
+            name: 'Qwen3-4B',
+            unverified: true,
+            gated: false,
+            default_variant: 'qwen3-4b-cpu',
+            variants: [variant('qwen3-4b-cpu', 'cpu', 'ok')],
+          },
+        ],
+      },
+    })
+    await activate('library:catalog', t.ctx)
+    expect(t.screen()).toMatch(/LiteRT-LM/)
+    await activate('format:litert', t.ctx)
+    expect(t.get()).toMatchObject({
+      overlay: 'engine-panel',
+      enginePanel: { engine: 'litert-lm', mode: 'models' },
+    })
+    expect(t.calls('models.search')).toEqual([{ engine: 'litert-lm' }])
+    const rows = t
+      .screen()
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => /LiteRT-LM models|Gemma 4 E4B ·|Qwen3-4B ·/.test(l))
+      .map((l) => l.replace(/^[│|]\s*/, '').replace(/\s*[│|]$/, ''))
+    expect(rows).toMatchInlineSnapshot(`
+      [
+        "LiteRT-LM models",
+        "* Gemma 4 E4B · GPU · 2.0 GiB · ok",
+        "Gemma 4 E4B · CPU · 2.0 GiB · ok",
+        "* Qwen3-4B · CPU · 2.0 GiB · ok · unverified",
+      ]
+    `)
+  })
+
+  it('cancels a running LiteRT-LM download and resumes an interrupted one from Downloads', async () => {
+    const plan = { digest: 'pd', variant_id: 'gemma-4-e4b-gpu' }
+    const t = tui(
+      {},
+      {
+        libraryView: 'downloads',
+        workspace: {
+          setups: [
+            { id: 'l1', kind: 'litert-model', stage: 'downloading', plan },
+            { id: 'l2', kind: 'litert-model', stage: 'interrupted', plan },
+          ],
+          downloads: [],
+        } as never,
+      }
+    )
+    await activate('download-row:0', t.ctx)
+    expect(t.get()).toMatchObject({ operation: 'litert.cancel', operationInput: '{"id":"l1"}' })
+    t.ctx.update((v) => ({ ...v, page: 'models' }))
+    await activate('download-row:1', t.ctx)
+    expect(t.get()).toMatchObject({
+      operation: 'litert.install',
+      operationInput: '{"request_id":"l2","plan_digest":"pd"}',
     })
   })
 })
