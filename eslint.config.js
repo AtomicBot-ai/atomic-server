@@ -63,6 +63,8 @@ export default tseslint.config(
       'coverage',
       'node_modules',
       '.core',
+      // Agent worktrees (`.claude/worktrees/*`) are other checkouts, with their own `dist/`.
+      '.claude',
       // The admin SPA lints with its own browser/React config (`packages/admin-ui/eslint.config.js`).
       'packages/admin-ui',
       '**/*.generated.ts',
