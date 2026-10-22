@@ -16,6 +16,7 @@ const root = defineCommand({
           options: {
             quant: { type: 'string', description: 'q' },
             force: { type: 'boolean', short: 'f', description: 'f' },
+            'no-verify': { type: 'boolean', description: 'n' },
           },
           positionals: [{ name: 'id', description: 'id', required: true }],
           run: async () => 0,
@@ -66,6 +67,15 @@ describe('parseInvocation', () => {
     const inv = parseInvocation(resolveCommand(root, ['models', 'pull', 'x', '--quant', 'Q4', '-f']))
     expect(inv.values).toEqual({ quant: 'Q4', force: true })
     expect(inv.positionals).toEqual(['x'])
+  })
+
+  it('keeps an option named no-<x> under its own name, and --no-<x> still negates a boolean', () => {
+    expect(parseInvocation(resolveCommand(root, ['models', 'pull', 'x', '--no-verify'])).values).toEqual({
+      'no-verify': true,
+    })
+    expect(parseInvocation(resolveCommand(root, ['models', 'pull', 'x', '--no-force'])).values).toEqual({
+      force: false,
+    })
   })
 
   it('reports usage errors with the help hint', () => {
