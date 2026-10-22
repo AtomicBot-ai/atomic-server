@@ -9,6 +9,7 @@ import { operation, workspace } from './control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
 import { foundryListing, pullFoundryModel } from './foundry-commands.js'
+import { litertListing } from './litert-commands.js'
 import { isNoGguf } from '../terminal-setup/index.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
@@ -90,28 +91,35 @@ export const modelsCommand = defineCommand({
         ...engineOption,
       },
       run: (inv, ctx) =>
-        typeof inv.values['engine'] === 'string'
-          ? managedListing(ctx, 'models.catalog', { engine: inv.values['engine'] })
-          : operation(ctx, 'models.catalog', { category: inv.values['category'] }),
+        inv.values['engine'] === 'litert-lm'
+          ? litertListing(ctx, 'models.catalog')
+          : typeof inv.values['engine'] === 'string'
+            ? managedListing(ctx, 'models.catalog', { engine: inv.values['engine'] })
+            : operation(ctx, 'models.catalog', { category: inv.values['category'] }),
     }),
     defineCommand({
       name: 'search',
       summary: 'Search model repositories',
       positionals: [
-        { name: 'query', description: 'Search words or owner/repo (optional for foundry-local)' },
+        {
+          name: 'query',
+          description: 'Search words or owner/repo (optional for foundry-local and litert-lm)',
+        },
       ],
       options: engineOption,
       run: (inv, ctx) =>
         inv.values['engine'] === 'foundry-local'
           ? foundryListing(ctx, inv.positionals[0] ?? '')
-          : !inv.positionals[0]
-            ? Promise.reject(new AtcError('ATC_USAGE', 'Name what to search for.'))
-            : typeof inv.values['engine'] === 'string'
-              ? managedListing(ctx, 'models.search', {
-                  engine: inv.values['engine'],
-                  query: inv.positionals[0],
-                })
-              : operation(ctx, 'models.search', { query: inv.positionals[0] }),
+          : inv.values['engine'] === 'litert-lm'
+            ? litertListing(ctx, 'models.search', inv.positionals[0] ?? '')
+            : !inv.positionals[0]
+              ? Promise.reject(new AtcError('ATC_USAGE', 'Name what to search for.'))
+              : typeof inv.values['engine'] === 'string'
+                ? managedListing(ctx, 'models.search', {
+                    engine: inv.values['engine'],
+                    query: inv.positionals[0],
+                  })
+                : operation(ctx, 'models.search', { query: inv.positionals[0] }),
     }),
     checkModelCommand,
     defineCommand({

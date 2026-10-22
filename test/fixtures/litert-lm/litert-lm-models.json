@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-21T00:00:00Z",
+  "huggingface": {
+    "orgs": ["litert-community"],
+    "filter": "litert-lm",
+    "backends": {
+      "macos-arm64": ["cpu", "gpu"],
+      "linux-x64": ["cpu", "gpu"],
+      "linux-arm64": ["cpu"],
+      "win-x64": ["cpu", "npu"]
+    }
+  },
+  "models": [
+    {
+      "id": "gemma-4-e4b",
+      "name": "Gemma 4 E4B",
+      "description": "Google's Gemma 4 with 4B effective parameters.",
+      "task": "chat",
+      "license": "gemma",
+      "repo": "litert-community/gemma-4-E4B-it-litert-lm",
+      "revision": "1111111111111111111111111111111111111111",
+      "gated": false,
+      "context_length": 32768,
+      "tools": true,
+      "reasoning": true,
+      "vision": true,
+      "variants": [
+        {
+          "id": "gemma-4-e4b-npu-lnl",
+          "backend": "npu",
+          "npu": "intel-lnl",
+          "platforms": ["win-x64"],
+          "file": {
+            "path": "gemma-4-E4B-it_intel_LNL.litertlm",
+            "size": 3000,
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "id": "gemma-4-e4b-gpu",
+          "backend": "gpu",
+          "platforms": ["macos-arm64", "linux-x64", "win-x64"],
+          "file": {
+            "path": "gemma-4-E4B-it-gpu.litertlm",
+            "size": 2000,
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        },
+        {
+          "id": "gemma-4-e4b-cpu",
+          "backend": "cpu",
+          "platforms": ["macos-arm64", "linux-x64", "linux-arm64", "win-x64"],
+          "min_runtime_version": "0.18.0",
+          "file": {
+            "path": "gemma-4-E4B-it.litertlm",
+            "size": 1000,
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gemma-3-1b",
+      "name": "Gemma 3 1B",
+      "description": "Google's Gemma 3, 1B parameters.",
+      "task": "chat",
+      "license": "gemma",
+      "repo": "litert-community/Gemma3-1B-IT",
+      "revision": "2222222222222222222222222222222222222222",
+      "gated": true,
+      "context_length": 4096,
+      "tools": false,
+      "reasoning": false,
+      "vision": false,
+      "variants": [
+        {
+          "id": "gemma-3-1b-cpu",
+          "backend": "cpu",
+          "platforms": ["macos-arm64", "linux-x64", "linux-arm64", "win-x64"],
+          "file": {
+            "path": "gemma3-1b-it-int4.litertlm",
+            "size": 500,
+            "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        }
+      ]
+    }
+  ]
+}

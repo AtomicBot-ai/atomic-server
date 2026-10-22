@@ -9,18 +9,15 @@
  * `schema_version` is refused whole.
  */
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { FOUNDRY_LOCAL_DEVICES, FOUNDRY_LOCAL_EXECUTION_PROVIDERS } from '@atomic-chat/core/contracts'
 import type { FoundryLocalDevice, FoundryLocalExecutionProvider } from '@atomic-chat/core/contracts'
+import { CACHE_TTL_MS, fetchConfList } from './conf-list.js'
+import type { ConfListOptions, ConfListResult } from './conf-list.js'
 
 export const DEFAULT_FOUNDRY_LOCAL_MODELS_URL =
   'https://raw.githubusercontent.com/AtomicBot-ai/atomic-chat-conf/main/models/foundry-local-models.json'
 export const SUPPORTED_SCHEMA_VERSION = 1
-/** One hour, the other conf registries' posture. */
-export const CACHE_TTL_MS = 60 * 60 * 1000
-const FETCH_TIMEOUT_MS = 10_000
+export { CACHE_TTL_MS }
 
 export const FOUNDRY_LOCAL_PLATFORMS = [
   'win-x64',
@@ -221,60 +218,18 @@ export function parseFoundryLocalList(raw: unknown): FoundryLocalList {
   }
 }
 
-export interface FoundryLocalListResult {
-  list: FoundryLocalList
-  source: 'remote' | 'cache' | 'baseline'
-  fetchedAt: number | null
-  /** Why conf's answer was not used, when it was not. */
-  error?: string
-}
-
-export interface FoundryLocalListOptions {
-  /** `<atc>/cache/foundry-local-models.json`. */
-  cachePath: string
-  fetch: typeof fetch
-  url?: string | undefined
-  force?: boolean
-  now?: () => number
-}
-
-async function documentAt(url: string, request: typeof fetch): Promise<unknown> {
-  if (url.startsWith('file://')) return JSON.parse(await readFile(fileURLToPath(url), 'utf8'))
-  const response = await request(url, {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  })
-  if (!response.ok) throw new Error(`Foundry Local model list: HTTP ${response.status}`)
-  return response.json()
-}
+export type FoundryLocalListResult = ConfListResult<FoundryLocalList>
+export type FoundryLocalListOptions = ConfListOptions
 
 /** A fresh cache (unless forced), else conf (cached when it parses), else the last accepted copy, else the baseline. */
-export async function fetchFoundryLocalList(o: FoundryLocalListOptions): Promise<FoundryLocalListResult> {
-  const now = o.now ?? Date.now
-  const cached = await readFile(o.cachePath, 'utf8')
-    .then((text) => JSON.parse(text) as { value: unknown; fetchedAt: number })
-    .catch(() => null)
-  const accepted = (() => {
-    try {
-      return cached ? parseFoundryLocalList(cached.value) : null
-    } catch {
-      return null
-    }
-  })()
-  if (!o.force && cached && accepted && now() - cached.fetchedAt < CACHE_TTL_MS)
-    return { list: accepted, source: 'cache', fetchedAt: cached.fetchedAt }
-  try {
-    const raw = await documentAt(o.url ?? DEFAULT_FOUNDRY_LOCAL_MODELS_URL, o.fetch)
-    const list = parseFoundryLocalList(raw)
-    const fetchedAt = now()
-    await mkdir(dirname(o.cachePath), { recursive: true })
-    await writeFile(`${o.cachePath}.tmp`, JSON.stringify({ value: raw, fetchedAt }))
-    await rename(`${o.cachePath}.tmp`, o.cachePath)
-    return { list, source: 'remote', fetchedAt }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    if (accepted && cached)
-      return { list: accepted, source: 'cache', fetchedAt: cached.fetchedAt, error: message }
-    return { list: parseFoundryLocalList(BASELINE_LIST), source: 'baseline', fetchedAt: null, error: message }
-  }
+export function fetchFoundryLocalList(o: FoundryLocalListOptions): Promise<FoundryLocalListResult> {
+  return fetchConfList(
+    {
+      label: 'Foundry Local model list',
+      defaultUrl: DEFAULT_FOUNDRY_LOCAL_MODELS_URL,
+      parse: parseFoundryLocalList,
+      baseline: BASELINE_LIST,
+    },
+    o
+  )
 }

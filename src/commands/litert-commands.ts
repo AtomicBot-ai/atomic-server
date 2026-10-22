@@ -1,13 +1,14 @@
 /**
  * LiteRT-LM from `atc engines` (spec `litert-lm-server`, "Движок и ускоритель LiteRT-LM в atc"): the
  * accelerator the core offers this machine — `openvino` for an Intel NPU on Windows, nothing elsewhere —
- * and preparing it in the server, followed here by the core's `litert-lm:accelerators` events.
+ * and preparing it in the server, followed here by the core's `litert-lm:accelerators` events; and its
+ * models from `atc models catalog|search --engine litert-lm`.
  */
 
 import { AtcError } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
-import type { LiteRtAcceleratorsView } from '../contract/index.js'
-import { formatSize } from '../workspace-view/index.js'
+import type { LiteRtAcceleratorsView, LiteRtSearchResult } from '../contract/index.js'
+import { formatSize, liteRtVariantLabel, liteRtVerdictText } from '../workspace-view/index.js'
 import { followPrepare } from './accelerator-prepare.js'
 import { attachWorkspace } from './control.js'
 
@@ -69,6 +70,40 @@ export async function listLiteRtAccelerators(ctx: CommandContext): Promise<numbe
       )
     else if (view.installed) ctx.out.line(NOTHING)
     if (view.preparing) ctx.out.note('a prepare is running in the server')
+  })
+  return 0
+}
+
+/**
+ * `atc models catalog --engine litert-lm` (conf's list only) and `atc models search [query] --engine
+ * litert-lm` (then Hugging Face): models, their variants here, the core's verdicts.
+ */
+export async function litertListing(ctx: CommandContext, op: 'models.catalog' | 'models.search', query = '') {
+  const { service } = await attachWorkspace(ctx)
+  const result = (await service.execute(op, { engine: 'litert-lm', query })) as LiteRtSearchResult
+  ctx.out.result(result, () => {
+    if (result.list_source !== 'remote' && result.list_error)
+      ctx.out.note(
+        `conf's LiteRT-LM list could not be read (${result.list_error}); using the ${result.list_source === 'cache' ? 'last copy' : 'bundled list'}`
+      )
+    if (result.huggingface_unavailable)
+      ctx.out.note(
+        `Hugging Face is not reachable now (${result.huggingface_error ?? ''}): Atomic Chat's list only`
+      )
+    if (!result.models.length)
+      ctx.out.line(`No LiteRT-LM model for ${result.platform}${query ? ` matches "${query}"` : ''}.`)
+    for (const m of result.models) {
+      const about = m.unverified
+        ? ' — Hugging Face, not verified by Atomic Chat'
+        : ` — ${[m.license, m.gated ? 'gated: needs HF_TOKEN' : ''].filter(Boolean).join(', ')}`
+      ctx.out.line(m.unverified ? `${m.model_id}${about}` : `${m.name} (${m.model_id})${about}`)
+      for (const v of m.variants) {
+        const mark = v.id === m.default_variant ? '*' : ' '
+        ctx.out.line(
+          `  ${mark} ${v.id}  ${liteRtVariantLabel(v).toLowerCase()}  ${formatSize(v.file.size)}  ${liteRtVerdictText(v.verdict)}`
+        )
+      }
+    }
   })
   return 0
 }

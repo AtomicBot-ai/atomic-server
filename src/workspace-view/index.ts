@@ -25,6 +25,7 @@ export {
   prepareResultLines,
   variantLabel,
 } from './foundry.js'
+export { liteRtVariantLabel, liteRtVerdictText } from './litert.js'
 export { LOAD_STAGE_LABELS, loadStageText } from './loads.js'
 export { engineFamily, engineName, orderEngines } from './engine-order.js'
 export {

@@ -632,7 +632,7 @@ Usage: atc models search [query] [options]
 Search model repositories
 
 Arguments:
-  [query]  Search words or owner/repo (optional for foundry-local)
+  [query]  Search words or owner/repo (optional for foundry-local and litert-lm)
 
 Options:
       --engine <provider>  Engine provider ID

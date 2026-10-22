@@ -40,6 +40,7 @@ export interface WorkspaceServiceOptions {
   config: AtcConfig
   fetch?: typeof fetch
   platform?: NodeJS.Platform
+  arch?: string
   selfCommand?: readonly string[]
   /** The server's environment: `HF_TOKEN` for gated model downloads. */
   env?: NodeJS.ProcessEnv

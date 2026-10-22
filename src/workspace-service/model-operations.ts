@@ -1,6 +1,7 @@
 /**
- * The `models.*` operations of the workspace: the catalog, Hub search, installed models of every
- * provider (Foundry Local variants among them), removal and import. `NOT_CORE` for any other name, and for a removal that is the core's
+ * The `models.*` operations of the workspace: the catalog, Hub search (Foundry Local's and LiteRT-LM's
+ * models among them), installed models of every provider (Foundry Local variants among them), removal
+ * and import. `NOT_CORE` for any other name, and for a removal that is the core's
  * (a model of the managed store).
  */
 
@@ -14,9 +15,10 @@ import type { WorkspaceCatalog } from './catalog.js'
 import type { CatalogCategory } from './catalog.js'
 import type { ManagedModelSetups } from './managed-model-setups.js'
 import { foundrySearch } from './foundry-catalog.js'
+import { liteRtSearch } from './litert-catalog.js'
 import { managedCatalog, managedSearch } from './managed-catalog.js'
 import { isManagedEngine } from './managed-engines.js'
-import { checkModel } from './managed-models.js'
+import { checkModel, hubOf } from './managed-models.js'
 import { storeModels } from './managed-store.js'
 import { registeredEngines, withProviders } from './model-providers.js'
 import { foundryStoreModels, removeFoundryModel } from './foundry-store.js'
@@ -29,6 +31,23 @@ export interface ModelOperationDeps {
   catalog: WorkspaceCatalog
   request: typeof fetch
   managed: ManagedModelSetups
+}
+
+/** LiteRT-LM's catalog and search: conf's list (`ATC_LITERT_LM_MODELS_URL`), the Hub with `HF_TOKEN`. */
+function liteRtDeps(d: ModelOperationDeps) {
+  const { link, paths, env } = d.options
+  return {
+    link,
+    fetch: d.request,
+    list: {
+      cachePath: join(paths.atcDir, 'cache', 'litert-lm-models.json'),
+      url: env?.['ATC_LITERT_LM_MODELS_URL'],
+    },
+    platform: d.options.platform ?? process.platform,
+    arch: d.options.arch ?? process.arch,
+    hub: hubOf(env),
+    token: env?.['HF_TOKEN'],
+  }
 }
 
 export async function modelOperation(
@@ -60,6 +79,7 @@ export async function modelOperation(
         }
       )
     case 'models.catalog':
+      if (input['engine'] === 'litert-lm') return liteRtSearch(liteRtDeps(d), { huggingface: false })
       if (isManagedEngine(String(input['engine'] ?? ''))) return managedCatalog(link, String(input['engine']))
       return d.catalog.list(
         input['category'] as CatalogCategory | undefined,
@@ -67,6 +87,8 @@ export async function modelOperation(
         input['refresh'] === true
       )
     case 'models.search':
+      if (input['engine'] === 'litert-lm')
+        return liteRtSearch(liteRtDeps(d), { query: String(input['query'] ?? ''), huggingface: true })
       if (input['engine'] === 'foundry-local')
         return foundrySearch(
           {
