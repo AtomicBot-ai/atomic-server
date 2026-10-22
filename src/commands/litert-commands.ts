@@ -101,9 +101,10 @@ export async function litertListing(ctx: CommandContext, op: 'models.catalog' | 
     if (!result.models.length)
       ctx.out.line(`No LiteRT-LM model for ${result.platform}${query ? ` matches "${query}"` : ''}.`)
     for (const m of result.models) {
+      const gated = m.gated ? 'gated: needs HF_TOKEN' : ''
       const about = m.unverified
-        ? ' — Hugging Face, not verified by Atomic Chat'
-        : ` — ${[m.license, m.gated ? 'gated: needs HF_TOKEN' : ''].filter(Boolean).join(', ')}`
+        ? ` — ${['Hugging Face, not verified by Atomic Chat', gated].filter(Boolean).join(', ')}`
+        : ` — ${[m.license, gated].filter(Boolean).join(', ')}`
       ctx.out.line(m.unverified ? `${m.model_id}${about}` : `${m.name} (${m.model_id})${about}`)
       for (const v of m.variants) {
         const mark = v.id === m.default_variant ? '*' : ' '

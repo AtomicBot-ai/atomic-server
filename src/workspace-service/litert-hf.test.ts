@@ -31,7 +31,22 @@ describe('classifyLiteRtFile', () => {
     'gemma-4-E2B-it-web_gpu.litertlm',
     'gemma-4-E2B-it.task',
     'README.md',
+    // Names from litert-community on 2026-10-22: chips after a dot, AOT builds for Google Tensor.
+    'gemma3-270m-it-q8.mediatek.mt6991.litertlm',
+    'gemma3-270m-it-q8.qualcomm.sm8550.litertlm',
+    'Gemma3-1B-IT_q4_ekv1280_mt6989.litertlm',
+    'Gemma3-1B-IT_q8_ekv1280_Google_Tensor_G6.litertlm',
+    'Gemma3-1B-IT_int4hadamard_aot_ekv4096_G5.litertlm',
+    'gemma-4-E2B-it_Qualcomm_QCS8275.litertlm',
   ])('offers nothing for %s', (path) => expect(classifyLiteRtFile(path)).toBeNull())
+
+  it.each([
+    ['gemma3-270m-it-q8.litertlm', 'gemma3-270m-it-q8'],
+    ['Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096.litertlm', 'Gemma3-1B-IT_multi-prefill-seq_q4_ekv4096'],
+    ['gemma3-1b-it-int4.litertlm', 'gemma3-1b-it-int4'],
+  ])('reads %s as a plain file', (path, stem) =>
+    expect(classifyLiteRtFile(path)).toEqual({ kind: 'plain', stem })
+  )
 })
 
 describe('hfVariants', () => {

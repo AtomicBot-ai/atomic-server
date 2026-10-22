@@ -49,7 +49,7 @@ function serveHub() {
   })
   const revision = {
     sha: SHA,
-    gated: false,
+    gated: 'auto',
     cardData: { license: 'apache-2.0' },
     siblings: [
       { rfilename: 'README.md', size: 10 },
@@ -125,7 +125,7 @@ describe('atc models search --engine litert-lm', () => {
     expect(await t.run(['models', 'search', 'gemma', '--engine', 'litert-lm'])).toBe(0)
     const text = out()
     expect(text.indexOf('Gemma 4 E4B (gemma-4-e4b)')).toBeLessThan(text.indexOf(E2B))
-    expect(text).toContain(`${E2B} — Hugging Face, not verified by Atomic Chat`)
+    expect(text).toContain(`${E2B} — Hugging Face, not verified by Atomic Chat, gated: needs HF_TOKEN`)
     expect(text).toMatch(/\* gemma-4-e2b-it-gpu\s+gpu/)
     expect(text).toMatch(/gemma-4-e2b-it-cpu\s+cpu/)
     expect(text).not.toMatch(/web|Tensor|intel-lnl/)

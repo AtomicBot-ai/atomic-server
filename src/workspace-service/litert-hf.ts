@@ -21,9 +21,13 @@ const SUFFIXES: ReadonlyArray<
   [/_intel_lnl$/i, { backend: 'npu', npu: 'intel-lnl' }],
   [/_intel_ptl$/i, { backend: 'npu', npu: 'intel-ptl' }],
 ]
-/** A file for the browser or for another chip than the ones LiteRT-LM's desktop library runs on. */
+/**
+ * A file for the browser or for another chip than the ones LiteRT-LM's desktop library runs on: a chip
+ * suffix after `-`, `_` or `.` (`_sm8750`, `.mediatek.mt6991`, `_Google_Tensor_G5`), or an ahead-of-time
+ * build for one (`_aot_ekv4096_G5`, Google Tensor's generations).
+ */
 const NOT_OFFERED =
-  /[-_](web|sm\d+|mt\d+|google_tensor\w*|tensor_g\d+|qualcomm\w*|qnn\w*|mediatek\w*|samsung\w*|exynos\w*|intel_\w+)$/i
+  /[-_.](web|sm\d+|mt\d+|qcs\d+|google_tensor\w*|tensor_g\d+|qualcomm\w*|qnn\w*|mediatek\w*|samsung\w*|exynos\w*|intel_\w+)$|(^|[-_.])aot([-_.]|$)/i
 
 /** What one file of a repository is, by its name; `null` for a file never offered. */
 export function classifyLiteRtFile(path: string): LiteRtFileClass | null {
