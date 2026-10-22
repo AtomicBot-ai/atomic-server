@@ -85,6 +85,7 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
           'setup.resume',
           'managed.install',
           'foundry.install',
+          'litert.install',
         ].includes(operation)
       )
         throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading models.', {

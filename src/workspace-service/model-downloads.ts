@@ -3,13 +3,16 @@ import { Downloader } from '../downloads/index.js'
 import { captureReport, downloadFailureReport } from '../telemetry/index.js'
 import { ManagedModelSetups } from './managed-model-setups.js'
 import { FoundryModelSetups } from './foundry-model-setups.js'
+import { LiteRtAccelerators } from './litert.js'
+import { LiteRtModelSetups } from './litert-model-setups.js'
+import { hubOf } from './managed-models.js'
 import { ArtifactService } from './artifacts.js'
 import type { WorkspaceCatalog } from './catalog.js'
 import { downloadProxy } from './download-proxy.js'
 import { ModelSetups } from './model-setups.js'
 import type { WorkspaceServiceOptions } from './service.js'
 
-/** One downloader for every model this server fetches: GGUF setups, media, MLX and the managed store. */
+/** One downloader for every model this server fetches: GGUF setups, media, MLX, the managed store, Foundry Local and LiteRT-LM. */
 export function modelDownloads(
   options: WorkspaceServiceOptions,
   catalog: WorkspaceCatalog,
@@ -47,6 +50,25 @@ export function modelDownloads(
       downloader,
       proxy: downloadProxy(options.config),
     }),
+    litert: {
+      accelerators: new LiteRtAccelerators(options.link, { proxy: () => downloadProxy(options.config) }),
+      models: new LiteRtModelSetups({
+        link: options.link,
+        fetch: request,
+        list: {
+          cachePath: join(options.paths.atcDir, 'cache', 'litert-lm-models.json'),
+          url: options.env?.['ATC_LITERT_LM_MODELS_URL'],
+        },
+        platform: options.platform ?? process.platform,
+        arch: options.arch ?? process.arch,
+        hub: hubOf(options.env),
+        token: options.env?.['HF_TOKEN'],
+        modelsDir: options.paths.layout.provider('litert-lm').modelsDir,
+        directory: join(options.paths.atcDir, 'litert-model-setups'),
+        downloader,
+        proxy: downloadProxy(options.config),
+      }),
+    },
     setups: new ModelSetups({
       link: options.link,
       paths: options.paths,

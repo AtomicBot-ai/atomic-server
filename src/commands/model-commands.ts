@@ -9,7 +9,7 @@ import { operation, workspace } from './control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
 import { foundryListing, pullFoundryModel } from './foundry-commands.js'
-import { litertListing } from './litert-commands.js'
+import { litertListing, pullLiteRtModel } from './litert-commands.js'
 import { isNoGguf } from '../terminal-setup/index.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
@@ -31,6 +31,8 @@ async function loadProvider(ctx: CommandContext, value: unknown, service: Worksp
     hint: `Name one with --engine (${engines.map((e) => e.engine).join(', ')}), or change engines.default.`,
   })
 }
+/** The operation that cancels a download of `--engine`'s own kind. */
+const CANCEL: Record<string, string> = { 'foundry-local': 'foundry.cancel', 'litert-lm': 'litert.cancel' }
 const engineOption = {
   engine: { type: 'string' as const, description: 'Engine provider ID', placeholder: 'provider' },
 }
@@ -157,9 +159,14 @@ export const modelsCommand = defineCommand({
           description: 'Foundry Local: the variant for npu, gpu or cpu',
           placeholder: 'device',
         },
+        'backend': {
+          type: 'string',
+          description: 'LiteRT-LM: the variant for npu, gpu or cpu',
+          placeholder: 'backend',
+        },
         'cancel': {
           type: 'string',
-          description: 'Cancel a managed or Foundry Local download (with its --engine)',
+          description: 'Cancel a managed, Foundry Local or LiteRT-LM download (with its --engine)',
           placeholder: 'request-id',
         },
         'file': { type: 'string', description: 'Exact filename in the repository' },
@@ -170,16 +177,13 @@ export const modelsCommand = defineCommand({
       },
       run: async (inv, ctx) => {
         if (typeof inv.values['cancel'] === 'string')
-          return operation(
-            ctx,
-            inv.values['engine'] === 'foundry-local' ? 'foundry.cancel' : 'managed.cancel',
-            {
-              id: inv.values['cancel'],
-            }
-          )
+          return operation(ctx, CANCEL[String(inv.values['engine'])] ?? 'managed.cancel', {
+            id: inv.values['cancel'],
+          })
         if (!inv.positionals[0]) throw new AtcError('ATC_USAGE', 'Name the model to download.')
         if (inv.values['engine'] === 'foundry-local')
           return pullFoundryModel(ctx, inv.positionals[0], inv.values)
+        if (inv.values['engine'] === 'litert-lm') return pullLiteRtModel(ctx, inv.positionals[0], inv.values)
         if (
           typeof inv.values['engine'] === 'string' &&
           ENGINE_KINDS[inv.values['engine'] as EngineId] === 'managed'

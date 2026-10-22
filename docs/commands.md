@@ -737,7 +737,9 @@ Options:
                              store
       --detach               Start a managed download without following it
       --device <device>      Foundry Local: the variant for npu, gpu or cpu
-      --cancel <request-id>  Cancel a managed or Foundry Local download (with its --engine)
+      --backend <backend>    LiteRT-LM: the variant for npu, gpu or cpu
+      --cancel <request-id>  Cancel a managed, Foundry Local or LiteRT-LM download (with its
+                             --engine)
       --file <value>         Exact filename in the repository
       --quant <value>        Select an unambiguous quantization
       --mmproj               Include required vision projector (default: true)

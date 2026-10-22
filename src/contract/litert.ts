@@ -71,3 +71,38 @@ export interface LiteRtSearchResult {
   huggingface_error: string | null
   models: LiteRtModelRow[]
 }
+
+/** `litert.plan`: one LiteRT-LM variant to download, chosen and checked by the core. */
+export interface LiteRtModelPlan {
+  digest: string
+  origin: 'curated' | 'huggingface'
+  model_id: string
+  name: string
+  variant_id: string
+  backend: LiteRtLmBackendId
+  npu?: LiteRtLmNpu
+  repo: string
+  revision: string
+  gated: boolean
+  unverified: boolean
+  file: { path: string; size: number; sha256: string }
+  verdict: LiteRtLmCheckResult
+  /** `<data>/litert-lm/models/<variant_id>`. */
+  dir: string
+  /** The file is there already, whole. */
+  present: boolean
+  download_bytes: number
+  free_bytes: number | null
+  /** What `model.yml` records from conf's list; a Hugging Face model's come from the core's check. */
+  record: { context_length?: number; tools: boolean; reasoning: boolean; vision: boolean }
+  blockers: string[]
+}
+
+export interface LiteRtModelJob {
+  id: string
+  kind: 'litert-model'
+  plan: LiteRtModelPlan
+  stage: 'queued' | 'downloading' | 'verifying' | 'ready' | 'failed' | 'cancelled' | 'interrupted'
+  error?: string
+  updated_at: number
+}

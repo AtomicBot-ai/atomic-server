@@ -26,8 +26,8 @@ import type { ManagedModelSetups } from './managed-model-setups.js'
 import { downloadProxy } from './download-proxy.js'
 import { FoundryAccelerators } from './foundry.js'
 import { foundryOperation } from './foundry-operations.js'
-import { LiteRtAccelerators } from './litert.js'
 import { litertOperation } from './litert-operations.js'
+import type { LiteRtParts } from './litert-operations.js'
 import type { FoundryModelSetups } from './foundry-model-setups.js'
 import type { Downloader } from '../downloads/index.js'
 import type { ErrorSink } from '../telemetry/index.js'
@@ -59,7 +59,7 @@ export class WorkspaceService {
   private managed: ManagedModelSetups
   private foundry: FoundryAccelerators
   private foundryModels: FoundryModelSetups
-  private litert: LiteRtAccelerators
+  private litert: LiteRtParts
   /** Every model download of this server: GGUF setups, media and MLX. */
   private downloader: Downloader
   private chats: ChatJobs
@@ -76,7 +76,7 @@ export class WorkspaceService {
     this.managed = downloads.managed
     this.foundry = new FoundryAccelerators(options.link)
     this.foundryModels = downloads.foundry
-    this.litert = new LiteRtAccelerators(options.link, { proxy: () => downloadProxy(options.config) })
+    this.litert = downloads.litert
   }
   /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
   start(): Promise<{ kept: string[] }> {
@@ -86,7 +86,7 @@ export class WorkspaceService {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
     this.foundry.event(name, payload)
-    this.litert.event(name, payload)
+    this.litert.accelerators.event(name, payload)
   }
   async snapshot() {
     const result = await workspaceSnapshot(
@@ -103,7 +103,8 @@ export class WorkspaceService {
       ...(await this.setups.list()),
       ...(await this.artifacts.list()),
       ...(await this.managed.list()),
-      ...(await this.foundryModels.list())
+      ...(await this.foundryModels.list()),
+      ...(await this.litert.models.list())
     )
     return result
   }

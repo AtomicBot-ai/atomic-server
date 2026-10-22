@@ -2,15 +2,17 @@
  * LiteRT-LM from `atc engines` (spec `litert-lm-server`, "Движок и ускоритель LiteRT-LM в atc"): the
  * accelerator the core offers this machine — `openvino` for an Intel NPU on Windows, nothing elsewhere —
  * and preparing it in the server, followed here by the core's `litert-lm:accelerators` events; and its
- * models from `atc models catalog|search --engine litert-lm`.
+ * models from `atc models catalog|search|pull --engine litert-lm`.
  */
 
 import { AtcError } from '../cli/index.js'
 import type { CommandContext } from '../cli/index.js'
-import type { LiteRtAcceleratorsView, LiteRtSearchResult } from '../contract/index.js'
+import { randomUUID } from 'node:crypto'
+import type { LiteRtAcceleratorsView, LiteRtModelPlan, LiteRtSearchResult } from '../contract/index.js'
 import { formatSize, liteRtVariantLabel, liteRtVerdictText } from '../workspace-view/index.js'
 import { followPrepare } from './accelerator-prepare.js'
 import { attachWorkspace } from './control.js'
+import { followSetup } from './managed-model-commands.js'
 
 const NOTHING =
   'LiteRT-LM has nothing to prepare here: its models run on the CPU and GPU without an accelerator.'
@@ -106,4 +108,53 @@ export async function litertListing(ctx: CommandContext, op: 'models.catalog' | 
     }
   })
   return 0
+}
+
+/** `atc models pull <model|variant> --engine litert-lm [--backend]`: the variant, checked, downloaded, followed. */
+export async function pullLiteRtModel(
+  ctx: CommandContext,
+  model: string,
+  values: Record<string, unknown>
+): Promise<number> {
+  const { service } = await attachWorkspace(ctx)
+  const plan = (await service.execute('litert.plan', {
+    model,
+    ...(typeof values['backend'] === 'string' ? { backend: values['backend'] } : {}),
+  })) as LiteRtModelPlan
+  const print = () => {
+    ctx.out.line(
+      `${plan.name}: ${plan.variant_id} (${liteRtVariantLabel(plan)})${plan.unverified ? ' — Hugging Face, not verified by Atomic Chat' : ''}`
+    )
+    ctx.out.line(`Verdict: ${liteRtVerdictText(plan.verdict)}`)
+    ctx.out.line(
+      plan.present
+        ? `${plan.file.path} is downloaded already, into ${plan.dir}`
+        : `${plan.file.path}, ${formatSize(plan.download_bytes)}, from ${plan.repo}@${plan.revision.slice(0, 12)} into ${plan.dir}`
+    )
+    for (const b of plan.blockers) ctx.out.line(`  - ${b}`)
+  }
+  if (values['dry-run']) {
+    ctx.out.result(plan, print)
+    return 0
+  }
+  if (!ctx.flags.json) print()
+  if (plan.blockers.length) throw new AtcError('ATC_USAGE', plan.blockers.join(' '))
+  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
+  await service.execute('litert.install', { request_id: id, plan_digest: plan.digest })
+  const cancel = `atc models pull --cancel ${id} --engine litert-lm`
+  if (values['detach']) {
+    ctx.out.result({ id }, () =>
+      ctx.out.line(`Downloading in the server as ${id}; cancel it with: ${cancel}`)
+    )
+    return 0
+  }
+  const code = await followSetup(ctx, service, {
+    kind: 'litert-model',
+    id,
+    label: plan.variant_id,
+    cancel,
+    retry: `atc models pull ${plan.variant_id} --engine litert-lm --request-id ${id}`,
+  })
+  if (code === 0) ctx.out.line(`${plan.variant_id} is ready: atc run ${plan.variant_id} --engine litert-lm`)
+  return code
 }

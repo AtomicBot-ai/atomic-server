@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-core/test/helpers/fixture-http-server.ts @ 8a38521 (v0.17.0); adapted: `holdAfterBytes` keeps a body open until `release()`, every GET is counted per path, a request's `Authorization` is recorded, and `cut()` breaks held connections.
+// Lifted from atomic-chat-core/test/helpers/fixture-http-server.ts @ 8a38521 (v0.17.0); adapted: `holdAfterBytes` keeps a body open until `release()`, every GET is counted per path, a request's `Authorization` is recorded, `cut()` breaks held connections, and `redirect` answers 302 to another URL.
 /**
  * Scripted HTTP server for download tests: serves in-memory files with Range/206 support, and lets a
  * test inject failures (drop the connection after N bytes, answer a status, refuse Range).
@@ -24,6 +24,8 @@ export interface ServedFile {
   delayMs?: number
   /** Send this many bytes of every body, then hold the rest until `release()`. */
   holdAfterBytes?: number
+  /** Answer 302 with this `Location` (a CDN on another origin). */
+  redirect?: string
 }
 
 export class FixtureHttpServer {
@@ -88,6 +90,10 @@ export class FixtureHttpServer {
     const file = this.files.get(path)
     if (!file) {
       res.writeHead(404).end('not found')
+      return
+    }
+    if (file.redirect) {
+      res.writeHead(302, { location: file.redirect }).end()
       return
     }
     const failsLeft = this.fails.get(path) ?? file.failTimes ?? 0
