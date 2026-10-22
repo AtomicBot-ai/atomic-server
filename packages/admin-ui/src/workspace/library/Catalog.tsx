@@ -12,8 +12,10 @@ import { EngineSetup } from './EngineSetup'
 import { EnginesTab } from './EnginesTab'
 import { FoundryLocal } from './FoundryLocal'
 import { FoundryModelInstall } from './FoundryModelInstall'
+import { LiteRtLm } from './LiteRtLm'
+import { LiteRtModelInstall } from './LiteRtModelInstall'
 import { ManagedModelInstall } from './ManagedModelInstall'
-import { catalogCards, catalogFormats } from './catalog-data'
+import { catalogCards, catalogFormats, FORMAT_ENGINE } from './catalog-data'
 import type { CatalogFormat } from './catalog-data'
 import { useEngines } from '../useEngines'
 import { InstalledModels } from './InstalledModels'
@@ -36,7 +38,7 @@ export function Catalog({
   const [selected, setSelected] = useState<RecordValue | null>(null)
   const [settingsProvider, setSettingsProvider] = useState('')
   const [managed, setManaged] = useState('')
-  const [foundry, setFoundry] = useState(false)
+  const [accelerators, setAccelerators] = useState('')
   const [format, setFormat] = useState<CatalogFormat>('gguf')
   const [managedRepo, setManagedRepo] = useState('')
   const [managedEngine, setManagedEngine] = useState('')
@@ -54,9 +56,9 @@ export function Catalog({
         setInstalled([...rows(chat), ...rows(media).filter((model) => model.stage === 'ready')])
       } else if (tab === 'catalog' && format === 'safetensors' && engineForModels)
         setCatalog(catalogCards(await execute('models.catalog', { engine: engineForModels }), format))
-      else if (tab === 'catalog' && format === 'foundry')
+      else if (tab === 'catalog' && FORMAT_ENGINE[format])
         setCatalog(
-          catalogCards(await execute('models.search', { engine: 'foundry-local', query: '' }), format)
+          catalogCards(await execute('models.search', { engine: FORMAT_ENGINE[format], query: '' }), format)
         )
       else if (tab === 'catalog') setCatalog(rows(await execute('models.catalog', { category })))
     } catch (e) {
@@ -134,6 +136,7 @@ export function Catalog({
                           gguf: 'GGUF',
                           safetensors: 'Safetensors (managed engines)',
                           foundry: 'Foundry Local',
+                          litert: 'LiteRT-LM',
                         }[f]
                       }
                     </option>
@@ -170,7 +173,7 @@ export function Catalog({
                       ? rows(await execute('models.search', { query }))
                       : catalogCards(
                           await execute('models.search', {
-                            engine: format === 'foundry' ? 'foundry-local' : engineForModels,
+                            engine: FORMAT_ENGINE[format] ?? engineForModels,
                             query,
                           }),
                           format
@@ -217,12 +220,13 @@ export function Catalog({
           loading={loading}
           execute={execute}
           onManaged={setManaged}
-          onFoundry={() => setFoundry(true)}
+          onAccelerators={setAccelerators}
           onSettings={setSettingsProvider}
         />
       )}
       {tab === 'downloads' && <Downloads workspace={w} />}
-      {foundry && <FoundryLocal workspace={w} onClose={() => setFoundry(false)} />}
+      {accelerators === 'foundry-local' && <FoundryLocal workspace={w} onClose={() => setAccelerators('')} />}
+      {accelerators === 'litert-lm' && <LiteRtLm workspace={w} onClose={() => setAccelerators('')} />}
       {managed && <EngineSetup workspace={w} engine={managed} onClose={() => setManaged('')} />}
       {settingsProvider && (
         <EngineSettings provider={settingsProvider} workspace={w} onClose={() => setSettingsProvider('')} />
@@ -247,8 +251,17 @@ export function Catalog({
           onStarted={() => setTab('downloads')}
           onFoundry={() => {
             setSelected(null)
-            setFoundry(true)
+            setAccelerators('foundry-local')
           }}
+        />
+      )}
+      {selected && format === 'litert' && category === 'text' && (
+        <LiteRtModelInstall
+          workspace={w}
+          model={selected.litert as never}
+          onClose={() => setSelected(null)}
+          onStarted={() => setTab('downloads')}
+          onEngine={() => (setSelected(null), setAccelerators('litert-lm'))}
         />
       )}
       {managedRepo && (

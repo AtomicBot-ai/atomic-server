@@ -9,15 +9,22 @@ export function loadTarget(job: Record<string, unknown>): { provider: string; mo
   if (job.kind === 'managed-model')
     return { provider: String(plan.engine), model_id: String(plan.repository) }
   if (job.kind === 'foundry-model') return { provider: 'foundry-local', model_id: String(plan.variant_id) }
+  if (job.kind === 'litert-model') return { provider: 'litert-lm', model_id: String(plan.variant_id) }
   return {
     provider: String(job.provider ?? plan.provider ?? ''),
     model_id: String(job.model_id ?? plan.model_id ?? ''),
   }
 }
 
-/** The operations that resume or cancel a job, by who owns it: a store or Foundry job, media, a setup. */
+const OWNERS: Record<string, string> = {
+  'managed-model': 'managed',
+  'foundry-model': 'foundry',
+  'litert-model': 'litert',
+}
+
+/** The operations that resume or cancel a job, by who owns it: a store, Foundry or LiteRT-LM job, media, a setup. */
 export function jobOperations(job: Record<string, unknown>, id: string, media: boolean) {
-  const own = job.kind === 'managed-model' ? 'managed' : job.kind === 'foundry-model' ? 'foundry' : null
+  const own = OWNERS[String(job.kind)]
   if (own)
     return {
       resume: [`${own}.install`, { request_id: id, plan_digest: record(job.plan).digest }] as const,

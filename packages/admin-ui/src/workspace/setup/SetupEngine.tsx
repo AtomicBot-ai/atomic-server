@@ -17,6 +17,7 @@ const LABELS: Record<string, string> = {
   'sglang': 'safetensors models in a container (NVIDIA)',
   'tensorrt-llm': 'safetensors and NVFP4 models in a container (NVIDIA)',
   'foundry-local': 'ONNX models on the NPU, GPU or CPU',
+  'litert-lm': '.litertlm models on the CPU, GPU or an Intel NPU',
 }
 export function SetupEngine({
   workspace: w,
@@ -38,8 +39,8 @@ export function SetupEngine({
     if (category === 'image' || category === 'video') return id === 'sd-cpp'
     if (category === 'decision') return id === 'llamacpp'
     if (category === 'embedding') return ['llamacpp-upstream', 'llamacpp'].includes(id)
-    // Chat engines: llama.cpp's family, MLX, the managed engines and Foundry Local (by the core's kind).
-    return text(entry.kind) !== 'engine-build' || id === 'mlx' || id === 'foundry-local'
+    // Chat engines: llama.cpp's family, MLX, the managed engines, Foundry Local and LiteRT-LM (by the core's kind).
+    return text(entry.kind) !== 'engine-build' || ['mlx', 'foundry-local', 'litert-lm'].includes(id)
   })
   const selected = choices.find((entry) => entry.engine === engine)
   const available = (entry: RecordValue) => Boolean(entry.active || entry.latest)

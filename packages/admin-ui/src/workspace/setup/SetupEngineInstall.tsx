@@ -3,10 +3,11 @@ import { engineName } from '@view'
 import { Action } from '../Controls'
 import { EngineSetup } from '../library/EngineSetup'
 import { FoundryLocal } from '../library/FoundryLocal'
+import { LiteRtLm } from '../library/LiteRtLm'
 import type { Workspace } from '../useWorkspace'
 
 /**
- * A managed engine or Foundry Local chosen in setup but not installed here: its installation inside
+ * A managed engine, Foundry Local or LiteRT-LM chosen in setup but not installed here: its installation inside
  * the wizard, through the same modal as the Engines tab; closing it reads the engines again.
  */
 export function SetupEngineInstall({
@@ -32,6 +33,8 @@ export function SetupEngineInstall({
       {open &&
         (engine === 'foundry-local' ? (
           <FoundryLocal workspace={w} onClose={close} />
+        ) : engine === 'litert-lm' ? (
+          <LiteRtLm workspace={w} onClose={close} />
         ) : (
           <EngineSetup workspace={w} engine={engine} onClose={close} />
         ))}

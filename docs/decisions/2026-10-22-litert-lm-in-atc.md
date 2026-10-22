@@ -26,6 +26,10 @@ title: "Install and run LiteRT-LM from atc"
     sha256, the token on requests to the Hub's origin only (redirects followed hop by hop, so a CDN on
     another domain never sees it), the core's check by path, `model.yml` last through the core's
     `serializeModelYml`. A refused download or file leaves no folder.
+  - Both UIs give LiteRT-LM what Foundry Local has: an engine panel (TUI) and dialog (admin) with the
+    build and `openvino`, the catalog's LiteRT-LM format opening its models with variants and verdicts,
+    guided setup's LiteRT-LM path, Downloads rows of `litert-model` jobs; a variant waiting on openvino
+    or the engine leads to that panel. The admin's Foundry Local and LiteRT-LM dialogs share one state.
 - **Consequences:** a second host mode costs one table row; the downloader gained `wrapFetch` (a fetch
   for one call), not a second allowed root — the files live in the data folder. The file-name rules
   for Hugging Face repeat the spec in atc; the app's copy must be checked against the same names. An

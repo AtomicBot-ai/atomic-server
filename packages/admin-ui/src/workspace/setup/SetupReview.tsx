@@ -1,5 +1,6 @@
 import { engineDialog } from './setup-data'
 import { FoundryModelInstall } from '../library/FoundryModelInstall'
+import { LiteRtModelInstall } from '../library/LiteRtModelInstall'
 import { ManagedModelInstall } from '../library/ManagedModelInstall'
 import { ModelInstall } from '../library/ModelInstall'
 import { text } from '../types'
@@ -8,7 +9,7 @@ import type { Workspace } from '../useWorkspace'
 
 /**
  * The review of the model chosen in setup, by the engine's format: a GGUF file (or a media model), a
- * managed engine's checkpoint (the core's verdicts, then the plan), or a Foundry Local variant.
+ * managed engine's checkpoint (the core's verdicts, then the plan), or a Foundry Local or LiteRT-LM variant.
  */
 export function SetupReview({
   workspace: w,
@@ -48,6 +49,16 @@ export function SetupReview({
         onClose={onClose}
         onStarted={onStarted}
         onFoundry={() => onEngine('foundry-local')}
+      />
+    )
+  if (kind === 'litert')
+    return (
+      <LiteRtModelInstall
+        workspace={w}
+        model={model.litert as never}
+        onClose={onClose}
+        onStarted={onStarted}
+        onEngine={() => onEngine('litert-lm')}
       />
     )
   return (

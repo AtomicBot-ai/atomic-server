@@ -8,16 +8,18 @@ export function EnginesTab({
   loading,
   execute,
   onManaged,
-  onFoundry,
+  onAccelerators,
   onSettings,
 }: {
   engines: RecordValue[]
   loading: boolean
   execute: Execute
   onManaged: (engine: string) => void
-  onFoundry: () => void
+  /** Foundry Local's and LiteRT-LM's dialog: accelerators, and an install or update that prepares them. */
+  onAccelerators: (engine: string) => void
   onSettings: (engine: string) => void
 }) {
+  const accelerated = (engine: unknown) => engine === 'foundry-local' || engine === 'litert-lm'
   return (
     <>
       {loading ? (
@@ -30,15 +32,17 @@ export function EnginesTab({
             actions={
               // A managed engine's setup is a plan to agree to: the modal, never a direct install.
               <>
-                {engine.engine === 'foundry-local' && (
-                  <Action onClick={() => onFoundry()}>Accelerators</Action>
+                {accelerated(engine.engine) && (
+                  <Action onClick={() => onAccelerators(text(engine.engine))}>
+                    {engine.engine === 'litert-lm' ? 'Accelerator' : 'Accelerators'}
+                  </Action>
                 )}
                 <Action
                   onClick={() =>
                     engine.kind === 'managed'
                       ? onManaged(text(engine.engine))
-                      : engine.engine === 'foundry-local'
-                        ? onFoundry()
+                      : accelerated(engine.engine)
+                        ? onAccelerators(text(engine.engine))
                         : execute('engines.install', { engine: engine.engine })
                   }
                 >
