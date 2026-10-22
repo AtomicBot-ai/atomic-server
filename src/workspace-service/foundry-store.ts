@@ -1,14 +1,14 @@
 /**
  * Downloaded Foundry Local variants (spec `foundry-local-server`, "Запуск и удаление моделей Foundry
  * Local"): every folder under `<data>/foundry-local/models/` that holds `model.yml`, with the variant's
- * device, accelerator and size; removal unloads a loaded variant, then deletes its folder inside that
- * root — never through the managed store's route.
+ * device, accelerator and size; removal is the shared one (`store-variants.ts`).
  */
 
 import { ModelRegistry } from '@atomic-chat/core/models'
 import type { DataLayout } from '@atomic-chat/core/host'
 import type { CoreLink } from '../core-link/index.js'
 import { bytesUnder } from './managed-store.js'
+import { removeStoreVariant } from './store-variants.js'
 
 const PROVIDER = 'foundry-local'
 
@@ -51,16 +51,8 @@ export async function foundryStoreModels(layout: DataLayout): Promise<FoundrySto
 }
 
 /** Unload `id` if it is loaded, then delete its folder; `undefined` when it is not a Foundry Local variant. */
-export async function removeFoundryModel(link: CoreLink, layout: DataLayout, id: string) {
-  const registry = new ModelRegistry(layout, PROVIDER)
-  const entry = await registry.find(id)
-  if (!entry) return undefined
-  const loaded = (await link.models.sessions()).some((s) => s.provider === PROVIDER && s.model_id === id)
-  if (loaded) await link.models.unload(PROVIDER, id)
-  const freed = await bytesUnder(entry.dir)
-  await registry.remove(id)
-  return { removed: true, model_id: id, was_loaded: loaded, freed_bytes: freed }
-}
+export const removeFoundryModel = (link: CoreLink, layout: DataLayout, id: string) =>
+  removeStoreVariant(link, layout, PROVIDER, id)
 
 /** Whether a downloaded variant takes tools, by its `model.yml` (`foundry_local.tools`). */
 export async function foundryTakesTools(layout: DataLayout, id: string): Promise<boolean> {

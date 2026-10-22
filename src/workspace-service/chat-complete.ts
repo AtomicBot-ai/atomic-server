@@ -5,7 +5,7 @@ import type { WorkspaceServiceOptions } from './service.js'
 import { object } from './validation.js'
 import { callPublic } from './public-api.js'
 import { chatRequestFor, contextExceeded } from './chat-request.js'
-import { foundryTakesTools } from './foundry-store.js'
+import { chatAbilities } from './store-variants.js'
 import { publicEndpoint } from './snapshot.js'
 export async function completeChat(
   options: WorkspaceServiceOptions,
@@ -28,9 +28,7 @@ export async function completeChat(
     chatRequestFor(
       provider,
       { ...body, stream: false },
-      provider === 'foundry-local'
-        ? { tools: await foundryTakesTools(options.paths.layout, String(body['model'])) }
-        : {}
+      await chatAbilities(options.paths.layout, provider, String(body['model']))
     )
   ).catch((error: unknown) => {
     throw contextExceeded(provider, error instanceof Error ? error.message : String(error)) ?? error

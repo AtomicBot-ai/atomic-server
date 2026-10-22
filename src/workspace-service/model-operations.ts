@@ -22,6 +22,7 @@ import { checkModel, hubOf } from './managed-models.js'
 import { storeModels } from './managed-store.js'
 import { registeredEngines, withProviders } from './model-providers.js'
 import { foundryStoreModels, removeFoundryModel } from './foundry-store.js'
+import { liteRtStoreModels, removeLiteRtModel } from './litert-store.js'
 import { NOT_CORE } from './not-core.js'
 import type { WorkspaceServiceOptions } from './service.js'
 import { importedModelId } from './validation.js'
@@ -127,6 +128,7 @@ export async function modelOperation(
           })),
           ...(await storeModels(link, registered ?? undefined)),
           ...(await foundryStoreModels(paths.layout)),
+          ...(await liteRtStoreModels(paths.layout)),
         ],
         registered
       )
@@ -138,7 +140,11 @@ export async function modelOperation(
         entry = await local.find(id),
         registry = entry ? local : mlx
       if (!entry && !(await mlx.find(id)))
-        return (await removeFoundryModel(link, paths.layout, id)) ?? NOT_CORE
+        return (
+          (await removeFoundryModel(link, paths.layout, id)) ??
+          (await removeLiteRtModel(link, paths.layout, id)) ??
+          NOT_CORE
+        )
       if ((await link.models.sessions()).some((s) => s.model_id === id))
         throw new AtcError('ATC_USAGE', 'Unload this model before removing it.')
       await registry.remove(id)

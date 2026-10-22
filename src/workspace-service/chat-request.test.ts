@@ -76,6 +76,55 @@ describe('chatRequestFor', () => {
   })
 })
 
+describe('chatRequestFor, LiteRT-LM', () => {
+  it('passes what its host reads and drops llama.cpp’s knobs', () => {
+    const shaped = chatRequestFor('litert-lm', {
+      ...body,
+      seed: 1,
+      reasoning_effort: 'none',
+      response_format: { type: 'json_object' },
+    })
+    expect(Object.keys(shaped).sort()).toEqual([
+      'chat_template_kwargs',
+      'messages',
+      'model',
+      'n',
+      'reasoning_effort',
+      'response_format',
+      'seed',
+      'stream',
+      'stream_options',
+      'temperature',
+      'top_k',
+    ])
+  })
+
+  it('offers tools only when model.yml says the model takes them, with tool_choice auto or none', () => {
+    expect(chatRequestFor('litert-lm', { ...body, tools }, { tools: false })).not.toHaveProperty('tools')
+    expect(
+      chatRequestFor('litert-lm', { ...body, tools, tool_choice: 'auto' }, { tools: true })
+    ).toMatchObject({
+      tools,
+      tool_choice: 'auto',
+    })
+    const named = { type: 'function', function: { name: 'f' } }
+    expect(
+      chatRequestFor('litert-lm', { ...body, tools, tool_choice: named }, { tools: true })
+    ).not.toHaveProperty('tool_choice')
+  })
+
+  it('takes an image only for a model with vision', () => {
+    const image = {
+      ...body,
+      messages: [
+        { role: 'user', content: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,AA' } }] },
+      ],
+    }
+    expect(() => chatRequestFor('litert-lm', image, { vision: false })).toThrow(/takes no images/)
+    expect(chatRequestFor('litert-lm', image, { vision: true })['messages']).toEqual(image.messages)
+  })
+})
+
 describe('contextExceeded', () => {
   it('turns the engine’s refusal into the limit, the request length and the setting to change', () => {
     const error = contextExceeded(

@@ -2,13 +2,14 @@
  * `atc models list` and `atc models rm`: every installed model once, with the providers that list it
  * and its size where known; a model of the managed engines' shared store is removed through the core,
  * which stops it first, after saying that it goes for every managed engine; a Foundry Local variant is
- * listed with its accelerator and device, and removed by the server, which unloads it first.
+ * listed with its accelerator and device, a LiteRT-LM variant with its backend, and either is removed by
+ * the server, which unloads it first.
  */
 
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { ManagedModelDeletion } from '@atomic-chat/core/contracts'
 import type { CommandContext } from '../cli/index.js'
-import { formatSize, variantLabel } from '../workspace-view/index.js'
+import { formatSize, liteRtVariantLabel, variantLabel } from '../workspace-view/index.js'
 import { workspace } from './control.js'
 
 interface InstalledRow {
@@ -19,12 +20,16 @@ interface InstalledRow {
   size_bytes?: number
   device?: string
   execution_provider?: string
+  backend?: string
+  npu?: string
 }
 
 const providersOf = (m: InstalledRow) =>
   m.store === 'foundry-local' && m.device && m.execution_provider
     ? `foundry-local (${variantLabel({ device: m.device, execution_provider: m.execution_provider })})`
-    : (m.providers ?? [m.provider]).join(', ') || '(none lists it)'
+    : m.store === 'litert-lm' && m.backend
+      ? `litert-lm (${liteRtVariantLabel({ backend: m.backend, npu: m.npu })})`
+      : (m.providers ?? [m.provider]).join(', ') || '(none lists it)'
 
 export async function listInstalled(ctx: CommandContext): Promise<number> {
   const result = (await (await workspace(ctx)).execute('models.installed')) as InstalledRow[]
@@ -59,7 +64,9 @@ export async function removeInstalled(ctx: CommandContext, id: string): Promise<
     throw error
   }
   const deletion =
-    row?.store === 'managed' || row?.store === 'foundry-local' ? (result as ManagedModelDeletion) : undefined
+    row?.store && ['managed', 'foundry-local', 'litert-lm'].includes(row.store)
+      ? (result as ManagedModelDeletion)
+      : undefined
   ctx.out.result(result, () =>
     ctx.out.line(
       deletion

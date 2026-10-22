@@ -5,7 +5,7 @@
  * load fails. A provider without stages (llama.cpp, Foundry Local) just waits for the answer. For a
  * model of the managed store the engine is the one named, the default when it lists the model, or the
  * one installed engine that does; several are a usage error that names them. A downloaded Foundry Local
- * variant goes to `foundry-local`.
+ * variant goes to `foundry-local`, a LiteRT-LM one to `litert-lm`.
  */
 
 import type { CoreEventMessage } from '@atomic-chat/core/client'
@@ -24,14 +24,15 @@ interface StoreRow {
   providers?: string[]
 }
 
-/** The engine a store model or Foundry Local variant goes to when none is named; else `undefined`. */
+/** The engine a store model, Foundry Local or LiteRT-LM variant goes to when none is named; else `undefined`. */
 async function storeEngine(
   service: WorkspaceClient,
   model: string,
   fallback: string
 ): Promise<string | undefined> {
   const rows = (await service.execute('models.installed')) as StoreRow[]
-  if (rows.some((m) => m.id === model && m.store === 'foundry-local')) return 'foundry-local'
+  const own = rows.find((m) => m.id === model && (m.store === 'foundry-local' || m.store === 'litert-lm'))
+  if (own) return own.store
   const row = rows.find((m) => m.id === model && m.store === 'managed')
   if (!row) return undefined
   const providers = row.providers ?? []
@@ -59,13 +60,14 @@ export async function runModel(
 ): Promise<number> {
   const { link, service } = await attachWorkspace(ctx)
   const named = typeof values['engine'] === 'string' ? values['engine'] : undefined
-  // Foundry Local exists only where the core registers it (spec foundry-local-server): say so here.
-  if (named === 'foundry-local') {
+  // Foundry Local and LiteRT-LM exist only where the core registers them (specs foundry-local-server,
+  // litert-lm-server): say so here.
+  if (named === 'foundry-local' || named === 'litert-lm') {
     const { engines } = (await service.execute('engines.list')) as { engines: Array<{ engine: string }> }
-    if (!engines.some((e) => e.engine === 'foundry-local'))
+    if (!engines.some((e) => e.engine === named))
       throw new AtcError(
         'ATC_USAGE',
-        'Foundry Local is not available on this platform: the core does not offer it here.'
+        `${named === 'litert-lm' ? 'LiteRT-LM' : 'Foundry Local'} is not available on this platform: the core does not offer it here.`
       )
   }
   const provider =

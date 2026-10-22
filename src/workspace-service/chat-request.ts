@@ -4,7 +4,9 @@
  * provider (design D11). A managed engine refuses unknown fields (`trtllm-serve`) or ignores them
  * (`vllm serve`): the body is cut to the OpenAI fields every managed engine reads. Foundry Local reads
  * only the OpenAI chat fields, and tools only for a model whose `model.yml` says it takes them. Neither
- * takes images. Other providers get the body as it is.
+ * takes images. LiteRT-LM's host reads the OpenAI fields, `top_k`, thinking switches and a structured
+ * `response_format`; tools (with `tool_choice` `auto` or `none`) and images go to a model whose
+ * `model.yml` says it takes them. Other providers get the body as it is.
  */
 
 import { AtcError } from '../errors/index.js'
@@ -29,6 +31,17 @@ const MANAGED: ReadonlySet<string> = new Set([
   'chat_template_kwargs',
 ])
 const FOUNDRY: ReadonlySet<string> = new Set([...PROTOCOL, ...OPENAI_SAMPLING])
+const LITERT: ReadonlySet<string> = new Set([
+  ...PROTOCOL,
+  ...OPENAI_SAMPLING,
+  'top_k',
+  'n',
+  'chat_template_kwargs',
+  'reasoning_effort',
+])
+/** Providers whose body `atc` shapes; any other gets it as it is. */
+const SHAPED = (provider: string) =>
+  isManagedEngine(provider) || provider === 'foundry-local' || provider === 'litert-lm'
 
 /** A `response_format` other than plain text: the request asks for constrained output. */
 function structured(format: unknown): boolean {
@@ -53,26 +66,40 @@ function hasImage(messages: unknown): boolean {
   )
 }
 
-/** `options.tools`: whether the model takes tools (a Foundry Local model by its `model.yml`). */
+/**
+ * `options.tools`, `options.vision`: whether the model takes tools and images (a Foundry Local or
+ * LiteRT-LM model by its `model.yml`).
+ */
 export function chatRequestFor(
   provider: string,
   body: Record<string, unknown>,
-  options: { tools?: boolean } = {}
+  options: { tools?: boolean; vision?: boolean } = {}
 ): Record<string, unknown> {
+  if (!SHAPED(provider)) return body
   const managed = isManagedEngine(provider)
-  if (!managed && provider !== 'foundry-local') return body
-  if (hasImage(body['messages']))
-    throw new AtcError('ATC_USAGE', `Models on ${provider} take no images; send text only.`)
-  const passed = managed ? MANAGED : FOUNDRY
+  const litert = provider === 'litert-lm'
+  if (hasImage(body['messages']) && !(litert && options.vision))
+    throw new AtcError(
+      'ATC_USAGE',
+      litert
+        ? 'This model takes no images; send text only.'
+        : `Models on ${provider} take no images; send text only.`
+    )
+  const passed = managed ? MANAGED : litert ? LITERT : FOUNDRY
   const shaped: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(body)) if (passed.has(key)) shaped[key] = value
   // `tool_choice` only with tools: an engine refuses one without the other.
   if (options.tools !== false && Array.isArray(body['tools']) && body['tools'].length > 0) {
     shaped['tools'] = body['tools']
-    if (body['tool_choice'] !== undefined) shaped['tool_choice'] = body['tool_choice']
+    // LiteRT-LM's host takes `auto` and `none` alone.
+    const choice = body['tool_choice']
+    if (choice !== undefined && (!litert || choice === 'auto' || choice === 'none'))
+      shaped['tool_choice'] = choice
   }
-  // The core's gateway refuses structured output for a family without it, by name: passed on to say so.
-  if (managed && structured(body['response_format'])) shaped['response_format'] = body['response_format']
+  // The core's gateway refuses structured output for a family without it, by name: passed on to say so;
+  // LiteRT-LM decodes to the schema itself.
+  if ((managed || litert) && structured(body['response_format']))
+    shaped['response_format'] = body['response_format']
   return shaped
 }
 

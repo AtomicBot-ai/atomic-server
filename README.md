@@ -116,7 +116,7 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Server | `atc status` | The server, the API endpoint, running models, the admin URL | works (`--watch` is a stub) |
 | Server | `atc logs` | Tail of the server log; `-f` follows it | works |
 | Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on an engine (`--engine`; a managed engine shows its load stages); stop it | works |
-| Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines' and Foundry Local's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local)) |
+| Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines', Foundry Local's and LiteRT-LM's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local), [LiteRT-LM](#litert-lm)) |
 | Models & engines | `atc engines list\|install\|status\|rm\|accelerators` | Engines (llama.cpp, MLX, Foundry Local, LiteRT-LM (`litert-lm`), the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs; `engines accelerators foundry-local\|litert-lm` lists and prepares accelerators | works (see [Managed engines](#managed-engines), [LiteRT-LM](#litert-lm)) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
@@ -228,7 +228,24 @@ atc engines install litert-lm [--no-accelerators]    # the build, then openvino 
 atc engines accelerators litert-lm [--refresh]       # the NPU generation and openvino, prepared or not
 atc engines accelerators litert-lm --prepare         # download openvino (about 85 MB) through atc's proxy
 atc engines status litert-lm                         # the active build
+atc models catalog --engine litert-lm                # Atomic Chat's list only
+atc models search gemma --engine litert-lm           # Atomic Chat's list, then Hugging Face's
+atc models pull gemma-4-e4b --engine litert-lm [--backend npu|gpu|cpu]
+atc models pull --cancel <request-id> --engine litert-lm
+atc run gemma-4-e4b-gpu --engine litert-lm           # a downloaded variant loads with litert-lm
+atc models rm gemma-4-e4b-gpu                        # unloaded first, then its folder is deleted
 ```
+
+Without `--backend` the pull takes the NPU variant, then GPU, then CPU, among those that run here or will
+once prepared, and downloads only one the core says runs (`ok`). Atomic Chat's list pins each file to a
+commit with its size and sha256; Hugging Face models (conf's organisations, tag `litert-lm`) come after,
+marked not verified by Atomic Chat, with variants read from their file names (`-gpu`, `_intel_LNL`, …)
+and sha256 from the Hub's LFS metadata. A gated model needs `HF_TOKEN` in the server's environment and
+its terms accepted on Hugging Face; the token goes to Hugging Face's own host, never to the CDN a
+download is redirected to. A download runs in the server into `<data>/litert-lm/models/<variant>/`,
+resumes, is checked by the core, and writes `model.yml` last; a folder without it is not a model. One
+model answers one request at a time: several clients are served in turn. The list is cached for an
+hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
 ## Where data lives
 
