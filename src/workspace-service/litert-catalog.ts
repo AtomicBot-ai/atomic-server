@@ -137,7 +137,7 @@ export async function liteRtSearch(
             revision: r.revision,
           },
           // A variant id names a folder: one conf already holds is told apart by the repository.
-          uniqueHfIds(hfVariants(r.files, allowed), r.repo, curatedIds)
+          uniqueHfIds(hfVariants(r.files, allowed, r.repo), r.repo, curatedIds)
         )
       }
     } catch (error) {

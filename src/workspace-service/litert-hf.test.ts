@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyLiteRtFile, hfVariants, uniqueHfIds } from './litert-hf.js'
+import { classifyLiteRtFile, hfLiteRtRepositories, hfVariants, uniqueHfIds } from './litert-hf.js'
 
 describe('classifyLiteRtFile', () => {
   it.each([
@@ -49,6 +49,8 @@ describe('classifyLiteRtFile', () => {
   )
 })
 
+const E2B = 'litert-community/gemma-4-E2B-it-litert-lm'
+
 describe('hfVariants', () => {
   const file = (path: string) => ({ path, size: 100, sha256: 'a'.repeat(64) })
   const spec = [
@@ -61,7 +63,7 @@ describe('hfVariants', () => {
 
   it('builds cpu, gpu and npu (intel-lnl) from the spec’s repository, no web or Tensor file', () => {
     expect(
-      hfVariants(spec, ['cpu', 'gpu', 'npu']).map((v) => [v.id, v.backend, v.npu ?? null, v.file.path])
+      hfVariants(spec, ['cpu', 'gpu', 'npu'], E2B).map((v) => [v.id, v.backend, v.npu ?? null, v.file.path])
     ).toEqual([
       ['gemma-4-e2b-it-npu-intel-lnl', 'npu', 'intel-lnl', 'gemma-4-E2B-it_intel_LNL.litertlm'],
       ['gemma-4-e2b-it-gpu', 'gpu', null, 'gemma-4-E2B-it-gpu.litertlm'],
@@ -71,7 +73,7 @@ describe('hfVariants', () => {
 
   it('offers the plain file for the GPU too when the repository has no GPU file', () => {
     expect(
-      hfVariants([file('gemma-4-E2B-it.litertlm')], ['cpu', 'gpu']).map((v) => [v.id, v.file.path])
+      hfVariants([file('gemma-4-E2B-it.litertlm')], ['cpu', 'gpu'], E2B).map((v) => [v.id, v.file.path])
     ).toEqual([
       ['gemma-4-e2b-it-gpu', 'gemma-4-E2B-it.litertlm'],
       ['gemma-4-e2b-it-cpu', 'gemma-4-E2B-it.litertlm'],
@@ -79,20 +81,32 @@ describe('hfVariants', () => {
   })
 
   it('offers only the backends conf allows on this platform', () => {
-    expect(hfVariants(spec, ['cpu', 'npu']).map((v) => v.backend)).toEqual(['npu', 'cpu'])
+    expect(hfVariants(spec, ['cpu', 'npu'], E2B).map((v) => v.backend)).toEqual(['npu', 'cpu'])
   })
 
   it('keeps each quantisation of a repository as its own variant', () => {
     const qwen = ['qwen3_4b_mixed_int4.litertlm', 'qwen3_4b_channelwise_int8_float32kv.litertlm'].map(file)
-    expect(hfVariants(qwen, ['cpu']).map((v) => v.id)).toEqual([
+    expect(hfVariants(qwen, ['cpu'], 'litert-community/Qwen3-4B').map((v) => v.id)).toEqual([
       'qwen3_4b_mixed_int4-cpu',
       'qwen3_4b_channelwise_int8_float32kv-cpu',
     ])
   })
 
   it('skips a file without an LFS sha256', () => {
-    expect(hfVariants([{ path: 'm.litertlm', size: 10, sha256: null }], ['cpu'])).toEqual([])
+    expect(hfVariants([{ path: 'm.litertlm', size: 10, sha256: null }], ['cpu'], E2B)).toEqual([])
   })
+})
+
+describe('variant ids across repositories', () => {
+  const file = (path: string) => ({ path, size: 100, sha256: 'a'.repeat(64) })
+  it.each([
+    // A file named after the model keeps its name; one that is not gets the repository's.
+    ['litert-community/Qwen3-0.6B', 'qwen3_0_6b_mixed_int4.litertlm', 'qwen3_0_6b_mixed_int4-cpu'],
+    ['litert-community/Gemma3-1B-IT', 'gemma3-1b-it-int4.litertlm', 'gemma3-1b-it-int4-cpu'],
+    ['litert-community/VibeThinker-3B', 'model.litertlm', 'vibethinker-3b-model-cpu'],
+    ['litert-community/VibeThinker-1.5B', 'model.litertlm', 'vibethinker-1.5b-model-cpu'],
+    ['litert-community/Kokoro-82M', 'kokoro_int8.litertlm', 'kokoro-82m-kokoro_int8-cpu'],
+  ])('%s: %s is %s', (repo, path, id) => expect(hfVariants([file(path)], ['cpu'], repo)[0]?.id).toBe(id))
 })
 
 describe('uniqueHfIds', () => {
@@ -106,5 +120,47 @@ describe('uniqueHfIds', () => {
     expect(
       uniqueHfIds([v('gemma-cpu')], 'litert-community/Gemma-X', new Set(['gemma-cpu'])).map((x) => x.id)
     ).toEqual(['gemma-x-gemma-cpu'])
+  })
+})
+
+describe('hfLiteRtRepositories, cached', () => {
+  /** The Hub as a fetch: the org lists two repositories; every request is counted. */
+  function hub(fail = false) {
+    const calls: string[] = []
+    const request = (async (input: string | URL | Request) => {
+      const url = String(input)
+      calls.push(url)
+      if (fail) return new Response('down', { status: 503 })
+      if (url.includes('/api/models?'))
+        return Response.json([{ id: 'litert-community/A' }, { id: 'litert-community/B' }])
+      return Response.json({ sha: 'c'.repeat(40), siblings: [{ rfilename: 'a.litertlm', size: 1 }] })
+    }) as typeof fetch
+    return { calls, request }
+  }
+
+  it('asks the Hub once an hour: the same search is free, another reads only the listing', async () => {
+    const { calls, request } = hub()
+    let now = 0
+    const o = { hub: 'https://hf.test', fetch: request, now: () => now }
+    expect(await hfLiteRtRepositories(['litert-community'], '', o)).toHaveLength(2)
+    expect(calls).toHaveLength(3)
+    await hfLiteRtRepositories(['litert-community'], '', o)
+    expect(calls).toHaveLength(3)
+    await hfLiteRtRepositories(['litert-community'], 'gemma', o)
+    expect(calls).toHaveLength(4)
+    now = 60 * 60 * 1000 + 1
+    await hfLiteRtRepositories(['litert-community'], '', o)
+    expect(calls).toHaveLength(7)
+  })
+
+  it('keeps no failure: the next search asks again', async () => {
+    const down = hub(true)
+    await expect(
+      hfLiteRtRepositories(['litert-community'], '', { hub: 'https://hf.test', fetch: down.request })
+    ).rejects.toThrow('503')
+    await expect(
+      hfLiteRtRepositories(['litert-community'], '', { hub: 'https://hf.test', fetch: down.request })
+    ).rejects.toThrow('503')
+    expect(down.calls).toHaveLength(2)
   })
 })

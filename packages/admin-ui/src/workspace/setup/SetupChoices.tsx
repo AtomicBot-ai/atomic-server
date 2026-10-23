@@ -100,7 +100,8 @@ export function SetupChoices({
               disabled={loading}
               onChange={(e) => setChoice(e.target.value)}
             >
-              <option value="">Choose a model</option>
+              {/* In the list itself: below it, the note falls out of a short dialog's view. */}
+              <option value="">{loading ? 'Loading models…' : 'Choose a model'}</option>
               {visible.map((model) => (
                 <option value={text(model.id)} key={text(model.id)}>
                   {text(model.title ?? model.name ?? model.id)}

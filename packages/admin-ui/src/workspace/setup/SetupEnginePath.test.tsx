@@ -122,3 +122,27 @@ describe('the admin setup wizard with a managed engine', () => {
     await waitFor(() => expect(execute).toHaveBeenCalledWith('setup.complete', { model_id: REPO }))
   })
 })
+
+describe('the admin setup wizard with LiteRT-LM', () => {
+  it('says the models are loading inside the list while the search runs, then lists them', async () => {
+    let answer: (value: unknown) => void = () => {}
+    const { workspace } = workspaceFixture({
+      'engines.list': enginesList(['llamacpp-upstream', 'litert-lm']),
+      'models.search': () => new Promise((resolve) => (answer = resolve)),
+      'config.get': {},
+    })
+    render(<SetupWizard workspace={workspace} onClose={() => {}} onOpenGoal={() => {}} />)
+    await chooseEngine('litert-lm')
+    const list = await screen.findByLabelText('Setup model')
+    expect(list.querySelector('option')?.textContent).toBe('Loading models…')
+    await act(async () =>
+      answer({
+        models: [
+          { model_id: 'gemma-4-e2b', name: 'Gemma 4 E2B', default_variant: 'gemma-4-e2b-cpu', variants: [] },
+        ],
+      })
+    )
+    await waitFor(() => expect(list.querySelector('option')?.textContent).toBe('Choose a model'))
+    expect(screen.getByRole('option', { name: 'Gemma 4 E2B' })).toBeInTheDocument()
+  })
+})

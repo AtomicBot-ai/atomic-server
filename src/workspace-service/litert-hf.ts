@@ -67,8 +67,24 @@ const slug = (stem: string) =>
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/^[^a-z0-9]+/, '')
 
+const letters = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/**
+ * What a variant id starts with: the file's name when it names the repository's model (letters and
+ * digits compared, the repository's `-litert-lm` aside), else the repository's name before it — a file
+ * called `model.litertlm` is in many repositories, a repository's name in one organisation is once.
+ */
+function idStem(stem: string, repo: string): string {
+  const name = (repo.split('/').at(-1) ?? repo).replace(/[-_]litert[-_]?lm$/i, '')
+  return letters(stem).startsWith(letters(name)) ? slug(stem) : `${slug(name)}-${slug(stem)}`
+}
+
 /** A repository's files as variants, NPU first, then GPU, then CPU; only the backends in `allowed`. */
-export function hfVariants(files: readonly HfFile[], allowed: readonly LiteRtLmBackendId[]): HfVariant[] {
+export function hfVariants(
+  files: readonly HfFile[],
+  allowed: readonly LiteRtLmBackendId[],
+  repo: string
+): HfVariant[] {
   const classified = files.flatMap((f) => {
     const c = f.sha256 ? classifyLiteRtFile(f.path) : null
     return c ? [{ file: { path: f.path, size: f.size, sha256: f.sha256! }, c }] : []
@@ -77,7 +93,7 @@ export function hfVariants(files: readonly HfFile[], allowed: readonly LiteRtLmB
   const variants: HfVariant[] = []
   const add = (stem: string, backend: LiteRtLmBackendId, file: HfVariant['file'], npu?: LiteRtLmNpu) => {
     if (!allowed.includes(backend)) return
-    const id = `${slug(stem)}-${backend}${npu ? `-${npu}` : ''}`
+    const id = `${idStem(stem, repo)}-${backend}${npu ? `-${npu}` : ''}`
     if (!variants.some((v) => v.id === id)) variants.push({ id, backend, ...(npu ? { npu } : {}), file })
   }
   for (const { file, c } of classified)
@@ -116,10 +132,31 @@ export interface HfListingOptions {
   fetch: typeof fetch
   /** `HF_TOKEN`: sent to the Hub only. */
   token?: string | undefined
+  now?: () => number
 }
 
 const PAGE = 50
 const CONCURRENCY = 8
+/** An hour, as conf's lists: a repository's new commit reaches a search within it. */
+export const HUB_CACHE_MS = 60 * 60 * 1000
+
+/**
+ * The server's answers from the Hub, by listing (organisation and query) and by repository: a search
+ * reads up to 50 repositories, so the next one within the hour costs one listing request, not 50. Kept
+ * per fetch — one server's, or one test's — so two never share. A failure is not kept.
+ */
+const caches = new WeakMap<typeof fetch, Map<string, { at: number; value: unknown }>>()
+
+async function cached<T>(o: HfListingOptions, key: string, read: () => Promise<T>): Promise<T> {
+  const now = (o.now ?? Date.now)()
+  let cache = caches.get(o.fetch)
+  if (!cache) caches.set(o.fetch, (cache = new Map()))
+  const hit = cache.get(`${o.hub} ${key}`)
+  if (hit && now - hit.at < HUB_CACHE_MS) return hit.value as T
+  const value = await read()
+  if (value !== null) cache.set(`${o.hub} ${key}`, { at: now, value })
+  return value
+}
 
 async function hubJson(url: string, o: HfListingOptions): Promise<unknown> {
   const response = await o.fetch(url, {
@@ -139,7 +176,11 @@ type Revision = {
 }
 
 /** One repository at the commit `main` names; `null` when the Hub does not answer for it. */
-async function readRepository(repo: string, o: HfListingOptions): Promise<HfRepository | null> {
+function readRepository(repo: string, o: HfListingOptions): Promise<HfRepository | null> {
+  return cached(o, `repo ${repo}`, () => fetchRepository(repo, o))
+}
+
+async function fetchRepository(repo: string, o: HfListingOptions): Promise<HfRepository | null> {
   const r = (await hubJson(
     `${o.hub}/api/models/${repo}/revision/main?blobs=true&files_metadata=true`,
     o
@@ -178,7 +219,7 @@ export async function hfLiteRtRepositories(
   for (const org of orgs) {
     const params = new URLSearchParams({ author: org, filter: 'litert-lm', limit: String(PAGE) })
     if (query.trim()) params.set('search', query.trim())
-    const listing = await hubJson(`${o.hub}/api/models?${params}`, o)
+    const listing = await cached(o, `list ${params}`, () => hubJson(`${o.hub}/api/models?${params}`, o))
     if (!Array.isArray(listing)) throw new Error('Hugging Face answered its model listing in another shape.')
     for (const m of listing as Array<{ id?: unknown }>)
       if (typeof m.id === 'string' && !ids.includes(m.id)) ids.push(m.id)
