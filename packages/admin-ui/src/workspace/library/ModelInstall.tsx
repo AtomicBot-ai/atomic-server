@@ -7,6 +7,9 @@ import { PlanCommands } from './PlanCommands'
 import { describeError } from '@/services/admin-api'
 
 export function ModelInstall({
+  autoStart = false,
+  initialFile = '',
+  initialQuant = '',
   expectedEngine,
   technical = false,
   model,
@@ -16,25 +19,42 @@ export function ModelInstall({
   onStarted,
   onNoGguf,
 }: {
+  autoStart?: boolean
+  initialFile?: string
+  initialQuant?: string
   expectedEngine?: string
   technical?: boolean
   model: RecordValue
   category: string
   execute: Execute
   onClose: () => void
-  onStarted?: (result: unknown) => void
+  onStarted?: (result: unknown) => void | Promise<void>
   /** A repository with no GGUF file: the managed engines' path, when the host has one. */
   onNoGguf?: (repository: string) => void
 }) {
-  const dialog = useDialog(onClose)
+  const [committing, setCommitting] = useState(false)
+  const dialog = useDialog(() => {
+    if (!committing) onClose()
+  })
   const id = text(model.id ?? model.model_name ?? model.repo, '')
   const gguf = category === 'text' && record(model.source).format !== 'mlx'
   const [files, setFiles] = useState<RecordValue[]>([])
   const [file, setFile] = useState('')
-  const [quant, setQuant] = useState('')
+  const [quant, setQuant] = useState(initialQuant)
   const [plan, setPlan] = useState<RecordValue | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(gguf)
+  const [planning, setPlanning] = useState(true)
+  const [revision, setRevision] = useState(0)
+  const active = useRef(true)
+  const selection = useRef('')
+  selection.current = JSON.stringify([category, id, file, quant, revision])
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
   // The latest callback, read when the lookup answers: the lookup itself runs once per model.
   const noGguf = useRef(onNoGguf)
   noGguf.current = onNoGguf
@@ -54,7 +74,11 @@ export function ModelInstall({
           if (active) {
             const entries = rows(result)
             setFiles(entries)
-            setFile(text(entries[0]?.filename ?? entries[0]?.path, ''))
+            setFile(
+              entries.some((entry) => (entry.filename ?? entry.path) === initialFile)
+                ? initialFile
+                : text(entries[0]?.filename ?? entries[0]?.path, '')
+            )
           }
         })
         .catch((e) => {
@@ -70,7 +94,35 @@ export function ModelInstall({
     return () => {
       active = false
     }
-  }, [category, gguf, id, execute])
+  }, [category, gguf, id, execute, revision, initialFile])
+  useEffect(() => {
+    if (loading || (gguf && !file)) return
+    let active = true
+    setPlanning(true)
+    setPlan(null)
+    setError('')
+    void execute(
+      gguf ? 'models.plan' : 'artifacts.plan',
+      gguf
+        ? { repo: id, file, include_projector: true }
+        : { category, model_id: id, ...(quant ? { quant } : {}) }
+    )
+      .then((result) => {
+        if (active) setPlan(record(result))
+      })
+      .catch((e) => {
+        if (active) setError(describeError(e))
+      })
+      .finally(() => {
+        if (active) setPlanning(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [execute, loading, gguf, id, file, category, quant, revision])
+  const started = useRef('')
+  const callbacks = useRef({ onStarted, onClose })
+  callbacks.current = { onStarted, onClose }
   const request = { repo: id, file, include_projector: true }
   const blockers = [...(Array.isArray(plan?.blockers) ? plan.blockers : [])]
   const plannedEngine = text(
@@ -86,6 +138,33 @@ export function ModelInstall({
     blockers.push(
       `This file requires ${plannedEngine || 'another engine'}. You chose ${expectedEngine}. Go back and change the engine or choose a different model.`
     )
+  const blocked = blockers.length > 0
+  useEffect(() => {
+    if (!autoStart || !plan || planning || blocked || error) return
+    const digest = text(plan.digest ?? plan.plan_digest, '')
+    const key = `${id}:${digest}:${revision}`
+    if (started.current === key) return
+    started.current = key
+    const input = { plan_digest: digest, request_id: crypto.randomUUID() }
+    const selected = selection.current
+    void execute(
+      gguf ? 'models.install' : 'artifacts.install',
+      gguf ? { ...input, request: { repo: id, file, include_projector: true } } : input
+    )
+      .then(async (result) => {
+        if (!active.current || selection.current !== selected) return
+        setCommitting(true)
+        try {
+          await callbacks.current.onStarted?.(result)
+          if (active.current) callbacks.current.onClose()
+        } finally {
+          setCommitting(false)
+        }
+      })
+      .catch((e) => {
+        if (active.current && selection.current === selected) setError(describeError(e))
+      })
+  }, [autoStart, plan, planning, blocked, error, execute, gguf, id, file, revision])
   return (
     <div className="modal-shade">
       <section
@@ -98,21 +177,28 @@ export function ModelInstall({
       >
         <div className="panel-heading">
           <h2>{text(model.title ?? model.name, id)}</h2>
-          <button className="ew-button" onClick={onClose}>
+          <button className="ew-button" disabled={committing} onClick={onClose}>
             Close
           </button>
         </div>
-        <p className="ew-muted">{id}</p>
         {error && (
           <p role="alert" className="inline-error">
             {error}
           </p>
         )}
-        {!plan ? (
-          <>
+        {!autoStart && (
+          <details>
+            <summary>Download options</summary>
             {gguf ? (
               <Field label="Model file">
-                <select value={file} disabled={loading} onChange={(e) => setFile(e.target.value)}>
+                <select
+                  value={file}
+                  disabled={loading || committing}
+                  onChange={(e) => {
+                    setPlan(null)
+                    setFile(e.target.value)
+                  }}
+                >
                   <option value="">{loading ? 'Loading files…' : 'Choose a file'}</option>
                   {files.map((row) => (
                     <option key={text(row.filename ?? row.path)} value={text(row.filename ?? row.path)}>
@@ -123,7 +209,14 @@ export function ModelInstall({
               </Field>
             ) : quants.length > 0 ? (
               <Field label="Quantization">
-                <select value={quant} onChange={(e) => setQuant(e.target.value)}>
+                <select
+                  value={quant}
+                  disabled={committing}
+                  onChange={(e) => {
+                    setPlan(null)
+                    setQuant(e.target.value)
+                  }}
+                >
                   <option value="">Recommended</option>
                   {quants.map((q, i) => (
                     <option key={i} value={typeof q === 'string' ? q : text(record(q).id ?? record(q).quant)}>
@@ -133,43 +226,26 @@ export function ModelInstall({
                 </select>
               </Field>
             ) : null}
-            <Action
-              primary
-              disabled={loading || (gguf && !file)}
-              onClick={async () =>
-                setPlan(
-                  record(
-                    await execute(
-                      gguf ? 'models.plan' : 'artifacts.plan',
-                      gguf ? request : { category, model_id: id, ...(quant ? { quant } : {}) }
-                    )
-                  )
-                )
-              }
-            >
-              Review download
-            </Action>
-          </>
-        ) : (
+            {technical && plan && <JsonResult value={plan} />}
+          </details>
+        )}
+        {(loading || planning) && !error && <p role="status">Checking download…</p>}
+        {autoStart && !error && (
+          <p role="status">
+            {blocked
+              ? blockers.map((b) => (typeof b === 'string' ? b : text(record(b).message))).join(' ')
+              : 'Starting download…'}
+          </p>
+        )}
+        {error && <Action onClick={() => setRevision((v) => v + 1)}>Retry</Action>}
+        {plan && !planning && !autoStart && (
           <>
             <div className="plan-facts">
               <div>
                 <span>Download</span>
                 <strong>{bytes(plan.total_download_bytes ?? plan.total_bytes)}</strong>
               </div>
-              <div>
-                <span>Available disk</span>
-                <strong>{bytes(plan.free_bytes)}</strong>
-              </div>
-              <div>
-                <span>{expectedEngine ? 'Selected engine' : 'Engine'}</span>
-                <strong>{text(expectedEngine || plannedEngine)}</strong>
-              </div>
             </div>
-            <p className="ew-muted">
-              Review compatibility below. Any missing engine build is prepared before loading; its download
-              may be additional to the model size shown.
-            </p>
             {technical && (
               <PlanCommands
                 execute={execute}
@@ -189,12 +265,7 @@ export function ModelInstall({
                 ))}
               </ul>
             )}
-            <details>
-              <summary>Files and compatibility</summary>
-              <JsonResult value={plan} />
-            </details>
             <div className="ew-actions">
-              <Action onClick={() => setPlan(null)}>Back</Action>
               <Action
                 primary
                 disabled={blockers.length > 0}
@@ -203,12 +274,19 @@ export function ModelInstall({
                     plan_digest: text(plan.digest ?? plan.plan_digest, ''),
                     request_id: crypto.randomUUID(),
                   }
+                  const selected = selection.current
                   const result = await execute(
                     gguf ? 'models.install' : 'artifacts.install',
                     gguf ? { ...input, request } : input
                   )
-                  onStarted?.(result)
-                  onClose()
+                  if (!active.current || selection.current !== selected) return
+                  setCommitting(true)
+                  try {
+                    await callbacks.current.onStarted?.(result)
+                    if (active.current) callbacks.current.onClose()
+                  } finally {
+                    setCommitting(false)
+                  }
                 }}
               >
                 Download

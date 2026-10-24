@@ -26,7 +26,7 @@ afterEach(async () => {
 })
 
 /** The server's workspace: plans, atc-owned setup records and the downloads snapshot. */
-function workspace() {
+function workspace(onEngine: () => void = () => {}) {
   const jobs: ModelSetup[] = []
   const calls: Array<{ name: string; input: Record<string, unknown> }> = []
   const downloads: unknown[] = []
@@ -35,6 +35,7 @@ function workspace() {
       calls.push({ name, input })
       if (name === 'models.plan') return { ...plan, digest: `fresh-${String(input['file'])}` }
       if (name === 'setup.status') return { setups: jobs }
+      if (name === 'engines.enqueue') onEngine()
       if (name === 'models.install') {
         const record = {
           setup_id: `setup-${jobs.length + 1}`,
@@ -63,18 +64,22 @@ it.each(['llamacpp-upstream', 'llamacpp'])(
   async (provider) => {
     const dir = await folder(),
       link = fakeCoreLink(),
-      w = workspace()
-    const packs: { version: string; backend: string }[] = []
+      packs: { version: string; backend: string }[] = [],
+      w = workspace(() => packs.push({ version: 'b1', backend: 'cpu' }))
     link.request = async <T>(method: string, path: string, body?: unknown) => {
       link.calls.push({ method, path, body })
       if (path === `/backends/${provider}`) return { backends: packs } as T
-      if (path.endsWith('/install')) packs.push({ version: 'b1', backend: 'cpu' })
       return {} as T
     }
     const service = new TerminalSetup(dir, async () => link, w.ws)
     const selected = await service.plan({ repo: 'owner/repo', file: 'model.gguf' })
     await service.begin('server', `${provider}|b1|cpu`, [selected])
     await expect(service.finish()).rejects.toThrow('every selected')
+    expect(w.calls).toContainEqual({
+      name: 'engines.enqueue',
+      input: { engine: provider, target: { version: 'b1', variant: 'cpu' } },
+    })
+    expect(link.calls.some((c) => c.path.endsWith('/install'))).toBe(false)
     expect(w.calls).toContainEqual({
       name: 'models.install',
       input: { request: selected.request, plan_digest: 'fresh-model.gguf', request_id: selected.requestId },
@@ -153,7 +158,7 @@ it('continues the earlier setup when only its engine got installed since', async
   expect(w.calls).toContainEqual({ name: 'setup.resume', input: { setup_id: 'setup-1' } })
 })
 
-it('leaves the PrismML build to the setup record, and pause cancels the setups and that build download', async () => {
+it('leaves the PrismML build to the shared queue, and pauses only its model setup', async () => {
   const dir = await folder(),
     link = fakeCoreLink(),
     w = workspace()
@@ -169,9 +174,7 @@ it('leaves the PrismML build to the setup record, and pause cancels the setups a
   w.jobs[0]!.task_ids.engine = 'atomic-prism-backend-prism-b3-abcdef0-cpu'
   await service.pause()
   expect(w.calls).toContainEqual({ name: 'setup.cancel', input: { setup_id: 'setup-1' } })
-  expect(link.calls.filter((c) => c.path.startsWith('/downloads/')).map((c) => c.path)).toEqual([
-    '/downloads/atomic-prism-backend-prism-b3-abcdef0-cpu/cancel',
-  ])
+  expect(link.calls.some((c) => c.path.startsWith('/downloads/'))).toBe(false)
 })
 
 it('shows an installation an earlier version started as one to start again, then restarts it', async () => {

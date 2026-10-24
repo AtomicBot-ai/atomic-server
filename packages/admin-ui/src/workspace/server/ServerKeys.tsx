@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import type { Workspace } from '../useWorkspace'
-import { Action, Copy, Panel } from '../Controls'
+import { Action, Copy } from '../Controls'
 import { record, text } from '../types'
+import { DeleteConfirmation } from '../library/DeleteConfirmation'
 export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
   const s = w.snapshot
   const [keyName, setKeyName] = useState('')
+  const [revoke, setRevoke] = useState<{ id: string; name: string } | null>(null)
+  const [revoking, setRevoking] = useState(false)
   return (
-    <Panel title="API keys">
+    <section className="ew-panel" aria-label="API keys">
       <div className="key-create">
         <input
           aria-label="New API key name"
@@ -56,10 +59,7 @@ export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
                     <Action
                       danger
                       disabled={s.keys.length < 2}
-                      onClick={() => {
-                        if (window.confirm(`Revoke ${key.name}? Clients using it will lose access.`))
-                          return w.execute('keys.revoke', { id: key.id })
-                      }}
+                      onClick={() => setRevoke({ id: key.id, name: key.name })}
                     >
                       Revoke
                     </Action>
@@ -70,6 +70,25 @@ export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
           </tbody>
         </table>
       </div>
-    </Panel>
+      {revoke && (
+        <DeleteConfirmation
+          title="Revoke API key?"
+          name={revoke.name}
+          detail="Clients using this key will lose access."
+          confirm="Revoke key"
+          cancel="Cancel"
+          busy={revoking}
+          onClose={() => setRevoke(null)}
+          onConfirm={async () => {
+            setRevoking(true)
+            try {
+              await w.execute('keys.revoke', { id: revoke.id })
+            } finally {
+              setRevoking(false)
+            }
+          }}
+        />
+      )}
+    </section>
   )
 }

@@ -53,7 +53,13 @@ export function drawOperationPanel(
     fields.slice(win.start, win.start + win.count).forEach((f, i) => {
       const value = fieldValue(s.operationInput, f.path)
       const shown =
-        value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value)
+        value === undefined
+          ? '—'
+          : /api_key|token|password/.test(f.path)
+            ? '••••••••'
+            : typeof value === 'object'
+              ? JSON.stringify(value)
+              : String(value)
       button(
         c,
         `operation-field:${f.path}`,
@@ -78,7 +84,8 @@ export function drawOperationPanel(
         width
       )
   }
-  let bx = x
+  let bx = x,
+    actionRow = width < 50 ? bottom - 1 : bottom
   for (const [id, label, hint] of [
     ['operation-run', s.busy ? 'Running…' : 'Run', op.description],
     ['operation-fields', 'Fields', 'Edit named fields'],
@@ -88,8 +95,12 @@ export function drawOperationPanel(
     ['operation-up', '↑', 'Scroll toward beginning'],
     ['operation-down', '↓', 'Scroll toward end'],
   ]) {
-    if (bx + label!.length + 2 > x + width) break
-    bx += button(c, id!, bx, bottom, label!, hint!, focus) + 1
+    if (bx + label!.length + 2 > x + width) {
+      bx = x
+      actionRow++
+    }
+    if (actionRow > bottom) break
+    bx += button(c, id!, bx, actionRow, label!, hint!, focus) + 1
   }
 }
 export function drawOperationOverlay(c: Canvas, s: WorkspaceState, focus: string) {

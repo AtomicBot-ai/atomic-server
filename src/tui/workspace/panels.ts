@@ -1,5 +1,10 @@
+import { drawHardware } from './server/hardware-panel.js'
+import { drawSettings, drawInterfaceSettings } from './server/settings-panel.js'
+import { drawSpecialSettings } from './server/settings-special.js'
 import { drawLibrary } from './library/library-panel.js'
 import { drawOperationPanel } from './operations/operation-panel.js'
+import { mediaTask } from './media/media-model.js'
+import { drawMediaPanel } from './media/media-panel.js'
 import { drawServer } from './server/server-panel.js'
 import type { Canvas } from './draw/canvas.js'
 import { button, COLORS, text, wrap } from './draw/canvas.js'
@@ -15,7 +20,11 @@ interface Bounds {
 }
 export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: string): void {
   const { x, y, width, bottom } = b
-  if (s.page === 'tools') {
+  if (s.page === 'tools' && s.operation === 'hardware.info' && s.settingsGroup === 'hardware') {
+    drawHardware(c, s, x, y, width, bottom, focus)
+  } else if (mediaTask(s)) {
+    drawMediaPanel(c, s, x, y, width, bottom, focus)
+  } else if (s.page === 'tools') {
     drawOperationPanel(c, s, x, y, width, bottom, focus)
   } else if (['server', 'requests', 'access'].includes(s.page)) {
     if (s.page === 'server') {
@@ -40,54 +49,12 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
           )
         )
       button(c, 'refresh', x, bottom, 'Refresh', 'Refresh server status.', focus)
-    } else {
-      let bx = x
-      for (const [id, label] of [
-        ['tools:runtime', 'All runtime controls ▾'],
-        ['open-operation:settings.get', 'Engine settings'],
-        ['open-operation:environments.list', 'Environments'],
-      ]) {
-        if (bx + label!.length + 2 > x + width) break
-        bx += button(c, id!, bx, y, label!, `Open ${label}`, focus) + 1
-      }
-      const rows = s.base.config.rows.filter((r) => r.path.startsWith('api.'))
-      const win = computeRowWindow(rows.length, s.selected, Math.max(1, bottom - y - 2))
-      rows
-        .slice(win.start, win.start + win.count)
-        .forEach((r, i) =>
-          button(
-            c,
-            `setting:${r.path}`,
-            x,
-            y + 2 + i,
-            `${r.path.replace('api.', '').padEnd(15)} ${r.value}`.slice(0, width - 2),
-            `${r.description} | Restart API to apply`,
-            focus
-          )
-        )
-      button(c, 'scroll-up', x, bottom, '↑', 'Earlier settings', focus)
-      button(c, 'scroll-down', x + 4, bottom, '↓', 'Later settings', focus)
-    }
+    } else if (!drawSpecialSettings(c, s, x, y, width, bottom, focus))
+      drawSettings(c, s, x, y, width, bottom, focus)
   } else if (s.page === 'models') {
     drawLibrary(c, s, x, y, width, bottom, focus)
   } else if (s.page === 'settings') {
-    text(c, x, y, 'Preferences', COLORS.gold)
-    let row = y + 2
-    for (const [id, label, hint] of [
-      ['endpoint', 'Connection', 'Change the chat endpoint.'],
-      ['motion', `Eye animation: ${s.motion ? 'On' : 'Off'}`, 'Reduce motion; keep the eye still.'],
-      [
-        'mouse',
-        `Mouse navigation: ${s.mouse ? 'On' : 'Off'}`,
-        'Toggle mouse capture. Ctrl+X also switches text-selection mode.',
-      ],
-      ['switch-mode', 'Starting workspace', 'Choose where Atomic Chat opens next time.'],
-      ['page:access', 'API settings', 'Bind address, port, and access policy.'],
-      ['page:logs', 'Server logs', 'Follow the server log.'],
-      ['page:checks', 'System checks', 'Check installation and configuration.'],
-      ['page:commands', 'Command reference', 'Browse the plain commands.'],
-    ])
-      if (row < bottom) button(c, id!, x, row++, label!, hint!, focus)
+    drawInterfaceSettings(c, s, x, y, width, bottom, focus)
   } else if (s.page === 'logs') {
     text(
       c,

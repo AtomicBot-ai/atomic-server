@@ -1,12 +1,8 @@
-/**
- * The daemon against a real core in a temporary data folder: the lock and token the core writes,
- * the run record atc adds, the admin BFF's auth and proxy, the SSE relay, and attach-or-spawn from
- * a command's point of view. No engine is started; the core's own tests cover model loads.
- */
+/** Real core, isolated folder, no engine processes: daemon lifecycle, admin and public API contracts. */
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { rm } from 'node:fs/promises'
-import { AtomicCore } from '@atomic-chat/core'
+import { AtomicCore, CORE_VERSION } from '@atomic-chat/core'
 import { inspectLock } from '@atomic-chat/core/host'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { attachCore, readDaemonRecord } from '../../src/core-link/index.js'
@@ -16,11 +12,13 @@ import type { RunningDaemon } from '../../src/daemon/index.js'
 import { recordingIo } from '../../src/io.js'
 import { createLogger } from '../../src/output/index.js'
 import { readAdminToken } from '../../src/admin/index.js'
+import type { AdminStatus } from '../../src/contract/index.js'
 import { fakeHost } from '../helpers/test-context.js'
 import { tmpDataFolder } from '../helpers/tmp-data-folder.js'
 
 const { paths, cleanup } = tmpDataFolder('atc-contract-')
 const log = createLogger(() => {}, { level: 'silent' })
+const nativeArch = process.platform === 'darwin' ? 'arm64' : 'x64'
 let daemon: RunningDaemon
 let adminUrl: string
 let coreOptions: Parameters<typeof AtomicCore.create>[0]
@@ -37,7 +35,12 @@ beforeAll(async () => {
     telemetry: false,
     createCore: (options) => {
       coreOptions = options
-      return AtomicCore.create(options)
+      return AtomicCore.create({
+        ...options,
+        // Supported native-host facts on each CI OS; no release manifest leaves this process.
+        foundryLocalHost: { arch: nativeArch, osRelease: '22.0.0', glibcVersion: '2.35' },
+        fetch: async () => new Response('Offline contract fixture', { status: 503 }),
+      })
     },
   })
   adminUrl = daemon.admin!.url
@@ -60,7 +63,14 @@ describe('the daemon owns the folder', () => {
     const lock = await inspectLock(paths.layout)
     expect(lock.kind).toBe('owned')
     if (lock.kind === 'owned')
-      expect(lock.record).toMatchObject({ owner_scope: 'cli', state: 'ready', pid: process.pid })
+      expect(lock.record).toMatchObject({
+        owner_scope: 'cli',
+        state: 'ready',
+        pid: process.pid,
+        version: CORE_VERSION,
+      })
+    expect(daemon.core.version).toBe(CORE_VERSION)
+    expect(await daemon.link.health()).toMatchObject({ version: CORE_VERSION })
     if (process.platform !== 'win32')
       expect(statSync(paths.layout.core.controlToken).mode & 0o777).toBe(0o600)
     const record = await readDaemonRecord(paths.daemonRecord)
@@ -69,6 +79,7 @@ describe('the daemon owns the folder', () => {
       admin_url: adminUrl,
       pid: process.pid,
       state: 'ready',
+      core_version: CORE_VERSION,
     })
   })
 
@@ -95,8 +106,8 @@ describe('the daemon owns the folder', () => {
     const headers = { cookie: cookie as string }
     const status = await fetch(`${adminUrl}/api/status`, { headers })
     expect(status.status).toBe(200)
-    const body = (await status.json()) as { core: { instance_id: string }; api: { running: boolean } }
-    expect(body.core.instance_id).toBe(daemon.core.instanceId)
+    const body = (await status.json()) as AdminStatus
+    expect(body.core).toMatchObject({ instance_id: daemon.core.instanceId, version: CORE_VERSION })
     expect(body.api.running).toBe(false)
     const snapshot = await fetch(`${adminUrl}/api/core/snapshot`, { headers })
     expect(snapshot.status).toBe(200)
@@ -107,6 +118,46 @@ describe('the daemon owns the folder', () => {
     expect(bearer.status).toBe(200)
     expect(((await bearer.json()) as { values: { api: { port: number } } }).values.api.port).toBe(1337)
     expect((await fetch(`${adminUrl}/api/setup/state`, { headers })).status).toBe(501)
+  })
+
+  it('keeps LiteRT-LM visible through the shared engine list when release sources are offline', async () => {
+    const token = (await readAdminToken(paths.adminToken)) as string
+    const response = await post(
+      '/api/workspace/execute',
+      { operation: 'engines.list', input: {} },
+      { authorization: `Bearer ${token}` }
+    )
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { engines: Array<{ engine: string }> }
+    expect(body.engines).toContainEqual(
+      expect.objectContaining({
+        engine: 'litert-lm',
+        kind: 'engine-build',
+        active: null,
+        builds: [],
+        error: expect.objectContaining({ code: expect.any(String), message: expect.any(String) }),
+      })
+    )
+  })
+
+  it('saves cloud credentials through authenticated operations and never returns the key in provider lists', async () => {
+    const token = (await readAdminToken(paths.adminToken)) as string
+    const call = (operation: string, input = {}) =>
+      post('/api/workspace/execute', { operation, input }, { authorization: `Bearer ${token}` })
+    const saved = await call('cloud.save', {
+      provider: 'fixture',
+      base_url: 'https://provider.example/v1',
+      models: ['fixture-model'],
+      api_key: 'contract-only-secret',
+    })
+    expect(saved.status).toBe(200)
+    expect(await saved.json()).toMatchObject({ provider: 'fixture', has_api_key: true })
+    const listed = await call('cloud.list')
+    const body = await listed.text()
+    expect(body).toContain('fixture-model')
+    expect(body).not.toContain('contract-only-secret')
+    expect((await call('cloud.remove', { provider: 'fixture' })).status).toBe(200)
+    expect(await (await call('cloud.list')).json()).toEqual({ providers: [] })
   })
 
   it('relays events over SSE', async () => {
@@ -186,7 +237,58 @@ describe('the daemon owns the folder', () => {
     expect(await models()).toBe(401)
     expect(await models({ authorization: 'Bearer not-a-key' })).toBe(401)
     expect(await models({ authorization: `Bearer ${keys.keys[0]!.token}` })).toBe(200)
-    await daemon.link.server.stop()
+    const chat = (model: string, messages: unknown[]) =>
+      fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'authorization': `Bearer ${keys.keys[0]!.token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ model, messages }),
+      })
+    const cold = await chat('missing-model', [{ role: 'user', content: 'Hello' }])
+    expect(cold.status).toBe(503)
+    expect(await cold.text()).toContain('No models are available')
+    // Only session metadata is registered: validation must finish before contacting an engine.
+    daemon.core.externalSessions.publish('contract-validation', 1, [
+      {
+        provider: 'llamacpp-upstream',
+        model_id: 'registered-model',
+        port: 1,
+      },
+    ])
+    try {
+      for (const row of [
+        {
+          model: 'missing-model',
+          messages: [{ role: 'user', content: 'Hello' }],
+          status: 404,
+          code: 'model_not_found',
+          param: 'model',
+          message: /missing-model/,
+        },
+        {
+          model: 'registered-model',
+          messages: [],
+          status: 400,
+          code: 'empty_array',
+          param: 'messages',
+          message: /minimum length 1/,
+        },
+      ]) {
+        const response = await chat(row.model, row.messages)
+        expect(response.status).toBe(row.status)
+        expect(response.headers.get('content-type')).toContain('application/json')
+        expect(await response.json()).toMatchObject({
+          error: {
+            type: 'invalid_request_error',
+            code: row.code,
+            param: row.param,
+            message: expect.stringMatching(row.message),
+          },
+        })
+      }
+    } finally {
+      daemon.core.externalSessions.unregister('contract-validation')
+      await daemon.link.server.stop()
+    }
   })
 
   it('shuts down cleanly: lock released, record removed', async () => {

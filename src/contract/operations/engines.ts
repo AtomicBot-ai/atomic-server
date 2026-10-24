@@ -3,6 +3,17 @@ import { operation, request } from './define.js'
 
 /** Engines & Models: engine builds, provider settings, hardware and managed environments. */
 export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
+  operation('engines.selected', 'Selected engine', 'read', 'Read the engine selected for this workspace.'),
+  operation(
+    'engines.select',
+    'Select engine',
+    'configure',
+    'Use an installed inference engine for onboarding and server setup in every frontend.',
+    {
+      properties: { engine: { type: 'string' } },
+      required: ['engine'],
+    }
+  ),
   operation(
     'engines.list',
     'Engines and builds',
@@ -37,6 +48,23 @@ export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
       },
       required: ['engine'],
     }
+  ),
+  operation(
+    'engines.enqueue',
+    'Download engine',
+    'download',
+    'Queue a supported engine build in the background. Selection records intent; readiness still requires the installation to finish.',
+    {
+      properties: { engine: { type: 'string' }, target: { type: 'object' }, select: { type: 'boolean' } },
+      required: ['engine'],
+    }
+  ),
+  operation(
+    'engines.retry',
+    'Retry engine download',
+    'download',
+    'Retry a failed or interrupted engine build. The core owns build files and installation.',
+    { properties: { id: { type: 'string' } }, required: ['id'] }
   ),
   operation(
     'engines.activate',

@@ -1,5 +1,9 @@
-import { useState } from 'react'
-import { Field } from '../Controls'
+import { fileData } from '../file-data'
+import { useRef, useState } from 'react'
+import { Paperclip, FileText, X } from 'lucide-react'
+import { DEFAULT_ATTACHMENTS, type WorkspaceFeatures } from '@contract'
+import { workspaceApi } from '../workspace-api'
+import { attachmentImage } from './attachment-image'
 export interface Attachment {
   name: string
   text?: string
@@ -17,66 +21,77 @@ export function ChatAttachments({
   vision: boolean
 }) {
   const [error, setError] = useState('')
+  const input = useRef<HTMLInputElement>(null)
   return (
-    <details className="chat-attachments">
-      <summary>
-        Attach text{vision ? ' or images' : ''}
-        {attachments.length ? ` (${attachments.length})` : ''}
-      </summary>
-      <Field label="Choose attachments">
-        <input
-          type="file"
-          multiple
-          disabled={disabled}
-          accept={`${vision ? 'image/png,image/jpeg,image/webp,' : ''}.txt,.md,.csv,.json,.log,.py,.js,.ts,.html,.css`}
-          onChange={async (event) => {
-            const files = [...(event.target.files ?? [])]
-            event.target.value = ''
-            try {
-              if (files.length + attachments.length > 5)
-                throw new Error('Attach at most five files per message.')
-              const next: Attachment[] = []
-              for (const file of files) {
-                if (file.size > (file.type.startsWith('image/') ? 10 * 1024 * 1024 : 1024 * 1024))
-                  throw new Error('Images must be below 10 MB; text files below 1 MB.')
-                if (/^image\/(png|jpeg|webp)$/.test(file.type) && vision) {
-                  const image = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader()
-                    reader.onerror = () => reject(new Error('Could not read image.'))
-                    reader.onload = () => resolve(String(reader.result))
-                    reader.readAsDataURL(file)
-                  })
-                  next.push({ name: file.name, image })
-                } else {
-                  if (!/\.(txt|md|csv|json|log|py|js|ts|html|css)$/i.test(file.name))
-                    throw new Error(
-                      'Choose a text file, or a supported image with a vision model. Convert PDFs to text before attaching.'
-                    )
-                  const text = await file.text()
-                  if (text.includes('\0')) throw new Error('This file contains binary data.')
-                  next.push({ name: file.name, text })
-                }
+    <div className="chat-attachments">
+      <button
+        className="chat-attach-button"
+        type="button"
+        disabled={disabled}
+        title="Attach files"
+        aria-label="Attach files"
+        onClick={() => input.current?.click()}
+      >
+        <Paperclip size={18} />
+      </button>
+      <input
+        ref={input}
+        aria-label="Choose attachments"
+        className="chat-file-input"
+        type="file"
+        multiple
+        disabled={disabled}
+        accept={`${vision ? 'image/png,image/jpeg,image/webp,' : ''}.txt,.md,.csv,.json,.log,.py,.js,.ts,.html,.css,.xml,.yaml,.yml,.pdf,.docx,.xlsx,.pptx`}
+        onChange={async (event) => {
+          const files = [...(event.target.files ?? [])]
+          event.target.value = ''
+          try {
+            if (files.length + attachments.length > 5)
+              throw new Error('Attach at most five files per message.')
+            const features = await workspaceApi.execute<WorkspaceFeatures>('features.get')
+            const settings = features?.attachments ?? DEFAULT_ATTACHMENTS
+            const next: Attachment[] = []
+            for (const file of files) {
+              if (file.size > settings.max_file_size_mb * 1024 * 1024)
+                throw new Error(`Attachments must be below ${settings.max_file_size_mb} MB.`)
+              if (/^image\/(png|jpeg|webp)$/.test(file.type) && vision) {
+                const image = await attachmentImage(file, settings.max_image_size_px)
+                next.push({ name: file.name, image })
+              } else {
+                if (!settings.enabled) throw new Error('Enable document attachments in Settings first.')
+                const parsed = await workspaceApi.execute<{ content: string }>('attachments.parse', {
+                  name: file.name,
+                  data: await fileData(file),
+                })
+                const text = parsed.content
+                next.push({ name: file.name, text })
               }
-              setAttachments([...attachments, ...next])
-              setError('')
-            } catch (e) {
-              setError(String(e))
             }
-          }}
-        />
-      </Field>
-      {attachments.map((file, i) => (
-        <div className="attachment" key={i}>
-          {file.name}
-          <button disabled={disabled} onClick={() => setAttachments(attachments.filter((_, n) => n !== i))}>
-            Remove {file.name}
-          </button>
+            setAttachments([...attachments, ...next])
+            setError('')
+          } catch (e) {
+            setError(String(e))
+          }
+        }}
+      />
+      {!!attachments.length && (
+        <div className="chat-attachment-chips">
+          {attachments.map((file, i) => (
+            <div className="chat-attachment-chip" key={i}>
+              {file.image ? <img src={file.image} alt="" /> : <FileText size={16} />}
+              <span>{file.name}</span>
+              <button
+                aria-label={`Remove ${file.name}`}
+                disabled={disabled}
+                onClick={() => setAttachments(attachments.filter((_, n) => n !== i))}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
         </div>
-      ))}
-      {!vision && (
-        <small>Image input is available only when the selected engine reports vision support.</small>
       )}
       {error && <p role="alert">{error}</p>}
-    </details>
+    </div>
   )
 }

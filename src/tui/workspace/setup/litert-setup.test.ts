@@ -107,7 +107,7 @@ describe('guided setup with LiteRT-LM', () => {
     })
   })
 
-  it('lists its models in its own format, reviews the default variant, downloads it and loads it', async () => {
+  it('lists its models in its own format, downloads the default variant without confirmation and loads it', async () => {
     const t = harness(['litert-lm'])
     await setupAction('setup-engine:litert-lm', t.ctx)
     expect(t.calls('models.search')).toEqual([{ engine: 'litert-lm', query: '' }])
@@ -115,8 +115,7 @@ describe('guided setup with LiteRT-LM', () => {
     expect(t.screen()).not.toMatch(/GGUF/)
     await setupAction('setup-path-repo:0', t.ctx)
     expect(t.calls('litert.plan')).toEqual([{ model: 'gemma-4-e4b' }])
-    expect(t.screen()).toContain('gemma-4-e4b-gpu (GPU)')
-    await setupAction('setup-path-install', t.ctx)
+    expect(t.screen()).toContain('gemma-4-e4b-gpu')
     expect(t.calls('litert.install')).toEqual([
       { request_id: expect.stringMatching(/^terminal-/), plan_digest: 'plan-l1' },
     ])

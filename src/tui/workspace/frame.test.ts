@@ -59,9 +59,47 @@ describe('responsive terminal artwork and layout', () => {
     const s = createWorkspace('chat')
     s.overlay = 'stop'
     const f = workspaceFrame(s, 80, 24, 0)
-    expect(f.targets.filter((t) => t.y < f.height - 1).map((t) => t.id)).toEqual(['stop-confirm', 'close'])
-    const c = f.targets[1]!
+    expect(f.targets.filter((t) => t.y < f.height - 1).map((t) => t.id)).toEqual(['stop-confirm'])
+    const c = f.targets.find((t) => t.id === 'close')!
+    expect(c.y).toBe(f.height - 1)
+    expect(f.targets.filter((t) => t.id === 'close')).toHaveLength(1)
     expect(hit(f, c.x, c.y)?.id).toBe('close')
+  })
+  it.each([
+    [54, 24],
+    [120, 36],
+    [180, 56],
+  ])('dims the workspace behind a compact API confirmation at %sx%s', (width, height) => {
+    const s = createWorkspace('server')
+    s.setupComplete = true
+    s.overlay = 'stop'
+    const f = workspaceFrame(s, width, height, 0)
+    const body = f.cells
+      .slice(2, height - 3)
+      .map((row) => row.map((cell) => cell.char).join(''))
+      .join('\n')
+    expect(body).toContain('Stop accepting API requests?')
+    const original = workspaceFrame({ ...s, overlay: null }, width, height, 0)
+    const bounds = f.popover!
+    let preserved = 0
+    for (let y = 0; y < height - 3; y++)
+      for (let x = 0; x < width; x++) {
+        if (x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height)
+          continue
+        const cell = f.cells[y]![x]!,
+          source = original.cells[y]![x]!
+        expect(cell.char).toBe(source.char)
+        if (cell.char.trim()) {
+          preserved++
+          expect(cell.color).not.toBe(source.color)
+        }
+      }
+    expect(preserved).toBeGreaterThan(0)
+    const confirm = f.targets.find((target) => target.id === 'stop-confirm')!
+    expect(confirm.height).toBe(3)
+    expect(hit(f, confirm.x + 1, confirm.y + 1)?.id).toBe('stop-confirm')
+    expect(f.targets.filter((target) => target.id === 'close')).toHaveLength(1)
+    expect(f.targets.find((target) => target.id === 'close')?.y).toBe(height - 1)
   })
   it('clips Unicode text, strips terminal control codes, and shares hit geometry', () => {
     const c = canvas(12, 4)
@@ -79,15 +117,12 @@ describe('responsive terminal artwork and layout', () => {
   })
 })
 
-it('makes the complete stone inscription clickable and reverses its colours on hover', () => {
-  const s = { ...createWorkspace('welcome'), focus: 'setup-manual' },
-    normal = workspaceFrame(s, 120, 36, 0)
-  const plate = normal.targets.find((t) => t.id === 'hosting')!
-  expect(plate.height).toBeGreaterThan(3)
-  expect(hit(normal, plate.x + 3, plate.y + 2)?.id).toBe('hosting')
-  const hovered = workspaceFrame({ ...s, hover: 'hosting' }, 120, 36, 0)
-  const from = normal.cells[plate.y + 2]![plate.x + 2]!,
-    to = hovered.cells[plate.y + 2]![plate.x + 2]!
-  expect(to.background).toBe(from.color)
-  expect(to.color).not.toBe(from.color)
+it('makes onboarding actions clickable and highlights the focused action', () => {
+  const normal = workspaceFrame(createWorkspace('welcome'), 120, 36, 0)
+  const start = normal.targets.find((t) => t.id === 'first-skip')!
+  expect(hit(normal, start.x + 1, start.y)?.id).toBe('first-skip')
+  expect(normal.targets.some((t) => t.id === 'first-skip')).toBe(true)
+  const hovered = workspaceFrame({ ...createWorkspace('welcome'), hover: 'first-skip' }, 120, 36, 0)
+  const skip = hovered.targets.find((t) => t.id === 'first-skip')!
+  expect(hovered.cells[skip.y]![skip.x]!.background).not.toBe(normal.cells[skip.y]![skip.x]!.background)
 })

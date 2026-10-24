@@ -17,10 +17,13 @@ const scratch = mkdtempSync(join(tmpdir(), 'atc-litert-host-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 
 describe(`atc litert-host (${ATC.join(' ')})`, () => {
-  it('answers an unknown mode with the host usage line, not an atc error', () => {
-    const res = runAtc(['litert-host', 'nope'])
+  it.each([
+    { args: ['nope'], message: 'litert-host: unknown mode "nope"' },
+    { args: ['probe'], message: '--lib is required' },
+  ])('passes $args to the core host parser without opening atc', ({ args, message }) => {
+    const res = runAtc(['litert-host', ...args])
     expect(res.code, res.err).toBe(2)
-    expect(res.err).toContain('litert-host: unknown mode "nope"')
+    expect(res.err).toContain(message)
     expect(res.err).not.toMatch(/unknown command/i)
     expect(res.out).toBe('')
   })
@@ -32,6 +35,8 @@ describe(`atc litert-host (${ATC.join(' ')})`, () => {
     expect(res.code, res.err).toBe(3)
     expect(res.err).toContain(`LiteRT-LM does not load from ${build}`)
     expect(res.err).not.toContain('only inside a compiled binary')
+    // This diagnostic comes from ffi-bun.js, proving its dynamic import survived compilation.
+    expect(res.err).toMatch(/litert-lm\.(dylib|so|dll).*not found/)
     expect(res.out).toBe('')
   })
 

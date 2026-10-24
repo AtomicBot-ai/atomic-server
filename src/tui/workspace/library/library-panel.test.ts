@@ -38,7 +38,7 @@ function tui(answers: Record<string, unknown>, over: Partial<ReturnType<typeof c
       s = fn(s)
     },
     controller: {
-      runtime: { execute, snapshot: async () => null, start: async () => ({ launch: 'terminal' }) },
+      runtime: { execute, snapshot: async () => s.workspace, start: async () => ({ launch: 'terminal' }) },
       // What the core's GGUF lookup does for a repository without GGUF files: it throws.
       files: vi.fn(async (repo: string) => {
         throw new AtomicCoreError('MODEL_NOT_FOUND', `No GGUF files found in Hugging Face repo ${repo}`)
@@ -90,12 +90,7 @@ describe('the TUI catalog for managed engines', () => {
     await activate('library:catalog', t.ctx)
     await activate('library-row:0', t.ctx)
     expect(t.calls('managed.plan')).toEqual([{ repository: REPO, engine: 'vllm' }])
-    expect(t.get().overlay).toBe('install-review')
-    expect(t.screen()).toMatch(/vllm \(installed\): ok/)
-    // Every managed engine with a descriptor: the refusal too, with its reason.
-    expect(t.screen()).toMatch(/tensorrt-llm: refused/)
-    expect(t.screen()).not.toContain('No GGUF file found')
-    await activate('library-install', t.ctx)
+    expect(t.get().overlay).toBeNull()
     expect(t.calls('managed.install')).toEqual([
       { request_id: expect.stringMatching(/^terminal-/), plan_digest: 'p1' },
     ])
@@ -126,8 +121,11 @@ describe('the TUI catalog for managed engines', () => {
       'models.search': { models: [] },
     })
     await activate('library:catalog', t.ctx)
-    expect(t.screen()).toMatch(/Safetensors/)
+    expect(t.screen()).toMatch(/Filters/)
+    await activate('library-filters', t.ctx)
+    expect(t.screen()).toMatch(/Format: Safetensors/)
     expect(t.screen()).toMatch(/Foundry Local/)
+    await activate('close', t.ctx)
     await activate('format:safetensors', t.ctx)
     expect(t.calls('models.catalog').at(-1)).toEqual({ engine: 'vllm' })
     expect(t.get().libraryRows.map((r) => r.id)).toEqual([REPO])
@@ -135,10 +133,8 @@ describe('the TUI catalog for managed engines', () => {
     expect(t.calls('models.catalog').at(-1)).toEqual({ engine: 'vllm' })
     expect(t.get().libraryRows.map((r) => r.id)).toEqual([REPO])
     await activate('format:foundry', t.ctx)
-    expect(t.get()).toMatchObject({
-      overlay: 'engine-panel',
-      enginePanel: { engine: 'foundry-local', mode: 'models' },
-    })
+    expect(t.get()).toMatchObject({ overlay: null, libraryFormat: 'foundry', libraryView: 'catalog' })
+    expect(t.calls('models.search').at(-1)).toEqual({ engine: 'foundry-local' })
   })
 
   it('lists a store model once with every provider, and warns that removing it removes it for all', async () => {
@@ -186,16 +182,16 @@ describe('the TUI catalog for managed engines', () => {
       }
     )
     await activate('download-row:0', t.ctx)
-    expect(t.get()).toMatchObject({ operation: 'managed.cancel', operationInput: '{"id":"m1"}' })
+    expect(t.get().overlay).toBe('download-detail')
+    await activate('download-do:pause', t.ctx)
+    expect(t.calls('managed.cancel')).toEqual([{ id: 'm1' }])
     t.ctx.update((v) => ({ ...v, page: 'models' }))
     await activate('download-row:1', t.ctx)
-    expect(t.get()).toMatchObject({
-      operation: 'foundry.install',
-      operationInput: '{"request_id":"f1","plan_digest":"pd"}',
-    })
+    await activate('download-do:resume', t.ctx)
+    expect(t.calls('foundry.install')).toEqual([{ request_id: 'f1', plan_digest: 'pd' }])
   })
 
-  it('opens LiteRT-LM’s models from the catalog’s format filter, with variants and verdicts', async () => {
+  it('lists LiteRT-LM’s models in Local models from the catalog’s format filter', async () => {
     const variant = (id: string, backend: string, verdict: string) => ({
       id,
       backend,
@@ -239,27 +235,17 @@ describe('the TUI catalog for managed engines', () => {
       },
     })
     await activate('library:catalog', t.ctx)
-    expect(t.screen()).toMatch(/LiteRT-LM/)
+    await activate('library-filters', t.ctx)
+    expect(t.screen()).toMatch(/Format: LiteRT-LM/)
+    await activate('close', t.ctx)
     await activate('format:litert', t.ctx)
-    expect(t.get()).toMatchObject({
-      overlay: 'engine-panel',
-      enginePanel: { engine: 'litert-lm', mode: 'models' },
-    })
+    expect(t.get()).toMatchObject({ overlay: null, libraryFormat: 'litert', libraryView: 'catalog' })
     expect(t.calls('models.search')).toEqual([{ engine: 'litert-lm' }])
-    const rows = t
-      .screen()
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => /LiteRT-LM models|Gemma 4 E4B ·|Qwen3-4B ·/.test(l))
-      .map((l) => l.replace(/^[│|]\s*/, '').replace(/\s*[│|]$/, ''))
-    expect(rows).toMatchInlineSnapshot(`
-      [
-        "LiteRT-LM models",
-        "* Gemma 4 E4B · GPU · 2.0 GiB · ok",
-        "Gemma 4 E4B · CPU · 2.0 GiB · ok",
-        "* Qwen3-4B · CPU · 2.0 GiB · ok · unverified",
-      ]
-    `)
+    expect(t.get().libraryRows.map((r) => [r.id, r.source?.['format']])).toEqual([
+      ['gemma-4-e4b', 'litert'],
+      ['litert-community/Qwen3-4B', 'litert'],
+    ])
+    expect(t.screen()).toMatch(/Gemma 4 E4B/)
   })
 
   it('cancels a running LiteRT-LM download and resumes an interrupted one from Downloads', async () => {
@@ -278,12 +264,12 @@ describe('the TUI catalog for managed engines', () => {
       }
     )
     await activate('download-row:0', t.ctx)
-    expect(t.get()).toMatchObject({ operation: 'litert.cancel', operationInput: '{"id":"l1"}' })
+    expect(t.get().overlay).toBe('download-detail')
+    await activate('download-do:pause', t.ctx)
+    expect(t.calls('litert.cancel')).toEqual([{ id: 'l1' }])
     t.ctx.update((v) => ({ ...v, page: 'models' }))
     await activate('download-row:1', t.ctx)
-    expect(t.get()).toMatchObject({
-      operation: 'litert.install',
-      operationInput: '{"request_id":"l2","plan_digest":"pd"}',
-    })
+    await activate('download-do:resume', t.ctx)
+    expect(t.calls('litert.install')).toEqual([{ request_id: 'l2', plan_digest: 'pd' }])
   })
 })

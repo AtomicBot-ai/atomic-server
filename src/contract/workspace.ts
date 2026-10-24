@@ -1,3 +1,4 @@
+import type { WorkspaceFeatures } from './workspace-features.js'
 /** Shared operation contract for the terminal, browser and unattended clients. */
 import type {
   EnvironmentOperation,
@@ -53,6 +54,7 @@ export interface WorkspaceRequest {
   finished_at: number
 }
 export interface WorkspaceSnapshot {
+  features?: WorkspaceFeatures
   version: 1
   captured_at: number
   core: { version: string; instance_id: string; uptime_ms: number | null }

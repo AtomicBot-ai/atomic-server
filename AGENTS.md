@@ -64,6 +64,7 @@ when this table is stale or a module's `index.ts` has no comment):
 | `src/core-link/` | Finding, starting and talking to the core: the daemon record, attach-or-spawn, `CoreLink`, events. |
 | `src/daemon/` | The daemon process: spawning it detached, and running it (core + admin + host agent). |
 | `src/doctor/` | `atc doctor`: the check table and its runner. |
+| `src/document-import/` | Bounded text extraction and portable skill archives shared by Web uploads and terminal files. |
 | `src/downloads/` | Model downloads: resumable, verified, parallel byte ranges written in place, proxies and progress. |
 | `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
 | `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |

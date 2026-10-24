@@ -1,125 +1,235 @@
-import { Fragment, useEffect, useState } from 'react'
-import { PLAYGROUND_TASKS, WORKSPACE_NAVIGATION, SETUP_GOALS } from '@contract'
-import { useServiceHub } from '@/hooks/useServiceHub'
-import { useStatusStore } from '@/stores/status-store'
+import { useEffect, useState } from 'react'
+import { setupFinished } from '@view'
+import { PanelLeft } from 'lucide-react'
+import { EngineIntro } from './intro/EngineIntro'
+import { WorkspaceBrand } from './WorkspaceBrand'
+import { workspaceTheme } from './workspace-theme'
 import { useWorkspace } from './useWorkspace'
-import { Cockpit } from './Cockpit'
-import { HostStepBanner } from './HostStepBanner'
 import { Server } from './server/Server'
+import { Settings } from './server/Settings'
 import { Catalog } from './library/Catalog'
 import { Chat } from './chat/Chat'
 import { Media } from './media/Media'
 import { CommandDock } from './CommandDock'
 import { SetupWizard } from './setup/SetupWizard'
+import { WorkspaceNavigation } from './WorkspaceNavigation'
+import { useWorkspaceSidebar } from './useWorkspaceSidebar'
+import { useWorkspaceNavigation } from './useWorkspaceNavigation'
+import { useWorkspaceShortcuts } from './useWorkspaceShortcuts'
 import { Action } from './Controls'
-import type { Page } from './types'
+import { HelpMenu } from './HelpMenu'
+import { FloatingDownloads } from './library/FloatingDownloads'
+import { useAcquisition } from './useAcquisition'
 import './styles/workspace.css'
+import './styles/desktop-shell.css'
+import './server/server-desktop.css'
+import './server/server-settings.css'
+import './server/server-sidebar.css'
+import './styles/desktop-parity.css'
+import './styles/desktop-controls.css'
+import './styles/workspace-brand.css'
+import './styles/workspace-theme.css'
 
 export function WorkspaceApp() {
+  const [intro, setIntro] = useState(true)
+  const [replay, setReplay] = useState(false)
+  return intro ? (
+    <EngineIntro replay={replay} onContinue={() => setIntro(false)} />
+  ) : (
+    <WorkspaceContent
+      onWelcome={() => {
+        setReplay(true)
+        setIntro(true)
+      }}
+    />
+  )
+}
+function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const workspace = useWorkspace()
-  const hub = useServiceHub()
-  const [page, setPage] = useState<Page>('server')
-  const [task, setTask] = useState('chat')
+  const navigation = useWorkspaceNavigation()
+  const {
+    page,
+    setPage,
+    serverSection,
+    setServerSection,
+    catalogSection,
+    setCatalogSection,
+    settingsSection,
+    setSettingsSection,
+    task,
+    setTask,
+  } = navigation
+  useAcquisition(setPage, setCatalogSection, setServerSection)
+  const [agent, setAgent] = useState<string | undefined>(undefined)
+  const [connectionGuide, setConnectionGuide] = useState(false)
+  const [prepared, setPrepared] = useState<string[]>([])
   const [command, setCommand] = useState<string | null>(null)
   const [wizard, setWizard] = useState(false)
   const [setupDismissed, setSetupDismissed] = useState(false)
   const [help, setHelp] = useState(false)
-  const openWizard = wizard || Boolean(workspace.snapshot && !workspace.snapshot.setup && !setupDismissed)
+  const [trySkill, setTrySkill] = useState<string | null>(null)
   useEffect(() => {
-    // Keep the first-run wizard mounted when verification saves setup.complete,
-    // so its Ready screen and goal-specific next action remain visible.
-    if (workspace.snapshot && !workspace.snapshot.setup && !setupDismissed) setWizard(true)
-  }, [workspace.snapshot, setupDismissed])
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'F4') {
-        e.preventDefault()
-        setCommand((current) => (current ? null : 'api.ping'))
-      } else if (e.key === 'F1') {
-        e.preventDefault()
-        setHelp((value) => !value)
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
-        e.preventDefault()
-        setPage('playground')
-        setTask('chat')
-        window.dispatchEvent(new Event('atomic:new-chat'))
-      } else if (e.altKey && ['1', '2', '3'].includes(e.key)) {
-        e.preventDefault()
-        setPage(WORKSPACE_NAVIGATION[Number(e.key) - 1].id)
-      } else if (e.key === 'Escape') {
-        setCommand(null)
-        setHelp(false)
-      }
+    const tryInChat = (event: Event) => {
+      const name = (event as CustomEvent<unknown>).detail
+      if (typeof name !== 'string' || !name) return
+      setTrySkill(name)
+      setTask('chat')
+      setPage('playground')
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+    window.addEventListener('atomic:try-skill', tryInChat)
+    return () => window.removeEventListener('atomic:try-skill', tryInChat)
+  }, [setPage, setTask])
+  const [historyContainer, setHistoryContainer] = useState<HTMLDivElement | null>(null)
+  const { sidebarOpen, setSidebarOpen, sidebarCollapsed, expanded, toggle, reveal } = useWorkspaceSidebar()
+  // Automatic onboarding follows the shared state; an explicitly reopened guide stays local.
+  const openWizard =
+    wizard || Boolean(workspace.snapshot && !setupFinished(workspace.snapshot.setup) && !setupDismissed)
+  useWorkspaceShortcuts({
+    navigation,
+    openWizard,
+    sidebarOpen,
+    setSidebarOpen,
+    command,
+    setCommand,
+    help,
+    setHelp,
+  })
+  const section = page === 'server' ? serverSection : page === 'catalog' ? catalogSection : settingsSection
+  const selectSection =
+    page === 'server' ? setServerSection : page === 'catalog' ? setCatalogSection : setSettingsSection
+  const models = (section = 'catalog') => {
+    setCatalogSection(section)
+    setPage('catalog')
+  }
+  const settings = () => {
+    setServerSection('configuration')
+    setPage('server')
+  }
+  const connect = (id: string) => {
+    navigation.rememberConnection()
+    setSidebarOpen(false)
+    setAgent(id)
+    setConnectionGuide(true)
+    setServerSection('overview')
+    setPage('server')
+  }
   return (
-    <div className="eye-workspace">
-      <Cockpit workspace={workspace} navigate={setPage} />
-      <div className="workspace-nav">
-        <nav aria-label="Main">
-          {WORKSPACE_NAVIGATION.map((item, index) => (
-            <button
-              key={item.id}
-              className={page === item.id ? 'active' : ''}
-              aria-current={page === item.id ? 'page' : undefined}
-              title={`Alt+${index + 1}`}
-              onClick={() => setPage(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="ew-actions">
-          <button className="ew-button" onClick={() => setCommand('operations.list')} title="Commands · F4">
-            Commands
-          </button>
-          <Action
-            onClick={async () => {
-              await hub.session().logout()
-              useStatusStore.getState().reset()
-              useStatusStore.setState({ unauthorized: true })
-            }}
+    <div
+      style={workspaceTheme}
+      className={`eye-workspace desktop-workspace ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+    >
+      <WorkspaceNavigation
+        page={page}
+        section={section}
+        task={task}
+        workspace={workspace}
+        historyContainerRef={setHistoryContainer}
+        navigate={(next) => {
+          navigation.navigate(next)
+          reveal()
+        }}
+        selectSection={(value) => {
+          selectSection(value)
+          setSidebarOpen(false)
+        }}
+        selectTask={setTask}
+        connectAgent={connect}
+        prepared={prepared}
+        openHelp={() => setHelp(true)}
+        openSetup={() => {
+          navigation.rememberConnection()
+          setSidebarOpen(false)
+          setAgent(undefined)
+          setConnectionGuide(true)
+          setServerSection('overview')
+          setPage('server')
+        }}
+      />
+      <div className="desktop-main">
+        <header className="desktop-topbar">
+          <button
+            className="sidebar-toggle"
+            aria-label="Toggle sidebar"
+            aria-expanded={expanded}
+            onClick={toggle}
           >
-            Sign out
-          </Action>
-        </div>
-      </div>
-      {workspace.error && (
-        <div className="ew-error connection-error" role="alert">
-          <span>{workspace.error}</span>
-          <Action onClick={workspace.refresh}>Retry</Action>
-        </div>
-      )}
-      <main className={`workspace-content ${page === 'playground' && task === 'chat' ? 'chat-page' : ''}`}>
-        {page === 'server' && <HostStepBanner workspace={workspace} />}
-        {page === 'server' && (
-          <Server workspace={workspace} openCommand={setCommand} openSetup={() => setWizard(true)} />
+            <PanelLeft size={18} aria-hidden="true" />
+          </button>
+          <WorkspaceBrand />
+          {!openWizard && !connectionGuide && <FloatingDownloads workspace={workspace} />}
+        </header>
+        {workspace.error && (
+          <div className="ew-error connection-error" role="alert">
+            <span>{workspace.error}</span>
+            <Action onClick={workspace.refresh}>Retry</Action>
+          </div>
         )}
-        {page === 'catalog' && <Catalog workspace={workspace} openCommand={setCommand} />}
-        {page === 'playground' && (
-          <>
-            <div className="playground-nav">
-              <label>
-                Task{' '}
-                <select value={task} onChange={(e) => setTask(e.target.value)}>
-                  {PLAYGROUND_TASKS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            {task === 'chat' ? (
-              <Chat workspace={workspace} onCatalog={() => setPage('catalog')} />
+        <main className={`workspace-content ${page === 'playground' && task === 'chat' ? 'chat-page' : ''}`}>
+          {page === 'server' && (
+            <Server
+              workspace={workspace}
+              openCommand={setCommand}
+              openSetup={() => {
+                navigation.rememberConnection()
+                setAgent(undefined)
+                setConnectionGuide(true)
+                setServerSection('overview')
+                setPage('server')
+              }}
+              section={serverSection}
+              onSection={setServerSection}
+              initialAgent={agent}
+              showGuide={connectionGuide}
+              closeGuide={() => {
+                setConnectionGuide(false)
+                navigation.restoreConnection()
+              }}
+              connectAgent={connect}
+              prepared={prepared}
+              onPrepared={(id) => setPrepared((items) => [...new Set([...items, id])])}
+              openSettings={settings}
+              openModels={() => models()}
+            />
+          )}
+          {page === 'catalog' && (
+            <Catalog
+              workspace={workspace}
+              openCommand={setCommand}
+              section={catalogSection}
+              onSection={setCatalogSection}
+            />
+          )}
+          {page === 'settings' && (
+            <Settings
+              workspace={workspace}
+              section={settingsSection}
+              openCommand={setCommand}
+              openEngines={() => models('engines')}
+            />
+          )}
+          {page === 'playground' &&
+            (task === 'chat' ? (
+              <Chat
+                workspace={workspace}
+                onCatalog={() => models()}
+                historyContainer={historyContainer}
+                trySkill={trySkill}
+                onSkillStarted={() => setTrySkill(null)}
+              />
             ) : (
-              <Media key={task} workspace={workspace} task={task} openCommand={setCommand} />
-            )}
-          </>
-        )}
-      </main>
+              <Media
+                key={task}
+                workspace={workspace}
+                task={task}
+                openCommand={setCommand}
+                onCatalog={() => models()}
+              />
+            ))}
+        </main>
+      </div>
+      {sidebarOpen && (
+        <button className="sidebar-scrim" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />
+      )}
       {command && (
         <CommandDock
           key={command}
@@ -129,61 +239,46 @@ export function WorkspaceApp() {
           onClose={() => setCommand(null)}
         />
       )}
-      <footer className="command-footer">
-        <button onClick={() => setHelp((value) => !value)}>F1 Help</button>
-        <span>|</span>
-        {WORKSPACE_NAVIGATION.map((item, index) => (
-          <Fragment key={item.id}>
-            <button onClick={() => setPage(item.id)}>
-              Alt+{index + 1} {item.label}
-            </button>
-            <span>|</span>
-          </Fragment>
-        ))}
-        <button onClick={() => setCommand((current) => (current ? null : 'api.ping'))}>F4 Commands</button>
-        {page === 'playground' && task === 'chat' && (
-          <>
-            <span>|</span>
-            <button onClick={() => window.dispatchEvent(new Event('atomic:new-chat'))}>
-              Ctrl+N New chat
-            </button>
-            <span>|</span>
-            <span>Enter Send | Shift+Enter New line</span>
-          </>
-        )}
-      </footer>
       {help && (
-        <div className="help-popover">
-          <div className="panel-heading">
-            <h2>Controls</h2>
-            <button onClick={() => setHelp(false)}>Close</button>
-          </div>
-          <p>Click any control, or use Tab to move and Enter to activate it.</p>
-          <p>F4 opens the command list. Escape closes it. Alt+1 / 2 / 3 switches pages.</p>
-          <p>Closing this page leaves the server running.</p>
-          <Action
-            onClick={() => {
-              setHelp(false)
-              setWizard(true)
-            }}
-          >
-            Setup wizard
-          </Action>
-        </div>
+        <HelpMenu
+          onClose={() => setHelp(false)}
+          onCommands={() => {
+            setHelp(false)
+            setCommand('operations.list')
+          }}
+          onSetup={() => {
+            setHelp(false)
+            setWizard(true)
+          }}
+        />
       )}
       {openWizard && (
         <SetupWizard
-          workspace={workspace}
-          onOpenGoal={(id) => {
-            const goal = SETUP_GOALS.find((item) => item.id === id)
+          onWelcome={onWelcome}
+          onDestination={(destination) => {
             setWizard(false)
             setSetupDismissed(true)
-            setPage(goal?.destination ?? 'server')
-            setTask(goal?.task ?? 'chat')
+            setPage('server')
+            setServerSection(destination === 'endpoint' ? 'configuration' : 'overview')
+          }}
+          onChat={() => {
+            setWizard(false)
+            setSetupDismissed(true)
+            setPage('playground')
+            setTask('chat')
+          }}
+          onConfigure={() => setWizard(true)}
+          workspace={workspace}
+          onPrepared={(id) => setPrepared((items) => [...new Set([...items, id])])}
+          onOpenGoal={(_goal, selectedAgent) => {
+            setWizard(false)
+            setSetupDismissed(true)
+            connect(selectedAgent ?? agent ?? 'atomic-agent')
           }}
           onClose={() => {
             setWizard(false)
             setSetupDismissed(true)
+            setServerSection('overview')
             setPage('server')
           }}
         />

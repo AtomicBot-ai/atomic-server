@@ -1,0 +1,128 @@
+.mcp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 20px;
+}
+.mcp-card {
+  border: 1px solid var(--border, #353a39);
+  background: var(--card, #202423);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.mcp-card header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+}
+.mcp-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+.mcp-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.mcp-identity {
+  flex: 1;
+  min-width: 0;
+}
+.mcp-identity h3 {
+  font-size: 16px;
+  margin: 0 0 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mcp-identity small {
+  font-size: 12px;
+  color: var(--muted-foreground, #a9b3af);
+}
+.mcp-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted-foreground, #a9b3af);
+  overflow-wrap: anywhere;
+}
+.mcp-card-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.mcp-card-controls input {
+  accent-color: var(--accent, #63d8c6);
+}
+.mcp-menu {
+  position: relative;
+}
+.mcp-menu summary {
+  display: flex;
+  padding: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+.mcp-menu summary::-webkit-details-marker {
+  display: none;
+}
+.mcp-menu > div {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  width: 155px;
+  z-index: 4;
+  border: 1px solid #49534f;
+  border-radius: 8px;
+  padding: 6px;
+  background: #202826;
+  box-shadow: 0 12px 24px #0006;
+}
+.mcp-menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 4px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.mcp-menu button:hover,
+.mcp-menu button:focus-visible {
+  background: #35423e;
+}
+.mcp-card .mcp-error {
+  color: #f2a0a0;
+}
+.connector-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: 85vh;
+  overflow: auto;
+}
+.connector-json {
+  font-family: monospace !important;
+  white-space: pre;
+  min-height: 250px;
+}
+.mcp-sign-in {
+  display: inline-block;
+  background: #67dac7;
+  color: #102621;
+  padding: 13px 20px;
+  border-radius: 7px;
+  font-weight: 600;
+  text-decoration: none;
+}

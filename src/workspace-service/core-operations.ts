@@ -13,7 +13,8 @@ export async function coreOperation(
   name: string,
   input: WorkspaceInput,
   /** atc's download proxy, for the engine builds an install or a load fetches. */
-  proxy: ProxyConfig | null = null
+  proxy: ProxyConfig | null = null,
+  ensureEngine?: (engine: string, taskId: string) => Promise<void>
 ): Promise<unknown> {
   const request = object(input['request']),
     id = () => segment(input['id']),
@@ -21,9 +22,19 @@ export async function coreOperation(
   const get = (path: string) => link.request('GET', path),
     post = (path: string, body: unknown = {}) => link.request('POST', path, body)
   switch (name) {
+    case 'cloud.list':
+      return get('/cloud/providers')
+    case 'cloud.save': {
+      const { provider, ...config } = input
+      return link.request('PUT', `/cloud/providers/${segment(provider)}`, config)
+    }
+    case 'cloud.remove':
+      return link.request('DELETE', `/cloud/providers/${segment(input['provider'])}`)
     case 'models.load':
       if (engineKind(String(input['provider'])) === 'llamacpp')
-        await ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`, proxy)
+        await (ensureEngine
+          ? ensureEngine(String(input['provider']), `chat-engine-${randomUUID()}`)
+          : ensureArtifactEngine(link, String(input['provider']), `chat-engine-${randomUUID()}`, proxy))
       return link.models.load(String(input['provider']), String(input['model_id']), object(input['options']))
     case 'models.unload':
       return link.models.unload(String(input['provider']), String(input['model_id']))

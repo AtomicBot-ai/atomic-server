@@ -15,7 +15,14 @@ function context() {
     update: (fn) => {
       state = fn(state)
     },
-    controller: { save, api, run, models, installed: async () => [] } as unknown as WorkspaceController,
+    controller: {
+      save,
+      api,
+      run,
+      models,
+      installed: async () => [],
+      runtime: { execute: async () => ({ rows: [] }) },
+    } as unknown as WorkspaceController,
     copy: vi.fn(),
     send: vi.fn(),
     cancel: vi.fn(),
@@ -27,7 +34,7 @@ describe('workspace actions', () => {
     const { ctx, save } = context()
     ctx.update((s) => ({ ...s, draft: 'Keep this' }))
     await activate('personal', ctx)
-    expect(save).toHaveBeenCalledWith('tui.mode', 'personal')
+    expect(save).toHaveBeenCalledWith('tui.mode', 'server')
     await activate('page:models', ctx)
     await activate('model:0', ctx)
     expect(ctx.get()).toMatchObject({ page: 'chat', model: 'one', draft: 'Keep this', focus: 'composer' })

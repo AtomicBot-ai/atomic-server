@@ -62,7 +62,7 @@ export class WorkspaceRuntime {
   agentBrief() {
     const folder = "'" + this.paths.dataFolder.replaceAll("'", "'\\''") + "'"
     const command = `atc --data-folder ${folder}`
-    return `Set up this Atomic Chat server using its typed controls. Preserve existing keys and data.\n\nDiscover: ${command} control list --json\nCall: ${command} control call <operation> --input @input.json --json\nWatch: ${command} control watch\n\nMCP configuration:\n${JSON.stringify({ mcpServers: { 'atomic-chat': { command: 'atc', args: ['--data-folder', this.paths.dataFolder, 'mcp'] } } }, null, 2)}\n\nInspect hardware.info and models.catalog. Ask me to choose a model, review models.plan or artifacts.plan and disk size, then install that reviewed plan. Poll the installation, load it, start api.start, and verify api.ping plus a small inference. Use setup.complete only after it works. Keep the listener on localhost unless I request network access.`
+    return `Set up this Atomic Server using its typed controls. Preserve existing keys and data.\n\nDiscover: ${command} control list --json\nCall: ${command} control call <operation> --input @input.json --json\nWatch: ${command} control watch\n\nMCP configuration:\n${JSON.stringify({ mcpServers: { 'atomic-chat': { command: 'atc', args: ['--data-folder', this.paths.dataFolder, 'mcp'] } } }, null, 2)}\n\nInspect hardware.info and models.catalog. Ask me to choose a model, review models.plan or artifacts.plan and disk size, then install that reviewed plan. Poll the installation, load it, start api.start, and verify api.ping plus a small inference. Use setup.complete only after it works. Keep the listener on localhost unless I request network access.`
   }
   dispose() {
     this.service = undefined

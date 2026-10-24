@@ -1,7 +1,6 @@
 import type { ActionContext } from './actions.js'
 import type { WorkspaceState } from './state.js'
-import { readVision } from './chat/chat-load.js'
-import { modelProvider } from '../../terminal-setup/index.js'
+import { selectLocalModel } from './chat/model-selection.js'
 export async function persistConversation(ctx: Pick<ActionContext, 'get' | 'controller'>): Promise<void> {
   const s = ctx.get()
   if (s.conversation && s.messages.length)
@@ -55,8 +54,10 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     ctx.cancel()
     patch({
       conversation: chat,
+      chatPreferences: chat.request_settings,
       messages: chat.messages,
       images: [],
+      documents: [],
       endpoint: chat.endpoint,
       model: chat.model,
       page: 'chat',
@@ -115,34 +116,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
       message: 'Key revoked. New requests using it will be refused.',
     })
   } else if (id.startsWith('installed:')) {
-    const [index, picked] = id.slice(10).split(':')
-    const model = s.installed[Number(index)]
-    if (!model) return true
-    const provider = picked ?? modelProvider(s.engine, model.provider)
-    patch({ busy: true, message: `Loading ${model.name}...`, loadError: null })
-    try {
-      await c.loadModel(provider, model.id).catch((e: unknown) => {
-        patch({
-          loadError: { provider, model: model.id, message: e instanceof Error ? e.message : String(e) },
-        })
-        throw e
-      })
-      patch({ modelVision: await readVision(c, provider, model.id), ...(picked ? { engine: picked } : {}) })
-      const endpoint = await c.localEndpoint()
-      await c.save('tui.model', model.id)
-      await c.save('tui.endpoint', endpoint)
-      patch({
-        model: model.id,
-        endpoint,
-        page: 'chat',
-        focus: 'composer',
-        overlay: null,
-        hover: '',
-        message: 'Model loaded. Ready for chat and API requests.',
-      })
-    } finally {
-      patch({ busy: false })
-    }
+    await selectLocalModel(id, ctx)
   } else return false
   return true
 }
@@ -172,6 +146,7 @@ export async function saveDataEdit(ctx: ActionContext): Promise<boolean> {
     update((v) => ({
       ...v,
       conversation: chat,
+      chatPreferences: chat.request_settings,
       overlay: null,
       history: v.history.map((h) => (h.id === chat.id ? { ...h, title } : h)),
     }))

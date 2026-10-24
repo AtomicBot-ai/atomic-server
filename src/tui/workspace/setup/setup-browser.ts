@@ -1,3 +1,4 @@
+import { card } from '../draw/cards.js'
 import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
@@ -96,18 +97,48 @@ export function drawSetupBrowser(
       )
     return
   }
-  put(
-    3,
-    v.repository ? 'Choose a download' : v.query ? `Results for “${v.query}”` : 'Atomic Chat · Staff picks',
-    COLORS.gold
-  )
-  put(
-    4,
-    v.repository ||
-      (v.query ? 'Atomic Chat quants appear first.' : 'Browse first. Search if you need something else.')
-  )
+  if (v.repository) {
+    button(c, 'setup-back', x, y + 3, '< Models', 'Return to the model list', focus)
+    text(c, x + 12, y + 3, v.repository, COLORS.muted, width - 12)
+  } else {
+    const used = button(
+      c,
+      'setup-query',
+      x,
+      y + 3,
+      v.query ? `Search: ${v.query.slice(0, 18)}` : 'Search models',
+      'Search model catalog',
+      focus
+    )
+    button(c, 'setup-engine-back', x + used + 1, y + 3, 'Engine v', 'Choose inference engine', focus)
+    if (v.query) button(c, 'setup-catalog', x + used + 13, y + 3, 'Clear', 'Clear search', focus)
+  }
+  let installedRows = 0
+  if ((s.firstRun || s.connection?.pickingModel) && !v.repository && s.installed.length) {
+    const installedWindow = computeRowWindow(
+      s.installed.length,
+      focus.startsWith('first-installed:') ? Number(focus.slice(16)) : 0,
+      2
+    )
+    for (const [i, model] of s.installed
+      .slice(installedWindow.start, installedWindow.start + installedWindow.count)
+      .entries()) {
+      b(
+        `first-installed:${installedWindow.start + i}`,
+        5 + i,
+        `${model.name || model.id} · Installed`,
+        'Use this downloaded model and continue setup'
+      )
+      installedRows++
+    }
+  }
   const items = v.repository ? v.files : v.repositories
-  const win = computeRowWindow(items.length, s.selected, Math.max(1, bottom - y - 8))
+  const cardHeight = 3
+  const win = computeRowWindow(
+    items.length,
+    s.selected,
+    Math.max(1, Math.floor((bottom - y - 6 - installedRows) / cardHeight))
+  )
   items.slice(win.start, win.start + win.count).forEach((item, i) => {
     const index = win.start + i
     if ('filename' in item) {
@@ -116,62 +147,41 @@ export function drawSetupBrowser(
           ? `${(item.size / 1024 ** 3).toFixed(1)} GB`
           : `${(item.size / 1024 ** 2).toFixed(0)} MB`
       const recommended = /Q4_K_M/i.test(item.filename) ? ' *' : ''
-      b(
-        `setup-file:${index}`,
-        6 + i,
-        `${size}  ${item.filename}${recommended}`,
-        `Download ${item.filename}. Engine and required vision files are included. Enter reviews size and compatibility.`
+      card(c, {
+        id: `setup-file:${index}`,
+        x,
+        y: y + 5 + i * cardHeight + installedRows,
+        width,
+        height: cardHeight,
+        title: `${size}  ${item.filename}${recommended}`,
+        focus,
+        detail: 'Download this version',
+        icon: '[v]',
+      })
+    } else {
+      card(c, {
+        id: `setup-repo:${index}`,
+        x,
+        y: y + 5 + i * cardHeight + installedRows,
+        width,
+        height: cardHeight,
+        title: (item.title ?? item.id).slice(0, Math.max(4, width - 21)),
+        detail: item.summary ?? 'Download recommended version',
+        icon: '[M]',
+        focus,
+      })
+      button(
+        c,
+        `setup-variants:${index}`,
+        x + width - 14,
+        y + 6 + i * cardHeight + installedRows,
+        'Versions v',
+        'Choose a download version',
+        focus
       )
-    } else
-      b(
-        `setup-repo:${index}`,
-        6 + i,
-        `${/^AtomicChat\//i.test(item.id) ? '◆ ' : '  '}${item.id}`,
-        `${item.title ?? item.id}${item.summary ? ' — ' + item.summary : ''}. Enter reviews the recommended version. Versions lets you choose another quant.`
-      )
+    }
   })
   if (v.busy && !items.length)
     put(6, v.repository ? 'Reading available downloads...' : 'Updating model catalog...')
   else if (!items.length) put(6, 'No models found. Try another search or return to Staff picks.')
-  if (items.length)
-    put(
-      bottom - y - 2,
-      `${win.start + 1}–${Math.min(items.length, win.start + win.count)} of ${items.length} | ↑↓ Browse | Enter Review`,
-      COLORS.stone
-    )
-  if (v.repository) {
-    button(c, 'setup-back', x, bottom, '< Models', 'Return to the model list. Esc returns to Engines.', focus)
-    button(c, 'setup-engine-back', x + 13, bottom, 'Engines', 'Change inference engine.', focus)
-  } else {
-    button(c, 'setup-engine-back', x, bottom, '< Engine', 'Change inference engine.', focus)
-    button(
-      c,
-      'setup-query',
-      x + 13,
-      bottom,
-      'Search',
-      'Search additional models. Matching Atomic Chat quants come first.',
-      focus
-    )
-    if (v.repositories.length)
-      button(
-        c,
-        'setup-variants',
-        x + 23,
-        bottom,
-        'Versions',
-        'Choose a quant for the focused model instead of using the recommended download.',
-        focus
-      )
-    if (v.query)
-      button(
-        c,
-        'setup-catalog',
-        x + 36,
-        bottom,
-        'Picks',
-        'Return to Atomic Chat’s curated model list.',
-        focus
-      )
-  }
 }

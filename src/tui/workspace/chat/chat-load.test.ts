@@ -59,7 +59,7 @@ describe('a managed load in the TUI chat', () => {
 
   it('shows the stage of a model loading in place of the chat’s current one, and cancels that load', async () => {
     const t = chat({ model: 'old/model', workspace: loading as never })
-    expect(t.screen()).toMatch(/Loading Qwen\/Qwen3\.5-2B on vllm: Starting the container/)
+    expect(t.screen()).toMatch(/Loading Qwen\/Qwen3\.5-2B: Starting the container/)
     await activate('cancel-load', t.ctx)
     expect(t.execute).toHaveBeenCalledWith('models.cancel', { provider: 'vllm', model_id: MODEL })
   })

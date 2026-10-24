@@ -10,6 +10,12 @@ it('reloads the selected installed model on explicit server start, without repla
     config = resolveConfig({ env: {} })
   config.values.tui.model = 'saved-model'
   link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', variant: 'cpu' }] }
+  const loadModel = link.models.load
+  link.models.load = async (provider, modelId) => {
+    const session = await loadModel(provider, modelId)
+    link.snapshotValue.sessions = [{ ...session, provider } as never]
+    return session
+  }
   const c = new WorkspaceController(
     {
       request: fetch,
@@ -64,12 +70,15 @@ it('turns a managed engine’s context overflow in the chat into the limit, the 
     link = fakeCoreLink(),
     config = resolveConfig({ env: {} })
   link.snapshotValue.sessions = [{ provider: 'tensorrt-llm', model_id: 'qwen', port: 0 } as never]
+  link.snapshotValue.server.running = true
   const message =
     "This model's maximum context length is 4096 tokens. However, your messages resulted in 5120 tokens."
+  const request = vi
+    .fn<typeof fetch>()
+    .mockImplementation(async () => new Response(JSON.stringify({ error: { message } }), { status: 400 }))
   const c = new WorkspaceController(
     {
-      request: (async () =>
-        new Response(JSON.stringify({ error: { message } }), { status: 400 })) as unknown as typeof fetch,
+      request,
       apiKey: '',
       chatKey: '',
       base: {
@@ -91,6 +100,9 @@ it('turns a managed engine’s context overflow in the chat into the limit, the 
     await expect(
       c.chat('http://127.0.0.1:1337/v1', 'qwen', [{ role: 'user', content: 'hi' }], () => {})
     ).rejects.toThrow(/5120 tokens.*atc config set engine\.tensorrt-llm\.context_length/s)
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(request.mock.calls[0]?.[0]).toBe('http://127.0.0.1:1337/v1/chat/completions')
+    expect(link.calls.some((call) => call.path === '/server/start')).toBe(false)
   } finally {
     c.dispose()
     folder.cleanup()

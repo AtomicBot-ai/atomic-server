@@ -10,3 +10,4 @@ export type { DownloaderDeps, DownloadItem, DownloadOptions, DownloadProgress } 
 export { DownloadRequestError, validateProxyConfig } from './protocol.js'
 export { HASH_MISMATCH_MESSAGE, VALIDATION_CANCELLED_MESSAGE } from './verify.js'
 export type { ProxyConfig } from './protocol.js'
+export { discardDownloadFiles } from './discard.js'

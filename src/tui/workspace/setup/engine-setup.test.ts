@@ -140,12 +140,12 @@ describe('guided setup with a managed engine', () => {
     expect(screen(t.get())).not.toMatch(/GGUF/)
     await setupAction('setup-path-repo:0', t.ctx)
     expect(t.calls('managed.plan')).toEqual([{ repository: REPO, engine: 'vllm' }])
-    expect(t.get().setup?.stage).toBe('review')
-    expect(screen(t.get())).toMatch(/vllm \(installed\): ok/)
-    // Every managed engine's verdict, as atc models check prints them.
+    expect(t.get().setup?.stage).toBe('download')
+    expect(t.get().page).toBe('welcome')
+    expect(screen(t.get())).toContain(REPO)
+    // Compatibility is still checked; unrelated engine verdicts stay out of the download screen.
     expect(t.calls('models.check')).toEqual([{ repository: REPO }])
-    expect(screen(t.get())).toContain('tensorrt-llm takes no Qwen3.5')
-    await setupAction('setup-path-install', t.ctx)
+    expect(screen(t.get())).not.toContain('tensorrt-llm takes no Qwen3.5')
     expect(t.calls('managed.install')).toEqual([
       { request_id: expect.stringMatching(/^terminal-/), plan_digest: 'plan-d1' },
     ])
@@ -196,14 +196,13 @@ describe('guided setup with a managed engine', () => {
 })
 
 describe('guided setup with Foundry Local', () => {
-  it('lists its models, reviews the default variant and downloads it', async () => {
+  it('lists its models and downloads the default variant without confirmation', async () => {
     const t = harness(['foundry-local'])
     await setupAction('setup-engine:foundry-local', t.ctx)
     expect(t.calls('models.search')).toEqual([{ engine: 'foundry-local', query: '' }])
     await setupAction('setup-path-repo:0', t.ctx)
     expect(t.calls('foundry.plan')).toEqual([{ model: 'phi-4-mini' }])
     expect(screen(t.get())).toContain('phi-4-mini-cpu')
-    await setupAction('setup-path-install', t.ctx)
     expect(t.calls('foundry.install')).toEqual([
       { request_id: expect.stringMatching(/^terminal-/), plan_digest: 'plan-f1' },
     ])
@@ -226,7 +225,7 @@ describe('guided setup with Foundry Local', () => {
     await setupAction('setup-engine:foundry-local', t.ctx)
     await setupAction('setup-path-repo:0', t.ctx)
     expect(screen(t.get())).toContain(label)
-    expect(screen(t.get())).not.toContain('Download')
+    expect(workspaceFrame(t.get(), 120, 36, 0).targets.some((t) => t.id === 'setup-path-install')).toBe(false)
     await setupAction('setup-path-foundry', t.ctx)
     expect(t.get()).toMatchObject({
       overlay: 'engine-panel',

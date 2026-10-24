@@ -1,0 +1,125 @@
+.desktop-workspace .desktop-topbar {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 80px;
+  height: auto;
+  padding: 10px 20px;
+  border: 0;
+}
+.desktop-workspace .desktop-topbar .sidebar-toggle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border-radius: 6px;
+}
+.desktop-workspace .desktop-topbar .sidebar-toggle:hover {
+  background: var(--ew-raised);
+}
+.workspace-brand {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  gap: 16px;
+  color: #fff;
+  white-space: nowrap;
+  user-select: none;
+}
+.workspace-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 8px 0 24px;
+  flex-shrink: 0;
+}
+.desktop-workspace .desktop-topbar:has(.floating-downloads) {
+  grid-template-columns: 36px minmax(0, 1fr) minmax(240px, 340px);
+  gap: 16px;
+  min-height: 142px;
+}
+.desktop-topbar:has(.floating-downloads) .workspace-brand span {
+  font-size: clamp(14px, 1.7vw, 22px);
+  letter-spacing: 1px;
+}
+@media (max-width: 850px) {
+  .desktop-workspace .desktop-topbar:has(.floating-downloads) {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .desktop-topbar .floating-downloads {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .workspace-status-header:has(.floating-downloads) {
+    flex-wrap: wrap;
+  }
+  .workspace-status-header .floating-downloads {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}
+.workspace-brand svg {
+  width: 60px;
+  height: 60px;
+  flex: none;
+}
+.workspace-brand span {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+@media (max-width: 700px) {
+  .desktop-workspace .desktop-topbar {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    min-height: 72px;
+    height: 72px;
+    padding: 10px 12px;
+  }
+  .workspace-brand {
+    gap: 10px;
+  }
+  .workspace-brand svg {
+    width: 46px;
+    height: 46px;
+  }
+  .workspace-brand span {
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+}
+@media (max-width: 450px) {
+  .desktop-workspace .desktop-topbar {
+    min-height: 64px;
+    height: 64px;
+    padding-inline: 8px;
+  }
+  .workspace-brand {
+    gap: 8px;
+  }
+  .workspace-brand svg {
+    width: 32px;
+    height: 32px;
+  }
+  .workspace-brand span {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+}
+
+@media (max-width: 850px) {
+  .desktop-workspace .desktop-topbar:has(.floating-downloads) {
+    height: auto;
+  }
+}

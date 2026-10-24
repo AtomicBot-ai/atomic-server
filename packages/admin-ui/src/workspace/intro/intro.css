@@ -1,0 +1,148 @@
+.atomic-intro {
+  min-height: 100dvh;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 40%, #18302c55, transparent 65%), #070b0c;
+  color: #fff;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+.atomic-intro-card {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  text-align: center;
+  padding: 40px 24px;
+}
+.atomic-intro-mark {
+  display: block;
+  width: clamp(140px, 21vw, 268px);
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0 auto clamp(24px, 3vw, 38px);
+  color: #fff;
+  animation: atomic-breathe 6s ease-in-out infinite;
+}
+.atomic-intro h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  margin: 0 0 32px;
+}
+.atomic-intro-mark + h1 {
+  font-size: clamp(42px, 7vw, 90px);
+  letter-spacing: -0.052em;
+  margin: 0;
+}
+.atomic-intro-action {
+  margin-top: clamp(48px, 5vw, 64px);
+}
+.atomic-intro p {
+  margin: 20px 0;
+  font-size: 14px;
+  color: #a8b4ae;
+}
+.atomic-intro button {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #0b241b;
+  border: 1px solid #b7dfd1;
+  border-radius: 7px;
+  background: #b7dfd1;
+  padding: 16px 32px;
+  min-height: 54px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.atomic-intro button:hover {
+  background: #fff;
+}
+.atomic-intro button:focus-visible {
+  outline: 2px solid #d7f1e6;
+  outline-offset: 6px;
+}
+.intro-cursor {
+  animation: atomic-blink 1.3s steps(2, start) infinite;
+}
+.atomic-intro button:disabled {
+  background: transparent;
+  border-color: #455b52;
+  color: #a8b4ae;
+  cursor: wait;
+}
+.atomic-intro .intent-grid {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 0 0 32px;
+}
+.atomic-intro .intent-grid button {
+  width: min(260px, 100%);
+  min-height: 88px;
+  white-space: normal;
+}
+.engine-download {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  text-align: left;
+  width: min(440px, 100%);
+  padding: 20px;
+  margin: 0 auto 24px;
+  border: 1px solid #455b52;
+  border-radius: 10px;
+  background: #101b17;
+}
+.engine-download progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 10px;
+  accent-color: #b7dfd1;
+}
+.engine-download small {
+  grid-column: 1 / -1;
+  color: #a8b4ae;
+}
+@keyframes atomic-breathe {
+  50% {
+    transform: scale(1.035);
+    opacity: 0.85;
+  }
+}
+@keyframes atomic-blink {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atomic-intro *,
+  .atomic-intro *::before,
+  .atomic-intro *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (max-height: 650px) {
+  .atomic-intro-card {
+    padding-block: 32px;
+  }
+  .atomic-intro-mark {
+    width: clamp(120px, 26dvh, 180px);
+    margin-bottom: 24px;
+  }
+  .atomic-intro-mark + h1 {
+    font-size: clamp(42px, 9dvh, 60px);
+  }
+}

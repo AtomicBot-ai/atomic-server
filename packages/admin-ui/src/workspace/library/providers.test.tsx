@@ -109,7 +109,7 @@ describe('provider lists from the core', () => {
     render(<Downloads workspace={workspace} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Resume' }))
     expect(execute).toHaveBeenCalledWith('managed.install', { request_id: 'm1', plan_digest: 'pd' })
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Pause' }))
     expect(execute).toHaveBeenCalledWith('foundry.cancel', { id: 'f1' })
   })
 

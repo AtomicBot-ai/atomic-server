@@ -137,12 +137,15 @@ describe('the terminal UI', () => {
       },
     })
     readyWorkspace(t.io.env['ATC_DATA_FOLDER']!)
+    // Module transformation is outside the two-second interactive render deadline.
+    await import('../../src/tui/run-tui.js')
     const exit = t.run([])
-    await eventually(() => terminal.stdout.text().includes('Choose a model below'), 'chat')
+    await eventually(() => terminal.stdout.text().includes('Agents & tools'), 'server')
+    expect(terminal.stdout.text()).not.toContain('Press any key')
     expect(terminal.stdout.text()).not.toContain('SET UP SERVER')
     terminal.stdin.press('\u0007')
     terminal.stdin.press('s')
-    await eventually(() => terminal.stdout.text().includes('Copy address'), 'server')
+    await eventually(() => terminal.stdout.text().includes('Network & API'), 'settings')
     terminal.stdin.press('\u0011')
     expect(await exit).toBe(0)
     expect(t.link.shutdowns).toBe(0)

@@ -1,13 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  LIBRARY_SECTIONS,
-  PLAYGROUND_TASKS,
-  SERVER_SECTIONS,
-  WORKSPACE_NAVIGATION,
-  WORKSPACE_OPERATIONS,
-} from '@contract'
+import { LIBRARY_SECTIONS, PLAYGROUND_TASKS, SERVER_SECTIONS, WORKSPACE_OPERATIONS } from '@contract'
 import type { WorkspaceSnapshot } from '@contract'
 import { initializeServiceHubStore } from '@/hooks/useServiceHub'
 import { createServiceHub } from '@/services'
@@ -84,35 +78,43 @@ describe('shared workspace structure', () => {
     // 250 ms progress polling does not trigger a workspace snapshot refresh each time.
     const api = vi.spyOn(workspaceApi, 'execute').mockResolvedValue([] as never)
     render(<WorkspaceApp />)
+    await userEvent.keyboard('{Enter}')
     const main = within(screen.getByRole('navigation', { name: 'Main' }))
-    expect(main.getAllByRole('button').map((button) => button.textContent)).toEqual(
-      WORKSPACE_NAVIGATION.map((item) => item.label)
-    )
+    expect(main.getAllByRole('button').map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Server',
+      'Playground',
+      'Models',
+      'Help',
+      'Settings',
+    ])
     expect(
       within(screen.getByRole('navigation', { name: 'Server sections' }))
         .getAllByRole('button')
         .map((button) => button.textContent)
-    ).toEqual(SERVER_SECTIONS.map((item) => item.label))
-    expect(main.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument()
+    ).toEqual(
+      SERVER_SECTIONS.filter((item) =>
+        ['overview', 'configuration', 'remote', 'proxy'].includes(item.id)
+      ).map((item) => item.label)
+    )
+    expect(screen.getByRole('region', { name: 'Server control panel' })).toBeInTheDocument()
+    expect(main.getByRole('button', { name: 'Settings' })).toBeInTheDocument()
     await userEvent.click(main.getByRole('button', { name: 'Playground' }))
     expect(
-      within(screen.getByLabelText('Task'))
-        .getAllByRole('option')
+      within(screen.getByRole('navigation', { name: 'Playground tasks' }))
+        .getAllByRole('button')
         .map((option) => option.textContent)
-    ).toEqual(PLAYGROUND_TASKS.map((item) => item.label))
+    ).toEqual(PLAYGROUND_TASKS.map((item) => (item.id === 'chat' ? 'New chat' : item.label)))
     await waitFor(() => expect(api).toHaveBeenCalledWith('history.list'))
   })
 
-  it('opens the library on Installed and uses the canonical library order', async () => {
+  it('opens the library on Local models and uses the canonical library order', async () => {
     render(<Catalog workspace={current} openCommand={vi.fn()} />)
     const nav = within(screen.getByRole('navigation', { name: 'Catalog sections' }))
     expect(nav.getAllByRole('button').map((button) => button.textContent)).toEqual(
       LIBRARY_SECTIONS.map((item) => item.label)
     )
-    expect(nav.getByRole('button', { name: 'Installed' })).toHaveAttribute('aria-current', 'page')
-    await screen.findByText('No models installed. Find a model or import a local file.')
-    expect(current.execute).toHaveBeenCalledWith('models.installed')
-    expect(current.execute).not.toHaveBeenCalledWith('models.catalog', expect.anything())
+    expect(nav.getByRole('button', { name: 'Local models' })).toHaveAttribute('aria-current', 'page')
+    await waitFor(() => expect(current.execute).toHaveBeenCalledWith('models.catalog', { category: 'text' }))
   })
 
   it.each([
@@ -123,29 +125,34 @@ describe('shared workspace structure', () => {
     const execute = vi
       .fn()
       .mockImplementation(async (operation: string) =>
-        operation === 'engines.list' ? [{ engine: 'llamacpp-upstream', active: { version: 'b1' } }] : []
+        operation === 'engines.list'
+          ? { engines: [{ engine: 'llamacpp-upstream', active: { version: 'b1' } }] }
+          : []
       )
     current = workspace(fixture({ setup }), execute)
     render(<WorkspaceApp />)
+    if (opens) await userEvent.click(await screen.findByRole('button', { name: 'Press any key' }))
+    await screen.findByRole('navigation', { name: 'Main' })
     if (opens) {
       const dialog = within(screen.getByRole('dialog', { name: 'Set up Atomic Server' }))
-      // Engine first: the model catalog is not requested until an engine is chosen.
-      await waitFor(() => expect(execute).toHaveBeenCalledWith('engines.list'))
-      await userEvent.selectOptions(
-        await dialog.findByRole('combobox', { name: 'Setup engine' }),
-        await dialog.findByRole('option', { name: /llama\.cpp/ })
-      )
-      expect(execute).not.toHaveBeenCalledWith('models.catalog', expect.anything())
-      await userEvent.click(dialog.getByRole('button', { name: 'Choose models for this engine' }))
       await waitFor(() => expect(execute).toHaveBeenCalledWith('models.catalog', { category: 'text' }))
-      await waitFor(() => expect(dialog.queryByText('Loading models…')).not.toBeInTheDocument())
+      expect(execute).toHaveBeenCalledWith('engines.list')
+      expect(dialog.getByRole('button', { name: 'Skip setup' })).toBeInTheDocument()
     } else expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
 
 describe('connection and download lifecycle', () => {
   it('prepares the Codex handoff for the selected running model and key', async () => {
-    const execute = vi.fn().mockResolvedValue({ launch_command: 'atc connect codex --model chat-model' })
+    const execute = vi
+      .fn()
+      .mockImplementation(async (name: string) =>
+        name === 'models.installed'
+          ? [{ id: 'chat-model', providers: ['llamacpp-upstream'] }]
+          : name === 'keys.list'
+            ? [{ id: 'desktop-key' }]
+            : { launch_command: 'atc connect codex --model chat-model' }
+      )
     const snapshot = fixture({
       services: [
         {
@@ -159,9 +166,18 @@ describe('connection and download lifecycle', () => {
       ],
       keys: [{ id: 'desktop-key', name: 'Desktop', preview: 'atc_…1234', createdAt: 1 }],
     })
-    render(<Server workspace={workspace(snapshot, execute)} openCommand={vi.fn()} openSetup={vi.fn()} />)
-    await userEvent.selectOptions(screen.getByLabelText('Agent'), 'codex')
-    await userEvent.click(screen.getByRole('button', { name: 'Connect agent' }))
+    render(
+      <Server
+        section="overview"
+        showGuide
+        initialAgent="codex"
+        workspace={workspace(snapshot, execute)}
+        openCommand={vi.fn()}
+        openSetup={vi.fn()}
+      />
+    )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Configure & start' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Configure & start' }))
     await waitFor(() =>
       expect(execute).toHaveBeenCalledWith('connection.profile', {
         agent: 'codex',
@@ -172,7 +188,7 @@ describe('connection and download lifecycle', () => {
     expect(await screen.findByRole('button', { name: 'Copy launch command' })).toBeInTheDocument()
   })
 
-  it('removes a finished download when its snapshot updates, including a stale transfer', () => {
+  it('keeps a finished model in Downloads while removing its compact progress card and stale transfer', () => {
     const job = {
       setup_id: 'chat-job',
       stage: 'downloading_model',
@@ -201,9 +217,24 @@ describe('connection and download lifecycle', () => {
         )}
       />
     )
-    expect(screen.queryByText('chat-model')).not.toBeInTheDocument()
-    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
-    expect(screen.getByText('No downloads in progress.')).toBeInTheDocument()
+    expect(screen.getByText('chat-model')).toBeInTheDocument()
+    expect(screen.getByText('Downloaded')).toBeInTheDocument()
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1)
+    expect(screen.getByRole('progressbar')).toHaveAttribute('value', '100')
+    expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete model chat-model' })).toBeInTheDocument()
+    rerender(
+      <Downloads
+        compact
+        workspace={workspace(
+          fixture({
+            setups: [{ ...job, stage: 'ready' }],
+            downloads: [{ taskId: 'weights', transferred: 100, total: 100 }],
+          })
+        )}
+      />
+    )
+    expect(screen.queryByRole('region', { name: 'Downloads' })).not.toBeInTheDocument()
   })
 
   it('keeps completed artifacts loadable under Installed without unfinished jobs', async () => {
@@ -215,7 +246,7 @@ describe('connection and download lifecycle', () => {
           ]
         : []
     )
-    render(<Catalog workspace={workspace(fixture(), execute)} openCommand={vi.fn()} />)
+    render(<Catalog section="installed" workspace={workspace(fixture(), execute)} openCommand={vi.fn()} />)
     expect(await screen.findByText('Image model')).toBeInTheDocument()
     expect(screen.queryByText('Pending image')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Load model' }))

@@ -38,9 +38,15 @@ function total(row: Row): number {
       0
   )
 }
-/** Hide successful jobs without deleting their installation records or downloaded files. */
-export function downloadRows(setups: readonly unknown[], transfers: readonly unknown[]): DownloadRow[] {
-  const downloads = transfers.map(record),
+/** Background cards show active work; the Downloads page also retains completed jobs. */
+export function downloadRows(
+  setups: readonly unknown[],
+  transfers: readonly unknown[],
+  includeCompleted = false
+): DownloadRow[] {
+  const downloads = transfers
+      .map(record)
+      .sort((a, b) => Number(b['kind'] === 'engine') - Number(a['kind'] === 'engine')),
     used = new Set<string>(),
     result: DownloadRow[] = []
   for (const job of setups.map(record)) {
@@ -48,11 +54,14 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
       plan = record(job['plan']),
       ids = [id, ...Object.values(record(job['task_ids'])).map(String)].filter(Boolean),
       matching = downloads.filter((transfer) => ids.includes(taskId(transfer))),
-      phase = state(job)
+      phase = state(job),
+      progressPhase = ['paused', 'cancelled', 'failed', 'interrupted'].includes(phase)
+        ? String(job['stopped_at'] ?? phase)
+        : phase
     // Consume child transfers before omitting a completed parent. A stale last progress
     // event must not reappear as a separate download after verification succeeds.
     matching.forEach((transfer) => used.add(taskId(transfer)))
-    if (completed.has(phase)) continue
+    if (completed.has(phase) && !includeCompleted) continue
     // A GGUF or media plan counts `total_download_bytes`; a store or Foundry Local plan `download_bytes`.
     const size = Number(
       plan['total_download_bytes'] ?? plan['total_bytes'] ?? plan['download_bytes'] ?? total(job)
@@ -60,11 +69,13 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
     let done = matching.length
       ? matching.reduce((sum, transfer) => sum + transferred(transfer), 0)
       : transferred(job)
-    if (phase === 'downloading_model') done += Number(record(plan['engine'])['download_size'] ?? 0)
-    if (phase === 'downloading_projector')
+    // A stopped GGUF setup retains the active transfer's bytes. Earlier stages
+    // are still complete; pausing must not make the model or engine disappear.
+    if (progressPhase === 'downloading_model') done += Number(record(plan['engine'])['download_size'] ?? 0)
+    if (progressPhase === 'downloading_projector')
       done +=
         Number(record(plan['engine'])['download_size'] ?? 0) + Number(record(plan['model'])['size'] ?? 0)
-    if (['verifying', 'registering'].includes(phase)) done = size
+    if (['verifying', 'registering'].includes(progressPhase) || completed.has(phase)) done = size
     result.push({
       ...job,
       id,
@@ -73,6 +84,7 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
       total: size,
       transferred: done,
       state: phase || 'queued',
+      completed: completed.has(phase),
       owner: plan['category'] ? 'artifacts' : 'setup',
     })
   }
@@ -81,8 +93,13 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
       phase = state(transfer),
       size = total(transfer),
       done = transferred(transfer)
-    if (used.has(id) || completed.has(phase) || (!phase && size > 0 && done >= size)) continue
+    if (used.has(id)) continue
     if (id) used.add(id)
+    if (
+      (completed.has(phase) && !(includeCompleted && transfer['kind'] === 'engine')) ||
+      (!phase && size > 0 && done >= size)
+    )
+      continue
     result.push({
       ...transfer,
       id,
@@ -90,7 +107,23 @@ export function downloadRows(setups: readonly unknown[], transfers: readonly unk
       total: size,
       transferred: done,
       owner: 'download',
+      completed: completed.has(phase),
     })
   }
-  return result
+  return includeCompleted
+    ? result.sort((a, b) => Number(a['completed'] === true) - Number(b['completed'] === true))
+    : result
+}
+
+/** Keep the current transfer visible while retaining stopped jobs in the queue. */
+export function prioritizeDownloads(rows: readonly DownloadRow[]): DownloadRow[] {
+  const rank = (row: DownloadRow) =>
+    /failed|interrupted|cancelled/.test(row.state)
+      ? 3
+      : /paused/.test(row.state)
+        ? 2
+        : /queued/.test(row.state)
+          ? 1
+          : 0
+  return [...rows].sort((a, b) => rank(a) - rank(b))
 }

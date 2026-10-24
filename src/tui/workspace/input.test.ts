@@ -1,10 +1,36 @@
 import type { Key } from 'ink'
 import { describe, expect, it } from 'vitest'
-import { workspaceInput, mouseReport } from './input.js'
+import { workspaceInput } from './input.js'
+import { mouseReport } from './mouse-report.js'
 import { workspaceFrame } from './frame.js'
 import { createWorkspace } from './state.js'
 import { newSetup } from '../../terminal-setup/index.js'
 const key = (value: Partial<Key> = {}) => value as Key
+it('clears an endpoint editor with Ctrl+U without saving or closing it', () => {
+  const s = {
+    ...createWorkspace('server'),
+    overlay: 'endpoint' as const,
+    edit: 'cloud-key',
+    editValue: 'fixture-key',
+    focus: 'save-edit',
+  }
+  const result = workspaceInput('u', key({ ctrl: true }), s, workspaceFrame(s, 80, 24, 0))
+  expect(result).toEqual({ patch: { editValue: '' } })
+})
+it.each(['fixture-key\r', 'fixture-key\r\n', '\tfixture-\u0015key\u0000'])(
+  'keeps pasted control bytes out of a single-line credential without submitting it',
+  (input) => {
+    const s = {
+      ...createWorkspace('server'),
+      overlay: 'endpoint' as const,
+      edit: 'cloud-key',
+      editValue: '',
+      focus: 'save-edit',
+    }
+    const result = workspaceInput(input, key(), s, workspaceFrame(s, 80, 24, 0))
+    expect(result).toEqual({ patch: { editValue: 'fixture-key' } })
+  }
+)
 describe('keyboard and mouse controls', () => {
   it('routes the same visible button from keyboard and mouse', () => {
     const s = createWorkspace('server'),
@@ -31,11 +57,16 @@ describe('keyboard and mouse controls', () => {
   })
   it('scrolls model focus past a screenful and exposes the new mouse target', () => {
     const s = createWorkspace('models')
-    s.models = Array.from({ length: 100 }, (_, i) => `Model ${i}`)
-    s.focus = 'model:0'
+    s.libraryView = 'installed'
+    s.installed = Array.from({ length: 100 }, (_, i) => ({
+      id: `Model ${i}`,
+      name: `Model ${i}`,
+      provider: 'llamacpp-upstream',
+    }))
+    s.focus = 'installed:0'
     for (let i = 0; i < 75; i++)
       Object.assign(s, workspaceInput('', key({ downArrow: true }), s, workspaceFrame(s, 80, 24, 0)).patch)
-    expect(s.focus).toBe('model:75')
+    expect(s.focus).toBe('installed:75')
     expect(workspaceFrame(s, 80, 24, 0).targets.some((t) => t.id === s.focus)).toBe(true)
   })
   it('uses a leader menu without stealing text; Escape dismisses the current layer', () => {
@@ -45,7 +76,7 @@ describe('keyboard and mouse controls', () => {
       leader: true,
       patch: { overlay: 'menu' },
     })
-    expect(workspaceInput('s', key(), s, f, true).action).toBe('page:server')
+    expect(workspaceInput('s', key(), s, f, true).action).toBe('page:access')
     s.overlay = 'help'
     expect(workspaceInput('', key({ escape: true }), s, f).action).toBe('close')
     expect(workspaceInput('q', key({ ctrl: true }), s, f).quit).toBe(true)
@@ -111,4 +142,34 @@ it('Enter activates the visibly highlighted control and confirms Cancel in an ed
   s.focus = 'composer'
   s.hover = 'page:models'
   expect(workspaceInput('', key({ return: true }), s, workspaceFrame(s, 80, 24, 0)).action).toBe('send')
+})
+
+it.each([
+  'cloud',
+  'download-remove',
+  'stop',
+  'catalog-filters',
+  'server-choice',
+  'config-choice',
+  'engine-picker',
+  'model-picker',
+  'setup-permission',
+] as const)('outside click closes %s without triggering a background control', (overlay) => {
+  const s = {
+    ...createWorkspace(overlay.endsWith('-picker') ? 'chat' : 'models'),
+    setupComplete: true,
+    overlay,
+  }
+  s.cloud.editing = true
+  s.downloadSelection = { id: 'one', owner: 'setup', name: 'One' }
+  const frame = workspaceFrame(s, 120, 40, 0)
+  const result = workspaceInput('[<0;1;1M', key(), s, frame)
+  expect(result.action).toBe(overlay === 'cloud' ? 'cloud-close' : 'close')
+  expect(result.patch?.focus).toBeUndefined()
+  const bounds = frame.popover!
+  expect(bounds).toBeDefined()
+  expect(workspaceInput(`[<0;${bounds.x};${bounds.y + 2}M`, key(), s, frame).action).toBe(
+    overlay === 'cloud' ? 'cloud-close' : 'close'
+  )
+  expect(workspaceInput(`[<0;${bounds.x + 2};${bounds.y + 1}M`, key(), s, frame).action).toBeUndefined()
 })

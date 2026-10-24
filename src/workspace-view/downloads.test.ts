@@ -71,6 +71,35 @@ describe('shared Downloads view', () => {
     ).toMatchObject([{ id: 'chat', state: 'downloading_projector', total: 350, transferred: 275 }])
   })
 
+  it.each([
+    ['downloading_model', 75],
+    ['downloading_projector', 275],
+  ])('keeps completed stages when pausing %s and reconnecting', (stage, expected) => {
+    const setup = {
+      setup_id: 'chat',
+      stage,
+      plan: { total_download_bytes: 350, engine: { download_size: 50 }, model: { size: 200 } },
+      task_ids: { model: 'weights', projector: 'vision' },
+    }
+    const taskId = stage === 'downloading_model' ? 'weights' : 'vision'
+    const running = downloadRows([setup], [{ taskId, transferred: 25 }])[0]
+    const paused = downloadRows([{ ...setup, stage: 'cancelled', stopped_at: stage, transferred: 25 }], [])[0]
+    expect(running?.transferred).toBe(expected)
+    expect(paused).toMatchObject({ state: 'cancelled', total: 350, transferred: expected })
+  })
+
+  it.each(['cancelled', 'failed', 'interrupted'])(
+    'keeps downloaded bytes visible when verification is %s',
+    (stage) => {
+      expect(
+        downloadRows(
+          [{ id: 'chat', stage, stopped_at: 'verifying', plan: { total_download_bytes: 350 } }],
+          []
+        )
+      ).toMatchObject([{ state: stage, total: 350, transferred: 350 }])
+    }
+  )
+
   it('removes completed standalone transfers without treating zero-size transfers as complete', () => {
     expect(
       downloadRows(
@@ -114,4 +143,56 @@ describe('store and Foundry Local downloads', () => {
       ['phi-cpu', 100, 400],
     ])
   })
+})
+
+it('retains completed models in Downloads without reviving child transfer events in background cards', () => {
+  const jobs = [
+    {
+      setup_id: 'done',
+      stage: 'ready',
+      task_ids: { model: 'weights' },
+      plan: { model_id: 'Qwen', total_download_bytes: 100 },
+    },
+  ]
+  const transfers = [{ taskId: 'weights', transferred: 98, total: 100 }]
+  expect(downloadRows(jobs, transfers)).toEqual([])
+  expect(downloadRows(jobs, transfers, true)).toMatchObject([
+    { id: 'done', completed: true, total: 100, transferred: 100 },
+  ])
+})
+
+it('merges a durable engine job with its transient progress, retains only completed history, and never offers model controls', () => {
+  const progress = { taskId: 'engine', transferred: 50, total: 100 }
+  const job = {
+    id: 'engine',
+    taskId: 'engine',
+    kind: 'engine',
+    name: 'Atomic Prism',
+    stage: 'downloading',
+    transferred: 50,
+    total: 100,
+  }
+  expect(downloadRows([], [progress, job])).toMatchObject([
+    { id: 'engine', name: 'Atomic Prism', owner: 'download', transferred: 50 },
+  ])
+  const completed = { ...job, stage: 'ready', transferred: 100 }
+  expect(downloadRows([], [progress, completed])).toEqual([])
+  expect(downloadRows([], [progress, completed], true)).toMatchObject([
+    { id: 'engine', completed: true, transferred: 100 },
+  ])
+})
+
+it('prioritizes live progress without losing paused or failed jobs', async () => {
+  const { prioritizeDownloads } = await import('./index.js')
+  const rows = downloadRows(
+    [
+      { id: 'failed', stage: 'failed' },
+      { id: 'paused', stage: 'paused' },
+      { id: 'queued', stage: 'queued' },
+      { id: 'active', stage: 'downloading' },
+    ],
+    []
+  )
+  expect(prioritizeDownloads(rows).map((row) => row.id)).toEqual(['active', 'queued', 'paused', 'failed'])
+  expect(rows.map((row) => row.id)).toEqual(['failed', 'paused', 'queued', 'active'])
 })

@@ -1,0 +1,293 @@
+/* Fonts vendored from Atomic-Chat/web-app/public/fonts @ 5043013. */
+@font-face {
+  font-family: Inter;
+  src: url('/fonts/Inter-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: Inter;
+  src: url('/fonts/Inter-SemiBold.ttf') format('truetype');
+  font-weight: 600 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: StudioFeixenSans;
+  src: url('/fonts/StudioFeixenSans-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+.eye-workspace {
+  font-family: Inter, system-ui, sans-serif;
+}
+.eye-workspace h1,
+.eye-workspace h2,
+.eye-workspace h3,
+.desktop-sidebar header strong {
+  font-family: StudioFeixenSans, Inter, sans-serif;
+  font-weight: 500;
+}
+/* Lifted from Atomic-Chat desktop rail/sidebar and Hub @ 5043013; no native window chrome on the web. */
+.desktop-workspace {
+  grid-template-columns: 84px 248px minmax(0, 1fr);
+  background: #111;
+}
+.desktop-rail {
+  padding: 12px 7px;
+  gap: 12px;
+}
+.desktop-rail .rail-brand {
+  width: 44px;
+  margin-bottom: 20px;
+}
+.desktop-rail .rail-item {
+  width: 68px;
+  min-height: 62px;
+  height: 62px;
+  border-radius: 11px;
+  padding: 10px 3px;
+}
+.desktop-rail .rail-item span {
+  display: block;
+}
+.desktop-rail .rail-brand img {
+  width: 28px;
+  height: 28px;
+}
+.desktop-rail .rail-item svg {
+  width: 18px;
+  height: 18px;
+}
+.desktop-rail .rail-help {
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  color: var(--ew-muted);
+  width: 42px;
+  height: 32px;
+  order: 4;
+}
+.desktop-rail .rail-item[aria-label='Settings'] {
+  order: 5;
+}
+.desktop-sidebar {
+  border: 1px solid #343434;
+  border-radius: 15px;
+  margin: 8px 8px 8px 7px;
+  padding: 16px 8px;
+  background: linear-gradient(155deg, #232323, #141414 62%);
+}
+.desktop-sidebar header {
+  padding: 0 8px 16px;
+}
+.desktop-sidebar header strong {
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.sidebar-sections {
+  gap: 3px;
+}
+.sidebar-sections button {
+  justify-content: start;
+  gap: 8px;
+  padding: 9px 8px;
+  font-size: 14px;
+  color: #e3e3e3;
+}
+.sidebar-sections button small {
+  margin-left: auto;
+}
+.sidebar-sections button.active {
+  background: #ffffff1f;
+}
+.sidebar-group-label {
+  margin: 18px 8px 5px;
+}
+.desktop-topbar {
+  display: none;
+}
+.desktop-main .workspace-content {
+  max-width: none;
+  padding: 12px 8px 24px 0;
+}
+.hub-toolbar {
+  top: -12px;
+  padding-top: 0;
+  padding-bottom: 8px;
+}
+.hub-toolbar > select {
+  width: 148px;
+  border-radius: 22px;
+  background: #202020;
+}
+.hub-toolbar .hub-import {
+  background: #bce2d9;
+  color: #18362f;
+  border-color: #bce2d9;
+}
+.hub-table th {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.hub-table td {
+  font-size: 13px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+.hub-table .hub-model-disclosure strong {
+  font-size: 13px;
+}
+.hub-table th:first-child {
+  width: 34%;
+}
+.desktop-workspace .compact-downloads {
+  display: grid;
+  gap: 8px;
+  max-height: 26dvh;
+  overflow-y: auto;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.compact-downloads .download-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 12px;
+  margin: 0;
+}
+.compact-downloads .download-heading {
+  grid-column: 1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.compact-downloads .download-row > progress {
+  grid-column: 1;
+  grid-row: 2;
+  height: 5px;
+  margin: 0;
+}
+.compact-downloads .download-detail {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.desktop-workspace .compact-downloads .ew-button,
+.desktop-workspace .compact-downloads .ew-button.primary {
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+.compact-downloads .inline-error {
+  grid-column: 1 / -1;
+}
+@media (max-width: 900px) {
+  .desktop-workspace {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+  .desktop-topbar {
+    display: flex;
+    height: 44px;
+    border: 0;
+    justify-content: start;
+  }
+  .desktop-topbar > span {
+    color: var(--ew-muted);
+  }
+  .desktop-sidebar {
+    left: 84px;
+    width: 240px;
+    margin: 8px;
+  }
+  .sidebar-scrim {
+    left: 332px;
+  }
+  .desktop-main .workspace-content {
+    padding: 8px 12px 20px;
+  }
+  .desktop-rail {
+    padding: 12px 7px;
+  }
+  .hub-toolbar {
+    top: -8px;
+  }
+}
+
+/* Server content keeps the same 16px inset and 1200px reading width as the desktop. */
+.desktop-main .workspace-content:has(> .server-page),
+.desktop-main .workspace-content:has(> .settings-page) {
+  padding: 16px;
+}
+.server-page {
+  max-width: 1200px;
+}
+.desktop-sidebar .server-control-detail {
+  gap: 8px;
+  padding: 7px 8px;
+}
+.desktop-sidebar .server-control-detail > svg {
+  color: #a0e7db;
+}
+.desktop-server-control {
+  padding: 12px;
+  background: linear-gradient(145deg, #29403d, #22302e);
+  border-color: #8de0d22b;
+}
+.server-power button {
+  position: relative;
+  overflow: hidden;
+}
+.server-power.is-running button {
+  color: #a0e7db;
+  background: #8de0d21a;
+  border-color: #78baad40;
+}
+.server-connection-count {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--ew-raised);
+  font-variant-numeric: tabular-nums;
+}
+.server-connection-count span {
+  font-size: 10px;
+}
+.server-connection-count.has-connections {
+  color: #a0e7db;
+  background: #8de0d21a;
+}
+.server-running-border {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.server-running-border rect {
+  x: 0.75px;
+  y: 0.75px;
+  width: calc(100% - 1.5px);
+  height: calc(100% - 1.5px);
+  fill: none;
+  stroke: white;
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-dasharray: 12 88;
+  animation: server-border-travel 3.6s linear infinite;
+}
+@keyframes server-border-travel {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .server-running-border rect {
+    animation: none;
+  }
+}

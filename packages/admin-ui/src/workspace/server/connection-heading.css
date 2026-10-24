@@ -1,0 +1,41 @@
+.connection-heading {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.connection-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.connection-identity h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.connection-identity .connection-agent-icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+.connection-heading > .ew-action {
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .connection-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+  }
+  .connection-heading > .floating-downloads {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+  }
+  .connection-heading > button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}

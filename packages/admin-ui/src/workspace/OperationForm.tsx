@@ -1,3 +1,4 @@
+import { useConfirmation } from './use-confirmation'
 import { useEffect, useRef, useState } from 'react'
 import type { WorkspaceField, WorkspaceOperation } from '@contract'
 import { Action, Copy, Field, JsonResult } from './Controls'
@@ -46,6 +47,7 @@ export function OperationForm({
   initial?: RecordValue
   onComplete?: (value: unknown) => void
 }) {
+  const { ask, confirmation, waiting } = useConfirmation()
   const [values, setValues] = useState<RecordValue>(() => ({ ...initialValues(operation), ...initial }))
   const [result, setResult] = useState<unknown>()
   const [revealed, setRevealed] = useState(false)
@@ -57,8 +59,14 @@ export function OperationForm({
     setRevealed(false)
   }, [operation])
   const required = operation.inputSchema.required
+  const run = async (input: RecordValue) => {
+    const value = await execute(operation.name, input)
+    setResult(value)
+    onComplete?.(value)
+  }
   return (
     <div className="operation-form">
+      {confirmation}
       {operation.description !== operation.title && (
         <p className="ew-muted">{operation.description.replace(' Engine capability limits apply.', '')}</p>
       )}
@@ -81,18 +89,21 @@ export function OperationForm({
       <div className="ew-actions">
         <Action
           primary
+          disabled={waiting}
           onClick={async () => {
             const input = parseValues(operation, values)
             const missing = required.filter((name) => input[name] === undefined)
             if (missing.length) throw new Error(`Required: ${missing.join(', ')}`)
-            if (
-              operation.effect === 'interrupt' &&
-              !window.confirm(`${operation.title}? Running requests may be interrupted.`)
-            )
+            if (operation.effect === 'interrupt') {
+              ask({
+                title: `${operation.title}?`,
+                actionLabel: operation.title,
+                children: <p>Running requests may be interrupted.</p>,
+                onConfirm: () => run(input),
+              })
               return
-            const value = await execute(operation.name, input)
-            setResult(value)
-            onComplete?.(value)
+            }
+            await run(input)
           }}
         >
           {operation.title}

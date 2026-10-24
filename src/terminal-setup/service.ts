@@ -22,7 +22,6 @@ export interface SetupWorkspace {
   execute(operation: string, input?: Record<string, unknown>): Promise<unknown>
   snapshot(): Promise<{ downloads: unknown[]; setups: unknown[] }>
 }
-/** The request a setup plan takes, without what earlier versions stored beside it (a proxy). */
 function planInput(request: ModelSetupPlanRequest): ModelSetupPlanRequest {
   const { repo, file, revision, model_id, include_projector } = request
   return {
@@ -37,8 +36,6 @@ const legacy = (manifest: SetupManifest) => manifest.version !== 2 && !manifest.
 export class TerminalSetup {
   private samples = new Map<string, { bytes: number; at: number; speed: number }>()
   private path: string
-  private engineInstall: Promise<unknown> | undefined
-  private engineError = ''
   private transfers = new Map<string, Transfer>()
   constructor(
     directory: string,
@@ -149,7 +146,6 @@ export class TerminalSetup {
       await writeDocument(this.path, manifest)
     }
     const link = await this.attach(true)
-    this.engineError = ''
     await this.ensureEngine(link, manifest)
     const { setups } = (await this.workspace.execute('setup.status')) as { setups: ModelSetup[] }
     for (const item of manifest.selections) {
@@ -205,7 +201,10 @@ export class TerminalSetup {
       ...jobs.flatMap((j) => Object.values(j.task_ids).filter((id): id is string => !!id)),
     ])
     const ready =
-      engineReady && jobs.length === manifest.selections.length && jobs.every((j) => j.stage === 'ready')
+      manifest.selections.length > 0 &&
+      engineReady &&
+      jobs.length === manifest.selections.length &&
+      jobs.every((j) => j.stage === 'ready')
     const speed = [...this.samples.entries()]
       .filter(
         ([id, sample]) =>
@@ -232,7 +231,7 @@ export class TerminalSetup {
       speed,
       eta,
       transfers: [...this.transfers.values()].filter((t) => ids.has(t.taskId)),
-      error: this.engineError || jobs.find((j) => j.error)?.error?.message || '',
+      error: jobs.find((j) => j.error)?.error?.message || '',
       ready,
     }
   }
@@ -243,14 +242,7 @@ export class TerminalSetup {
         .filter((j) => j.stage !== 'ready')
         .map((j) => this.workspace.execute('setup.cancel', { setup_id: j.setup_id }))
     )
-    if (progress.engineReady) return
-    // A PrismML build downloads under the setup records' engine task; any other under the manifest's.
-    const tasks =
-      progress.manifest.engine.provider === 'atomic-prism'
-        ? [...new Set(progress.jobs.flatMap((j) => (j.task_ids.engine ? [j.task_ids.engine] : [])))]
-        : [progress.manifest.engine.taskId]
-    const link = await this.attach(false)
-    for (const task of tasks) await link.request('POST', `/downloads/${encodeURIComponent(task)}/cancel`)
+    // Engine installs belong to the shared queue; pausing a model must not cancel them.
   }
   async finish(): Promise<SetupManifest> {
     const progress = await this.progress()
@@ -275,24 +267,10 @@ export class TerminalSetup {
       'GET',
       `/backends/${engine.provider}`
     )
-    if (
-      backends.some((p) => p.version === engine.version && p.backend === engine.backend) ||
-      this.engineInstall
-    )
-      return
-    const snapshot = await link.snapshot()
-    if (snapshot.downloads.some((d) => (d as { taskId?: string }).taskId === engine.taskId)) return
-    this.engineInstall = link
-      .request('POST', `/backends/${engine.provider}/install`, {
-        version: engine.version,
-        backend: engine.backend,
-        task_id: engine.taskId,
-      })
-      .catch((e: unknown) => {
-        this.engineError = e instanceof Error ? e.message : 'Engine installation failed.'
-      })
-      .finally(() => {
-        this.engineInstall = undefined
-      })
+    if (backends.some((p) => p.version === engine.version && p.backend === engine.backend)) return
+    await this.workspace.execute('engines.enqueue', {
+      engine: engine.provider,
+      target: { version: engine.version, variant: engine.backend },
+    })
   }
 }

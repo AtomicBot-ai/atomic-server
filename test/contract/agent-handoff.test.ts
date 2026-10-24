@@ -10,7 +10,7 @@ import { createWorkspace } from '../../src/tui/workspace/state.js'
 import { workspaceFrame } from '../../src/tui/workspace/frame.js'
 it('releases mouse capture before handing off and returns to Server without stopping the API', async () => {
   const tmp = tmpDataFolder(),
-    terminal = fakeTerminal(100, 30),
+    terminal = fakeTerminal(120, 36),
     link = fakeCoreLink()
   readyWorkspace(tmp.paths.dataFolder)
   link.snapshotValue.server.running = true
@@ -48,10 +48,25 @@ it('releases mouse capture before handing off and returns to Server without stop
     },
   })
   try {
-    await eventually(() => terminal.stdout.text().includes('Copy address'))
-    const target = workspaceFrame(createWorkspace('server'), 100, 30, 0).targets.find(
-      (t) => t.id === 'agent:atomic-agent'
+    await eventually(() => terminal.stdout.text().includes('Agents & tools'))
+    expect(terminal.stdout.text()).not.toContain('Press any key')
+    const connect = workspaceFrame(createWorkspace('server'), 120, 36, 0).targets.find(
+      (target) => target.id === 'sidebar-agent:2'
     )!
+    terminal.stdin.press(`\u001b[<0;${connect.x + 1};${connect.y + 1}M`)
+    await eventually(() => terminal.stdout.text().includes('Connect Atomic Agent'))
+    const target = workspaceFrame(
+      {
+        ...createWorkspace('server'),
+        setupComplete: true,
+        overlay: 'connection-guide',
+        workspace: { api: { running: true } } as never,
+        connection: { step: 'review', path: 'agent', agent: 'atomic-agent', port: '1337' } as never,
+      },
+      120,
+      36,
+      0
+    ).targets.find((t) => t.id === 'agent:atomic-agent')!
     terminal.stdin.press(`\u001b[<0;${target.x + 1};${target.y + 1}M`)
     await eventually(() => terminal.stdout.text().includes('Launch and switch'))
     terminal.stdin.press('\r')

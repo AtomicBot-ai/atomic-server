@@ -123,6 +123,21 @@ export class LiteRtModelSetups {
     })
   }
 
+  /** Stops the job, waits for its worker, then lets `cleanup` discard its files before the record goes. */
+  async remove(id: string, cleanup: (job: LiteRtModelJob) => Promise<void>) {
+    const worker = this.running.get(id)
+    await this.cancel(id)
+    await worker?.done
+    return this.mutations.run(id, async () => {
+      if (this.running.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
+      const job = await readDocument<LiteRtModelJob | null>(this.path(id), null)
+      if (!job?.plan) throw new AtcError('ATC_USAGE', 'No such download.')
+      await cleanup(job)
+      await rm(this.path(id), { force: true })
+      return { removed: true, id }
+    })
+  }
+
   private async write(job: LiteRtModelJob, stage: LiteRtModelJob['stage'], error?: unknown) {
     job.stage = stage
     job.updated_at = Date.now()

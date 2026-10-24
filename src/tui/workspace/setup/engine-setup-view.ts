@@ -1,11 +1,6 @@
 /** Draws guided setup's steps for a managed engine, Foundry Local or LiteRT-LM: models, review, download. */
 
-import type {
-  FoundryModelPlan,
-  LiteRtModelPlan,
-  ManagedModelPlan,
-  ManagedVerdict,
-} from '../../../contract/index.js'
+import type { FoundryModelPlan, LiteRtModelPlan, ManagedModelPlan } from '../../../contract/index.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
 import {
   formatSize,
@@ -13,7 +8,6 @@ import {
   liteRtVariantLabel,
   liteRtVerdictText,
   variantLabel,
-  verdictLine,
 } from '../../../workspace-view/index.js'
 import { computeRowWindow } from '../../row-window.js'
 import { button, COLORS, text, wrap } from '../draw/canvas.js'
@@ -31,18 +25,6 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
     a.y + 3,
     v.query ? `Results for “${v.query}”` : `Models for ${path.engine}`,
     COLORS.gold,
-    a.width
-  )
-  text(
-    c,
-    a.x,
-    a.y + 4,
-    path.kind === 'managed'
-      ? 'Checkpoints the engine’s release was measured with; Search looks further on Hugging Face.'
-      : path.kind === 'litert'
-        ? 'Atomic Chat’s .litertlm list, then Hugging Face’s; the variant for this machine is chosen for you.'
-        : 'Atomic Chat’s list, then Microsoft’s catalog; the variant for this machine is chosen for you.',
-    COLORS.muted,
     a.width
   )
   const win = computeRowWindow(path.rows.length, s.selected, Math.max(1, a.bottom - a.y - 8))
@@ -66,10 +48,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
   button(c, 'setup-query', a.x + 13, a.bottom, 'Search', 'Search more models.', a.focus)
 }
 
-function planLinesOf(
-  plan: ManagedModelPlan | FoundryModelPlan | LiteRtModelPlan,
-  verdicts?: ManagedVerdict[]
-): string[] {
+function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan | LiteRtModelPlan): string[] {
   if ('backend' in plan)
     return [
       `${plan.name}: ${plan.variant_id} (${liteRtVariantLabel(plan)})`,
@@ -86,11 +65,7 @@ function planLinesOf(
       `${plan.pending.length} of ${plan.files.length} files, ${formatSize(plan.download_bytes)}`,
       ...(plan.unverified ? ['A Microsoft catalog model: unverified by Atomic Chat.'] : []),
     ]
-  return [
-    `${plan.repository} @ ${plan.revision.slice(0, 12)}`,
-    ...(verdicts?.length ? verdicts : [plan.verdict]).map(verdictLine),
-    `${plan.pending.length} of ${plan.files.length} files, ${formatSize(plan.download_bytes)}, into ${plan.root}`,
-  ]
+  return [plan.repository, `Download: ${formatSize(plan.download_bytes)}`]
 }
 
 /** A variant that runs once Foundry Local or LiteRT-LM is ready: the step its panel takes. */
@@ -106,8 +81,8 @@ const LITERT_STEP: Record<string, string> = {
 export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   const plan = v.path?.plan
   if (!plan) return
-  text(c, a.x, a.y + 3, 'Review before downloading', COLORS.gold, a.width)
-  const lines = [...planLinesOf(plan, v.path?.verdicts), ...plan.blockers].flatMap((l) => wrap(l, a.width))
+  text(c, a.x, a.y + 3, 'Download', COLORS.gold, a.width)
+  const lines = [...planLinesOf(plan), ...plan.blockers].flatMap((l) => wrap(l, a.width))
   lines
     .slice(0, Math.max(1, a.bottom - a.y - 6))
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))
@@ -134,15 +109,7 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
 export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: Area) {
   const job = v.path?.job
   const state = pathJob(v, s.workspace)
-  text(c, a.x, a.y + 3, 'DOWNLOADING YOUR MODEL.', COLORS.gold, a.width)
-  text(
-    c,
-    a.x,
-    a.y + 4,
-    'It runs in the server: close this terminal and come back later if you like.',
-    COLORS.muted,
-    a.width
-  )
+  text(c, a.x, a.y + 3, 'Downloading', COLORS.gold, a.width)
   text(c, a.x, a.y + 6, `${job?.model ?? ''} for ${job?.engine ?? ''}`, COLORS.text, a.width)
   const total = state?.total ?? 0,
     done = state?.done ?? 0

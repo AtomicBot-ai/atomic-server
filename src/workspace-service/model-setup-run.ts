@@ -26,6 +26,7 @@ export interface SetupRunDeps {
   downloader: Downloader
   env: NodeJS.ProcessEnv
   proxy?: ProxyConfig | null
+  installEngine?: (engine: ModelSetupEngine, taskId: string) => Promise<void>
 }
 
 /** A stop the user asked for. */
@@ -51,7 +52,7 @@ function modelDir(paths: AtcPaths, plan: ModelSetupPlan) {
   return modelDirFromId(paths.layout.provider('llamacpp-upstream').modelsDir, plan.model_id)
 }
 
-function pathsOf(paths: AtcPaths, plan: ModelSetupPlan) {
+export function setupFilePaths(paths: AtcPaths, plan: ModelSetupPlan) {
   const dir = modelDir(paths, plan)
   const rel = (file: string) =>
     relative(paths.layout.root, join(dir, file.split('/').pop() ?? file))
@@ -92,7 +93,7 @@ export async function runSetup(
       {}
     )
   }
-  const files = pathsOf(paths, plan)
+  const files = setupFilePaths(paths, plan)
   await enter('downloading_model')
   await download(deps, task_ids.model, plan.model, files.model, signal)
   if (plan.projector && files.projector && task_ids.projector) {

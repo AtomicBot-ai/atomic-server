@@ -2,6 +2,7 @@ import { COLORS, graphemes, text, textWidth, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { fill } from '../draw/fortress.js'
 import type { WorkspaceState } from '../state.js'
+import { drawLoadLine } from './chat-load.js'
 
 export const COMPOSER_HEIGHT = 7
 
@@ -12,10 +13,12 @@ export function drawComposer(
   x: number,
   y: number,
   width: number,
-  focus: string
+  focus: string,
+  seconds = 0
 ) {
   fill(c, x, y, width, COMPOSER_HEIGHT, COLORS.composerFrame)
   fill(c, x + 2, y + 1, width - 4, COMPOSER_HEIGHT - 2, COLORS.composer)
+  drawLoadLine(c, s, x + 3, y + 1, width - 6, focus, seconds)
   const control = (
     id: string,
     left: number,
@@ -63,44 +66,46 @@ export function drawComposer(
     height: 2,
     hint: 'Enter Send | Shift+Enter New line | Esc Menu | Ctrl+N New chat',
   })
-  control(
-    s.generating ? 'cancel' : 'send',
-    x + width - 11,
-    y + 2,
-    8,
-    s.generating ? 'Stop' : 'Send ↑',
-    s.generating ? 'Ctrl+C Stop response' : 'Enter Send message',
-    COLORS.sendButton,
-    COLORS.composerInk
-  )
-  const engineWidth = 12
-  control(
-    'choose-engine',
-    x + 3,
-    y + 4,
-    engineWidth,
-    'Engine ▾',
-    'Choose an inference engine | Enter Open picker',
-    COLORS.engineButton,
-    COLORS.composer
-  )
+  if (s.generating || s.draft.trim() || s.documents?.length || s.images.length)
+    control(
+      s.generating ? 'cancel' : 'send',
+      x + width - 11,
+      y + 2,
+      8,
+      s.generating ? 'Stop' : 'Send ↑',
+      s.generating ? 'Ctrl+C Stop response' : 'Enter Send message',
+      COLORS.sendButton,
+      COLORS.composerInk
+    )
   control(
     'choose-model',
-    x + engineWidth + 4,
+    x + 14,
     y + 4,
-    Math.min(64, width - engineWidth - 18),
-    s.model ? `Model: ${s.model} ▾` : 'Model ▾',
+    Math.max(15, width - (width < 65 ? 17 : 30)),
+    s.model ? `${s.model} ▾` : 'Choose model ▾',
     s.model ? `${s.model} | Choose a model` : 'Choose a model from your library or endpoint',
     COLORS.modelButton,
     COLORS.composerInk
   )
   control(
-    'images',
-    x + width - 12,
+    'chat-features',
+    width < 65 ? x + 3 : x + width - 14,
+    y + (width < 65 ? 5 : 4),
+    11,
+    'Tools ▾',
+    'Choose assistant, skills and tools',
+    COLORS.engineButton,
+    COLORS.composer
+  )
+  control(
+    'attachments',
+    x + 3,
     y + 4,
     9,
-    s.modelVision === false ? 'No image' : s.images.length ? `Images ${s.images.length}` : '+ Image',
-    s.modelVision === false ? 'This model takes no images' : 'Attach a local image | Requires a vision model',
+    (s.documents?.length ?? 0) + s.images.length
+      ? `Files ${(s.documents?.length ?? 0) + s.images.length}`
+      : '+ Files',
+    'Attach documents or images',
     COLORS.engineButton,
     COLORS.composer
   )

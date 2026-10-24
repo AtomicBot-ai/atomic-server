@@ -13,8 +13,16 @@ import type { Workspace } from '../useWorkspace'
  * macOS. Install and Update build prepare openvino after them where it is offered, as `atc engines
  * install litert-lm` does. Closing it stops nothing.
  */
-export function LiteRtLm({ workspace: w, onClose }: { workspace: Workspace; onClose: () => void }) {
-  const dialog = useDialog(onClose)
+export function LiteRtLm({
+  workspace: w,
+  onClose,
+  embedded = false,
+}: {
+  workspace: Workspace
+  onClose: () => void
+  embedded?: boolean
+}) {
+  const dialog = useDialog(onClose, !embedded)
   const [view, setView] = useState<LiteRtAcceleratorsView | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -52,21 +60,23 @@ export function LiteRtLm({ workspace: w, onClose }: { workspace: Workspace; onCl
       if (after.accelerators.some((a) => !a.prepared)) await execute('litert.prepare', {})
     })
   return (
-    <div className="modal-shade">
+    <div className={embedded ? 'engine-setup-inline' : 'modal-shade'}>
       <section
         ref={dialog}
         tabIndex={-1}
-        className="ew-modal"
-        role="dialog"
-        aria-modal="true"
+        className={embedded ? undefined : 'ew-modal'}
+        role={embedded ? 'region' : 'dialog'}
+        aria-modal={embedded ? undefined : true}
         aria-label="LiteRT-LM"
       >
-        <div className="panel-heading">
-          <h2>LiteRT-LM</h2>
-          <button className="ew-button" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        {!embedded && (
+          <div className="panel-heading">
+            <h2>LiteRT-LM</h2>
+            <button className="ew-button" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        )}
         {!view && !error && <p className="ew-muted">Reading the accelerator…</p>}
         {view?.installed && <p className="ew-muted">Installed: {view.build}</p>}
         {view && liteRtAcceleratorLines(view).map((line) => <p key={line}>{line}</p>)}

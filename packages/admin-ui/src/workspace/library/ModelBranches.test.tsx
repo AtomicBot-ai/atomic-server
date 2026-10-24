@@ -79,9 +79,8 @@ describe('a managed engine’s model in the admin', () => {
         onInstallEngine={() => {}}
       />
     )
-    await userEvent.click(await screen.findByRole('button', { name: 'Review download' }))
-    expect(execute).toHaveBeenCalledWith('managed.plan', { repository: REPO, engine: 'vllm' })
     await userEvent.click(await screen.findByRole('button', { name: 'Download' }))
+    expect(execute).toHaveBeenCalledWith('managed.plan', { repository: REPO, engine: 'vllm' })
     expect(execute).toHaveBeenCalledWith('managed.install', {
       request_id: expect.stringMatching(/^admin-/),
       plan_digest: 'p1',
@@ -155,9 +154,8 @@ describe('a Foundry Local model in the admin', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Prepare OpenVINO NPU' }))
     expect(foundry).toHaveBeenCalled()
     await userEvent.selectOptions(screen.getByLabelText('Variant'), 'phi-4-mini-cpu')
-    await userEvent.click(screen.getByRole('button', { name: 'Review download' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Download' }))
     expect(execute).toHaveBeenCalledWith('foundry.plan', { model: 'phi-4-mini', variant: 'phi-4-mini-cpu' })
-    await userEvent.click(await screen.findByRole('button', { name: 'Download' }))
     expect(execute).toHaveBeenCalledWith('foundry.install', {
       request_id: expect.stringMatching(/^admin-/),
       plan_digest: 'f1',
@@ -203,12 +201,15 @@ describe('the admin catalog and installed models', () => {
       'models.check': { repository: REPO, verdicts: [] },
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
-    const format = await screen.findByLabelText('Format')
-    await userEvent.selectOptions(format, 'safetensors')
+    await userEvent.click(screen.getByRole('button', { name: 'Local models' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+    await userEvent.click(await screen.findByRole('radio', { name: 'Safetensors' }))
+    await userEvent.keyboard('{Escape}')
     expect(execute).toHaveBeenCalledWith('models.catalog', { engine: 'vllm' })
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose model' }))
-    expect(await screen.findByRole('dialog', { name: `Install ${REPO}` })).toBeInTheDocument()
+    await userEvent.click(await screen.findByText(REPO, { selector: 'strong' }))
+    await waitFor(() => expect(execute).toHaveBeenCalledWith('models.check', { repository: REPO }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('Compatibility')).toBeInTheDocument()
   })
 
   it('goes back to the category catalog when the task changes after another format was chosen', async () => {
@@ -219,10 +220,12 @@ describe('the admin catalog and installed models', () => {
       'artifacts.list': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
-    await userEvent.selectOptions(await screen.findByLabelText('Format'), 'safetensors')
-    await userEvent.selectOptions(screen.getByLabelText('Task'), 'image')
-    await waitFor(() => expect(execute).toHaveBeenLastCalledWith('models.catalog', { category: 'image' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Local models' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+    await userEvent.click(await screen.findByRole('radio', { name: 'Safetensors' }))
+    await userEvent.click(screen.getByRole('combobox', { name: 'Model category' }))
+    await userEvent.click(screen.getByRole('option', { name: /Images/ }))
+    await waitFor(() => expect(execute).toHaveBeenCalledWith('models.catalog', { category: 'image' }))
   })
 
   it('leads a repository without GGUF to the managed engines’ verdicts instead of “No GGUF”', async () => {
@@ -239,16 +242,16 @@ describe('the admin catalog and installed models', () => {
       'artifacts.list': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Choose model' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Local models' }))
+    await userEvent.click(await screen.findByText(REPO, { selector: 'strong' }))
     await waitFor(() => expect(execute).toHaveBeenCalledWith('models.check', { repository: REPO }))
     expect(screen.queryByText(/No GGUF/)).toBeNull()
-    expect(await screen.findByRole('button', { name: 'Review download' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Download' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('warns that removing a store model removes it for every managed engine', async () => {
     const { workspace, execute } = workspaceFixture({ 'models.remove': {} })
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const store = { id: REPO, name: REPO, provider: 'vllm', providers: ['vllm', 'sglang'], store: 'managed' }
     render(
       <InstalledModels
@@ -259,8 +262,9 @@ describe('the admin catalog and installed models', () => {
         browse={() => {}}
       />
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
-    expect(confirm.mock.calls[0]?.[0]).toMatch(/every managed engine \(vllm, sglang\)/)
+    await userEvent.click(screen.getByRole('button', { name: '× Delete' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('every engine using the shared store')
+    await userEvent.click(screen.getByRole('button', { name: 'Delete model' }))
     expect(execute).toHaveBeenCalledWith('models.remove', { model_id: REPO })
   })
 })

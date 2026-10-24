@@ -6,12 +6,14 @@ export function ConnectionSteps({
   hasKey,
   setup,
   start,
+  openKeys,
 }: {
   model: boolean
   online: boolean
   hasKey: boolean
   setup: () => void
   start: () => Promise<unknown>
+  openKeys: () => void
 }) {
   if (model && online && hasKey)
     return <p className="ew-muted">Ready to connect. Choose your model, client key and app below.</p>
@@ -31,7 +33,7 @@ export function ConnectionSteps({
             </Action>
           )}
         </li>
-        <li>{hasKey ? 'Client key available' : 'Create a client key in API keys below'}</li>
+        <li>{hasKey ? 'Client key available' : <Action onClick={openKeys}>Create a client key</Action>}</li>
       </ol>
       <small>
         Downloading a model does not load it. Closing this page leaves the background server running.

@@ -1,0 +1,113 @@
+/* Lifted from Atomic-Chat containers/hub/LocalModelTable.tsx @ 5043013; adapted: responsive native table. */
+.hub-model-count {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ew-muted);
+  font-size: 12px;
+  margin: 12px 0 8px;
+}
+.hub-model-count button {
+  background: none;
+  border: 0;
+  color: inherit;
+}
+.hub-table-frame {
+  border: 1px solid var(--ew-line);
+  border-radius: 10px;
+  overflow-x: auto;
+  container-type: inline-size;
+}
+.hub-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+.hub-table th {
+  padding: 14px 8px;
+  font-weight: 400;
+  background: #ffffff05;
+  color: var(--ew-muted);
+  white-space: nowrap;
+}
+.hub-table th button {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+.hub-table td {
+  border-top: 1px solid var(--ew-line);
+  padding: 10px 8px;
+  color: var(--ew-muted);
+}
+.hub-table td:first-child {
+  min-width: 230px;
+}
+.hub-table tr.expanded,
+.hub-expanded {
+  background: #ffffff04;
+}
+.hub-table .hub-model-summary {
+  padding: 0;
+}
+.hub-table .hub-model-disclosure {
+  padding: 0;
+  gap: 8px;
+}
+.hub-table .hub-model-disclosure > svg {
+  flex-shrink: 0;
+}
+.hub-table .hub-model-disclosure > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hub-table .hub-model-disclosure strong {
+  font-size: 12px;
+}
+.hub-table .hub-model-disclosure small {
+  font-size: 10px;
+}
+.hub-table .hub-model-disclosure .hub-device-compact {
+  display: none;
+}
+[data-model-status='Loaded'] {
+  color: var(--ew-accent, #bee8df);
+}
+.hub-table .hub-model-mark {
+  width: 30px;
+  height: 30px;
+}
+.hub-table .hub-model-detail {
+  padding: 12px 20px;
+}
+.hub-table .installed-row {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+@container (max-width: 1100px) {
+  .hub-table [data-column='Capabilities'],
+  .hub-table [data-column='Context'] {
+    display: none;
+  }
+}
+@container (max-width: 760px) {
+  .hub-table [data-column='Engines'],
+  .hub-table [data-column='Parameters'] {
+    display: none;
+  }
+}
+@container (max-width: 540px) {
+  .hub-table .hub-model-disclosure .hub-device-compact {
+    display: block;
+  }
+  .hub-table [data-column='This device'],
+  .hub-table [data-column='Download size'] {
+    display: none;
+  }
+}

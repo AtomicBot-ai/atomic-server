@@ -1,29 +1,21 @@
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
+import { catalogFormatsFor } from '@view'
+import type { CatalogFormat } from '@view'
 
-export type CatalogFormat = 'gguf' | 'safetensors' | 'foundry' | 'litert'
+export type { CatalogFormat } from '@view'
 
 /** The formats the chat catalog offers on this host: GGUF, plus what the core's engines here run. */
 export function catalogFormats(engines: readonly RecordValue[]): CatalogFormat[] {
-  return [
-    'gguf',
-    ...(engines.some((e) => e.kind === 'managed') ? (['safetensors'] as const) : []),
-    ...(engines.some((e) => e.engine === 'foundry-local') ? (['foundry'] as const) : []),
-    ...(engines.some((e) => e.engine === 'litert-lm') ? (['litert'] as const) : []),
-  ]
-}
-
-/** The engine whose own catalog a variant format reads. */
-export const FORMAT_ENGINE: Partial<Record<CatalogFormat, string>> = {
-  foundry: 'foundry-local',
-  litert: 'litert-lm',
+  return catalogFormatsFor(engines.map((e) => text(e.engine)))
 }
 
 /**
  * A managed engine's curated checkpoints or Hub search rows, or Foundry Local's or LiteRT-LM's models,
- * as catalog cards.
+ * as catalog cards that keep their engine for the catalog's filters.
  */
-export function catalogCards(result: unknown, format: CatalogFormat): RecordValue[] {
+export function catalogCards(result: unknown, format: CatalogFormat, engine = ''): RecordValue[] {
+  if (format === 'gguf' || format === 'mlx') return rows(result)
   const r = record(result)
   if (format === 'litert')
     return rows(r.models).map((m) => ({
@@ -31,6 +23,7 @@ export function catalogCards(result: unknown, format: CatalogFormat): RecordValu
       title: m.name,
       summary: `${text(m.default_variant, 'no variant runs here')}${m.unverified ? ' · Hugging Face, not verified by Atomic Chat' : ''}${m.gated ? ' · gated' : ''}`,
       format: 'LiteRT-LM',
+      providers: ['litert-lm'],
       litert: m,
     }))
   if (format === 'foundry')
@@ -39,6 +32,7 @@ export function catalogCards(result: unknown, format: CatalogFormat): RecordValu
       title: m.name,
       summary: `${text(m.default_variant, 'no variant runs here')}${m.unverified ? ' · unverified' : ''}`,
       format: 'Foundry Local',
+      providers: ['foundry-local'],
       foundry: m,
     }))
   const list = Array.isArray(r.models) ? rows(r.models) : rows(r.rows)
@@ -47,5 +41,6 @@ export function catalogCards(result: unknown, format: CatalogFormat): RecordValu
     title: m.repository,
     summary: text(m.note ?? m.section, ''),
     format: 'safetensors',
+    providers: engine ? [engine] : [],
   }))
 }

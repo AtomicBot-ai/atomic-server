@@ -112,15 +112,15 @@ describe('LiteRT-LM in the admin', () => {
       'models.catalog': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
-    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Format' }), 'litert')
+    await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+    const formats = within(screen.getByText('Format', { selector: 'legend' }).parentElement!)
+    await userEvent.click(await formats.findByRole('radio', { name: 'LiteRT-LM', exact: true }))
+    await userEvent.keyboard('{Escape}')
     expect(execute).toHaveBeenCalledWith('models.search', { engine: 'litert-lm', query: '' })
-    expect(await screen.findByText('Gemma 4 E4B')).toBeInTheDocument()
-    expect(screen.getByText(/gemma-4-e2b-it-gpu · Hugging Face, not verified/)).toBeInTheDocument()
-    await userEvent.click(screen.getAllByRole('button', { name: 'Choose model' })[1]!)
-    const dialog = await screen.findByRole('dialog', { name: 'Install gemma-4-E2B-it-litert-lm' })
-    expect(within(dialog).getByText(/not verified by Atomic Chat/)).toBeInTheDocument()
-    const options = within(dialog)
+    expect(await screen.findByText('Gemma 4 E4B', { selector: 'strong' })).toBeInTheDocument()
+    await userEvent.click(screen.getByText('gemma-4-E2B-it-litert-lm', { selector: 'strong' }))
+    expect(screen.getByText('A Hugging Face model: not verified by Atomic Chat.')).toBeInTheDocument()
+    const options = within(screen.getByRole('combobox', { name: 'Variant' }))
       .getAllByRole('option')
       .map((o) => o.textContent)
     expect(options).toEqual([
@@ -128,28 +128,29 @@ describe('LiteRT-LM in the admin', () => {
       expect.stringMatching(/NPU intel-lnl .* accelerator-not-prepared/),
     ])
     await userEvent.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Variant' }),
+      screen.getByRole('combobox', { name: 'Variant' }),
       'gemma-4-e2b-it-npu-intel-lnl'
     )
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Prepare accelerator' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Prepare accelerator' }))
     expect(await screen.findByRole('dialog', { name: 'LiteRT-LM' })).toBeInTheDocument()
   })
 
-  it('opens from the Engines tab, its Install and Update too', async () => {
+  it('opens inside the engine’s settings, and its build check never installs around openvino', async () => {
     const { workspace, execute } = workspaceFixture({
       'engines.list': enginesList(['llamacpp-upstream', 'litert-lm']),
       'litert.accelerators': LINUX,
+      'settings.get': { revision: 1, values: {} },
+      'settings.schema': { descriptors: [] },
       'models.installed': [],
       'artifacts.list': [],
     })
-    render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Engines' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Accelerator' }))
-    expect(await screen.findByRole('dialog', { name: 'LiteRT-LM' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
-    await userEvent.click(screen.getAllByRole('button', { name: 'Update' })[1]!)
-    expect(await screen.findByRole('dialog', { name: 'LiteRT-LM' })).toBeInTheDocument()
-    expect(execute).not.toHaveBeenCalledWith('engines.install', { engine: 'litert-lm' })
+    render(<Catalog workspace={workspace} openCommand={() => {}} section="engines" />)
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Engine settings' }))[1]!)
+    const settings = within(await screen.findByRole('dialog', { name: 'litert-lm settings' }))
+    expect(await settings.findByRole('region', { name: 'LiteRT-LM' })).toBeInTheDocument()
+    expect(await settings.findByText(/Nothing to prepare/)).toBeInTheDocument()
+    expect(settings.queryByRole('button', { name: 'Install latest build' })).toBeNull()
+    expect(execute).not.toHaveBeenCalledWith('engines.enqueue', expect.anything())
   })
 
   it('resumes, cancels and loads a LiteRT-LM download by its own operations', () => {

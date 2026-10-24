@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { highlightDownloads } from '../library/download-attention'
+import { createPortal } from 'react-dom'
 import type { Workspace } from '../useWorkspace'
-import { Action } from '../Controls'
+import { connectorToolBindings, inferenceReadiness } from '@view'
+import { openAcquisition } from '../useAcquisition'
+import { chatRequest } from './chat-request'
+import { ChatFeaturePicker } from './ChatFeaturePicker'
+import type { ChatFeatureSelection } from './ChatFeaturePicker'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { useChatSession } from './useChatSession'
@@ -11,14 +16,27 @@ import { ChatHistory } from './ChatHistory'
 import { ChatMessages } from './ChatMessages'
 import { ChatParameters } from './ChatParameters'
 import { ChatSettings } from './ChatSettings'
-import { ChatModelPicker } from './ChatModelPicker'
-import { ChatCapabilities } from './ChatCapabilities'
-import { ChatAttachments } from './ChatAttachments'
+import { ChatComposer } from './ChatComposer'
 import type { Attachment } from './ChatAttachments'
-import { ChatTools } from './ChatTools'
+import { ChatTurnStatus } from './ChatTurnStatus'
 import { workspaceApi } from '../workspace-api'
-
-export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCatalog: () => void }) {
+import { ChatEmpty } from './ChatEmpty'
+import './chat-sidebar.css'
+import './chat-desktop.css'
+import './chat-composition.css'
+export function Chat({
+  workspace: w,
+  onCatalog,
+  historyContainer,
+  trySkill,
+  onSkillStarted,
+}: {
+  workspace: Workspace
+  onCatalog: () => void
+  historyContainer?: HTMLElement | null
+  trySkill?: string | null
+  onSkillStarted?: () => void
+}) {
   const s = useChatSession(),
     { preferences, save } = useChatPreferences()
   const [draft, setDraft] = useState(''),
@@ -27,14 +45,33 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
     [selected, setSelected] = useState('')
   const [settings, setSettings] = useState(false),
     [attachments, setAttachments] = useState<Attachment[]>([])
+  const [features, setFeatures] = useState<ChatFeatureSelection>({
+    assistant: '',
+    skills: [],
+    connectors: [],
+  })
+  const bindings = connectorToolBindings(w.snapshot?.features, features.connectors)
   const [capabilities, setCapabilities] = useState<RecordValue>({})
+  const [admission, setAdmission] = useState({ attempted: false, modelRequest: 0 })
   const bottom = useRef<HTMLDivElement>(null),
     composer = useRef<HTMLTextAreaElement>(null)
   const models = w.snapshot?.services.filter((m) => m.kind === 'chat') ?? []
   const service = models.find((m) => m.id === selected) ?? (!selected ? models[0] : undefined)
+  const readiness = inferenceReadiness(w.snapshot, {
+    model: service?.model,
+    provider: service?.provider,
+    kind: 'chat',
+    requireApi: true,
+  })
   const messages = rows(s.chat.messages),
     last = messages[messages.length - 1]
   const toolsPending = last?.role === 'assistant' && rows(last.tool_calls).length > 0
+  const { busy, startSkill } = s
+  useEffect(() => {
+    if (!trySkill || busy) return
+    startSkill(trySkill)
+    onSkillStarted?.()
+  }, [trySkill, onSkillStarted, busy, startSkill])
   const model = service?.model,
     provider = service?.provider
   useEffect(() => {
@@ -52,14 +89,22 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
     }
   }, [model, provider])
   useEffect(() => {
-    if (preferences.autoScroll) bottom.current?.scrollIntoView({ block: 'end' })
-  }, [s.chat, preferences.autoScroll])
+    if (preferences.autoScroll || s.error) bottom.current?.scrollIntoView({ block: 'end' })
+  }, [s.chat, s.error, preferences.autoScroll])
   useEffect(() => {
     const stored = rows(s.chat.messages).find((m) => m.role === 'system')
     setSystem(stored ? text(stored.content, '') : preferences.system)
     setParameters(
       s.chat.id ? JSON.stringify(record(s.chat.request_settings), null, 2) : preferences.parameters
     )
+    const storedFeatures = record(s.chat.request_settings)
+    setFeatures({
+      assistant: text(storedFeatures.atomic_assistant, ''),
+      skills: Array.isArray(storedFeatures.atomic_skills) ? storedFeatures.atomic_skills.map(String) : [],
+      connectors: Array.isArray(storedFeatures.atomic_connectors)
+        ? storedFeatures.atomic_connectors.map(String)
+        : [],
+    })
     setAttachments([])
     setDraft('')
     if (s.chat.model) {
@@ -71,27 +116,16 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
   }, [s.chat.id, s.chat.draft_key])
   useEffect(() => {
     const fresh = () => {
+      if (s.busy) return
       s.fresh()
       composer.current?.focus()
     }
     window.addEventListener('atomic:new-chat', fresh)
     return () => window.removeEventListener('atomic:new-chat', fresh)
   })
-  const request = () => {
-    let value: unknown
-    try {
-      value = JSON.parse(parameters)
-    } catch {
-      throw new Error(
-        'Request JSON is invalid. Fix it under Additional engine parameters & tools; your message is kept.'
-      )
-    }
-    if (!value || typeof value !== 'object' || Array.isArray(value))
-      throw new Error('Request JSON must be an object.')
-    if (!service) throw new Error('Load and select a ready model in Engines & Models.')
-    return { ...record(value), model: service.model }
-  }
+  const request = () => chatRequest(parameters, service, features, bindings)
   const generate = async (next: RecordValue[], base = s.chat) => {
+    if (!readiness.ready) throw new Error(readiness.message)
     const configured = request()
     const withSystem = system
       ? [{ role: 'system', content: system }, ...next.filter((m) => m.role !== 'system')]
@@ -100,15 +134,34 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
   }
   const send = async () => {
     if (!draft.trim() && !attachments.length) return
+    if (!readiness.ready) {
+      if (readiness.waiting) highlightDownloads()
+      s.setError('')
+      setAdmission((v) => ({
+        attempted: true,
+        modelRequest: v.modelRequest + Number(readiness.acquire === 'catalog'),
+      }))
+      return
+    }
+    setAdmission((v) => ({ ...v, attempted: false }))
     try {
-      request() // Validate before clearing the composer.
+      request()
       if (attachments.some((a) => a.image) && capabilities.vision !== true)
         throw new Error('Select a vision-capable model or remove the images.')
       const written = [
         draft,
-        ...attachments
-          .filter((a) => a.text !== undefined)
-          .map((a) => `\nAttached file: ${a.name}\n${a.text}`),
+        ...(await Promise.all(
+          attachments
+            .filter((a) => a.text !== undefined)
+            .map(async (a) => {
+              const prepared = await w.execute<{ content: string }>('attachments.prepare', {
+                name: a.name,
+                content: a.text,
+                query: draft,
+              })
+              return `\nAttached file: ${a.name}\n${prepared.content}`
+            })
+        )),
       ]
         .filter(Boolean)
         .join('\n')
@@ -136,6 +189,7 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
     )
   }
   const regenerate = async (index: number) => {
+    if (!readiness.ready) throw new Error(readiness.message)
     request()
     const next = messages.slice(0, index)
     const fork = await s.save(
@@ -148,9 +202,14 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
   const isLight =
     preferences.theme === 'light' ||
     (preferences.theme === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches)
+  const history = (
+    <div className="chat-history-region" hidden={!preferences.sidebar}>
+      <ChatHistory session={s} embedded={Boolean(historyContainer)} />
+    </div>
+  )
   return (
     <div
-      className={`chat-layout chat-enhanced ${preferences.sidebar ? '' : 'sidebar-hidden'} ${isLight ? 'chat-light' : ''}`}
+      className={`chat-layout chat-enhanced ${messages.length ? 'has-messages' : 'is-empty'} ${historyContainer ? 'history-in-sidebar' : ''} ${preferences.sidebar ? '' : 'sidebar-hidden'} ${isLight ? 'chat-light' : ''}`}
       style={
         {
           '--chat-font-size': `${preferences.fontSize}px`,
@@ -158,22 +217,31 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
         } as CSSProperties
       }
     >
-      {preferences.sidebar && <ChatHistory session={s} />}
+      {historyContainer ? createPortal(history, historyContainer) : history}
       <div className="chat-main">
         <ChatToolbar
+          embeddedHistory={Boolean(historyContainer)}
           session={s}
           preferences={preferences}
           save={save}
           openSettings={() => setSettings(true)}
+          requestControls={
+            <ChatParameters
+              system={system}
+              setSystem={setSystem}
+              parameters={parameters}
+              setParameters={setParameters}
+              preferences={preferences}
+              save={save}
+              disabled={s.busy}
+              provider={provider ?? ''}
+              capabilities={capabilities}
+              usage={usage}
+            />
+          }
         />
         <div className="chat-scroll">
-          {!messages.length && (
-            <div className="chat-empty">
-              <h1>Test your model</h1>
-              <p>Send a test message here. Connect your agent from the Server page.</p>
-              {!service && <Action onClick={onCatalog}>Load a model</Action>}
-            </div>
-          )}
+          {!messages.length && <ChatEmpty />}
           <ChatMessages
             messages={messages}
             preferences={preferences}
@@ -182,117 +250,46 @@ export function Chat({ workspace: w, onCatalog }: { workspace: Workspace; onCata
             fork={branch}
             regenerate={regenerate}
           />
-          {s.busy && (
-            <p role="status">
-              {s.job.state === 'stopping'
-                ? 'Stopping…'
-                : s.job.state === 'generating'
-                  ? 'Generating…'
-                  : 'Waiting for the engine…'}{' '}
-              {s.job.duration_ms ? `${(Number(s.job.duration_ms) / 1000).toFixed(1)}s` : ''}
-            </p>
-          )}
-          {s.error && (
-            <div className="ew-error" role="alert">
-              {s.error}
-              <div className="ew-actions">
-                <Action onClick={onCatalog}>Engines & Models</Action>
-                <Action onClick={() => window.location.reload()}>Reconnect</Action>
-              </div>
-            </div>
-          )}
-          {toolsPending && !s.busy && (
-            <ChatTools
-              key={JSON.stringify(last.tool_calls)}
-              message={last}
-              disabled={s.busy}
-              submit={(results) => generate([...messages, ...results])}
-            />
-          )}
-          {!s.busy && last?.role === 'user' && (
-            <Action disabled={!service} onClick={() => generate(messages)}>
-              Generate from here
-            </Action>
-          )}
-          {!s.busy && last?.role === 'assistant' && !toolsPending && (
-            <Action
-              disabled={!service}
-              onClick={() =>
-                generate([
-                  ...messages,
-                  { role: 'user', content: 'Continue your previous answer from where you stopped.' },
-                ])
-              }
-            >
-              Continue answer
-            </Action>
-          )}
+          <ChatTurnStatus
+            session={s}
+            messages={messages}
+            bindings={bindings}
+            serviceReady={readiness.ready}
+            generate={generate}
+            onCatalog={onCatalog}
+          />
           <div ref={bottom} />
         </div>
-        <ChatParameters
-          system={system}
-          setSystem={setSystem}
-          parameters={parameters}
-          setParameters={setParameters}
+        <ChatComposer
+          readiness={admission.attempted ? readiness : undefined}
+          modelRequest={admission.modelRequest}
+          acquire={() => openAcquisition(readiness.acquire)}
+          session={s}
+          composer={composer}
+          draft={draft}
+          setDraft={setDraft}
+          toolsPending={toolsPending}
+          send={send}
+          service={service}
+          models={models}
+          selected={selected}
+          setSelected={setSelected}
           preferences={preferences}
           save={save}
-          disabled={s.busy}
-          provider={provider ?? ''}
-        />
-        <div className="composer">
-          <div className="composer-input">
-            <textarea
-              ref={composer}
-              aria-label="Message"
-              placeholder={toolsPending ? 'Resolve the tool calls above to continue' : 'Message'}
-              value={draft}
-              disabled={s.busy || toolsPending}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (
-                  e.key === 'Enter' &&
-                  !e.shiftKey &&
-                  !e.nativeEvent.isComposing &&
-                  (preferences.sendOnEnter || e.metaKey || e.ctrlKey)
-                ) {
-                  e.preventDefault()
-                  void send()
-                }
-              }}
-            />
-            {s.busy ? (
-              <Action disabled={!s.job.id || s.job.state === 'stopping'} onClick={s.stop}>
-                Stop response
-              </Action>
-            ) : (
-              <button
-                className="send-button"
-                disabled={!service || toolsPending || (!draft.trim() && !attachments.length)}
-                onClick={() => void send()}
-              >
-                Send ↑
-              </button>
-            )}
-          </div>
-          <div className="composer-controls">
-            <ChatModelPicker
-              models={models}
-              selected={service?.id ?? selected}
-              setSelected={setSelected}
-              preferences={preferences}
-              save={save}
+          onCatalog={onCatalog}
+          attachments={attachments}
+          setAttachments={setAttachments}
+          capabilities={capabilities}
+          usage={usage}
+          featureControls={
+            <ChatFeaturePicker
+              features={w.snapshot?.features}
+              value={features}
+              onChange={setFeatures}
               disabled={s.busy}
-              onCatalog={onCatalog}
             />
-          </div>
-          <ChatAttachments
-            attachments={attachments}
-            setAttachments={setAttachments}
-            disabled={s.busy}
-            vision={capabilities.vision === true}
-          />
-          <ChatCapabilities usage={usage} capabilities={capabilities} />
-        </div>
+          }
+        />
       </div>
       {settings && <ChatSettings value={preferences} save={save} onClose={() => setSettings(false)} />}
     </div>

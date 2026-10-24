@@ -19,7 +19,7 @@ export function SetupReady({
       </div>
       <p className="setup-guidance">{selected.next}</p>
       <Action primary onClick={() => onOpenGoal(goal)}>
-        {selected.destination === 'server' ? 'Connect an app or agent' : `Open ${selected.label}`}
+        Open server connections
       </Action>
     </>
   )

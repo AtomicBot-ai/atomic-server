@@ -1,6 +1,12 @@
+import { readinessPatch } from './chat/readiness.js'
+import { useDownloadAttention } from './use-download-attention.js'
+import { chatFeatureRequest } from './chat/features.js'
+import { useSharedPanels } from './shared-panels.js'
+import { useMediaJobs } from './media/media-effects.js'
+import { IntroScreen } from './IntroScreen.js'
 import { messageText } from '../../terminal-service/index.js'
 import type { ChatMessage } from '../../terminal-service/index.js'
-import { useRuntimeData } from './runtime-effects.js'
+import { useRuntimeData, useWaitingGame } from './runtime-effects.js'
 import { persistConversation } from './data-actions.js'
 import { startup } from './startup.js'
 import { isPicker } from './chat/picker.js'
@@ -21,16 +27,9 @@ import type { Page, WorkspaceState } from './state.js'
 import { workspaceFrame } from './frame.js'
 import { workspaceInput } from './input.js'
 import { activate } from './actions.js'
-import { COLORS } from './draw/canvas.js'
-import type { Cell } from './draw/canvas.js'
-const lightSurfaces = new Set([
-  COLORS.text,
-  COLORS.composer,
-  COLORS.composerFrame,
-  COLORS.modelButton,
-  COLORS.sendButton,
-])
+import { CanvasRow } from './draw/CanvasRow.js'
 export interface WorkspaceProps {
+  showIntro?: boolean
   onLaunch?: (launch: AgentLaunch) => void
   initialMessage?: string
   root?: CommandSpec
@@ -40,57 +39,33 @@ export interface WorkspaceProps {
   trueColor?: boolean
   write: (value: string) => void
 }
-function Row({ cells, color, trueColor }: { cells: Cell[]; color: boolean; trueColor: boolean }) {
-  const runs: { text: string; color: string; background: string | undefined; bold: boolean | undefined }[] =
-    []
-  for (const c of cells) {
-    const last = runs.at(-1)
-    if (last && last.color === c.color && last.background === c.background && last.bold === c.bold)
-      last.text += c.char
-    else runs.push({ text: c.char, color: c.color, background: c.background, bold: c.bold })
-  }
-  return (
-    <Text {...(color && trueColor ? { backgroundColor: COLORS.ground } : {})}>
-      {runs.map((r, i) => (
-        <Text
-          key={i}
-          bold={r.bold === true}
-          {...(color
-            ? {
-                color: trueColor
-                  ? r.color
-                  : lightSurfaces.has(r.background ?? '')
-                    ? 'white'
-                    : r.color === COLORS.gold
-                      ? 'cyan'
-                      : r.color === COLORS.ground
-                        ? 'black'
-                        : r.color === COLORS.text
-                          ? 'white'
-                          : r.color === COLORS.green
-                            ? 'cyan'
-                            : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
-                              ? 'gray'
-                              : 'cyan',
-              }
-            : {})}
-          {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}
-          inverse={
-            (!color || !trueColor) && (lightSurfaces.has(r.background ?? '') || r.background === COLORS.focus)
-          }
-        >
-          {r.text}
-        </Text>
-      ))}
-    </Text>
+export function WorkspaceApp(props: WorkspaceProps) {
+  const [intro, setIntro] = useState(props.showIntro ?? true)
+  const [resume, setResume] = useState<WorkspaceState | null>(null)
+  return intro ? (
+    <IntroScreen {...props} forceWelcome={resume !== null} onContinue={() => setIntro(false)} />
+  ) : (
+    <WorkspaceContent
+      {...props}
+      resume={resume}
+      onIntro={(state) => {
+        setResume(state)
+        setIntro(true)
+      }}
+    />
   )
 }
-export function WorkspaceApp(props: WorkspaceProps) {
-  const [state, setState] = useState(() => ({
-      ...createWorkspace(props.initialPage),
-      message: props.initialMessage ?? '',
-      commands: props.root ? commandRows(props.root) : [],
-    })),
+function WorkspaceContent(
+  props: WorkspaceProps & { resume: WorkspaceState | null; onIntro: (state: WorkspaceState) => void }
+) {
+  const [state, setState] = useState(
+      () =>
+        props.resume ?? {
+          ...createWorkspace(props.initialPage),
+          message: props.initialMessage ?? '',
+          commands: props.root ? commandRows(props.root) : [],
+        }
+    ),
     [seconds, setSeconds] = useState(0)
   const latest = useRef(state),
     controller = useRef<WorkspaceController | undefined>(undefined),
@@ -103,7 +78,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     setState(latest.current)
   }, [])
   const patch = useCallback((p: Partial<WorkspaceState>) => update((s) => ({ ...s, ...p })), [update])
-  const { deps, initialPage, write } = props
+  const { deps, initialPage, write, resume } = props
   useEffect(() => {
     let live = true
     const activeEpoch = epoch
@@ -128,7 +103,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     void startup(c, initialPage)
       .then((saved) => {
         if (!live) return
-        patch(saved)
+        if (!resume) patch(saved)
         if (saved.setup)
           void c.setup.resume().catch((e) => {
             if (live) patch({ message: oneLine(e) })
@@ -142,7 +117,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
       activeEpoch.current++
       c.dispose()
     }
-  }, [deps, initialPage, patch, update])
+  }, [deps, initialPage, patch, update, resume])
   const instance = state.base.daemon.kind === 'up' ? state.base.daemon.snapshot.instance_id : ''
   useEffect(() => {
     void controller.current?.observe(instance)
@@ -157,8 +132,12 @@ export function WorkspaceApp(props: WorkspaceProps) {
     write(state.mouse ? '\u001b[?1000h\u001b[?1003h\u001b[?1006h' : '\u001b[?1000l\u001b[?1003l\u001b[?1006l')
   }, [state.mouse, write])
   useWorkspaceData(state, latest, controller, update)
+  useSharedPanels(state.ready, latest, controller, update)
+  useMediaJobs(state.ready, latest, controller, update)
   useRuntimeData(state.ready, controller, update)
-  const frame = workspaceFrame(state, columns, rows, seconds)
+  useWaitingGame(state, update)
+  const downloadHighlight = useDownloadAttention(state.downloadAttention ?? 0, state.motion)
+  const frame = workspaceFrame(state, columns, rows, seconds, 'fangs', downloadHighlight)
   function cancel() {
     epoch.current++
     controller.current?.cancel()
@@ -167,9 +146,15 @@ export function WorkspaceApp(props: WorkspaceProps) {
   function send() {
     const s = latest.current,
       c = controller.current
-    if (!c || s.generating || !s.draft.trim()) return
-    if (!s.model) {
-      patch({ message: 'Choose a model before sending your message.' })
+    if (
+      !c ||
+      s.generating ||
+      (!s.draft.trim() && !s.images.length && !s.documents?.length && s.messages.at(-1)?.role !== 'tool')
+    )
+      return
+    const blocked = readinessPatch(s)
+    if (blocked) {
+      patch(blocked)
       return
     }
     const message: ChatMessage = {
@@ -181,7 +166,8 @@ export function WorkspaceApp(props: WorkspaceProps) {
           ]
         : s.draft.trim(),
     }
-    const messages = [...s.messages, message],
+    const messages =
+        s.draft.trim() || s.images.length || s.documents?.length ? [...s.messages, message] : s.messages,
       id = ++epoch.current
     patch({
       conversation: s.conversation ?? {
@@ -191,26 +177,56 @@ export function WorkspaceApp(props: WorkspaceProps) {
       messages: [...messages, { role: 'assistant', content: '' }],
       draft: '',
       images: [],
+      documents: [],
       cursor: 0,
       generating: true,
       message: '',
       scroll: 0,
     })
     void c
-      .chat(s.endpoint, s.model, messages, (token) => {
+      .chat(
+        s.endpoint,
+        s.model,
+        messages,
+        (token) => {
+          if (epoch.current === id)
+            update((v) => ({
+              ...v,
+              messages: v.messages.map((m, i) =>
+                i === v.messages.length - 1 ? { ...m, content: messageText(m.content) + token } : m
+              ),
+            }))
+        },
+        chatFeatureRequest(s),
+        s.conversation?.id,
+        s.documents
+      )
+      .then((response) => {
         if (epoch.current === id)
           update((v) => ({
             ...v,
-            messages: v.messages.map((m, i) =>
-              i === v.messages.length - 1 ? { ...m, content: messageText(m.content) + token } : m
-            ),
+            generating: false,
+            messages: response
+              ? [...(response.messages ?? v.messages.slice(0, -1)), response.message]
+              : v.messages,
+            conversation:
+              response && v.conversation
+                ? { ...v.conversation, id: response.conversation_id, request_settings: chatFeatureRequest(s) }
+                : v.conversation,
+            ...(response?.message.tool_calls?.length
+              ? { overlay: 'chat-tools', focus: 'chat-tools-approve' }
+              : {}),
           }))
       })
-      .then(() => {
-        if (epoch.current === id) patch({ generating: false })
-      })
       .catch((e) => {
-        if (epoch.current === id) patch({ generating: false, message: oneLine(e) })
+        if (epoch.current === id)
+          patch({
+            generating: false,
+            message: oneLine(e),
+            draft: s.draft,
+            documents: s.documents,
+            images: s.images,
+          })
       })
   }
   const context = () => ({
@@ -226,6 +242,7 @@ export function WorkspaceApp(props: WorkspaceProps) {
     copy: (value: string) => write(`\u001b]52;c;${Buffer.from(value).toString('base64')}\u0007`),
   })
   const run = (id: string) => {
+    if (id === 'first-intro') return props.onIntro(latest.current)
     if (
       !controller.current ||
       (latest.current.busy && ['api-toggle', 'stop-confirm', 'refresh-models'].includes(id))
@@ -266,13 +283,13 @@ export function WorkspaceApp(props: WorkspaceProps) {
   if (!state.ready)
     return (
       <Box>
-        <Text>Opening Atomic Chat...</Text>
+        <Text>Opening Atomic Server...</Text>
       </Box>
     )
   return (
     <Box flexDirection="column" width={columns} height={rows}>
       {frame.cells.map((row, i) => (
-        <Row key={i} cells={row} color={props.color} trueColor={props.trueColor ?? false} />
+        <CanvasRow key={i} cells={row} color={props.color} trueColor={props.trueColor ?? false} />
       ))}
     </Box>
   )

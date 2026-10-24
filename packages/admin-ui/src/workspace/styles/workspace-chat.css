@@ -131,15 +131,6 @@
   border-radius: 6px;
   margin: 10px 0;
 }
-.chat-parameters {
-  margin: 0 8px !important;
-  flex-shrink: 0;
-  max-height: 250px;
-  overflow: auto;
-}
-.chat-parameters summary {
-  font-size: 10px;
-}
 .composer {
   background: #e8f5f3;
   border: 8px solid #bedad6;

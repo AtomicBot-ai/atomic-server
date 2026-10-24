@@ -152,6 +152,12 @@ export function useChatSession() {
       setError('')
     }
   }
+  const startSkill = useCallback((name: string) => {
+    if (locked.current) return
+    setChat({ messages: [], draft_key: crypto.randomUUID(), request_settings: { atomic_skills: [name] } })
+    setJob({})
+    setError('')
+  }, [])
   return {
     chat,
     job,
@@ -166,6 +172,7 @@ export function useChatSession() {
     generate,
     stop,
     fresh,
+    startSkill,
     refresh,
   }
 }

@@ -39,6 +39,8 @@ it('sends operations to the matching daemon without disclosing its token in URLs
   })
 })
 it.each([
+  ['engines.enqueue', { engine: 'llamacpp-upstream' }],
+  ['engines.retry', { id: 'job' }],
   ['artifacts.install', { plan_digest: 'one', request_id: 'job' }],
   ['artifacts.resume', { id: 'job' }],
   ['models.install', { request: { repo: 'o/r', file: 'm.gguf' }, plan_digest: 'one', request_id: 'job' }],

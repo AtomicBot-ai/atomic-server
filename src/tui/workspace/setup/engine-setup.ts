@@ -27,6 +27,7 @@ import type {
 import { formatSize } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import { engineAction } from '../library/engine-actions.js'
+import { returnToConnection } from '../server/connection-model-return.js'
 
 type Context = Pick<ActionContext, 'controller' | 'get' | 'update'>
 
@@ -129,7 +130,11 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   const path = (p: Partial<EngineSetupPath>) =>
     update((s) => (s.setup?.path ? { ...s, setup: { ...s.setup, path: { ...s.setup.path, ...p } } } : s))
   const focus = (value: string) =>
-    update((s) => ({ ...s, focus: value, selected: 0, hover: '', overlay: null }))
+    update((s) =>
+      (s.firstRun && s.page === 'welcome') || (s.setup?.destination && !['setup', 'models'].includes(s.page))
+        ? s
+        : { ...s, focus: value, selected: 0, hover: '', overlay: null }
+    )
   const run = async (work: () => Promise<void>) => {
     change({ busy: true, error: '' })
     try {
@@ -193,14 +198,15 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
           plan: (await c.runtime.execute(OPS[current.kind].plan, { model: row.id })) as
             FoundryModelPlan | LiteRtModelPlan,
         })
-      change({ stage: 'review' })
-      focus('setup-path-install')
+      change({ stage: 'review', busy: false })
+      await engineSetupAction('setup-path-install', ctx)
     })
   }
   if (id === 'setup-path-install' && current.plan) {
     const plan = current.plan
     return run(async () => {
       if (plan.blockers.length) throw new Error(plan.blockers.join(' '))
+      change({ stage: 'download' })
       const requestId = `terminal-${randomUUID()}`
       await c.runtime.execute(OPS[current.kind].install, {
         request_id: requestId,
@@ -216,6 +222,15 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
       path({ job })
       change({ stage: 'download', startedAt: Date.now() })
       focus('setup-cancel')
+      if (returnToConnection(ctx, { model: job.model, provider: job.engine, downloading: true })) return
+      if (get().firstRun === 'model')
+        update((s) => ({
+          ...s,
+          firstRun: 'permissions',
+          page: 'welcome',
+          selected: 0,
+          focus: 'first-permission:notifications',
+        }))
     })
   }
   if (id === 'setup-path-resume' && current.job) {
@@ -249,14 +264,14 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
       await c.save('tui.model', job.model)
       update((s) => ({
         ...s,
+        firstRun: null,
         setupComplete: true,
         setup: null,
         model: job.model,
         engine: job.engine,
         endpoint,
-        page: view.mode === 'personal' ? 'chat' : 'server',
-        focus: view.mode === 'personal' ? 'composer' : 'api-toggle',
-        message: `${job.model} is running on ${job.engine}.`,
+        ...(view.destination ? {} : { page: 'server', serverView: 'connect', focus: 'copy-endpoint' }),
+        message: view.destination ? '' : `${job.model} is running on ${job.engine}.`,
       }))
     })
   }

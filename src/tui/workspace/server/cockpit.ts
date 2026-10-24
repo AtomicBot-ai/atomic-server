@@ -1,6 +1,5 @@
-import { drawEye } from '../draw/art.js'
 import type { EyeStatus } from '../draw/art.js'
-import { art, button, COLORS, text } from '../draw/canvas.js'
+import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { fill } from '../draw/fortress.js'
@@ -50,12 +49,10 @@ export function cockpitNotices(
 const metric = (value: number | null | undefined, unit: string) =>
   value == null ? '—' : `${value.toFixed(value < 10 ? 1 : 0)}${unit}`
 
-export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, seconds: number, focus: string) {
+export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, _seconds: number, focus: string) {
   const state = cockpitStatus(s),
     narrow = c.width < 95
-  const eyeWidth = Math.min(narrow ? 18 : 27, Math.round((height - 1) * 2.75))
-  art(c, 1, 0, drawEye(eyeWidth, height - 1, seconds, s.motion, state))
-  const x = eyeWidth + 3,
+  const x = 2,
     width = c.width - x - 2
   const label = {
     offline: 'Offline',
@@ -66,7 +63,7 @@ export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, second
     error: 'Needs attention',
     stopping: 'Stopping',
   }[state]
-  text(c, x, 0, `ATOMIC CHAT   ${label}`, COLORS.text, width, undefined, true)
+  text(c, c.width - label.length - 2, 1, label, COLORS.gold, label.length)
   const rows =
     s.workspace?.services ??
     (s.base.daemon.kind === 'up'

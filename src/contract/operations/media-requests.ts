@@ -5,19 +5,19 @@ import { request } from './define.js'
 /** A video job, as media.video.create runs it and media.video.estimate prices it. */
 export const VIDEO_REQUEST = request(
   {
-    prompt: {},
+    prompt: { default: '' },
     negativePrompt: {},
-    width: { type: 'integer', minimum: 16 },
-    height: { type: 'integer', minimum: 16 },
-    steps: { type: 'integer', minimum: 1 },
-    cfgScale: { type: 'number' },
+    width: { type: 'integer', minimum: 16, default: 512 },
+    height: { type: 'integer', minimum: 16, default: 512 },
+    steps: { type: 'integer', minimum: 1, default: 20 },
+    cfgScale: { type: 'number', default: 7 },
     guidance: { type: 'number' },
     seed: { type: 'integer' },
     fps: { type: 'integer', minimum: 1 },
     frames: { type: 'integer', minimum: 1 },
     samplingMethod: {},
     flowShift: { type: 'number' },
-    workflow: { type: 'string', enum: ['create'] },
+    workflow: { type: 'string', enum: ['create'], default: 'create' },
   },
   ['prompt', 'width', 'height', 'steps', 'cfgScale']
 )
@@ -84,20 +84,21 @@ export const DECISION_CONFIG_REQUEST = request({
 /** An image job. */
 export const IMAGE_REQUEST = request(
   {
-    prompt: {},
+    prompt: { default: '' },
     negativePrompt: {},
-    width: { type: 'integer', minimum: 16 },
-    height: { type: 'integer', minimum: 16 },
-    steps: { type: 'integer', minimum: 1 },
-    cfgScale: { type: 'number' },
+    width: { type: 'integer', minimum: 16, default: 512 },
+    height: { type: 'integer', minimum: 16, default: 512 },
+    steps: { type: 'integer', minimum: 1, default: 20 },
+    cfgScale: { type: 'number', default: 7 },
     guidance: { type: 'number' },
     seed: { type: 'integer' },
-    batchSize: { type: 'integer', minimum: 1, maximum: 4 },
+    batchSize: { type: 'integer', minimum: 1, maximum: 4, default: 1 },
     samplingMethod: {},
     flowShift: { type: 'number' },
     workflow: {
       type: 'string',
       enum: ['create', 'transform', 'inpaint', 'extend', 'upscale', 'reference', 'edit'],
+      default: 'create',
     },
     initImage: { type: 'object' },
     maskImage: { type: 'object' },

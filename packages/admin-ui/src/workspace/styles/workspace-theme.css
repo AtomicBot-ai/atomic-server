@@ -1,0 +1,75 @@
+.desktop-workspace {
+  --ew-bg: var(--atomic-ground);
+  --ew-panel: var(--atomic-surface);
+  --ew-raised: var(--atomic-header);
+  --ew-line: var(--atomic-line);
+  --ew-muted: var(--atomic-muted);
+  --ew-text: var(--atomic-text);
+  --ew-teal: var(--atomic-gold);
+  background: var(--ew-bg);
+}
+.desktop-workspace .desktop-rail {
+  background: var(--ew-bg);
+}
+.desktop-workspace .desktop-sidebar {
+  background: var(--atomic-header);
+  border-color: var(--atomic-nav-edge);
+}
+.desktop-workspace .sidebar-sections button {
+  color: var(--ew-text);
+}
+.desktop-workspace .sidebar-sections button.active,
+.desktop-workspace .sidebar-sections button:hover,
+.desktop-workspace .sidebar-agents button:hover {
+  background: var(--atomic-focus);
+  color: var(--atomic-gold);
+}
+.desktop-workspace .rail-item {
+  background: var(--atomic-nav-button);
+  border-color: var(--atomic-nav-edge);
+}
+.desktop-workspace .rail-item.active,
+.desktop-workspace .rail-item:hover {
+  background: var(--atomic-focus);
+  color: var(--atomic-gold);
+  border-color: var(--atomic-gold);
+}
+.desktop-workspace .ew-button {
+  background: var(--atomic-header);
+  border-color: var(--atomic-nav-edge);
+  color: var(--atomic-text);
+}
+.desktop-workspace .ew-button.primary {
+  background: var(--atomic-gold);
+  border-color: var(--atomic-gold);
+  color: var(--atomic-composer-ink);
+}
+.desktop-workspace .ew-button.primary:hover {
+  background: var(--atomic-green);
+  border-color: var(--atomic-green);
+}
+.desktop-workspace .workspace-brand {
+  color: var(--atomic-text);
+}
+.desktop-workspace .floating-downloads {
+  background: var(--atomic-surface);
+  border-color: var(--atomic-nav-edge);
+  color: var(--atomic-text);
+}
+.desktop-workspace .floating-downloads progress {
+  accent-color: var(--atomic-gold);
+}
+.desktop-workspace .state-ready,
+.desktop-workspace .state-busy {
+  color: var(--atomic-status-running);
+}
+.desktop-workspace .state-starting {
+  color: var(--atomic-status-starting);
+}
+.desktop-workspace .state-stopped {
+  color: var(--atomic-status-stopped);
+}
+.desktop-workspace .state-error,
+.desktop-workspace .state-overloaded {
+  color: var(--atomic-status-error);
+}

@@ -6,7 +6,7 @@
  * was running when the server stopped reads as `interrupted`; the same request id continues it.
  */
 
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { ManagedModelJob, ManagedModelPlan, WorkspaceInput } from '../contract/index.js'
 import type { Downloader, ProxyConfig } from '../downloads/index.js'
@@ -26,7 +26,7 @@ export type { StoreFiles } from './managed-model-plan.js'
 export interface ManagedModelSetupsDeps extends ManagedModelDeps {
   /** `<atc>/managed-model-setups`: one record per plan digest and per request id. */
   directory: string
-  downloader: Pick<Downloader, 'download' | 'cancel'>
+  downloader: Pick<Downloader, 'download' | 'cancel'> & Partial<Pick<Downloader, 'snapshot'>>
   files?: StoreFiles
   proxy?: ProxyConfig | null | undefined
 }
@@ -47,7 +47,7 @@ export const nodeStoreFiles: StoreFiles = {
 const ACTIVE = ['queued', 'downloading', 'verifying']
 
 export class ManagedModelSetups {
-  private readonly running = new Map<string, { cancelled: boolean }>()
+  private readonly running = new Map<string, { cancelled: boolean; done: Promise<void> }>()
   private readonly mutations = new SerialWork()
   private readonly files: StoreFiles
   readonly directory: string
@@ -94,13 +94,30 @@ export class ManagedModelSetups {
 
   async cancel(id: string): Promise<ManagedModelJob> {
     const worker = this.running.get(id)
+    const transferred = this.d.downloader.snapshot?.().find((transfer) => transfer.taskId === id)?.transferred
     if (worker) worker.cancelled = true
     this.d.downloader.cancel(id)
+    await worker?.done
     return this.mutations.run(id, async () => {
       const job = await readDocument<ManagedModelJob | null>(this.path(id), null)
       if (!job?.plan) throw new AtcError('ATC_USAGE', 'No such model download.')
+      if (transferred !== undefined) Object.assign(job, { transferred })
       if (job.stage !== 'ready') await this.write(job, 'cancelled')
       return job
+    })
+  }
+
+  async remove(id: string, cleanup: (job: ManagedModelJob) => Promise<void>) {
+    const worker = this.running.get(id)
+    await this.cancel(id)
+    await worker?.done
+    return this.mutations.run(id, async () => {
+      if (this.running.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
+      const job = await readDocument<ManagedModelJob | null>(this.path(id), null)
+      if (!job?.plan) throw new AtcError('ATC_USAGE', 'No such download.')
+      await cleanup(job)
+      await rm(this.path(id), { force: true })
+      return { removed: true, id }
     })
   }
 
@@ -114,10 +131,10 @@ export class ManagedModelSetups {
 
   private async start(job: ManagedModelJob): Promise<ManagedModelJob> {
     if (job.stage === 'ready' || this.running.has(job.id)) return job
-    const worker = { cancelled: false }
+    const worker = { cancelled: false, done: Promise.resolve() }
     this.running.set(job.id, worker)
     await this.write(job, 'queued')
-    void this.run(job, worker).finally(() => {
+    worker.done = this.run(job, worker).finally(() => {
       if (this.running.get(job.id) === worker) this.running.delete(job.id)
     })
     return { ...job }
@@ -139,6 +156,7 @@ export class ManagedModelSetups {
     try {
       if (!plan.present) {
         await this.step(job, worker, 'downloading')
+        if (worker.cancelled) return void (await this.step(job, worker, 'cancelled'))
         const items = plan.files.map((f) => ({
           url: resolveUrl(plan.repository, plan.revision, f.path, hubOf(this.d.env)),
           save_path: underRoot(plan.root, plan.repository, f.path),

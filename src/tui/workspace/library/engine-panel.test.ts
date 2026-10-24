@@ -3,6 +3,8 @@ import type { ManagedEngineState, WorkspaceSnapshot } from '../../../contract/in
 import { DIGEST_A, installation, operation, plan } from '../../../../test/helpers/managed-fixtures.js'
 import { enginePanelModel, panelRefreshKey } from './engine-panel-model.js'
 import type { EnginePanel } from './engine-panel-model.js'
+import { workspaceFrame } from '../frame.js'
+import { createWorkspace } from '../state.js'
 
 function state(over: Partial<ManagedEngineState> = {}): ManagedEngineState {
   return {
@@ -200,9 +202,7 @@ describe('the drawn panel', () => {
   it.each([
     [80, 24],
     [120, 36],
-  ])('draws the plan and its buttons inside a %ix%i terminal', async (w, h) => {
-    const { workspaceFrame } = await import('../frame.js')
-    const { createWorkspace } = await import('../state.js')
+  ])('draws the plan and its buttons inside a %ix%i terminal', (w, h) => {
     const s = { ...createWorkspace('models'), setupComplete: true, overlay: 'engine-panel' as const }
     s.enginePanel = panel()
     const frame = workspaceFrame(s, w, h, 0)
