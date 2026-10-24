@@ -1,4 +1,4 @@
-// Lifted from desktop assistant settings and skills split list/detail @ 807b4d9; adapted: terminal columns and focus.
+// Lifted from atomic-chat-ui/web-app/src/routes/settings/assistant.tsx and routes/skills/index.tsx (list and detail) @ 807b4d9; adapted: terminal columns and focus.
 import type { Key } from 'ink'
 import type { WorkspaceState } from '../state.js'
 import type { Canvas } from '../draw/canvas.js'

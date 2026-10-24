@@ -1,6 +1,6 @@
+// Lifted from atomic-chat-ui/web-app/src/routes/settings/assistant.tsx, routes/connectors/index.tsx and routes/skills/index.tsx @ 807b4d9; adapted: shared server-owned features.
 import { FeatureMenu } from './FeatureMenu'
 import { fileData, downloadData } from '../file-data'
-// Lifted from atomic-chat-ui routes/settings/assistant.tsx, connectors/index.tsx and skills/index.tsx @ 807b4d9; adapted: shared server-owned features.
 import { useState } from 'react'
 import { Bot, FileText, Plus, Pencil, Trash2, Download } from 'lucide-react'
 import { DEFAULT_ASSISTANT } from '@contract'

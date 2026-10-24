@@ -1,4 +1,4 @@
-// Lifted from Atomic-Chat preview/onboarding/Onboarding.tsx @ 5043013; adapted: inline onboarding credentials and compact library dialogs.
+// Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: inline onboarding credentials and compact library dialogs.
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useDialog } from '../useDialog'
 

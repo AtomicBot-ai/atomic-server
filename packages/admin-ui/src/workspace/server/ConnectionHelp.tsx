@@ -1,3 +1,4 @@
+// Lifted from Atomic-Chat/web-app/src/containers/server-concept/SetupHelp.tsx @ 5043013; adapted: connection help for the server's endpoint and agents.
 import { Action } from '../Controls'
 export function ConnectionHelp({
   onSettings,

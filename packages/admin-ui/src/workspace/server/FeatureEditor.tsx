@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-ui AddEditAssistant and AgentSkillCreateDialog @ 807b4d9; adapted: shared server operations.
+// Lifted from atomic-chat-ui/web-app/src/routes/settings/assistant.tsx and routes/skills/index.tsx (AddEditAssistant, AgentSkillCreateDialog) @ 807b4d9; adapted: shared server operations.
 import { useState } from 'react'
 import { Action, Field } from '../Controls'
 import { useDialog } from '../useDialog'

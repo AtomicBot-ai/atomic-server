@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-ui routes/settings/attachments.tsx @ 807b4d9; adapted: shared supported text ingestion.
+// Lifted from atomic-chat-ui/web-app/src/routes/settings/attachments.tsx @ 807b4d9; adapted: shared supported text ingestion.
 import { useEffect, useState } from 'react'
 import { DEFAULT_ATTACHMENTS, type AttachmentSettings as Settings } from '@contract'
 import type { Workspace } from '../useWorkspace'

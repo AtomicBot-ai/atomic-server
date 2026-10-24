@@ -1,3 +1,4 @@
+// Lifted from Atomic-Chat/web-app/src/constants/integrations.ts @ 5043013; adapted: agent names and order shared with the terminal UI.
 /** Shared atomic-chat-ui first run and connection guide routes. */
 export const FIRST_RUN_STEPS = ['model', 'permissions', 'cloud', 'media', 'connect'] as const
 export type FirstRunStep = (typeof FIRST_RUN_STEPS)[number]

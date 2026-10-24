@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-ui ConnectorCard and connectors/index @ 807b4d9; adapted: keyboard and mouse terminal cards.
+// Lifted from atomic-chat-ui/web-app/src/containers/connectors/ConnectorCard.tsx and routes/connectors/index.tsx @ 807b4d9; adapted: keyboard and mouse terminal cards.
 import { MCP_CONNECTORS } from '../../../workspace-view/index.js'
 import { connectorTemplate } from '../../../workspace-view/index.js'
 import { button, COLORS, text, wrap } from '../draw/canvas.js'

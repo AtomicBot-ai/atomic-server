@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-ui routes/connectors/index.tsx @ 807b4d9; adapted: server-owned MCP catalog, browser sign-in and JSON configuration.
+// Lifted from atomic-chat-ui/web-app/src/routes/connectors/index.tsx @ 807b4d9; adapted: server-owned MCP catalog, browser sign-in and JSON configuration.
 import { useState } from 'react'
 import { Plus, Code } from 'lucide-react'
 import { MCP_CONNECTORS } from '@view'

@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-ui containers/connectors/ConnectorCard.tsx @ 807b4d9; adapted: shared runtime status and accessible controls.
+// Lifted from atomic-chat-ui/web-app/src/containers/connectors/ConnectorCard.tsx @ 807b4d9; adapted: shared runtime status and accessible controls.
 import { useEffect, useRef } from 'react'
 import { MoreVertical, Plug } from 'lucide-react'
 import type { ConnectorConfig, ConnectorStatus, ConnectorTemplate } from '@contract'

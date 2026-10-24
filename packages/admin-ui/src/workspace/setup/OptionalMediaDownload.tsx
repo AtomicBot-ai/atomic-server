@@ -1,4 +1,4 @@
-// Lifted from Atomic-Chat preview/onboarding/Onboarding.tsx @ 5043013; adapted: separate pause, retry and removal actions.
+// Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: separate pause, retry and removal actions.
 import { Check, Pause, Play, X } from 'lucide-react'
 import { Action } from '../Controls'
 import { jobOperations } from '../library/download-data'

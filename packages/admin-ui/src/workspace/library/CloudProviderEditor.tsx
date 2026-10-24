@@ -1,4 +1,4 @@
-// Lifted from Atomic-Chat preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider validation and advanced endpoints.
+// Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider validation and advanced endpoints.
 import { useEffect, useRef } from 'react'
 import { CLOUD_CONNECTION_NOTES } from '@view'
 import { Action, Field } from '../Controls'

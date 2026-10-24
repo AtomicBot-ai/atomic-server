@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-ui ConnectorSecretDialog and EditJsonMCPserver @ 807b4d9; adapted: server-owned operations.
+// Lifted from atomic-chat-ui/web-app/src/containers/connectors/ConnectorSecretDialog.tsx and EditJsonMCPserver @ 807b4d9; adapted: server-owned operations.
 import { useState } from 'react'
 import type { ConnectorTemplate } from '@contract'
 import { Action, Field } from '../Controls'

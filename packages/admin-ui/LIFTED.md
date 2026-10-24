@@ -32,11 +32,11 @@ The following flow adaptations use the owner's local `atomic-chat-ui` redesign (
 | Here | Reference | Adaptation |
 | --- | --- | --- |
 | `src/workspace/setup/SetupWizard.tsx`, `FirstModel.tsx` | `web-app/src/preview/onboarding/Onboarding.tsx` | Server-only destination, live catalogs/downloads, explicit unsupported OS permissions |
-| `src/workspace/server/ConnectionGuide.tsx`, `ConnectionHelp.tsx` | `web-app/src/containers/server-concept/Setup.tsx`, `SetupEndpoint.tsx`, `SetupSuccess.tsx`, `SetupHelp.tsx` | Real inference verification, client profiles and manual endpoint handoff |
+| `src/workspace/server/ConnectionGuide.tsx`, `ConnectionHelp.tsx` | `Atomic-Chat/web-app/src/containers/server-concept/Setup.tsx`, `SetupEndpoint.tsx`, `SetupSuccess.tsx`, `SetupHelp.tsx` @ `5043013` | Real inference verification, client profiles and manual endpoint handoff |
 | `src/workspace/WorkspaceNavigation.tsx` | `web-app/src/components/left-sidebar/NavigationRail.tsx`, `containers/ServerSidebar.tsx`, `SettingsMenu.tsx` | Server sections and a secondary Playground |
-| `../../src/contract/desktop-flows.ts` | `web-app/src/constants/integrations.ts` | Agent names/order shared with TUI; existing Claude wire ID retained |
+| `../../src/contract/desktop-flows.ts` | `Atomic-Chat/web-app/src/constants/integrations.ts` @ `5043013` | Agent names/order shared with TUI; existing Claude wire ID retained |
 
-The intro logo `src/workspace/intro/atomic-logo.png` is copied from the selected desktop redesign's `web-app/public/images/transparent-logo.png` at `c9fa1e66` plus local preview changes. `IntroScreen.tsx` documents its provenance; animation and layout are local CSS.
+The intro logo `src/workspace/intro/atomic-logo.png` is copied from the selected desktop redesign's `web-app/public/images/transparent-logo.png` at `c9fa1e66` plus local preview changes. `IntroScreen.tsx` itself is local: its animation and layout are this package's CSS.
 
 Cloud connection cards and their editor in `src/workspace/library/CloudProviders.tsx` follow
 `web-app/src/preview/onboarding/Onboarding.tsx` at `1c01e2a`, with real server validation replacing the
