@@ -1,6 +1,7 @@
-import { downloadOwner } from '@view'
+import { downloadEta, downloadHeld, downloadOwner, formatEta } from '@view'
+import { useDownloadEstimate } from './useDownloadEstimate'
 import { DeleteConfirmation } from './DeleteConfirmation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { downloadRows, jobOperations } from './download-data'
 import type { Workspace } from '../useWorkspace'
 import { Action, Empty } from '../Controls'
@@ -45,19 +46,7 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
   const [removing, setRemoving] = useState(false)
   const progress = record(job.progress)
   const completed = job.completed === true
-  const [sample, setSample] = useState({ bytes: Number(job.transferred || 0), at: Date.now(), speed: 0 })
-  useEffect(() => {
-    const current = Number(job.transferred || 0),
-      at = Date.now()
-    setSample((previous) => {
-      const elapsed = (at - previous.at) / 1000
-      return {
-        bytes: current,
-        at,
-        speed: elapsed >= 1 && current > previous.bytes ? (current - previous.bytes) / elapsed : 0,
-      }
-    })
-  }, [job.transferred])
+  const { speed } = useDownloadEstimate(job)
   const size = Number(progress.total_bytes ?? job.total_bytes ?? job.total ?? 0)
   const transferred = completed
     ? size
@@ -69,11 +58,7 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
   const model = record(job.model)
   const media = Boolean(job.category || job.artifact_id || record(job.plan).category)
   const failed = ['failed', 'cancelled', 'interrupted', 'paused'].includes(state)
-  const speed = progress.bytes_per_second ?? job.bytes_per_second ?? sample.speed
-  const eta =
-    progress.eta_seconds ??
-    job.eta_seconds ??
-    (Number(speed) > 0 && size > transferred ? (size - transferred) / Number(speed) : undefined)
+  const eta = downloadEta({ ...job, total: size, transferred }, speed)
   const name = text(
     job.model_id ??
       record(job.plan).name ??
@@ -87,18 +72,14 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
     <article className="download-row">
       <div className="download-heading">
         <strong>{name}</strong>
-        <span>
-          {completed ? 'Downloaded' : /paused|cancelled/.test(state) ? 'Paused' : state.replaceAll('_', ' ')}
-        </span>
+        <span>{completed ? 'Downloaded' : downloadHeld(state) ? 'Paused' : state.replaceAll('_', ' ')}</span>
       </div>
       <progress aria-label="Download progress" value={percent} max={100} />
       <div className="download-detail">
         <small>
           {size ? `${bytes(transferred)} / ${bytes(size)}` : 'Size pending'}
           {!completed && !failed && speed ? ` · ${bytes(speed)}/s` : ''}
-          {!completed && !failed && eta !== undefined && eta !== null
-            ? ` · ${Number(eta) < 60 ? Math.ceil(Number(eta)) + ' sec' : Math.ceil(Number(eta) / 60) + ' min'} remaining`
-            : ''}
+          {!completed && !failed && eta !== undefined && eta !== null ? ` · ${formatEta(eta)} remaining` : ''}
         </small>
         <div className="ew-actions">
           {job.kind === 'engine' && failed && (

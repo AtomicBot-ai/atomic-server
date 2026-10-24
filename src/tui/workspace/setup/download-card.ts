@@ -1,4 +1,10 @@
-import { downloadRows, downloadOwner, downloadPaused } from '../../../workspace-view/index.js'
+import {
+  downloadHeld,
+  downloadOwner,
+  downloadPaused,
+  downloadRows,
+  formatEta,
+} from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
 import { COLORS, text, button } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
@@ -43,16 +49,16 @@ export function drawDownloadCard(
       ? 'Failed'
       : ready
         ? 'Downloaded'
-        : first && /paused|cancelled/.test(first.state)
+        : first && downloadHeld(first.state)
           ? 'Paused'
           : String(first?.state ?? progress?.jobs[0]?.stage ?? 'Preparing').replaceAll('_', ' ')
   const speed = first ? (s.transferSamples[first.id]?.speed ?? 0) : (progress?.speed ?? 0)
   const eta = speed > 0 ? Math.max(0, (total - done) / speed) : !first ? progress?.eta : null
   let remaining =
-    ready || /failed|interrupted|paused|cancelled/i.test(state)
+    ready || downloadPaused(state.toLowerCase())
       ? ''
       : eta && eta > 0
-        ? `~${eta < 60 ? Math.ceil(eta) + ' sec' : Math.ceil(eta / 60) + ' min'} left`
+        ? `~${formatEta(eta)} left`
         : 'Estimating time'
   const height = downloadCardHeight(c.height)
   panel(c, x, y, width, height, focus === `download-row:${index}`)

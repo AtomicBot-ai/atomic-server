@@ -27,7 +27,7 @@ it.each([
 ])('keeps onboarding cards, download status and one Escape action inside %ix%i', (width, height) => {
   const s = createWorkspace('welcome')
   s.workspace = snapshot(500)
-  s.transferSamples[job.id] = { bytes: 500, speed: 100, at: 1000 }
+  s.transferSamples[job.id] = { id: job.id, bytes: 500, speed: 100, at: 1000 }
   for (const step of ['cloud', 'media', 'connect'] as const) {
     s.firstRun = step
     s.libraryRows = [{ id: 'flux', name: 'Flux', category: 'image', description: 'Image generation' }]

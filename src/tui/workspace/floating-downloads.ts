@@ -1,4 +1,10 @@
-import { downloadOwner, downloadPaused } from '../../workspace-view/index.js'
+import {
+  downloadEta,
+  downloadOwner,
+  downloadPaused,
+  downloadSpeed,
+  formatEta,
+} from '../../workspace-view/index.js'
 import type { WorkspaceState } from './state.js'
 import type { Canvas } from './draw/canvas.js'
 import { button, COLORS, text } from './draw/canvas.js'
@@ -23,23 +29,9 @@ export function drawFloatingDownloads(
     percent = row.total > 0 ? Math.min(100, Math.floor((row.transferred / row.total) * 100)) : null,
     paused = downloadPaused(row.state),
     owner = downloadOwner(row),
-    progress = row['progress'] as Record<string, unknown> | undefined,
-    speed =
-      s.transferSamples[row.id]?.speed ||
-      Number(row['bytes_per_second'] ?? progress?.['bytes_per_second'] ?? 0),
-    reportedEta = Number(row['eta_seconds'] ?? progress?.['eta_seconds'] ?? NaN),
-    eta =
-      Number.isFinite(reportedEta) && reportedEta >= 0
-        ? reportedEta
-        : speed > 0 && row.total > 0
-          ? Math.max(0, (row.total - row.transferred) / speed)
-          : null,
+    eta = downloadEta(row, downloadSpeed(row, s.transferSamples[row.id]?.speed ?? 0)),
     status = row.state.replaceAll('_', ' '),
-    remaining = /paused|cancelled|failed|interrupted/.test(row.state)
-      ? ''
-      : eta !== null
-        ? `~${eta < 60 ? Math.ceil(eta) + ' sec' : Math.ceil(eta / 60) + ' min'}`
-        : 'Estimating…'
+    remaining = paused ? '' : eta !== undefined && eta >= 0 ? `~${formatEta(eta)}` : 'Estimating…'
   const targetId = row['pending'] ? 'first-downloads' : 'download-status'
   panel(c, x, y, width, height, highlight || focus === targetId)
   c.targets.push({

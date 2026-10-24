@@ -8,7 +8,13 @@ import { button, text, COLORS } from '../draw/canvas.js'
 import { panel } from '../draw/cards.js'
 import type { WorkspaceState } from '../state.js'
 import { computeRowWindow } from '../../row-window.js'
-import { formatSize, downloadRows, downloadPaused } from '../../../workspace-view/index.js'
+import {
+  downloadEta,
+  downloadPaused,
+  downloadRows,
+  formatEta,
+  formatSize,
+} from '../../../workspace-view/index.js'
 const CATEGORIES = ['image', 'video'] as const
 export async function loadSetupMedia(ctx: ActionContext) {
   const request = ctx.get().setupMedia.request + 1
@@ -174,12 +180,12 @@ export function drawSetupMedia(
       }
       if (transfer && height >= 8) {
         const speed = s.transferSamples[transfer.id]?.speed ?? 0
-        const eta = speed > 0 ? Math.ceil(Math.max(0, transfer.total - transfer.transferred) / speed) : 0
+        const eta = downloadEta(transfer, speed) ?? 0
         const status = transfer['completed'] ? 'Downloaded' : transfer.state.replaceAll('_', ' ')
         const remaining =
           active && !downloadPaused(transfer.state)
             ? eta
-              ? ` · ~${eta < 60 ? eta + ' sec' : Math.ceil(eta / 60) + ' min'} left`
+              ? ` · ~${formatEta(eta)} left`
               : ' · Estimating time'
             : ''
         text(c, cardX + 2, cardY + 5, status + remaining, COLORS.muted, cardWidth - 4)

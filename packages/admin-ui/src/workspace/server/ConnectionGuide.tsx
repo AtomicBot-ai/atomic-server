@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/Setup.tsx @ 5043013; adapted: real server operations and download readiness.
+import { downloadPaused } from '@view'
 import { ConnectionHelp } from './ConnectionHelp'
 import { ConnectionModelPicker } from './ConnectionModelPicker'
 import { ConnectionModelFields } from './ConnectionModelFields'
@@ -169,19 +170,17 @@ export function ConnectionGuide({
               browse={() => setPickingModel(true)}
             />
             {selected.waiting && <Action onClick={() => setPlaying(true)}>Play while waiting</Action>}
-            {!selected.ready &&
-              job &&
-              /paused|cancelled|failed|interrupted/.test(text(job.stage ?? job.state, '')) && (
-                <Action
-                  primary
-                  onClick={() => {
-                    const [name, input] = jobOperations(job, text(job.id ?? job.setup_id, ''), false).resume
-                    return execute(name, input)
-                  }}
-                >
-                  Resume download
-                </Action>
-              )}
+            {!selected.ready && job && downloadPaused(text(job.stage ?? job.state, '')) && (
+              <Action
+                primary
+                onClick={() => {
+                  const [name, input] = jobOperations(job, text(job.id ?? job.setup_id, ''), false).resume
+                  return execute(name, input)
+                }}
+              >
+                Resume download
+              </Action>
+            )}
           </div>
           <ConnectionReviewSummary
             agent={path === 'agent' ? name : undefined}

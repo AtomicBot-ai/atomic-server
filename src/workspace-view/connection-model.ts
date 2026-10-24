@@ -1,4 +1,5 @@
 import { downloadRows } from './downloads.js'
+import { downloadHeld } from './download-controls.js'
 
 type Row = Record<string, unknown>
 const record = (value: unknown): Row =>
@@ -91,7 +92,7 @@ export function connectionModelState(
       status = providers.length
         ? 'Model ready. Configure the connection to continue.'
         : 'No compatible inference engine. Choose a different model.'
-    else if (/paused|cancelled/.test(state)) status = 'Download paused. Resume it to continue.'
+    else if (downloadHeld(state)) status = 'Download paused. Resume it to continue.'
     else if (/failed|interrupted/.test(state)) status = 'Download failed. Resume it to retry.'
     else if (/removed|deleted/.test(state) || !job)
       status = 'Model is not downloaded. Choose it again to start a download.'

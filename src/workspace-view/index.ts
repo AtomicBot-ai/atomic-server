@@ -3,6 +3,8 @@ export { downloadRows } from './downloads.js'
 export { localModelStatus, catalogModelMatches } from './local-model-status.js'
 export type { LocalModelIdentity, ModelDeviceStatus } from './local-model-status.js'
 export { inferenceReadiness, setupModelPending } from './inference-readiness.js'
+export { downloadEta, downloadSpeed, formatEta, nextTransferSample } from './download-estimate.js'
+export type { TransferSample } from './download-estimate.js'
 export {
   CATALOG_FORMAT_LABELS,
   catalogFormatsFor,
@@ -66,7 +68,7 @@ export {
 } from './settings-form.js'
 export { engineApproval, engineRefreshKey, liveEngineState, updateLine } from './engine-live.js'
 export type { EngineApproval } from './engine-live.js'
-export { downloadOwner, downloadPaused, downloadControl } from './download-controls.js'
+export { downloadOwner, downloadPaused, downloadHeld, downloadControl } from './download-controls.js'
 export type { DownloadOwner } from './download-controls.js'
 
 export { setupFinished } from './setup.js'

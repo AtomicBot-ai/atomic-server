@@ -11,7 +11,10 @@ export function downloadOwner(job: Record<string, unknown>): DownloadOwner | nul
   if (planOwner) return planOwner
   return job['owner'] === 'download' ? null : job['owner'] === 'artifacts' ? 'artifacts' : 'setup'
 }
+/** Stopped for any reason: paused, cancelled, failed or interrupted. */
 export const downloadPaused = (state: string) => /paused|cancelled|failed|interrupted/.test(state)
+/** Paused by a person (Pause or cancel), as opposed to failed or interrupted. */
+export const downloadHeld = (state: string) => /paused|cancelled/.test(state)
 export function downloadControl(job: DownloadRow, action: 'pause' | 'resume') {
   const owner = downloadOwner(job)
   if (!owner) return null

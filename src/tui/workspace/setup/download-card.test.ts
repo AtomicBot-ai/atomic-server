@@ -22,7 +22,7 @@ it.each([
       ],
       downloads: [{ taskId: 'job', transferred: 500, total: 1000 }],
     } as never
-    s.transferSamples['job'] = { bytes: 500, speed: Number(speed), at: 1000 }
+    s.transferSamples['job'] = { id: 'job', bytes: 500, speed: Number(speed), at: 1000 }
     const c = canvas(54, 24)
     drawDownloadCard(c, s, 2, 3, Number(width))
     const text = c.cells.map((row) => row.map((cell) => cell.char).join('')).join('\n')

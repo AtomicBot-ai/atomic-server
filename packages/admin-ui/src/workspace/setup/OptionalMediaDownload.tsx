@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: separate pause, retry and removal actions.
+import { downloadHeld } from '@view'
 import { Check, Pause, Play, X } from 'lucide-react'
 import { Action } from '../Controls'
 import { jobOperations } from '../library/download-data'
@@ -18,7 +19,7 @@ export function OptionalMediaDownload({
 }) {
   const state = text(job.stage ?? job.state, 'queued')
   const ready = state === 'ready'
-  const paused = /paused|cancelled/.test(state)
+  const paused = downloadHeld(state)
   const failed = /failed|interrupted/.test(state)
   const id = text(job.id ?? job.setup_id)
   const total = Number(job.total ?? 0),

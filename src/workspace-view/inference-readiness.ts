@@ -1,6 +1,7 @@
 import type { WorkspaceSnapshot } from '../contract/index.js'
 import { connectionDownload, connectionDownloadTarget } from './connection-model.js'
 import { downloadRows } from './downloads.js'
+import { downloadPaused } from './download-controls.js'
 
 export interface InferenceReadiness {
   ready: boolean
@@ -42,7 +43,7 @@ export function inferenceReadiness(
     model = downloads.find((row) => row.id === String(job?.['id'] ?? job?.['setup_id'] ?? '')),
     engine = downloads.find((row) => row.owner === 'download')
   if (model) {
-    const paused = /paused|cancelled|failed|interrupted/.test(model.state)
+    const paused = downloadPaused(model.state)
     return blocked(
       paused
         ? 'Resume the model download to continue.'
@@ -54,7 +55,7 @@ export function inferenceReadiness(
     )
   }
   if (engine) {
-    const paused = /paused|cancelled|failed|interrupted/.test(engine.state)
+    const paused = downloadPaused(engine.state)
     return blocked(
       paused
         ? engine['kind'] === 'engine'

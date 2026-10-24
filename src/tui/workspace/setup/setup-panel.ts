@@ -1,3 +1,4 @@
+import { formatSize } from '../../../workspace-view/index.js'
 import { actionButton } from '../draw/cards.js'
 import { button, COLORS, text, wrapWords } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
@@ -7,13 +8,9 @@ import { drawSetupBrowser, engineCheckFailed } from './setup-browser.js'
 import { drawSetupReview } from './setup-review.js'
 import { drawPathDownload, drawPathModels, drawPathReview } from './engine-setup-view.js'
 import { drawFirstModel, isFirstModel } from './first-model.js'
+/** A size as the web admin and the CLI print it (binary units); `size unknown` for none. */
 export function bytes(n: number): string {
-  if (!n) return 'size unknown'
-  return n >= 1024 ** 3
-    ? `${(n / 1024 ** 3).toFixed(2)} GB`
-    : n >= 1024 ** 2
-      ? `${(n / 1024 ** 2).toFixed(1)} MB`
-      : `${Math.max(1, Math.round(n / 1024))} KB`
+  return n ? formatSize(n) : 'size unknown'
 }
 export function drawSetup(
   c: Canvas,
