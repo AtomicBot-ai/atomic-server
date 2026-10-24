@@ -168,7 +168,7 @@ export function drawSetupMedia(
           cardX + 2,
           cardY + 4,
           '[' + '#'.repeat(filled) + '.'.repeat(12 - filled) + `] ${percent}%`,
-          COLORS.gold,
+          COLORS.accent,
           cardWidth - 4
         )
       }

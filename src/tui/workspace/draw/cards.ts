@@ -10,7 +10,7 @@ export function panel(
   active = false,
   seconds = 0
 ) {
-  const edge = active ? (Math.floor(seconds * 2) % 2 ? COLORS.green : COLORS.gold) : COLORS.line
+  const edge = active ? (Math.floor(seconds * 2) % 2 ? COLORS.green : COLORS.accent) : COLORS.line
   for (let row = 0; row < height; row++)
     text(c, x, y + row, ' '.repeat(width), COLORS.text, width, active ? COLORS.focus : COLORS.surface)
   text(c, x, y, '+' + '-'.repeat(Math.max(0, width - 2)) + '+', edge, width)
@@ -43,7 +43,7 @@ export function card(
     o.x + 2,
     o.y + 1,
     `${o.icon ?? '>'}  ${o.title}`,
-    active ? COLORS.gold : COLORS.text,
+    active ? COLORS.accent : COLORS.text,
     o.width - 4,
     undefined,
     true
@@ -67,7 +67,7 @@ export function actionButton(
   focus = ''
 ): number {
   const width = Math.min(c.width - x, textWidth(label) + 6)
-  const background = focus === id ? COLORS.composer : COLORS.gold
+  const background = focus === id ? COLORS.composer : COLORS.accent
   for (let row = 0; row < 3 && y + row < c.height; row++)
     text(c, x, y + row, ' '.repeat(Math.max(0, width)), COLORS.ground, width, background, true)
   text(c, x + 3, y + 1, label, COLORS.ground, width - 6, background, true)

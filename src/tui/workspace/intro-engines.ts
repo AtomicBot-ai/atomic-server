@@ -18,7 +18,7 @@ export function drawIntroEngines(
     x = Math.floor((columns - width) / 2),
     headingY = brandHeaderRows(columns, rows)
   atomicHeader(c)
-  text(c, x, headingY, 'Choose your engine', COLORS.gold, width)
+  text(c, x, headingY, 'Choose your engine', COLORS.accent, width)
   const height = rows >= 30 ? 5 : 3
   const window = computeRowWindow(
     choices.length,
@@ -49,7 +49,7 @@ export function drawIntroEngines(
       width
     )
   if (error) {
-    text(c, x, rows - 5, error, COLORS.red, width)
+    text(c, x, rows - 5, error, COLORS.accentLight, width)
     button(c, 'retry', x, rows - 3, 'Retry', 'Reload compatible engines', '')
   }
   text(c, x, rows - 2, 'Arrows Choose  Enter Select', COLORS.muted, width)

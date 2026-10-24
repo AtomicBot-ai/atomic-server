@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest'
-import { MCP_CONNECTORS } from '../contract/index.js'
-import { connectorDraft, connectorJson, connectorTemplate, parseConnectorJson } from './mcp-catalog.js'
+import {
+  MCP_CONNECTORS,
+  connectorDraft,
+  connectorJson,
+  connectorTemplate,
+  parseConnectorJson,
+} from './mcp-catalog.js'
 it('uses desktop HTTP, SSE and stdio templates and applies secrets only to the designated field', () => {
   const exa = connectorDraft(MCP_CONNECTORS.find((t) => t.serverKey === 'exa')!)
   expect(exa).toMatchObject({ type: 'http', url: 'https://mcp.exa.ai/mcp' })

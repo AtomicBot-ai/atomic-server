@@ -15,11 +15,11 @@ export function fieldControl(
   dropdown = false
 ) {
   const active = focus === id
-  const edge = active ? COLORS.gold : COLORS.stone
+  const edge = active ? COLORS.accent : COLORS.stone
   text(c, x, y, ' '.repeat(width), COLORS.text, width, active ? COLORS.focus : COLORS.header)
   text(c, x, y, '[', edge, 1)
   text(c, x + 2, y, value, COLORS.text, width - (dropdown ? 7 : 4))
-  if (dropdown) text(c, x + width - 4, y, 'v', active ? COLORS.gold : COLORS.muted, 1)
+  if (dropdown) text(c, x + width - 4, y, 'v', active ? COLORS.accent : COLORS.muted, 1)
   text(c, x + width - 1, y, ']', edge, 1)
   c.targets.push({ id, x, y, width, height: 1, hint })
 }
@@ -34,7 +34,7 @@ export function toggleControl(
   focus: string
 ) {
   const active = focus === id
-  const surface = active ? COLORS.composer : on ? COLORS.gold : COLORS.header
+  const surface = active ? COLORS.composer : on ? COLORS.accent : COLORS.header
   text(c, x, y, on ? '[= On ]' : '[Off =]', active || on ? COLORS.ground : COLORS.muted, 7, surface, true)
   c.targets.push({ id, x, y, width: 7, height: 1, hint })
 }
@@ -53,7 +53,7 @@ export function navigationRow(
   const active = focus === id
   const surface = active || selected ? COLORS.focus : COLORS.surface
   text(c, x, y, ' '.repeat(width), COLORS.text, width, surface)
-  text(c, x, y, active || selected ? '|' : ' ', COLORS.gold, 1)
+  text(c, x, y, active || selected ? '|' : ' ', COLORS.accent, 1)
   text(c, x + 2, y, label, active || selected ? COLORS.text : COLORS.muted, width - 3, surface, selected)
   c.targets.push({ id, x, y, width, height: 1, hint })
 }

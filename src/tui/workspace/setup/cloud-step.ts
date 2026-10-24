@@ -7,7 +7,7 @@ import { fieldControl, quietButton, scrollTrack } from '../draw/controls.js'
 import { cloudChoices, cloudNeedsKey } from '../library/cloud-catalog.js'
 import { cloudListLayout } from '../library/cloud-layout.js'
 import { computeRowWindow } from '../../row-window.js'
-import { CLOUD_CONNECTION_NOTES } from '../../../contract/index.js'
+import { CLOUD_CONNECTION_NOTES } from '../../../workspace-view/index.js'
 
 /** First run keeps provider cards and their form on the same screen, as on desktop. */
 export function drawSetupCloud(
@@ -145,7 +145,7 @@ export function drawSetupCloud(
       x + width - 14,
       formY + 2,
       `${['|', '/', '-', '\\'][Math.floor(seconds * 8) % 4]} Checking`,
-      COLORS.gold,
+      COLORS.accent,
       14
     )
   else if (current.saved?.connected) text(c, x + width - 13, formY + 2, '[Connected]', COLORS.muted, 13)
@@ -160,7 +160,7 @@ export function drawSetupCloud(
       focus
     )
   else text(c, x + width - 12, formY + 2, 'Connect', COLORS.stone, 12)
-  if (s.cloud.error) text(c, x, bottom - 1, s.cloud.error, COLORS.red, width)
+  if (s.cloud.error) text(c, x, bottom - 1, s.cloud.error, COLORS.accentLight, width)
 }
 
 export function setupCloudInput(input: string, key: Key, s: WorkspaceState) {

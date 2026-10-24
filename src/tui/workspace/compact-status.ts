@@ -24,7 +24,16 @@ export function drawCompactStatus(
         : serverRunning(s)
           ? 'Running'
           : 'Stopped'
-  text(c, x, y, status, status === 'Server error' ? COLORS.red : COLORS.gold, width, undefined, true)
+  text(
+    c,
+    x,
+    y,
+    status,
+    status === 'Server error' ? COLORS.accentLight : COLORS.accent,
+    width,
+    undefined,
+    true
+  )
   button(
     c,
     'server-model-page:engine',

@@ -48,7 +48,7 @@ export function drawFooter(c: Canvas, s: WorkspaceState, focus: string) {
       x,
       c.height - 1,
       label!,
-      focus === id && id ? COLORS.gold : COLORS.muted,
+      focus === id && id ? COLORS.accent : COLORS.muted,
       width,
       focus === id && id ? COLORS.focus : undefined
     )

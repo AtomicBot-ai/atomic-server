@@ -1,8 +1,5 @@
-// Lifted from atomic-chat-ui constants/mcp-connectors.ts @ 807b4d9; adapted: shared browser-safe catalog.
+/** A built-in MCP connector's card: the catalog itself is `MCP_CONNECTORS` in `src/workspace-view/`. */
 import type { ConnectorConfig } from './workspace-features.js'
-import { CONNECTORS_0 } from './mcp-catalog-0.js'
-import { CONNECTORS_1 } from './mcp-catalog-1.js'
-import { CONNECTORS_2 } from './mcp-catalog-2.js'
 export interface ConnectorTemplate {
   serverKey: string
   name: string
@@ -25,8 +22,3 @@ export interface ConnectorTemplate {
     bearer?: boolean
   }
 }
-export const MCP_CONNECTORS: readonly ConnectorTemplate[] = [
-  ...CONNECTORS_0,
-  ...CONNECTORS_1,
-  ...CONNECTORS_2,
-]

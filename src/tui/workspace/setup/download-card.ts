@@ -106,7 +106,7 @@ export function drawDownloadCard(
     x + 2,
     y + 2,
     '[' + '#'.repeat(filled) + '.'.repeat(bar - filled) + `] ${percent}%`,
-    COLORS.gold,
+    COLORS.accent,
     width - 4
   )
   const statusX = height === 4 ? x + bar + 11 : x + 2

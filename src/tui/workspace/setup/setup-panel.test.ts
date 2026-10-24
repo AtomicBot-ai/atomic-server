@@ -161,7 +161,7 @@ it.each([
   expect(retry.height).toBe(3)
   for (let row = retry.y; row < retry.y + retry.height; row++)
     for (let col = retry.x; col < retry.x + retry.width; col++)
-      expect(frame.cells[row]![col]!.background).toBe(COLORS.gold)
+      expect(frame.cells[row]![col]!.background).toBe(COLORS.accent)
   expect(screen).toContain('Esc Back')
   const later = workspaceFrame(s, w, h, 7)
   expect(later.cells.slice(brandHeaderRows(w, h))).toEqual(frame.cells.slice(brandHeaderRows(w, h)))

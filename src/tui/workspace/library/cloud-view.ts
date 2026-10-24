@@ -6,7 +6,7 @@ import { cloudChoices } from './cloud-catalog.js'
 import { computeRowWindow } from '../../row-window.js'
 import { fieldControl, scrollTrack } from '../draw/controls.js'
 import { cloudListLayout } from './cloud-layout.js'
-import { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES } from '../../../contract/index.js'
+import { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES } from '../../../workspace-view/index.js'
 export function drawCloudList(
   c: Canvas,
   s: WorkspaceState,
@@ -35,11 +35,11 @@ export function drawCloudList(
           const cell = c.cells[row]?.[col]
           if (cell) {
             cell.background = COLORS.header
-            cell.color = focus === id ? COLORS.gold : COLORS.stone
+            cell.color = focus === id ? COLORS.accent : COLORS.stone
           }
         }
     text(c, left + 2, top + 1, p.name, connected ? COLORS.muted : COLORS.text, cardWidth - 4, undefined, true)
-    text(c, left + 2, top, ` ${p.icon} `, connected ? COLORS.muted : COLORS.gold, 7)
+    text(c, left + 2, top, ` ${p.icon} `, connected ? COLORS.muted : COLORS.accent, 7)
     if (connected) text(c, left + cardWidth - 12, top, '[Connected]', COLORS.ground, 11, COLORS.muted, true)
     c.targets.push({
       id,
@@ -52,7 +52,7 @@ export function drawCloudList(
   })
   scrollTrack(c, x + width - 1, y, rows * 3, win.start, win.count, Math.ceil(choices.length / columns))
 
-  errors.forEach((line, i) => text(c, x, bottom - errors.length + i, line, COLORS.red, width))
+  errors.forEach((line, i) => text(c, x, bottom - errors.length + i, line, COLORS.accentLight, width))
   text(
     c,
     x,
@@ -89,7 +89,7 @@ export function drawCloud(c: Canvas, s: WorkspaceState, focus: string, seconds =
     s.cloud.editing
       ? `Connect ${choices.find((p) => p.id === s.cloud.provider)?.name || 'custom provider'}`
       : 'Cloud providers',
-    COLORS.gold,
+    COLORS.accent,
     width - 2
   )
   if (!s.cloud.editing) return drawCloudList(c, s, x + 1, top + 3, width - 2, bottom - 1, focus)
@@ -122,7 +122,9 @@ export function drawCloud(c: Canvas, s: WorkspaceState, focus: string, seconds =
     )
   }
   const actionY = bottom - 3
-  errors.forEach((line, i) => text(c, x + 1, actionY - errors.length + i, line, COLORS.red, width - 2))
+  errors.forEach((line, i) =>
+    text(c, x + 1, actionY - errors.length + i, line, COLORS.accentLight, width - 2)
+  )
   if (s.cloud.checking) {
     c.targets = []
     text(
@@ -130,7 +132,7 @@ export function drawCloud(c: Canvas, s: WorkspaceState, focus: string, seconds =
       x + 1,
       actionY + 1,
       `${['|', '/', '-', '\\'][Math.floor(seconds * 8) % 4]} Checking connection...`,
-      COLORS.gold,
+      COLORS.accent,
       width - 2
     )
     return

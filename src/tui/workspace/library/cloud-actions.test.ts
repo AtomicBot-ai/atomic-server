@@ -144,6 +144,6 @@ it('keeps the connection action visible on a compact terminal and preserves focu
   state.focus = 'cloud-choice:0'
   const list = workspaceFrame(state, 54, 24, 0)
   const target = list.targets.find((t) => t.id === 'cloud-choice:0')!
-  expect(list.cells[target.y]?.[target.x]?.color).toBe(COLORS.gold)
+  expect(list.cells[target.y]?.[target.x]?.color).toBe(COLORS.accent)
   expect(list.cells[target.y + 1]?.[target.x + 1]?.background).toBe(COLORS.header)
 })

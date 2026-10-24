@@ -55,7 +55,7 @@ export function drawWaitingSetup(c: Canvas, s: WorkspaceState, focus: string) {
     sideWidth = x + width - sideX,
     actionY = gameY + Math.max(0, gameRows) + 2,
     actionX = x + width - actionWidth,
-    background = focus === 'wait-continue' ? COLORS.composer : COLORS.gold
+    background = focus === 'wait-continue' ? COLORS.composer : COLORS.accent
   for (let row = 0; row < actionHeight; row++)
     text(c, actionX, actionY + row, ' '.repeat(actionWidth), COLORS.ground, actionWidth, background)
   actionLines.forEach((line, row) =>
@@ -87,7 +87,14 @@ export function drawWaitingSetup(c: Canvas, s: WorkspaceState, focus: string) {
     'Return to connection choice',
     focus
   )
-  text(c, x, headingY, pending ? 'Getting your model ready' : 'Your model is downloaded', COLORS.gold, width)
+  text(
+    c,
+    x,
+    headingY,
+    pending ? 'Getting your model ready' : 'Your model is downloaded',
+    COLORS.accent,
+    width
+  )
   if (gameRows < 1) {
     text(c, x, headingY + 2, 'Increase terminal height to show setup.', COLORS.muted, width)
     return
@@ -129,7 +136,7 @@ export function drawWaitingSetup(c: Canvas, s: WorkspaceState, focus: string) {
       cellWidth === 2 ? `${label} ` : ` ${label} `,
       active ? COLORS.ground : COLORS.text,
       cellWidth,
-      active ? COLORS.gold : open ? COLORS.ground : COLORS.header
+      active ? COLORS.accent : open ? COLORS.ground : COLORS.header
     )
     c.targets.push({
       id,

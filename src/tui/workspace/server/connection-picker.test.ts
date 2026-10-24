@@ -158,7 +158,7 @@ it.each([
       expect(frame.cells[option.y]![popover.x + popover.width - 1]!.char).toBe('|')
     }
     expect(frame.targets.some((t) => t.id === 'guide-configure')).toBe(false)
-    expect(frame.cells[popover.y]![popover.x]!.color).toBe(COLORS.gold)
+    expect(frame.cells[popover.y]![popover.x]!.color).toBe(COLORS.accent)
     const chosen = options.find((t) => t.y >= parentBox.y + 3)!
     const result = workspaceInput(`\u001b[<0;${chosen.x + 1};${chosen.y + 1}M`, {} as Key, ctx.get(), frame)
     await activate(result.action!, ctx)
@@ -178,5 +178,5 @@ it('anchors a short picker below its field and dims the parent action surface', 
   await activate('guide-model', ctx)
   const frame = workspaceFrame(ctx.get(), 120, 36, 0)
   expect(frame.popover!.y).toBe(anchor.y + 1)
-  expect(frame.cells[configure.y]![configure.x]!.background).not.toBe(COLORS.gold)
+  expect(frame.cells[configure.y]![configure.x]!.background).not.toBe(COLORS.accent)
 })

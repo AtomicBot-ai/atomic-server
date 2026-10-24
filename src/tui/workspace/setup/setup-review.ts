@@ -28,7 +28,9 @@ export function drawSetupReview(
   const detail = blockers.length ? JSON.stringify(blockers) : ''
   wrap(detail, width)
     .slice(0, Math.max(1, bottom - y - 11))
-    .forEach((line, i) => text(c, x, y + 10 + i, line, blockers.length ? COLORS.red : COLORS.muted, width))
+    .forEach((line, i) =>
+      text(c, x, y + 10 + i, line, blockers.length ? COLORS.accentLight : COLORS.muted, width)
+    )
   if (!blockers.length) button(c, 'setup-install', x, bottom, 'Download', 'Install the reviewed files', focus)
   button(c, 'setup-back', x + 13, bottom, 'Back', 'Return without downloading', focus)
 }

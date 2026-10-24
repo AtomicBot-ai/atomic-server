@@ -79,7 +79,7 @@ export function drawCatalogColumns(c: Canvas, x: number, y: number, width: numbe
       x + column.offset,
       y,
       column.label.slice(0, column.width - 1 - indicator.length) + indicator,
-      focus === id || selected ? COLORS.gold : COLORS.muted,
+      focus === id || selected ? COLORS.accent : COLORS.muted,
       column.width - 1,
       focus === id ? COLORS.focus : undefined
     )
@@ -108,7 +108,7 @@ export function drawCatalogMetadata(
         x + column.offset,
         y,
         shown(model, column.key, status),
-        column.key === 'device' && status === 'Loaded' ? COLORS.gold : COLORS.muted,
+        column.key === 'device' && status === 'Loaded' ? COLORS.accent : COLORS.muted,
         column.width - 1
       )
 }

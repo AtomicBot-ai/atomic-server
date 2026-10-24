@@ -1,4 +1,4 @@
-import { MCP_CONNECTORS } from '../../../contract/index.js'
+import { MCP_CONNECTORS } from '../../../workspace-view/index.js'
 import type { ConnectorConfig } from '../../../contract/index.js'
 import {
   connectorDraft,

@@ -66,6 +66,6 @@ export function drawServerRemote(
         )
     }
   }
-  if (s.remote['error']) text(c, x, bottom - 1, String(s.remote['error']), COLORS.red, width)
+  if (s.remote['error']) text(c, x, bottom - 1, String(s.remote['error']), COLORS.accentLight, width)
   button(c, 'remote-refresh', x, bottom, 'Refresh status', 'Refresh remote access status', focus)
 }

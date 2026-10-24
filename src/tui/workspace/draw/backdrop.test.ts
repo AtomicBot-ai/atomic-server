@@ -6,12 +6,12 @@ import { dimBackdrop } from './backdrop.js'
 
 it('preserves page characters and geometry while dimming text and bright surfaces', () => {
   const c = canvas(30, 2)
-  text(c, 0, 0, 'Start server', COLORS.ground, 30, COLORS.gold, true)
+  text(c, 0, 0, 'Start server', COLORS.ground, 30, COLORS.accent, true)
   text(c, 0, 1, 'Model ready', COLORS.text)
   const before = c.cells.map((row) => row.map((cell) => cell.char).join(''))
   dimBackdrop(c)
   expect(c.cells.map((row) => row.map((cell) => cell.char).join(''))).toEqual(before)
-  expect(c.cells[0]![0]!.background).not.toBe(COLORS.gold)
+  expect(c.cells[0]![0]!.background).not.toBe(COLORS.accent)
   expect(c.cells[0]![0]!.bold).toBe(false)
   for (const row of c.cells)
     for (const cell of row)
@@ -44,5 +44,5 @@ it.each([
   expect(modal.cells[3]![header]!.char).toBe(background.cells[3]![header]!.char)
   expect(modal.cells[3]![header]!.color).not.toBe(background.cells[3]![header]!.color)
   const visible = modal.cells.flat().filter((cell) => cell.char.trim())
-  expect(visible.some((cell) => cell.color === COLORS.text || cell.color === COLORS.gold)).toBe(true)
+  expect(visible.some((cell) => cell.color === COLORS.text || cell.color === COLORS.accent)).toBe(true)
 })

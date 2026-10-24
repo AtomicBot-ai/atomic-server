@@ -45,7 +45,7 @@ export function drawGoalSetup(c: Canvas, focus: string) {
   for (let row = y; row <= bottom; row++)
     text(c, x, row, ' '.repeat(width), COLORS.text, width, COLORS.header)
   c.targets = []
-  text(c, x + 2, y + 1, 'What should this server power?', COLORS.gold, width - 4)
+  text(c, x + 2, y + 1, 'What should this server power?', COLORS.accent, width - 4)
   SETUP_GOALS.forEach((goal, index) => {
     button(c, `goal:${goal.id}`, x + 2, y + 3 + index, goal.label, goal.guidance, focus)
   })

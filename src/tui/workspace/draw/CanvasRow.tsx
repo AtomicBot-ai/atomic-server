@@ -7,7 +7,7 @@ const lightSurfaces = new Set<string>([
   COLORS.composerFrame,
   COLORS.modelButton,
   COLORS.sendButton,
-  COLORS.gold,
+  COLORS.accent,
 ])
 export function CanvasRow({
   cells,
@@ -38,7 +38,7 @@ export function CanvasRow({
                   ? r.color
                   : lightSurfaces.has(r.background ?? '')
                     ? 'white'
-                    : r.color === COLORS.gold
+                    : r.color === COLORS.accent
                       ? 'cyan'
                       : r.color === COLORS.ground
                         ? 'black'

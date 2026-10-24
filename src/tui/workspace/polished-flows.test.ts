@@ -86,7 +86,7 @@ it.each(['cloud', 'media'] as const)(
       expect(s.focus).toBe(id)
       const frame = workspaceFrame(s, 54, 24, 0)
       const target = frame.targets.find((t) => t.id === id)!
-      expect(frame.cells[target.y]![target.x]!.background).toBe(COLORS.gold)
+      expect(frame.cells[target.y]![target.x]!.background).toBe(COLORS.accent)
     }
   }
 )

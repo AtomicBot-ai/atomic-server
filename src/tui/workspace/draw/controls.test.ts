@@ -22,7 +22,7 @@ it('keeps editable values, dropdown affordances and field hit bounds together', 
     'model',
     true
   )
-  expect(c.cells[5]![4]!.color).toBe(COLORS.gold)
+  expect(c.cells[5]![4]!.color).toBe(COLORS.accent)
   expect(c.cells[5]![43]!.char).toBe(']')
   expect(c.cells[5]![40]!.char).toBe('v')
   expect(hit(c, 30, 5)?.id).toBe('model')

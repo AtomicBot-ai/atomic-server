@@ -101,7 +101,7 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
   c.targets = []
   c.popover = { x, y, width, height }
   const p = s.libraryPlan ?? {}
-  text(c, x + 2, y + 1, 'Review installation', COLORS.gold)
+  text(c, x + 2, y + 1, 'Review installation', COLORS.accent)
   if (s.libraryRequest['managed']) {
     // A store download for a managed engine: the core's verdict of every managed engine, the bytes, any blockers.
     const blockers = Array.isArray(p['blockers']) ? (p['blockers'] as string[]) : []
@@ -113,7 +113,7 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
       `Download: ${bytes(Number(p['download_bytes'] ?? 0))}`,
     ]
     ;[...lines, ...blockers].forEach((l, i) =>
-      text(c, x + 2, y + 3 + i, l, i >= lines.length ? COLORS.red : COLORS.text, width - 4)
+      text(c, x + 2, y + 3 + i, l, i >= lines.length ? COLORS.accentLight : COLORS.text, width - 4)
     )
     if (!blockers.length)
       button(c, 'library-install', x + 2, y + height - 3, 'Download', 'Download in the server', focus)
@@ -142,7 +142,7 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
     x + 2,
     y + 7,
     blockers.length ? JSON.stringify(blockers) : 'Installs required engine and model files.',
-    blockers.length ? COLORS.red : COLORS.muted,
+    blockers.length ? COLORS.accentLight : COLORS.muted,
     width - 4
   )
   if (!blockers.length)

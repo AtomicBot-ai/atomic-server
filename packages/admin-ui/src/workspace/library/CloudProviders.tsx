@@ -1,7 +1,7 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider checks and server credential storage.
 import { watchSharedRead } from '../watch-shared-read'
 import { useEffect, useRef, useState } from 'react'
-import { CLOUD_CATALOG } from '@contract'
+import { CLOUD_CATALOG } from '@view'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { CloudProviderEditor } from './CloudProviderEditor'

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { WORKSPACE_COLORS } from '@contract'
+import { WORKSPACE_COLORS } from '@view'
 
 /** These are the same semantic values consumed by the terminal renderer. */
 export const workspaceTheme = Object.fromEntries(

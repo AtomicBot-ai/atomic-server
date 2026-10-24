@@ -72,7 +72,15 @@ export type { DownloadOwner } from './download-controls.js'
 export { setupFinished } from './setup.js'
 
 export { connectorToolBindings } from './connector-tools.js'
-export { connectorTemplate, connectorDraft, connectorJson, parseConnectorJson } from './mcp-catalog.js'
+export {
+  MCP_CONNECTORS,
+  connectorTemplate,
+  connectorDraft,
+  connectorJson,
+  parseConnectorJson,
+} from './mcp-catalog.js'
+export { WORKSPACE_COLORS } from './colors.js'
+export { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES } from './cloud-catalog.js'
 
 export { prioritizeDownloads } from './downloads.js'
 export { engineUpdateResult } from './engine-updates.js'

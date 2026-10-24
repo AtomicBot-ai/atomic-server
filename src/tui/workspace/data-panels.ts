@@ -12,7 +12,7 @@ export function drawDataPanel(
   focus: string
 ): boolean {
   if (s.page === 'history') {
-    text(c, x, y, 'Your conversations', COLORS.gold)
+    text(c, x, y, 'Your conversations', COLORS.accent)
     button(
       c,
       'history-search',
@@ -71,7 +71,7 @@ export function drawDataPanel(
       )
     }
   } else if (s.page === 'keys') {
-    text(c, x, y, 'API keys', COLORS.gold)
+    text(c, x, y, 'API keys', COLORS.accent)
     text(c, x, y + 2, 'One key per app. Revocation takes effect on its next request.', COLORS.muted, width)
     const win = computeRowWindow(
       s.clientKeys.length,

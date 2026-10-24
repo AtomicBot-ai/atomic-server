@@ -157,7 +157,7 @@ export function drawFirstRun(c: Canvas, s: WorkspaceState, focus: string, second
   const contentY = headingY + (c.height < 30 ? 1 : 2),
     contentRows = step === 'permissions' ? 13 : step === 'connect' ? 11 : step === 'cloud' ? 22 : 20,
     actionY = Math.min(c.height - 6, contentY + contentRows)
-  text(c, x, headingY, FIRST_RUN_TITLES[step], COLORS.gold, width)
+  text(c, x, headingY, FIRST_RUN_TITLES[step], COLORS.accent, width)
   if (step === 'model') {
     text(c, x, contentY, s.message || 'Loading models…', COLORS.muted, width)
     if (s.message) button(c, 'first-model', x, contentY + 2, 'Retry', 'Reload available models', focus)

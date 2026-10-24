@@ -11,4 +11,4 @@ title: "Share semantic colors between Web and the terminal"
 - **Consequences:** A shared color change reaches both clients. Terminal fallback rendering still chooses readable ANSI colors when true color is unavailable.
 - **Alternatives:** Duplicating CSS literals would continue the drift. Sharing terminal rendering code with Web would introduce an unnecessary runtime dependency.
 - **Owner:** team.
-- **Links:** `src/contract/workspace-colors.ts`, `packages/admin-ui/src/workspace/workspace-theme.ts`.
+- **Links:** `src/workspace-view/colors.ts` (`accent`, `accentLight` were `gold`, `red`), `packages/admin-ui/src/workspace/workspace-theme.ts`.

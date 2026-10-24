@@ -69,7 +69,7 @@ export function drawFloatingDownloads(
     x + 2,
     y + 2,
     `[${'#'.repeat(filled)}${'.'.repeat(barWidth - filled)}] ${percent === null ? '…' : percent + '%'}${compact ? ` ${status}${remaining ? ' · ' + remaining : ''}` : ''}`,
-    COLORS.gold,
+    COLORS.accent,
     width - 4
   )
   if (!compact)

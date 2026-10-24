@@ -82,7 +82,7 @@ export function drawConnectionChoices(
       art.forEach((line, row) => {
         const start = left + Math.floor((cardWidth - line.length) / 2)
         for (const [column, char] of [...line].entries())
-          text(c, start + column, top + 1 + row, char, /[o*]/.test(char) ? COLORS.gold : COLORS.text)
+          text(c, start + column, top + 1 + row, char, /[o*]/.test(char) ? COLORS.accent : COLORS.text)
       })
       titleLines(choice.title, cardWidth - 4)
         .slice(0, full ? 1 : 2)
@@ -97,7 +97,7 @@ export function drawConnectionChoices(
     } else if (height >= 5) {
       art.forEach((line, row) => {
         for (const [column, char] of [...line].entries())
-          text(c, left + 2 + column, top + 1 + row, char, /[o*]/.test(char) ? COLORS.gold : COLORS.text)
+          text(c, left + 2 + column, top + 1 + row, char, /[o*]/.test(char) ? COLORS.accent : COLORS.text)
       })
       titleLines(choice.title, cardWidth - 15)
         .slice(0, 2)
@@ -203,6 +203,6 @@ export function drawAgentChoices(
     top += row.height
     end++
   }
-  if (start > 0) text(c, x + width - 1, y, '↑', COLORS.gold, 1)
-  if (end < rows.length) text(c, x + width - 1, bottom, '↓', COLORS.gold, 1)
+  if (start > 0) text(c, x + width - 1, y, '↑', COLORS.accent, 1)
+  if (end < rows.length) text(c, x + width - 1, bottom, '↓', COLORS.accent, 1)
 }

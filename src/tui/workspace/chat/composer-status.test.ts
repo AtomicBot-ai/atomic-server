@@ -55,6 +55,6 @@ it.each([
 })
 
 it('keeps the existing bright status color readable on dark surfaces', () => {
-  expect(contrast(COLORS.red, COLORS.ground)).toBeGreaterThanOrEqual(4.5)
+  expect(contrast(COLORS.accentLight, COLORS.ground)).toBeGreaterThanOrEqual(4.5)
   expect(contrast(COLORS.composerError, COLORS.composer)).toBeGreaterThanOrEqual(4.5)
 })

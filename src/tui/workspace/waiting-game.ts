@@ -103,14 +103,14 @@ export function drawWaitingGame(c: Canvas, s: WorkspaceState): void {
     height = Math.min(c.height - 3 - top, GAME_HEIGHT + 10)
   panel(c, x - 2, top, width, height)
   c.popover = { x: x - 2, y: top, width, height }
-  text(c, x, y - 5, 'SPACE INVADERS', COLORS.gold, GAME_WIDTH, undefined, true)
+  text(c, x, y - 5, 'SPACE INVADERS', COLORS.accent, GAME_WIDTH, undefined, true)
   text(c, x, y - 3, s.connection?.model ?? 'Model download', COLORS.text, GAME_WIDTH + 2)
   wrap(downloadStatus(s), GAME_WIDTH + 2)
     .slice(0, 2)
     .forEach((line, index) => text(c, x, y - 2 + index, line, COLORS.muted, GAME_WIDTH + 2))
   panel(c, x, y, GAME_WIDTH + 2, GAME_HEIGHT + 2)
   game.invaders.forEach((invader) =>
-    text(c, x + invader.x, y + 1 + invader.y, game.tick % 12 < 6 ? '[o]' : '{o}', COLORS.gold, 3)
+    text(c, x + invader.x, y + 1 + invader.y, game.tick % 12 < 6 ? '[o]' : '{o}', COLORS.accent, 3)
   )
   game.shots.forEach((shot) => text(c, x + 1 + shot.x, y + 1 + shot.y, '|', COLORS.text, 1))
   text(c, x + game.ship, y + GAME_HEIGHT, '/^\\', COLORS.green, 3)
@@ -133,7 +133,7 @@ export function drawWaitingGame(c: Canvas, s: WorkspaceState): void {
       label,
       COLORS.ground,
       label.length,
-      COLORS.gold,
+      COLORS.accent,
       true
     )
   }

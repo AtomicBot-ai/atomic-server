@@ -120,7 +120,7 @@ export function drawCatalogMenu(c: Canvas, s: WorkspaceState, focus: string) {
           : s.catalogMenu === 'media-video'
             ? 'Video model'
             : 'Version',
-    COLORS.gold,
+    COLORS.accent,
     width - 4
   )
   const at = Math.max(

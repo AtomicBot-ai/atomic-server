@@ -121,9 +121,9 @@ export function drawPermissionDialog(c: Canvas, s: WorkspaceState, focus: string
   c.targets = []
   panel(c, x, y, width, height)
   c.popover = { x, y, width, height }
-  text(c, x + 2, y + 1, title, COLORS.gold, width - 4)
+  text(c, x + 2, y + 1, title, COLORS.accent, width - 4)
   lines.forEach((line, i) => text(c, x + 2, y + 3 + i, line, COLORS.text, width - 4))
-  message.forEach((line, i) => text(c, x + 2, y + 3 + lines.length + i, line, COLORS.gold, width - 4))
+  message.forEach((line, i) => text(c, x + 2, y + 3 + lines.length + i, line, COLORS.accent, width - 4))
   quietButton(c, 'first-permission-close', x + 2, y + height - 3, 'Not now', 'Return to permissions', focus)
   const label = 'Open web app'
   actionButton(

@@ -146,7 +146,7 @@ export function drawCatalogFilters(c: Canvas, s: WorkspaceState, focus: string) 
   panel(c, x, y, width, c.height - 8)
   c.popover = { x, y, width, height: c.height - 8 }
   c.targets = []
-  text(c, x + 2, y + 1, 'Filter models', COLORS.gold, width - 4)
+  text(c, x + 2, y + 1, 'Filter models', COLORS.accent, width - 4)
   const controls = catalogFilterControls(s)
   const win = computeRowWindow(
     controls.length,

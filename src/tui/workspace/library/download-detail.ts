@@ -192,7 +192,7 @@ export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) 
   c.popover = { x, y, width, height: c.height - 8 }
   c.targets = []
   if (s.overlay === 'download-remove') {
-    text(c, x + 2, y + 2, chosen.installed ? 'Delete model?' : 'Remove download?', COLORS.gold, width - 4)
+    text(c, x + 2, y + 2, chosen.installed ? 'Delete model?' : 'Remove download?', COLORS.accent, width - 4)
     text(c, x + 2, y + 4, chosen.name, COLORS.text, width - 4)
     wrap(
       chosen.installed
@@ -213,7 +213,7 @@ export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) 
     return
   }
   if (!job) return
-  text(c, x + 2, y + 2, chosen.name, COLORS.gold, width - 4)
+  text(c, x + 2, y + 2, chosen.name, COLORS.accent, width - 4)
   text(
     c,
     x + 2,
@@ -233,7 +233,7 @@ export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) 
       width - 4
     )
       .slice(0, 2)
-      .forEach((line, i) => text(c, x + 2, y + 7 + i, line, COLORS.red, width - 4))
+      .forEach((line, i) => text(c, x + 2, y + 7 + i, line, COLORS.accentLight, width - 4))
   if (job['kind'] === 'engine' && downloadPaused(job.state))
     button(c, 'download-do:retry', x + 2, y + 9, 'Retry download', 'Retry this engine installation', focus)
   if (downloadOwner(job)) {

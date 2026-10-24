@@ -47,7 +47,7 @@ it.each([
       size === 'compact' ? [3, 4, 5, 6, 7] : []
     )
     const c = canvas(44, 22)
-    c.cells.forEach((_, y) => text(c, 0, y, 'z'.repeat(c.width), COLORS.gold))
+    c.cells.forEach((_, y) => text(c, 0, y, 'z'.repeat(c.width), COLORS.accent))
     drawBrandMark(c, 1, 1, size, 'welcome', seconds, true, true)
     mask.forEach((row, y) =>
       row.forEach((opaque, x) => {

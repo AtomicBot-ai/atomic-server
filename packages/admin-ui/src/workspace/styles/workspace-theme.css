@@ -5,7 +5,7 @@
   --ew-line: var(--atomic-line);
   --ew-muted: var(--atomic-muted);
   --ew-text: var(--atomic-text);
-  --ew-teal: var(--atomic-gold);
+  --ew-teal: var(--atomic-accent);
   background: var(--ew-bg);
 }
 .desktop-workspace .desktop-rail {
@@ -22,7 +22,7 @@
 .desktop-workspace .sidebar-sections button:hover,
 .desktop-workspace .sidebar-agents button:hover {
   background: var(--atomic-focus);
-  color: var(--atomic-gold);
+  color: var(--atomic-accent);
 }
 .desktop-workspace .rail-item {
   background: var(--atomic-nav-button);
@@ -31,8 +31,8 @@
 .desktop-workspace .rail-item.active,
 .desktop-workspace .rail-item:hover {
   background: var(--atomic-focus);
-  color: var(--atomic-gold);
-  border-color: var(--atomic-gold);
+  color: var(--atomic-accent);
+  border-color: var(--atomic-accent);
 }
 .desktop-workspace .ew-button {
   background: var(--atomic-header);
@@ -40,8 +40,8 @@
   color: var(--atomic-text);
 }
 .desktop-workspace .ew-button.primary {
-  background: var(--atomic-gold);
-  border-color: var(--atomic-gold);
+  background: var(--atomic-accent);
+  border-color: var(--atomic-accent);
   color: var(--atomic-composer-ink);
 }
 .desktop-workspace .ew-button.primary:hover {
@@ -57,7 +57,7 @@
   color: var(--atomic-text);
 }
 .desktop-workspace .floating-downloads progress {
-  accent-color: var(--atomic-gold);
+  accent-color: var(--atomic-accent);
 }
 .desktop-workspace .state-ready,
 .desktop-workspace .state-busy {

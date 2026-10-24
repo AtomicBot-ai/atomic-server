@@ -8,7 +8,7 @@ export function drawReference(
   b: { x: number; y: number; width: number; bottom: number },
   focus: string
 ): void {
-  text(c, b.x, b.y, 'Command reference', COLORS.gold)
+  text(c, b.x, b.y, 'Command reference', COLORS.accent)
   const win = computeRowWindow(s.commands.length, s.selected, b.bottom - b.y - 3)
   s.commands
     .slice(win.start, win.start + win.count)

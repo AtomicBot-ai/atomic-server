@@ -78,7 +78,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     button(c, id, x + 2, y + row, label, hint, focus)
   if (s.overlay === 'sections') {
     const menu = sectionMenu(s)
-    put(1, menu.title, COLORS.gold)
+    put(1, menu.title, COLORS.accent)
     const columns = c.height < 24 && menu.items.length > h - 6 ? 2 : 1
     const rows = Math.ceil(menu.items.length / columns)
     menu.items.forEach((item, i) =>
@@ -96,7 +96,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     return
   }
   if (s.overlay === 'images') {
-    put(2, 'Attachments', COLORS.gold)
+    put(2, 'Attachments', COLORS.accent)
     s.images.forEach((image, i) =>
       b(`image-remove:${i}`, 4 + i, `${image.name}  ×`, 'Remove image from this message')
     )
@@ -108,11 +108,11 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     button(c, 'close', x + 16, y + h - 3, 'Done', 'Return to composer', focus)
     return
   } else if (s.overlay === 'workspace') {
-    put(2, 'Atomic Server', COLORS.gold)
+    put(2, 'Atomic Server', COLORS.accent)
     put(4, 'Manage the server, then connect your apps and agents.', COLORS.muted)
     b('hosting', 6, 'Open Server', 'Open API controls and connections.')
   } else if (s.overlay === 'credential') {
-    put(2, 'Your API key', COLORS.gold)
+    put(2, 'Your API key', COLORS.accent)
     wrap(s.secret || 'Key hidden.', w - 4).forEach((line, i) => put(5 + i, line))
     put(9, 'Shown for one minute. You can reveal it again from API keys.', COLORS.muted)
     b('copy-secret', h - 3, 'Copy key', 'Copy this credential to your terminal clipboard.')
@@ -120,7 +120,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     return
   } else if (s.overlay === 'revoke-key' || s.overlay === 'delete-chat') {
     const key = s.overlay === 'revoke-key'
-    put(2, key ? 'Revoke this API key?' : 'Delete this conversation?', COLORS.gold)
+    put(2, key ? 'Revoke this API key?' : 'Delete this conversation?', COLORS.accent)
     wrap(
       key
         ? 'Apps using this key will lose access on their next request. Other keys continue to work.'
@@ -137,7 +137,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     return
   } else if (s.overlay === 'remove-model') {
     const model = s.installed.find((m) => m.id === s.libraryRemove)
-    put(2, `Delete ${s.libraryRemove}?`, COLORS.gold)
+    put(2, `Delete ${s.libraryRemove}?`, COLORS.accent)
     wrap(
       model?.store === 'managed'
         ? `It is in the managed engines' shared store: removing it removes it for every managed engine (${(model.providers ?? []).join(', ')}), loaded or not.`
@@ -148,16 +148,16 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     button(c, 'close', x + 20, y + h - 3, 'Keep it', 'Cancel without making changes.', focus)
     return
   } else if (s.overlay === 'menu' && !s.setupComplete) {
-    put(2, 'Prepare your workspace first', COLORS.gold)
+    put(2, 'Prepare your workspace first', COLORS.accent)
     put(4, 'Choose an engine and models, then let installation finish.', COLORS.muted)
     tooltip(c, x + 2, y + 6, 'Ctrl+Q Close | Downloads continue in background', w - 4, COLORS.header)
   } else if (s.overlay === 'menu') {
-    put(2, 'Go to', COLORS.gold)
+    put(2, 'Go to', COLORS.accent)
     PAGES.forEach((p, i) => b(`page:${p.id}`, 4 + i, `${p.name}  [${p.key}]`, p.hint))
     b('library:downloads', 9, 'Downloads', 'Review background downloads and resume interrupted jobs.')
     b('choose-goal', 10, 'Set up a service', 'Prepare an engine and model for your clients.')
   } else if (s.overlay === 'agent') {
-    put(2, `Use with ${AGENTS.find((a) => a.id === s.agent)?.name}`, COLORS.gold)
+    put(2, `Use with ${AGENTS.find((a) => a.id === s.agent)?.name}`, COLORS.accent)
     put(4, 'Atomic Server provides the model for this session.', COLORS.muted)
     b('agent-model', 6, `Model: ${s.agentModel}`, 'Choose the next available model.')
     put(8, 'Launch switches this terminal to the agent. Exit it to return.', COLORS.muted)
@@ -174,7 +174,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
   } else if (s.overlay === 'command') {
     const row = s.commands[s.selected]
     if (row) {
-      put(2, `atc ${row.path.join(' ')}  /  ${row.status}`, COLORS.gold)
+      put(2, `atc ${row.path.join(' ')}  /  ${row.status}`, COLORS.accent)
       helpLines(row, w - 4)
         .slice(s.scroll, s.scroll + h - 7)
         .forEach((line, i) => put(4 + i, line))
@@ -208,7 +208,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
           : s.edit.startsWith('setting:')
             ? (SETTING_LABELS[s.edit.slice(8)] ?? 'Edit setting')
             : 'Connect a model endpoint'),
-      COLORS.gold
+      COLORS.accent
     )
     put(
       4,
@@ -245,17 +245,17 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     if (s.edit === 'library-import' && s.message)
       wrap(s.message, w - 4)
         .slice(0, Math.max(0, h - 12))
-        .forEach((line, i) => put(9 + i, line, COLORS.red))
+        .forEach((line, i) => put(9 + i, line, COLORS.accentLight))
     if (s.edit.startsWith('media-') && s.media.error)
       wrap(s.media.error, w - 4)
         .slice(0, Math.max(1, h - 12))
-        .forEach((line, i) => put(9 + i, line, COLORS.red))
+        .forEach((line, i) => put(9 + i, line, COLORS.accentLight))
     b('save-edit', h - 3, 'Save', 'Validate and save this setting.')
     button(c, 'close', x + 12, y + h - 3, 'Cancel', 'Discard this edit.', focus)
     return
   } else if (s.overlay === 'detail') {
     const r = s.requests[s.selected]
-    put(2, 'Request details', COLORS.gold)
+    put(2, 'Request details', COLORS.accent)
     if (r)
       [
         `Model       ${r.model}`,
@@ -269,7 +269,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
         .slice(0, h - 6)
         .forEach((v, i) => put(4 + i, v))
   } else {
-    put(2, 'Connect your application', COLORS.gold)
+    put(2, 'Connect your application', COLORS.accent)
     wrap(example(s), w - 4)
       .slice(0, h - 8)
       .forEach((r, i) => put(4 + i, r))

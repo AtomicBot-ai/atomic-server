@@ -30,7 +30,7 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
     if (s.page === 'server') {
       drawServer(c, s, x, y, width, bottom, focus)
     } else if (s.page === 'requests') {
-      text(c, x, y, 'Recent requests', COLORS.gold)
+      text(c, x, y, 'Recent requests', COLORS.accent)
       if (!s.requests.length)
         wrap('No requests yet.', width).forEach((r, i) => text(c, x, y + 2 + i, r, COLORS.muted, width))
       const win = computeRowWindow(s.requests.length, s.selected, bottom - y - 3)
@@ -63,7 +63,7 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
       s.base.logs.filtering
         ? `Filter: ${s.base.logs.filter}_`
         : `Server log${s.base.logs.filter ? ' / ' + s.base.logs.filter : ''}`,
-      COLORS.gold,
+      COLORS.accent,
       width
     )
     const lines = visibleLogLines(s.base.logs),
@@ -79,7 +79,7 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
     ])
       bx += button(c, id!, bx, bottom, label!, hint!, focus) + 1
   } else if (s.page === 'checks') {
-    text(c, x, y, 'System checks', COLORS.gold)
+    text(c, x, y, 'System checks', COLORS.accent)
     const results = s.base.doctor.results ?? []
     if (!results.length)
       text(

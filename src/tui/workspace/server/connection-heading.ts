@@ -44,7 +44,7 @@ export function drawConnectionHeading(
       x,
       row++,
       d.path === 'agent' ? agentMark(d.agent) : '((|))',
-      d.path === 'agent' ? agentColor(d.agent) : COLORS.gold,
+      d.path === 'agent' ? agentColor(d.agent) : COLORS.accent,
       titleWidth,
       undefined,
       true

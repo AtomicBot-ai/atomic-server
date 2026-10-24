@@ -34,7 +34,7 @@ export function introCanvas(
             Math.abs(i - (Math.floor((motion ? seconds : 0) * 5) % length)) < 2 ? '=' : '.'
           ).join('')
         : '='.repeat(done) + '.'.repeat(length - done)
-    text(c, x + 2, y + 2, `[${track}]${p.percent === null ? '' : ` ${p.percent}%`}`, COLORS.gold, size - 4)
+    text(c, x + 2, y + 2, `[${track}]${p.percent === null ? '' : ` ${p.percent}%`}`, COLORS.accent, size - 4)
     text(
       c,
       x + 2,

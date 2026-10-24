@@ -63,7 +63,7 @@ export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, _secon
     error: 'Needs attention',
     stopping: 'Stopping',
   }[state]
-  text(c, c.width - label.length - 2, 1, label, COLORS.gold, label.length)
+  text(c, c.width - label.length - 2, 1, label, COLORS.accent, label.length)
   const rows =
     s.workspace?.services ??
     (s.base.daemon.kind === 'up'
@@ -85,7 +85,7 @@ export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, _secon
   const top = 1 + Math.min(notices.length, Math.max(1, height - 4))
   rows
     .slice(0, Math.max(0, height - 3 - top))
-    .forEach((v, i) => text(c, x, top + i, `${v.provider}  ${v.model}  · ${v.state}`, COLORS.gold, width))
+    .forEach((v, i) => text(c, x, top + i, `${v.provider}  ${v.model}  · ${v.state}`, COLORS.accent, width))
   if (!rows.length && top < height - 2) text(c, x, top, 'No model loaded', COLORS.muted, width)
   if (rows.length > height - 4)
     text(

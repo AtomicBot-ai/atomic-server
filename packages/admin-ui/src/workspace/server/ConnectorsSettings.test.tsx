@@ -56,7 +56,7 @@ it('cancels an in-progress browser sign-in on Escape and never claims connected'
 })
 it('dismisses connector actions on Escape, outside click and action selection', async () => {
   const { workspace } = workspaceFixture({})
-  const { MCP_CONNECTORS } = await import('@contract'),
+  const { MCP_CONNECTORS } = await import('@view'),
     { connectorDraft } = await import('@view')
   workspace.snapshot!.features = {
     assistants: [],

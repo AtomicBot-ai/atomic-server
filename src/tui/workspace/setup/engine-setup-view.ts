@@ -24,7 +24,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
     a.x,
     a.y + 3,
     v.query ? `Results for “${v.query}”` : `Models for ${path.engine}`,
-    COLORS.gold,
+    COLORS.accent,
     a.width
   )
   const win = computeRowWindow(path.rows.length, s.selected, Math.max(1, a.bottom - a.y - 8))
@@ -43,7 +43,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
     )
   if (!path.rows.length)
     text(c, a.x, a.y + 6, v.busy ? 'Reading models…' : 'No models found.', COLORS.muted, a.width)
-  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.red, a.width)
+  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.accentLight, a.width)
   button(c, 'setup-engine-back', a.x, a.bottom, '< Engine', 'Change inference engine.', a.focus)
   button(c, 'setup-query', a.x + 13, a.bottom, 'Search', 'Search more models.', a.focus)
 }
@@ -81,12 +81,12 @@ const LITERT_STEP: Record<string, string> = {
 export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   const plan = v.path?.plan
   if (!plan) return
-  text(c, a.x, a.y + 3, 'Download', COLORS.gold, a.width)
+  text(c, a.x, a.y + 3, 'Download', COLORS.accent, a.width)
   const lines = [...planLinesOf(plan), ...plan.blockers].flatMap((l) => wrap(l, a.width))
   lines
     .slice(0, Math.max(1, a.bottom - a.y - 6))
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))
-  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.red, a.width)
+  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.accentLight, a.width)
   const litert = 'backend' in plan
   const waits = 'variant_id' in plan ? (litert ? LITERT_STEP : FOUNDRY_STEP)[plan.verdict.verdict] : undefined
   let bx = a.x
@@ -109,7 +109,7 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
 export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: Area) {
   const job = v.path?.job
   const state = pathJob(v, s.workspace)
-  text(c, a.x, a.y + 3, 'Downloading', COLORS.gold, a.width)
+  text(c, a.x, a.y + 3, 'Downloading', COLORS.accent, a.width)
   text(c, a.x, a.y + 6, `${job?.model ?? ''} for ${job?.engine ?? ''}`, COLORS.text, a.width)
   const total = state?.total ?? 0,
     done = state?.done ?? 0
@@ -120,11 +120,11 @@ export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: 
     a.x,
     a.y + 7,
     `[${'#'.repeat(filled)}${'.'.repeat(bw - filled)}] ${total ? `${formatSize(done)} / ${formatSize(total)}` : ''}  ${state?.stage ?? 'queued'}`,
-    COLORS.gold,
+    COLORS.accent,
     a.width
   )
-  if (state?.error) text(c, a.x, a.y + 9, state.error, COLORS.red, a.width)
-  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.red, a.width)
+  if (state?.error) text(c, a.x, a.y + 9, state.error, COLORS.accentLight, a.width)
+  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.accentLight, a.width)
   let bx = a.x
   if (state && STOPPED.includes(state.stage))
     bx +=

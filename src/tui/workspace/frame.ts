@@ -37,7 +37,7 @@ export function workspaceFrame(
   c.contentTop = Math.max(brandHeaderRows(width, height), downloads ? downloads.y + downloads.height + 1 : 0)
   const focus = s.hover || s.focus
   if (width < 54 || height < 20) {
-    text(c, 1, 1, 'ATOMIC SERVER', COLORS.gold, width - 2, undefined, true)
+    text(c, 1, 1, 'ATOMIC SERVER', COLORS.accent, width - 2, undefined, true)
     wrap('Expand to at least 54 columns and 20 rows. Ctrl+Q closes the console.', width - 2).forEach((r, i) =>
       text(c, 1, 3 + i, r)
     )
@@ -122,7 +122,7 @@ export function workspaceFrame(
             x,
             y + i,
             r,
-            r === 'YOU' ? COLORS.gold : r === 'ATOMIC' ? COLORS.red : COLORS.text,
+            r === 'YOU' ? COLORS.accent : r === 'ATOMIC' ? COLORS.accentLight : COLORS.text,
             bodyWidth
           )
         )
@@ -144,7 +144,7 @@ export function workspaceFrame(
       l.inset,
       height - 2,
       s.message || s.base.busy!,
-      s.message ? COLORS.gold : COLORS.muted,
+      s.message ? COLORS.accent : COLORS.muted,
       width - l.inset * 2
     )
   drawFooter(c, s, focus)

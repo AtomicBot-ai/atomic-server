@@ -24,7 +24,7 @@ export function drawMediaGallery(
   panel(c, x, y, width, Math.max(6, bottom - y - 5))
   const center = x + Math.max(2, Math.floor((width - 13) / 2))
   if (!compact)
-    text(c, center, y + 2, task === 'video' ? '[ > VIDEO < ]' : '[ # IMAGE # ]', COLORS.gold, width - 4)
+    text(c, center, y + 2, task === 'video' ? '[ > VIDEO < ]' : '[ # IMAGE # ]', COLORS.accent, width - 4)
   if (pending) {
     text(c, x + 2, contentY, `Generating ${task}…`, COLORS.text, width - 4, undefined, true)
     const count = Math.max(8, width - 6),
@@ -37,7 +37,7 @@ export function drawMediaGallery(
         '#'.repeat(Math.round((count - 2) * fraction)) +
         '-'.repeat(count - 2 - Math.round((count - 2) * fraction)) +
         ']',
-      COLORS.gold,
+      COLORS.accent,
       count
     )
     text(
@@ -87,7 +87,7 @@ export function drawMediaGallery(
       button(c, 'media-models', x + 1, contentY + 3, 'Choose a model', 'Load a downloaded media model', focus)
   }
   const error = s.media.error || String(record(job?.['error'])['message'] ?? job?.['error'] ?? '')
-  if (error) text(c, x + 1, bottom - 5, error, COLORS.red, width - 2)
+  if (error) text(c, x + 1, bottom - 5, error, COLORS.accentLight, width - 2)
   if (item) {
     let bx = x
     for (const [id, label] of [

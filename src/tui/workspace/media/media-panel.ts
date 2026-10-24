@@ -120,5 +120,5 @@ export function drawMediaPanel(
       focus
     )
   else drawMediaGallery(c, s, x + 39, y + 2, width - 39, bottom, focus)
-  if (s.media.error && !wide) text(c, x, bottom - 3, s.media.error, COLORS.red, width)
+  if (s.media.error && !wide) text(c, x, bottom - 3, s.media.error, COLORS.accentLight, width)
 }

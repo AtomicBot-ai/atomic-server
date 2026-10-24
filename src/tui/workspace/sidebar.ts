@@ -29,13 +29,13 @@ export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: st
     fill(c, 0, y, width, 2, background)
     for (const edge of [0, width - 1])
       for (const row of [y, y + 1])
-        text(c, edge, row, '│', active ? COLORS.gold : COLORS.navEdge, 1, COLORS.header)
+        text(c, edge, row, '│', active ? COLORS.accent : COLORS.navEdge, 1, COLORS.header)
     text(
       c,
       Math.floor((width - icon.length) / 2),
       y,
       icon,
-      active ? COLORS.gold : COLORS.muted,
+      active ? COLORS.accent : COLORS.muted,
       width,
       background
     )
@@ -44,7 +44,7 @@ export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: st
       Math.floor((width - label.length) / 2),
       y + 1,
       label,
-      active ? COLORS.gold : COLORS.muted,
+      active ? COLORS.accent : COLORS.muted,
       width,
       background
     )
@@ -123,7 +123,7 @@ export function drawSidebar(
         focus === `sidebar-agent:${offset + i}` ? COLORS.text : COLORS.muted
       )
     })
-    if (offset + count < CONNECTION_AGENTS.length) text(c, x + 21, bottom, '↓', COLORS.gold, 1)
+    if (offset + count < CONNECTION_AGENTS.length) text(c, x + 21, bottom, '↓', COLORS.accent, 1)
   } else {
     const items =
       page === 'models'

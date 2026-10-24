@@ -84,7 +84,7 @@ export function drawWelcome(
     focus
   )
   const label = '[3] Set up with an agent'
-  text(c, sx, bottom, label, focus === 'agent-setup' ? COLORS.gold : COLORS.muted)
+  text(c, sx, bottom, label, focus === 'agent-setup' ? COLORS.accent : COLORS.muted)
   c.targets.push({
     id: 'agent-setup',
     x: sx,

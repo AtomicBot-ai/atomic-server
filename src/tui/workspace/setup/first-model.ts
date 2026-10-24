@@ -66,7 +66,7 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
     x = Math.floor((c.width - width) / 2),
     v = s.setup!
   const heading = workspaceHeaderRows(c)
-  text(c, x, heading, 'Choose your first model', COLORS.gold, width)
+  text(c, x, heading, 'Choose your first model', COLORS.accent, width)
   let top = heading + (c.height < 30 ? 1 : 2)
   if (v.device && (c.height >= 30 || heading < 8)) {
     const memory = v.device.memory > 0 ? ` · ${formatSize(v.device.memory * 1024 ** 2)} memory` : ''
@@ -103,7 +103,7 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
       selected = chosen?.key === model.key
     panel(c, x, rowY, width - 2, cardHeight, selected || focus === id, seconds)
     text(c, x + 2, rowY + 1, model.name, COLORS.text, width - 12, undefined, true)
-    text(c, x + width - 8, rowY + 1, selected ? '(o)' : '( )', selected ? COLORS.gold : COLORS.muted)
+    text(c, x + width - 8, rowY + 1, selected ? '(o)' : '( )', selected ? COLORS.accent : COLORS.muted)
     if (cardHeight > 3) text(c, x + 2, rowY + 2, model.detail, COLORS.muted, width - 6)
     c.targets.push({
       id,
@@ -125,7 +125,7 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
     text(c, x, top, v.busy ? 'Loading models…' : 'No models available.', COLORS.muted, width)
     if (!v.busy) quietButton(c, 'first-model', x, top + 2, 'Retry', 'Reload available models', focus)
   }
-  if (v.error) text(c, x, bottom - 1, v.error.split('\n')[0]!, COLORS.red, width)
+  if (v.error) text(c, x, bottom - 1, v.error.split('\n')[0]!, COLORS.accentLight, width)
   text(c, x, barY, '-'.repeat(width), COLORS.line, width)
   const label = 'Continue',
     actionX = x + width - textWidth(label) - 6,

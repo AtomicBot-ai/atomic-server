@@ -34,7 +34,7 @@ export function drawSetupBrowser(
     put(3, 'Engines could not be checked.', COLORS.text)
     let row = 5
     for (const [i, line] of v.error.split('\n').entries())
-      for (const part of wrap(line, width)) put(row++, part, i === 0 ? COLORS.red : COLORS.text)
+      for (const part of wrap(line, width)) put(row++, part, i === 0 ? COLORS.accentLight : COLORS.text)
     put(row + 1, 'Fix the cause above, then choose Refresh.')
     button(c, 'setup-refresh', x, bottom, 'Refresh', 'Retry live engine detection.', focus)
     return

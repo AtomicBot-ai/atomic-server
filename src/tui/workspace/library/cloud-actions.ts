@@ -1,5 +1,5 @@
 import { cloudChoices, cloudNeedsKey } from './cloud-catalog.js'
-import { CLOUD_CATALOG } from '../../../contract/index.js'
+import { CLOUD_CATALOG } from '../../../workspace-view/index.js'
 import type { CloudDraft } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
 import { record } from './library-model.js'

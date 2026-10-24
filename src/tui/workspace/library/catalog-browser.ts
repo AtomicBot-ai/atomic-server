@@ -125,12 +125,12 @@ export function drawCatalogBrowser(
       const active = focus === rowId || open
       for (let line = 0; line < rowHeight; line++)
         text(c, x, rowY + line, ' '.repeat(width), COLORS.text, width, active ? COLORS.focus : COLORS.surface)
-      text(c, x + 1, rowY, open ? 'v' : '>', active ? COLORS.gold : COLORS.muted, 1)
+      text(c, x + 1, rowY, open ? 'v' : '>', active ? COLORS.accent : COLORS.muted, 1)
       text(c, x + 3, rowY, model.name, COLORS.text, catalogColumns(width)[0]!.width - 1, undefined, true)
       drawCatalogMetadata(c, model, x, rowY, width, status)
       rule(c, x, rowY + 1, width)
       if (status && !catalogColumns(width).some((column) => column.key === 'device'))
-        text(c, x + 3, rowY + 1, `[${status}]`, status === 'Loaded' ? COLORS.gold : COLORS.muted, width - 7)
+        text(c, x + 3, rowY + 1, `[${status}]`, status === 'Loaded' ? COLORS.accent : COLORS.muted, width - 7)
       c.targets.push({ id: rowId, x, y: rowY, width, height: rowHeight, hint: model.description || model.id })
     }
     button(

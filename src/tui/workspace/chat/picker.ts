@@ -87,7 +87,7 @@ export function drawPicker(c: Canvas, s: WorkspaceState, focus: string) {
           ? 'Local models available · endpoint offline'
           : 'Endpoint offline · connect or get a model'
         : '')
-  text(c, x + 2, y + 1, status, s.pickerError ? COLORS.red : COLORS.muted, width - 4, COLORS.header)
+  text(c, x + 2, y + 1, status, s.pickerError ? COLORS.accentLight : COLORS.muted, width - 4, COLORS.header)
   rows.slice(start, start + count).forEach((row, i) => {
     const top = y + 2 + i * 2,
       active = focus === row.id
@@ -99,7 +99,7 @@ export function drawPicker(c: Canvas, s: WorkspaceState, focus: string) {
       x + 2,
       top,
       wrap(label, width - 5)[0] ?? '',
-      active || row.current ? COLORS.gold : COLORS.text,
+      active || row.current ? COLORS.accent : COLORS.text,
       width - 4,
       bg,
       true

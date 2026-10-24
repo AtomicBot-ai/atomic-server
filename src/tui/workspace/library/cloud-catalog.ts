@@ -1,4 +1,4 @@
-import { CLOUD_CATALOG } from '../../../contract/index.js'
+import { CLOUD_CATALOG } from '../../../workspace-view/index.js'
 import type { CloudDraft } from '../../../contract/index.js'
 export function cloudNeedsKey(provider: string) {
   return (

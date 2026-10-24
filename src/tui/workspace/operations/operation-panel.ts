@@ -14,7 +14,7 @@ export function drawOperationPanel(
 ) {
   const op = s.operations.find((v) => v.name === s.operation)
   if (!op && s.toolGroup === 'download') {
-    text(c, x, y, 'Transfer details', COLORS.gold, width)
+    text(c, x, y, 'Transfer details', COLORS.accent, width)
     wrap(s.operationResult, width)
       .slice(s.scroll, s.scroll + Math.max(1, bottom - y - 2))
       .forEach((line, i) => text(c, x, y + 2 + i, line, COLORS.text, width))
@@ -117,7 +117,7 @@ export function drawOperationOverlay(c: Canvas, s: WorkspaceState, focus: string
       x + 2,
       y + 1,
       s.operationField === 'operation' ? 'Choose an action' : s.operationField.replace(/^request\./, ''),
-      COLORS.gold,
+      COLORS.accent,
       width - 4
     )
     const selected = Math.max(0, Number(focus.replace('operation-choice:', '')) || s.selected)
@@ -128,7 +128,7 @@ export function drawOperationOverlay(c: Canvas, s: WorkspaceState, focus: string
       button(c, `operation-choice:${win.start + i}`, x + 2, y + 3 + i, label.slice(0, width - 6), v, focus)
     })
   } else if (s.overlay === 'console') {
-    text(c, x + 2, y + 1, 'Server console', COLORS.gold)
+    text(c, x + 2, y + 1, 'Server console', COLORS.accent)
     text(c, x + 2, y + 3, `> ${s.consoleInput}▏`, COLORS.text, width - 4)
     c.targets.push({
       id: 'console-input',
@@ -160,7 +160,7 @@ export function drawOperationOverlay(c: Canvas, s: WorkspaceState, focus: string
     )
     button(c, 'operation-copy', x + 9, y + height - 3, 'Copy result', 'Copy complete output', focus)
   } else {
-    text(c, x + 2, y + 1, 'Control from your agent', COLORS.gold)
+    text(c, x + 2, y + 1, 'Control from your agent', COLORS.accent)
     const lines = [
       'Commands: atc control list --json',
       'Run: atc control call <operation> --input \'{"field":"value"}\' --json',

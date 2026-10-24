@@ -12,7 +12,7 @@ it.each([
   const c = introCanvas(width, height, 0, false, 'Press any key')
   const button = c.targets.find((target) => target.id === 'intro-continue')!
   expect(button.height).toBe(3)
-  expect(c.cells[button.y]![button.x]!.background).toBe(COLORS.gold)
+  expect(c.cells[button.y]![button.x]!.background).toBe(COLORS.accent)
   expect(hit(c, button.x + 1, button.y + 2)?.id).toBe('intro-continue')
   const intro = c.cells.map((row) => row.map((cell) => cell.char).join('')).join('\n')
   expect(intro.match(/Press any key/g)).toHaveLength(1)

@@ -1,5 +1,5 @@
 import type { Drawing } from './art.js'
-import { WORKSPACE_COLORS } from '../../../contract/index.js'
+import { WORKSPACE_COLORS } from '../../../workspace-view/index.js'
 export const COLORS = WORKSPACE_COLORS
 
 export interface Cell {
@@ -156,7 +156,7 @@ export function button(
     shown,
     selected || focused === id ? COLORS.ground : COLORS.text,
     width,
-    selected || focused === id ? COLORS.gold : COLORS.surface,
+    selected || focused === id ? COLORS.accent : COLORS.surface,
     bold
   )
   c.targets.push({ id, x, y, width: Math.min(width, c.width - x), height: 1, hint })

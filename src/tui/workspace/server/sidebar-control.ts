@@ -22,7 +22,7 @@ export function drawSidebarControl(
   const compact = c.height < 30
   panel(c, x, y, 22, compact ? 7 : 11, running, seconds)
   const background =
-    focus === 'api-toggle' ? COLORS.composer : changing || running ? COLORS.engineButton : COLORS.gold
+    focus === 'api-toggle' ? COLORS.composer : changing || running ? COLORS.engineButton : COLORS.accent
   const color = focus === 'api-toggle' || (!changing && !running) ? COLORS.ground : COLORS.text
   fill(c, x + 1, y + 1, 20, compact ? 2 : 3, background)
   const phase = s.motion ? Math.floor(seconds * 5) % 4 : 0

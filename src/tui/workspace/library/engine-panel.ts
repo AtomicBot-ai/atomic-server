@@ -10,11 +10,11 @@ import { computeRowWindow } from '../../row-window.js'
 import { parseSettingValue } from '../../../workspace-view/index.js'
 
 const TONES: Record<PanelLine['tone'], string> = {
-  title: COLORS.gold,
+  title: COLORS.accent,
   text: COLORS.text,
   muted: COLORS.muted,
-  warn: COLORS.gold,
-  error: COLORS.red,
+  warn: COLORS.accent,
+  error: COLORS.accentLight,
   command: COLORS.green,
 }
 export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string): void {

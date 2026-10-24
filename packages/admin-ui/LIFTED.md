@@ -124,6 +124,6 @@ The `807b4d9` onboarding refresh also supplies `setup/FirstModel.tsx` and `onboa
 | `src/workspace/server/ConnectorsSettings.tsx` | `atomic-chat-ui/web-app/src/routes/connectors/index.tsx` @ `807b4d9` | Shared server catalog, real connection status and OAuth, JSON configuration. |
 | `src/workspace/server/ConnectorCard.tsx` | `atomic-chat-ui/web-app/src/containers/connectors/ConnectorCard.tsx` @ `807b4d9` | Installed/catalog cards, toggles, actions, tools. |
 | `src/workspace/server/ConnectorDialogs.tsx` | `atomic-chat-ui/web-app/src/containers/connectors/ConnectorSecretDialog.tsx` and `EditJsonMCPserver` @ `807b4d9` | Keyboard-trapped key and JSON dialogs. |
-| `../../src/contract/mcp-catalog*.ts`, `public/images/connectors/*` | `atomic-chat-ui/web-app/src/constants/mcp-connectors.ts`, English MCP strings and public connector assets @ `807b4d9` | Exact catalog templates and branding shared with TUI. |
+| `../../src/workspace-view/mcp-connectors.json` (with `mcp-catalog.ts`), `public/images/connectors/*` | `atomic-chat-ui/web-app/src/constants/mcp-connectors.ts`, English MCP strings and public connector assets @ `807b4d9` | Exact catalog templates and branding shared with TUI. |
 
 - `workspace/library/CustomProviderSummary.tsx` and `custom-endpoints.css` follow `atomic-chat-ui/web-app/src/routes/endpoints.tsx` @ `807b4d9`: centered bordered empty state, compact endpoint cards and a separate heading action. Copy is reduced to the necessary endpoint choice.

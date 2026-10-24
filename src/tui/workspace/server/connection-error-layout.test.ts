@@ -52,7 +52,7 @@ it.each([
     .map((line, y) => ({
       y,
       text: line
-        .filter((cell) => cell.color === COLORS.red)
+        .filter((cell) => cell.color === COLORS.accentLight)
         .map((cell) => cell.char)
         .join('')
         .trim(),
@@ -73,7 +73,7 @@ it('bounds unusually long errors without overwriting Retry or footer controls', 
     .map((line, y) => ({
       y,
       text: line
-        .filter((cell) => cell.color === COLORS.red)
+        .filter((cell) => cell.color === COLORS.accentLight)
         .map((cell) => cell.char)
         .join('')
         .trim(),

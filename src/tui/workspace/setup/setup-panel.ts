@@ -49,7 +49,7 @@ export function drawSetup(
           : v.stage === 'review'
             ? 'Download needs attention'
             : 'Model setup',
-    COLORS.gold
+    COLORS.accent
   )
   if (s.setupComplete || s.connection?.pickingModel)
     button(
@@ -83,13 +83,13 @@ export function drawSetup(
     if (v.preparing) {
       put(row++, v.pending?.repo ?? v.repository, COLORS.text)
       if (preparationFailed) {
-        put(row++, 'Model setup stopped', COLORS.gold)
-        for (const line of wrapWords(error!, width)) put(row++, line, COLORS.red)
+        put(row++, 'Model setup stopped', COLORS.accent)
+        for (const line of wrapWords(error!, width)) put(row++, line, COLORS.accentLight)
       } else {
         const track = Array.from({ length: Math.min(30, width - 4) }, (_, i) =>
           Math.abs(i - (Math.floor(seconds * 4) % Math.min(30, width - 4))) < 2 ? '=' : '.'
         ).join('')
-        put(row++, `[${track}] Preparing`, COLORS.gold)
+        put(row++, `[${track}] Preparing`, COLORS.accent)
       }
     }
     if (!v.preparing) {
@@ -169,6 +169,6 @@ export function drawSetup(
     )
   // The engine screen shows a failed check in full; elsewhere one line fits above the buttons.
   if (engineCheckFailed(v)) return
-  if (error && !preparationFailed) text(c, x, bottom - 1, error.split('\n')[0]!, COLORS.red, width)
+  if (error && !preparationFailed) text(c, x, bottom - 1, error.split('\n')[0]!, COLORS.accentLight, width)
   else if (v.busy) text(c, x, bottom - 1, v.preparing ? 'Checking model…' : 'Working…', COLORS.stone, width)
 }
