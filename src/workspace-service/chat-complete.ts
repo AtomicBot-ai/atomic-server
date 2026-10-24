@@ -1,5 +1,5 @@
 import { chatProvider } from './chat-readiness.js'
-import { WorkspaceFeatureService } from './features.js'
+import type { EnrichChat } from './chat-jobs.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import type { Conversation, ChatHistory, ClientKeys } from '../terminal-data/index.js'
 import { AtcError } from '../errors/index.js'
@@ -14,6 +14,7 @@ export async function completeChat(
   keys: ClientKeys,
   history: ChatHistory,
   request: typeof fetch,
+  enrich: EnrichChat,
   input: WorkspaceInput
 ) {
   const body = object(input['request'])
@@ -28,7 +29,7 @@ export async function completeChat(
     '/chat/completions',
     chatRequestFor(
       provider,
-      { ...(await new WorkspaceFeatureService(options.paths.atcDir).enrich(body)), stream: false },
+      { ...(await enrich(body)), stream: false },
       await chatAbilities(options.paths.layout, provider, String(body['model']))
     )
   ).catch((error: unknown) => {

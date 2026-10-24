@@ -48,7 +48,7 @@ export function assistantValue(raw: unknown, id: string): AssistantProfile {
     parameters,
   }
 }
-export function skillValue(raw: unknown): AgentSkill {
+export function skillValue(raw: unknown, now = Date.now()): AgentSkill {
   const v = object(raw),
     skillName = name(v['name'])
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(skillName))
@@ -58,7 +58,7 @@ export function skillValue(raw: unknown): AgentSkill {
     description: string(v['description'] ?? '', 'Description', 1000),
     body: string(v['body'] ?? '', 'Instructions'),
     enabled: v['enabled'] !== false,
-    updated_at: Date.now(),
+    updated_at: now,
   }
 }
 export function importSkill(content: string): AgentSkill {

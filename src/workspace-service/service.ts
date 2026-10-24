@@ -55,7 +55,7 @@ export class WorkspaceService {
     )
     this.keys = new ClientKeys(options.paths.atcDir)
     this.history = new ChatHistory(options.paths.atcDir)
-    this.chats = new ChatJobs(options, this.keys, this.history)
+    this.chats = new ChatJobs(options, this.keys, this.history, (body) => this.features.enrich(body))
     this.request = options.fetch ?? fetch
     this.catalog = new WorkspaceCatalog(options.paths, this.request)
     this.engineDownloads = new EngineDownloads(
@@ -264,7 +264,14 @@ export class WorkspaceService {
       case 'history.import':
         return importConversations(this.history, input['conversations'])
       case 'chat.complete':
-        return completeChat(this.options, this.keys, this.history, this.request, input)
+        return completeChat(
+          this.options,
+          this.keys,
+          this.history,
+          this.request,
+          (body) => this.features.enrich(body),
+          input
+        )
     }
     if (operation === 'media.configure')
       input['request'] = { ...object(input['request']), dataFolder: paths.dataFolder }

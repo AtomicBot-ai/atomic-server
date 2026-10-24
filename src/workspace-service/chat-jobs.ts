@@ -1,5 +1,4 @@
 import { chatProvider } from './chat-readiness.js'
-import { WorkspaceFeatureService } from './features.js'
 import { randomUUID } from 'node:crypto'
 import type { WorkspaceInput } from '../contract/index.js'
 import type { ChatHistory, ClientKeys, Conversation } from '../terminal-data/index.js'
@@ -31,13 +30,17 @@ interface Running {
   lastRead: number
 }
 
+export type EnrichChat = (body: Record<string, unknown>) => Promise<Record<string, unknown>>
+
 /** Owned by the server, accessible through the same authenticated operations as the CLI. */
 export class ChatJobs {
   private jobs = new Map<string, Running>()
   constructor(
     private options: WorkspaceServiceOptions,
     private keys: ClientKeys,
-    private history: ChatHistory
+    private history: ChatHistory,
+    /** The server's one feature service: assistant instructions and skills added to the request. */
+    private enrich: EnrichChat
   ) {}
   async start(input: WorkspaceInput) {
     for (const [id, job] of this.jobs)
@@ -56,7 +59,7 @@ export class ChatJobs {
     const body = chatRequestFor(
       provider,
       {
-        ...(await new WorkspaceFeatureService(this.options.paths.atcDir).enrich(request)),
+        ...(await this.enrich(request)),
         stream: true,
         stream_options: { include_usage: true },
         n: 1,

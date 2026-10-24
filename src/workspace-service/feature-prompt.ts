@@ -1,7 +1,7 @@
 import type { WorkspaceFeatures } from '../contract/index.js'
 import { object } from './validation.js'
 /** Build a wire request without mutating the conversation's saved messages or feature choices. */
-export function featurePrompt(state: WorkspaceFeatures, body: Record<string, unknown>) {
+export function featurePrompt(state: WorkspaceFeatures, body: Record<string, unknown>, now = new Date()) {
   const {
     atomic_assistant,
     atomic_skills,
@@ -17,7 +17,7 @@ export function featurePrompt(state: WorkspaceFeatures, body: Record<string, unk
   const hasSystem = messages.some((m) => object(m)['role'] === 'system')
   const instructions =
     selected && (atomic_assistant || !hasSystem)
-      ? selected.instructions.replaceAll('{{current_date}}', new Date().toISOString().slice(0, 10))
+      ? selected.instructions.replaceAll('{{current_date}}', now.toISOString().slice(0, 10))
       : ''
   const skills = state.skills.filter(
     (s) => s.enabled && Array.isArray(atomic_skills) && atomic_skills.includes(s.name)
