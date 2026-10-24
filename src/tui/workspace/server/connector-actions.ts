@@ -1,4 +1,4 @@
-import { MCP_CONNECTORS } from '../../../workspace-view/index.js'
+import { MCP_CONNECTORS, OAUTH_POLL_MS, signInStep } from '../../../workspace-view/index.js'
 import type { ConnectorConfig } from '../../../contract/index.js'
 import {
   connectorDraft,
@@ -57,7 +57,8 @@ async function signIn(ctx: ActionContext, config: ConnectorConfig, clientId = ''
         ctx.get().featureEditor?.value['id'] !== config.id
       )
         return
-      if (status.state === 'complete') {
+      const step = signInStep(status)
+      if (step.next === 'connect') {
         await ctx.controller.runtime.execute('connectors.check', { id: config.id })
         await refresh(ctx)
         ctx.update((s) => ({
@@ -67,14 +68,14 @@ async function signIn(ctx: ActionContext, config: ConnectorConfig, clientId = ''
           focus: 'feature-add',
           message: '',
         }))
-      } else if (status.state === 'error' || status.state === 'cancelled' || status.state === 'idle')
+      } else if (step.next === 'stop')
         ctx.update((s) => ({
           ...s,
-          message: status.error ?? 'Sign-in cancelled.',
+          message: step.error ?? 'Sign-in cancelled.',
           featureEditor: undefined,
           overlay: null,
         }))
-      else setTimeout(() => void poll(), 1000)
+      else setTimeout(() => void poll(), OAUTH_POLL_MS.every)
     } catch (e) {
       ctx.update((s) => ({
         ...s,
@@ -84,7 +85,7 @@ async function signIn(ctx: ActionContext, config: ConnectorConfig, clientId = ''
       }))
     }
   }
-  setTimeout(() => void poll(), 700)
+  setTimeout(() => void poll(), OAUTH_POLL_MS.first)
 }
 export async function connectorAction(id: string, ctx: ActionContext): Promise<boolean> {
   const s = ctx.get(),

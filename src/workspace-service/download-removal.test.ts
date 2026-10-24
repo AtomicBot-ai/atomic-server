@@ -204,3 +204,54 @@ describe('a LiteRT-LM download', () => {
     ).toBe(true)
   })
 })
+
+describe('a managed engine download', () => {
+  function managedStore(job: unknown, others: unknown[] = []) {
+    return {
+      remove: (_id: string, cleanup: (job: unknown) => Promise<void>) => cleanup(job),
+      list: async () => [job, ...others],
+    }
+  }
+  it('discards its partial files but keeps one another download shares', async () => {
+    const f = fixture(),
+      root = join(f.tmp.paths.dataFolder, 'managed')
+    await mkdir(join(root, 'org/repo'), { recursive: true })
+    for (const name of ['own.safetensors', 'shared.json']) await writeFile(join(root, 'org/repo', name), 'x')
+    const plan = (files: string[]) => ({
+      root,
+      repository: 'org/repo',
+      present: false,
+      files: files.map((path) => ({ path })),
+    })
+    const job = { id: 'm1', stage: 'cancelled', plan: plan(['own.safetensors', 'shared.json']) }
+    const other = { id: 'm2', stage: 'downloading', plan: plan(['shared.json']) }
+    await removeDownload(
+      { managed: managedStore(job, [other]) } as never,
+      { paths: f.tmp.paths, link: f.link } as never,
+      { owner: 'managed', id: 'm1' },
+      async () => ({ services: [], errors: [] })
+    )
+    await expect(stat(join(root, 'org/repo/own.safetensors'))).rejects.toThrow()
+    expect(await readFile(join(root, 'org/repo/shared.json'), 'utf8')).toBe('x')
+  })
+  it('deletes a registered checkpoint through the core only when asked for an installed model', async () => {
+    const f = fixture()
+    const job = {
+      id: 'm1',
+      stage: 'ready',
+      plan: { root: f.tmp.paths.dataFolder, repository: 'org/repo', present: true, files: [] },
+    }
+    const run = (installed: boolean) =>
+      removeDownload(
+        { managed: managedStore(job) } as never,
+        { paths: f.tmp.paths, link: f.link } as never,
+        { owner: 'managed', id: 'm1', installed },
+        async () => ({ services: [], errors: [] })
+      )
+    await expect(run(false)).rejects.toThrow('Installed models')
+    await run(true)
+    expect(
+      f.link.calls.some((call) => call.method === 'DELETE' && call.path.startsWith('/managed-models/org'))
+    ).toBe(true)
+  })
+})

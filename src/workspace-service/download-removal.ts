@@ -16,6 +16,48 @@ type Downloads = Omit<ReturnType<typeof modelDownloads>, 'downloader'>
 const completed = () => {
   throw new AtcError('ATC_USAGE', 'This model is installed. Delete it from Installed models.')
 }
+/** A store of downloads that finish as a model the core registers (GGUF setups, managed, Foundry, LiteRT-LM). */
+interface CoreModelStore<J> {
+  remove(id: string, cleanup: (job: J) => Promise<void>): Promise<unknown>
+  list(): Promise<J[]>
+  /** The job's id in `list()`, and the request id its setup record is kept under. */
+  id(job: J): string
+  request(job: J): string
+  /** The core has the model already: it is deleted through the core, never as a partial download. */
+  registered(job: J): Promise<boolean>
+  model(job: J): string
+  /** The folder its files must stay inside, and its files. */
+  root(job: J): string
+  files(job: J): string[]
+}
+const exists = (path: string) =>
+  stat(path).then(
+    () => true,
+    () => false
+  )
+
+async function removeCoreModel<J>(
+  store: CoreModelStore<J>,
+  id: string,
+  options: WorkspaceServiceOptions,
+  installed: boolean
+) {
+  return store.remove(id, async (job) => {
+    if (await store.registered(job)) {
+      if (!installed) completed()
+      await options.link.request('DELETE', `/managed-models/${modelIdPath(store.model(job))}`)
+    } else {
+      const others = (await store.list()).filter((other) => store.id(other) !== id)
+      await discardDownloadFiles(
+        store.root(job),
+        store.files(job),
+        others.flatMap((other) => store.files(other))
+      )
+    }
+    await forgetSetupDownload(options.paths.atcDir, store.request(job))
+  })
+}
+
 /** Removing a transfer is distinct from pausing: wait for file handles, then discard owned bytes. */
 export async function removeDownload(
   downloads: Downloads,
@@ -25,30 +67,86 @@ export async function removeDownload(
 ) {
   const id = String(input['id']),
     owner = String(input['owner']),
-    root = options.paths.dataFolder
+    root = options.paths.dataFolder,
+    installed = input['installed'] === true
   const { setups, artifacts, managed, foundry, litert } = downloads
+  // core-boundary: model.yml — a finished registration (managed store, Foundry, LiteRT-LM) is protected from partial-download removal
+  const registeredIn = (dir: string) => exists(join(dir, 'model.yml'))
   if (owner === 'setup')
-    return setups.remove(id, async (job) => {
-      if (job.stage === 'ready' || (await new ModelRegistry(options.paths.layout).find(job.plan.model_id))) {
-        if (input['installed'] !== true) completed()
-        await options.link.request('DELETE', `/managed-models/${modelIdPath(job.plan.model_id)}`)
-        await forgetSetupDownload(options.paths.atcDir, job.request_id)
-        return
-      }
-      const others = (await setups.list()).filter((other) => other.setup_id !== id)
-      await discardDownloadFiles(
-        root,
-        Object.values(setupFilePaths(options.paths, job.plan)),
-        others.flatMap((other) => Object.values(setupFilePaths(options.paths, other.plan)))
-      )
-      await forgetSetupDownload(options.paths.atcDir, job.request_id)
-    })
+    return removeCoreModel(
+      {
+        remove: (i, c) => setups.remove(i, c),
+        list: () => setups.list(),
+        id: (job) => job.setup_id,
+        request: (job) => job.request_id,
+        registered: async (job) =>
+          job.stage === 'ready' ||
+          Boolean(await new ModelRegistry(options.paths.layout).find(job.plan.model_id)),
+        model: (job) => job.plan.model_id,
+        root: () => root,
+        files: (job) => Object.values(setupFilePaths(options.paths, job.plan)),
+      },
+      id,
+      options,
+      installed
+    )
+  if (owner === 'managed')
+    return removeCoreModel(
+      {
+        remove: (i, c) => managed.remove(i, c),
+        list: () => managed.list(),
+        id: (job) => job.id,
+        request: (job) => job.id,
+        registered: async ({ stage, plan }) =>
+          stage === 'ready' ||
+          plan.present ||
+          (await exists(underRoot(plan.root, plan.repository, 'model.yml'))),
+        model: (job) => job.plan.repository,
+        root: (job) => job.plan.root,
+        files: ({ plan }) => plan.files.map((file) => underRoot(plan.root, plan.repository, file.path)),
+      },
+      id,
+      options,
+      installed
+    )
+  if (owner === 'foundry')
+    return removeCoreModel(
+      {
+        remove: (i, c) => foundry.remove(i, c),
+        list: () => foundry.list(),
+        id: (job) => job.id,
+        request: (job) => job.id,
+        registered: async (job) => job.stage === 'ready' || (await registeredIn(job.plan.dir)),
+        model: (job) => job.plan.variant_id,
+        root: () => root,
+        files: ({ plan }) => plan.files.map((file) => underRoot(plan.dir, file.path)),
+      },
+      id,
+      options,
+      installed
+    )
+  if (owner === 'litert')
+    return removeCoreModel(
+      {
+        remove: (i, c) => litert.models.remove(i, c),
+        list: () => litert.models.list(),
+        id: (job) => job.id,
+        request: (job) => job.id,
+        registered: async (job) => job.stage === 'ready' || (await registeredIn(job.plan.dir)),
+        model: (job) => job.plan.variant_id,
+        root: () => root,
+        files: ({ plan }) => [underRoot(plan.dir, liteRtFileName(plan.file.path))],
+      },
+      id,
+      options,
+      installed
+    )
   if (owner === 'artifacts')
     return artifacts.remove(id, async (job) => {
       const registeredMlx =
         job.plan.engine === 'mlx' &&
         (await new ModelRegistry(options.paths.layout, 'mlx').find(job.plan.model_id))
-      if ((job.stage === 'ready' || registeredMlx) && input['installed'] !== true) completed()
+      if ((job.stage === 'ready' || registeredMlx) && !installed) completed()
       const snapshot = await getSnapshot()
       const kind = ['image', 'video'].includes(job.plan.category) ? 'image-video' : job.plan.category
       if (snapshot.services.some((s) => s.model === job.plan.model_id || (s.kind === kind && s.model === '')))
@@ -70,67 +168,6 @@ export async function removeDownload(
         (await new ModelRegistry(options.paths.layout, 'mlx').find(job.plan.model_id))
       )
         await new ModelRegistry(options.paths.layout, 'mlx').remove(job.plan.model_id)
-    })
-  if (owner === 'managed')
-    return managed.remove(id, async (job) => {
-      const plan = job.plan
-      // core-boundary: model.yml — a finished managed-store registration must be deleted through the core, never as a partial download
-      if (
-        job.stage === 'ready' ||
-        plan.present ||
-        (await stat(underRoot(plan.root, plan.repository, 'model.yml')).catch(() => null))
-      ) {
-        if (input['installed'] !== true) completed()
-        await options.link.request('DELETE', `/managed-models/${modelIdPath(plan.repository)}`)
-        await forgetSetupDownload(options.paths.atcDir, id)
-        return
-      }
-      const others = (await managed.list()).filter((other) => other.id !== id)
-      await discardDownloadFiles(
-        plan.root,
-        plan.files.map((file) => underRoot(plan.root, plan.repository, file.path)),
-        others.flatMap((other) =>
-          other.plan.files.map((file) => underRoot(other.plan.root, other.plan.repository, file.path))
-        )
-      )
-      await forgetSetupDownload(options.paths.atcDir, id)
-    })
-  if (owner === 'foundry')
-    return foundry.remove(id, async (job) => {
-      const plan = job.plan
-      // core-boundary: model.yml — a finished Foundry registration is protected from partial-download removal
-      if (job.stage === 'ready' || (await stat(join(plan.dir, 'model.yml')).catch(() => null))) {
-        if (input['installed'] !== true) completed()
-        await options.link.request('DELETE', `/managed-models/${modelIdPath(plan.variant_id)}`)
-        await forgetSetupDownload(options.paths.atcDir, id)
-        return
-      }
-      const others = (await foundry.list()).filter((other) => other.id !== id)
-      await discardDownloadFiles(
-        root,
-        plan.files.map((file) => underRoot(plan.dir, file.path)),
-        others.flatMap((other) => other.plan.files.map((file) => underRoot(other.plan.dir, file.path)))
-      )
-      await forgetSetupDownload(options.paths.atcDir, id)
-    })
-  if (owner === 'litert')
-    return litert.models.remove(id, async (job) => {
-      const plan = job.plan
-      // core-boundary: model.yml — a finished LiteRT-LM registration is protected from partial-download removal
-      if (job.stage === 'ready' || (await stat(join(plan.dir, 'model.yml')).catch(() => null))) {
-        if (input['installed'] !== true) completed()
-        await options.link.request('DELETE', `/managed-models/${modelIdPath(plan.variant_id)}`)
-        await forgetSetupDownload(options.paths.atcDir, id)
-        return
-      }
-      const others = (await litert.models.list()).filter((other) => other.id !== id)
-      const file = (p: typeof plan) => underRoot(p.dir, liteRtFileName(p.file.path))
-      await discardDownloadFiles(
-        root,
-        [file(plan)],
-        others.map((other) => file(other.plan))
-      )
-      await forgetSetupDownload(options.paths.atcDir, id)
     })
   throw new AtcError('ATC_USAGE', 'This download cannot be removed here.')
 }

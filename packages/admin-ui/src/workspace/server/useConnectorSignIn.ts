@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { OAUTH_POLL_MS, signInStep } from '@view'
 import type { Workspace } from '../useWorkspace'
 export function useConnectorSignIn(w: Workspace, fail: (message: string) => void) {
   const [waiting, setWaiting] = useState<{ id: string; name: string; url: string; error?: string } | null>(
@@ -27,17 +28,18 @@ export function useConnectorSignIn(w: Workspace, fail: (message: string) => void
           id: waiting.id,
         })
         if (stopped) return
-        if (value.state === 'complete') {
+        const step = signInStep(value)
+        if (step.next === 'connect') {
           await execute.current('connectors.check', { id: waiting.id })
           if (!stopped) {
             current.current = ''
             setWaiting(null)
           }
-        } else if (value.state === 'error' || value.state === 'cancelled' || value.state === 'idle') {
+        } else if (step.next === 'stop') {
           current.current = ''
           setWaiting(null)
-          if (value.state === 'error') onError.current(value.error || 'Sign-in failed. Try again.')
-        } else timer = setTimeout(() => void poll(), 1000)
+          if (step.error) onError.current(step.error)
+        } else timer = setTimeout(() => void poll(), OAUTH_POLL_MS.every)
       } catch (error) {
         if (!stopped) {
           current.current = ''
@@ -46,7 +48,7 @@ export function useConnectorSignIn(w: Workspace, fail: (message: string) => void
         }
       }
     }
-    timer = setTimeout(() => void poll(), 700)
+    timer = setTimeout(() => void poll(), OAUTH_POLL_MS.first)
     return () => {
       stopped = true
       clearTimeout(timer)
