@@ -6,6 +6,8 @@ import { mouseReport } from './mouse-report.js'
 import { engineName } from '../../workspace-view/index.js'
 import { useEffect, useRef, useState } from 'react'
 import { Box, useApp, useInput, useWindowSize } from 'ink'
+import type { Key } from 'ink'
+import { inputKeys } from './input-key.js'
 import { introInput } from './intro-art.js'
 import { introCanvas } from './intro-canvas.js'
 import type { WorkspaceProps } from './WorkspaceApp.js'
@@ -58,7 +60,8 @@ export function IntroScreen({
     write('\u001b[?1000h\u001b[?1006h')
     return () => write('\u001b[?1000l\u001b[?1006l')
   }, [write])
-  useInput((input, key) => {
+  // An Esc glued to the next key by Ink is both keys (see `inputKeys`).
+  const handle = (input: string, key: Key) => {
     const mouse = mouseReport(input)
     if (mouse && engine.stage === 'engines') {
       if (mouse.released) return
@@ -122,7 +125,8 @@ export function IntroScreen({
           void (engine.choices.length ? engine.install() : engine.choose())
       }
     }
-  })
+  }
+  useInput((input, key) => inputKeys(input, key).forEach((e) => handle(e.input, e.key)))
   // Show the prompt only after Ink has attached its input listener.
   useEffect(() => setReady(true), [])
   if (!ready) return null

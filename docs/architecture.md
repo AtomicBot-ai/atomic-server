@@ -214,7 +214,9 @@ Not done here: auto-starting the public API and `models.autoLoad` (iteration 2).
   accepted too, for scripts and tests. `atc admin token --rotate` replaces the token.
 - **Gates** (`gates.ts`, before any handler, in the control server's style): peer address must be loopback
   (403), `Host` must be a loopback name — DNS-rebinding defence (421); a mutating request must carry
-  `X-Atc-Admin: 1` and an `Origin` equal to our own `Host` (403) — a cross-site form or fetch has neither.
+  `X-Atc-Admin: 1`, and an `Origin` it sends must equal our own `Host` (403) — a cross-site form or fetch
+  cannot set the header, and a browser always sends `Origin` with it; a script without `Origin` still needs
+  the session or the admin token.
   Bodies are capped at 8 MiB, `POST /api/workspace/execute` at 140 MiB (documents and images travel as
   base64 in the operation's input). The SPA is served with `Content-Security-Policy: default-src 'self'`.
 - **Routes** (`bff.ts`): `GET /api/status`, `POST|DELETE /api/session`, `GET /api/config` (`PATCH` is
