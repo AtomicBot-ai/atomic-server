@@ -105,7 +105,8 @@ when this table is stale or a module's `index.ts` has no comment):
 9. **Lifted admin files keep their provenance header** (`// Lifted from Atomic-Chat/web-app/src/<path> @
    <commit>; adapted: …`) and a line in `packages/admin-ui/LIFTED.md`.
 10. **Every dependency needs a reason.** Runtime deps today: `atomic-chat-core`; `ink` and `react`, for
-    `src/tui/` only. Adding one needs an explicit "ok" from the owner and an ADR.
+    `src/tui/` only; `pdfjs-dist`, `fflate` and `fast-xml-parser`, for `src/document-import/` only
+    (`2026-10-23-shared-workspace-features.md`). Adding one needs an explicit "ok" from the owner and an ADR.
 11. **Do only what was asked.** No drive-by refactors; propose them. **Never commit unless asked.**
 12. **Record non-trivial decisions** as a file in `docs/decisions/` (template `_TEMPLATE.md`) plus one
     line in `INDEX.md`, in the same session.

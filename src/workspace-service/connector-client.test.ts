@@ -173,3 +173,13 @@ it('gives a stdio connector the host basics and its own env, never the server’
   )
   expect(names).toEqual(['CONNECTOR_KEY', 'HOME', 'HTTPS_PROXY', 'NODE_EXTRA_CA_CERTS', 'PATH'])
 })
+it('refuses a disabled connector and a misbehaving server as usage errors, not server failures', async () => {
+  await expect(withConnector({ ...config, enabled: false }, fetch, {}, async () => {})).rejects.toMatchObject(
+    {
+      code: 'ATC_USAGE',
+    }
+  )
+  await expect(withConnector(config, rpc({}, '1999-01-01'), {}, async () => {})).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+  })
+})

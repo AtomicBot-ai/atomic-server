@@ -64,14 +64,17 @@ export async function cloudOperation(
 }
 
 function connectionUrl(value: string) {
+  const invalid = () =>
+    new AtcError('ATC_USAGE', 'Enter a valid HTTP or HTTPS base URL without credentials or a query.')
+  let url: URL
   try {
-    const url = new URL(value.trim())
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash)
-      throw new Error()
-    return url.href.replace(/\/+$/, '')
+    url = new URL(value.trim())
   } catch {
-    throw new AtcError('ATC_USAGE', 'Enter a valid HTTP or HTTPS base URL without credentials or a query.')
+    throw invalid()
   }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash)
+    throw invalid()
+  return url.href.replace(/\/+$/, '')
 }
 
 async function checkConnection(request: typeof fetch, url: string, key: string, models: string[]) {

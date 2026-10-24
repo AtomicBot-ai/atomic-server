@@ -1,5 +1,6 @@
 import type { ConnectorConfig } from '../contract/index.js'
 import { object } from './validation.js'
+import { AtcError } from '../errors/index.js'
 /** Compatibility transport for desktop catalog connectors which still expose HTTP+SSE. */
 export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
   const controller = new AbortController()
@@ -30,7 +31,7 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
   void ready.catch(() => {})
   // Only discovery has a connection deadline. Each later request owns its own timeout.
   const opening = setTimeout(
-    () => controller.abort(new Error('Connector connection timed out.')),
+    () => controller.abort(new AtcError('ATC_USAGE', 'Connector connection timed out.')),
     config.timeout * 1000
   )
   void (async () => {
@@ -40,7 +41,8 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
         headers: { ...config.headers, Accept: 'text/event-stream' },
         signal: controller.signal,
       })
-      if (!response.ok || !response.body) throw new Error(`Connector returned HTTP ${response.status}.`)
+      if (!response.ok || !response.body)
+        throw new AtcError('ATC_USAGE', `Connector returned HTTP ${response.status}.`)
       const reader = response.body.getReader(),
         decoder = new TextDecoder()
       let buffer = '',
@@ -49,10 +51,10 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
       try {
         while (true) {
           const next = await reader.read()
-          if (next.done) throw new Error('Connector event stream closed.')
+          if (next.done) throw new AtcError('ATC_USAGE', 'Connector event stream closed.')
           buffer += decoder.decode(next.value, { stream: true })
           if (buffer.length + data.length > 4 * 1024 * 1024)
-            throw new Error('Connector response exceeds 4 MB.')
+            throw new AtcError('ATC_USAGE', 'Connector response exceeds 4 MB.')
           const lines = buffer.split(/\r?\n/)
           buffer = lines.pop() ?? ''
           for (const line of lines) {
@@ -62,7 +64,7 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
               if (event === 'endpoint') {
                 const url = new URL(data.trim(), config.url)
                 if (url.origin !== new URL(config.url).origin || url.username || url.password || url.hash)
-                  throw new Error('Connector redirected messages to a different origin.')
+                  throw new AtcError('ATC_USAGE', 'Connector redirected messages to a different origin.')
                 endpoint = url.toString()
                 clearTimeout(opening)
                 readyResolve()
@@ -71,11 +73,13 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
                   item = pending.get(Number(message['id']))
                 if (item && !message['method']) {
                   if (message['jsonrpc'] !== '2.0' || (!('result' in message) && !('error' in message)))
-                    throw new Error('Connector returned an invalid response.')
+                    throw new AtcError('ATC_USAGE', 'Connector returned an invalid response.')
                   clearTimeout(item.timer)
                   pending.delete(Number(message['id']))
                   if (message['error'])
-                    item.reject(new Error(String(object(message['error'])['message'] ?? 'Tool failed.')))
+                    item.reject(
+                      new AtcError('ATC_USAGE', String(object(message['error'])['message'] ?? 'Tool failed.'))
+                    )
                   else item.resolve(message['result'])
                 }
               }
@@ -89,7 +93,7 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
         reader.releaseLock()
       }
     } catch (error) {
-      const cause = error instanceof Error ? error : new Error(String(error))
+      const cause = error instanceof Error ? error : new AtcError('ATC_USAGE', String(error))
       readyReject(cause)
       fail(cause)
     } finally {
@@ -106,7 +110,7 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
         : new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
               pending.delete(id)
-              reject(new Error('Connector request timed out.'))
+              reject(new AtcError('ATC_USAGE', 'Connector request timed out.'))
             }, config.timeout * 1000)
             pending.set(id, { resolve, reject, timer })
           })
@@ -125,7 +129,7 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
             }),
           })
           await response.body?.cancel()
-          if (!response.ok) throw new Error(`Connector returned HTTP ${response.status}.`)
+          if (!response.ok) throw new AtcError('ATC_USAGE', `Connector returned HTTP ${response.status}.`)
         } catch (error) {
           const item = pending.get(id)
           if (item) {
@@ -142,7 +146,7 @@ export function connectorSse(config: ConnectorConfig, request: typeof fetch) {
     },
     close() {
       clearTimeout(opening)
-      const error = new Error('Connector connection closed.')
+      const error = new AtcError('ATC_USAGE', 'Connector connection closed.')
       readyReject(error)
       fail(error)
       controller.abort()

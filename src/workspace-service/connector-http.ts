@@ -1,10 +1,12 @@
 import type { ConnectorConfig } from '../contract/index.js'
 import { object } from './validation.js'
+import { AtcError } from '../errors/index.js'
 function result(value: unknown, id: number) {
   const row = object(value)
   if (row['jsonrpc'] !== '2.0' || row['id'] !== id || (!('result' in row) && !('error' in row)))
-    throw new Error('Connector returned an invalid response.')
-  if (row['error']) throw new Error(String(object(row['error'])['message'] ?? 'MCP request failed.'))
+    throw new AtcError('ATC_USAGE', 'Connector returned an invalid response.')
+  if (row['error'])
+    throw new AtcError('ATC_USAGE', String(object(row['error'])['message'] ?? 'MCP request failed.'))
   return row['result']
 }
 export function connectorHttp(config: ConnectorConfig, request: typeof fetch) {
@@ -35,7 +37,8 @@ export function connectorHttp(config: ConnectorConfig, request: typeof fetch) {
       })
       if (!response.ok) {
         await response.body?.cancel()
-        throw new Error(
+        throw new AtcError(
+          'ATC_USAGE',
           response.status === 401
             ? 'Connector requires authentication. Sign in or add its Authorization header.'
             : `Connector returned HTTP ${response.status}.`
@@ -47,7 +50,7 @@ export function connectorHttp(config: ConnectorConfig, request: typeof fetch) {
         return undefined
       }
       const reader = response.body?.getReader()
-      if (!reader) throw new Error('Connector returned an empty response.')
+      if (!reader) throw new AtcError('ATC_USAGE', 'Connector returned an empty response.')
       const decoder = new TextDecoder(),
         streaming = /text\/event-stream/.test(response.headers.get('content-type') ?? '')
       let body = '',
@@ -63,7 +66,7 @@ export function connectorHttp(config: ConnectorConfig, request: typeof fetch) {
           const next = await reader.read()
           body += decoder.decode(next.value, { stream: !next.done })
           if (body.length + event.length > 4 * 1024 * 1024)
-            throw new Error('Connector response exceeds 4 MB.')
+            throw new AtcError('ATC_USAGE', 'Connector response exceeds 4 MB.')
           if (streaming) {
             const lines = body.split(/\r?\n/)
             body = lines.pop() ?? ''
@@ -76,7 +79,7 @@ export function connectorHttp(config: ConnectorConfig, request: typeof fetch) {
               }
             }
           } else if (next.done) return parsed(JSON.parse(body))
-          if (next.done) throw new Error('Connector closed without a response.')
+          if (next.done) throw new AtcError('ATC_USAGE', 'Connector closed without a response.')
         }
       } finally {
         await reader.cancel().catch(() => {})

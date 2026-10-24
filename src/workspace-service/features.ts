@@ -18,6 +18,7 @@ import {
 import { prepareAttachment, type EmbedDocuments } from './embedding-retrieval.js'
 import { withConnector } from './connector-client.js'
 import { NOT_CORE } from './not-core.js'
+import { requireAttachments } from './attachment-processing.js'
 export class WorkspaceFeatureService {
   private path: string
   private oauth: ConnectorOAuth
@@ -98,7 +99,7 @@ export class WorkspaceFeatureService {
     }
     if (operation === 'attachments.parse') {
       const current = await this.read()
-      if (!current.attachments.enabled) throw new Error('Enable document attachments in Settings first.')
+      requireAttachments(current.attachments)
       return {
         name: String(input['name']),
         content: await documentText(

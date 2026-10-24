@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import type { ConnectorConfig } from '../contract/index.js'
 import { object } from './validation.js'
+import { AtcError } from '../errors/index.js'
 /**
  * What a program needs from the server's environment to start at all (finding executables, a home and
  * temporary folder, the locale, Windows' system folders and processor, the XDG folders) and to reach the
@@ -85,7 +86,7 @@ export function connectorStdio(config: ConnectorConfig, env: NodeJS.ProcessEnv) 
     pending.clear()
   }
   const close = () => {
-    fail(new Error('Connector connection closed.'))
+    fail(new AtcError('ATC_USAGE', 'Connector connection closed.'))
     child.stdin.end()
     if (child.exitCode !== null || child.signalCode !== null || terminate) return
     terminate = setTimeout(() => child.kill('SIGTERM'), 300)
@@ -99,13 +100,13 @@ export function connectorStdio(config: ConnectorConfig, env: NodeJS.ProcessEnv) 
     clearTimeout(terminate)
     clearTimeout(kill)
     // Connector stderr can contain credentials; it is never copied into shared UI status.
-    fail(new Error(`Connector exited (${code ?? 'signal'}).`))
+    fail(new AtcError('ATC_USAGE', `Connector exited (${code ?? 'signal'}).`))
   })
   child.stderr.resume()
   child.stdout.on('data', (chunk) => {
     buffer += String(chunk)
     if (buffer.length > 4 * 1024 * 1024) {
-      fail(new Error('Connector response exceeds 4 MB.'))
+      fail(new AtcError('ATC_USAGE', 'Connector response exceeds 4 MB.'))
       close()
       return
     }
@@ -118,16 +119,18 @@ export function connectorStdio(config: ConnectorConfig, env: NodeJS.ProcessEnv) 
           item = pending.get(Number(message['id']))
         if (message['method'] || !item) continue
         if (message['jsonrpc'] !== '2.0' || (!('result' in message) && !('error' in message)))
-          throw new Error('Connector returned an invalid response.')
+          throw new AtcError('ATC_USAGE', 'Connector returned an invalid response.')
         clearTimeout(item.timer)
         pending.delete(Number(message['id']))
         if (message['error'])
-          item.reject(new Error(String(object(message['error'])['message'] ?? 'MCP request failed.')))
+          item.reject(
+            new AtcError('ATC_USAGE', String(object(message['error'])['message'] ?? 'MCP request failed.'))
+          )
         else item.resolve(message['result'])
       } catch (error) {
         fail(
           error instanceof SyntaxError
-            ? new Error('Connector wrote invalid JSON to stdout.')
+            ? new AtcError('ATC_USAGE', 'Connector wrote invalid JSON to stdout.')
             : (error as Error)
         )
         close()
@@ -151,7 +154,7 @@ export function connectorStdio(config: ConnectorConfig, env: NodeJS.ProcessEnv) 
       }
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
-          fail(new Error('Connector request timed out.'))
+          fail(new AtcError('ATC_USAGE', 'Connector request timed out.'))
           close()
         }, config.timeout * 1000)
         pending.set(id, { resolve, reject, timer })

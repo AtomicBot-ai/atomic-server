@@ -2,6 +2,7 @@
 // No canvas, rendering, external worker file, font fetch or native addon is required.
 import 'pdfjs-dist/build/pdf.worker.mjs'
 import { getDocument } from 'pdfjs-dist'
+import { AtcError } from '../errors/index.js'
 export async function pdfText(bytes: Uint8Array): Promise<string> {
   const task = getDocument({
     data: new Uint8Array(bytes),
@@ -18,7 +19,7 @@ export async function pdfText(bytes: Uint8Array): Promise<string> {
   }, 30000)
   try {
     const document = await task.promise
-    if (document.numPages > 1000) throw new Error('Choose a PDF with at most 1,000 pages.')
+    if (document.numPages > 1000) throw new AtcError('ATC_USAGE', 'Choose a PDF with at most 1,000 pages.')
     const pages: string[] = []
     let length = 0
     for (let page = 1; page <= document.numPages; page++) {
@@ -29,16 +30,17 @@ export async function pdfText(bytes: Uint8Array): Promise<string> {
         .join('')
         .trim()
       length += value.length
-      if (length > 16000000) throw new Error('The extracted PDF text is too large.')
+      if (length > 16000000) throw new AtcError('ATC_USAGE', 'The extracted PDF text is too large.')
       pages.push(value)
       source.cleanup()
     }
     const result = pages.join('\n\n').trim()
-    if (!result) throw new Error('This PDF has no selectable text. Run OCR before attaching it.')
+    if (!result)
+      throw new AtcError('ATC_USAGE', 'This PDF has no selectable text. Run OCR before attaching it.')
     return result
   } catch (error) {
     if (error instanceof Error && error.name === 'PasswordException')
-      throw new Error('Unlock this PDF before attaching it.')
+      throw new AtcError('ATC_USAGE', 'Unlock this PDF before attaching it.')
     throw error
   } finally {
     clearTimeout(timer)

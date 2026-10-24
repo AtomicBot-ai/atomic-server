@@ -1,8 +1,13 @@
 import { AtcError } from '../errors/index.js'
 import type { AttachmentSettings } from '../contract/index.js'
+/** Attachments are off until the operator turns them on in Settings. */
+export function requireAttachments(settings: AttachmentSettings): void {
+  if (!settings.enabled) throw new AtcError('ATC_USAGE', 'Enable document attachments in Settings first.')
+}
+
 /** Deterministic lexical retrieval for supported text documents; no document text is executed. */
 export function prepareDocument(settings: AttachmentSettings, name: string, content: string, query: string) {
-  if (!settings.enabled) throw new AtcError('ATC_USAGE', 'Enable document attachments in Settings first.')
+  requireAttachments(settings)
   if (Buffer.byteLength(content) > settings.max_file_size_mb * 1024 * 1024)
     throw new AtcError('ATC_USAGE', `Document exceeds ${settings.max_file_size_mb} MB.`)
   if (content.includes('\0'))

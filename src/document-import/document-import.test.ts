@@ -75,3 +75,17 @@ it('round-trips skill instructions and resources without writing or executing ar
     importSkillPackage(zipSync({ 'a/SKILL.md': strToU8(content), 'b/SKILL.md': strToU8(content) }))
   ).toThrow('exactly one')
 })
+// A document the person chose is their answer to fix, not atc's failure: the admin answers 400 and reports nothing.
+it.each([
+  ['notes.doc', strToU8('legacy'), 10],
+  ['huge.txt', strToU8('x'), 0],
+  ['bad.docx', office('word/document.xml', '<!DOCTYPE x><x/>'), 10],
+  ['empty.pdf', textPdf([]), 10],
+] as const)('refuses %s as a usage error', async (name, bytes, limit) => {
+  await expect(documentText(name, bytes, limit)).rejects.toMatchObject({ code: 'ATC_USAGE' })
+})
+it('refuses an unsafe or oversized archive as a usage error', () => {
+  expect(() => readArchive(zipSync({ '../escape.txt': strToU8('x') }))).toThrow(
+    expect.objectContaining({ code: 'ATC_USAGE' })
+  )
+})

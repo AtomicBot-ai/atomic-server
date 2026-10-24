@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { readDocument, mutateDocument } from '../terminal-data/index.js'
 import { object } from './validation.js'
 import { discoverOAuth } from './connector-oauth-discovery.js'
+import { AtcError } from '../errors/index.js'
 interface Token {
   resource: string
   access_token: string
@@ -57,7 +58,8 @@ export class ConnectorOAuth {
   }
   private async save(id: string, value: Token, version: number) {
     await mutateDocument<Record<string, Token>>(this.path, {}, (all) => {
-      if ((this.versions.get(id) ?? 0) !== version) throw new Error('Connector sign-in was cancelled.')
+      if ((this.versions.get(id) ?? 0) !== version)
+        throw new AtcError('ATC_USAGE', 'Connector sign-in was cancelled.')
       return { ...all, [id]: value }
     })
   }
@@ -84,14 +86,15 @@ export class ConnectorOAuth {
       !value['access_token'] ||
       /[\r\n]/.test(value['access_token'])
     )
-      throw new Error(
+      throw new AtcError(
+        'ATC_USAGE',
         `Sign-in failed: ${String(value['error_description'] ?? value['error'] ?? `HTTP ${response.status}`)}`
       )
     if (value['token_type'] && String(value['token_type']).toLowerCase() !== 'bearer')
-      throw new Error('Connector returned an unsupported token type.')
+      throw new AtcError('ATC_USAGE', 'Connector returned an unsupported token type.')
     const expiry = Number(value['expires_in'] ?? 3600)
     if (!Number.isFinite(expiry) || expiry <= 0)
-      throw new Error('Connector returned an invalid token expiry.')
+      throw new AtcError('ATC_USAGE', 'Connector returned an invalid token expiry.')
     return {
       ...base,
       access_token: value['access_token'],
@@ -104,7 +107,7 @@ export class ConnectorOAuth {
     let token = Object.hasOwn(stored, id) ? stored[id] : undefined
     if (!token || token.resource !== resource) return undefined
     if (token.expires_at < Date.now() + 30000) {
-      if (!token.refresh_token) throw new Error('Connector sign-in expired. Sign in again.')
+      if (!token.refresh_token) throw new AtcError('ATC_USAGE', 'Connector sign-in expired. Sign in again.')
       let refreshing = this.refreshing.get(id)
       if (!refreshing) {
         const version = this.versions.get(id) ?? 0
@@ -126,7 +129,7 @@ export class ConnectorOAuth {
     const metadata = await discoverOAuth(resource, this.request),
       state = randomBytes(32).toString('base64url'),
       verifier = randomBytes(48).toString('base64url')
-    if (this.versions.get(id) !== version) throw new Error('Connector sign-in was cancelled.')
+    if (this.versions.get(id) !== version) throw new AtcError('ATC_USAGE', 'Connector sign-in was cancelled.')
     const server = createServer()
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject)
@@ -135,14 +138,15 @@ export class ConnectorOAuth {
     const address = server.address()
     if (!address || typeof address === 'string') {
       server.close()
-      throw new Error('Could not start the sign-in callback.')
+      throw new AtcError('ATC_USAGE', 'Could not start the sign-in callback.')
     }
     const redirect = `http://127.0.0.1:${address.port}/oauth/callback`
     let clientSecret: string | undefined
     try {
       if (!clientId) {
         if (!metadata.registration_endpoint)
-          throw new Error(
+          throw new AtcError(
+            'ATC_USAGE',
             'This connector needs a registered OAuth client ID. Enter one in the sign-in settings.'
           )
         const registration = await this.request(metadata.registration_endpoint, {
@@ -160,11 +164,12 @@ export class ConnectorOAuth {
         })
         const registered = object(await registration.json())
         if (!registration.ok || typeof registered['client_id'] !== 'string')
-          throw new Error(`Connector registration failed (HTTP ${registration.status}).`)
+          throw new AtcError('ATC_USAGE', `Connector registration failed (HTTP ${registration.status}).`)
         clientId = registered['client_id']
         if (typeof registered['client_secret'] === 'string') clientSecret = registered['client_secret']
       }
-      if (this.versions.get(id) !== version) throw new Error('Connector sign-in was cancelled.')
+      if (this.versions.get(id) !== version)
+        throw new AtcError('ATC_USAGE', 'Connector sign-in was cancelled.')
       const timer = setTimeout(() => {
         const item = this.pending.get(id)
         if (item?.state === 'waiting') {
@@ -196,11 +201,12 @@ export class ConnectorOAuth {
           pending.exchanging = true
           try {
             if (callback.searchParams.get('error'))
-              throw new Error(
+              throw new AtcError(
+                'ATC_USAGE',
                 callback.searchParams.get('error_description') ?? callback.searchParams.get('error')!
               )
             const code = callback.searchParams.get('code')
-            if (!code) throw new Error('Sign-in did not return an authorization code.')
+            if (!code) throw new AtcError('ATC_USAGE', 'Sign-in did not return an authorization code.')
             const token = await this.exchange(
               {
                 resource,

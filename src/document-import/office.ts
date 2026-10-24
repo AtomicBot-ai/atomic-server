@@ -1,5 +1,6 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { readArchive } from './archive.js'
+import { AtcError } from '../errors/index.js'
 const parser = new XMLParser({
   preserveOrder: true,
   ignoreAttributes: false,
@@ -11,8 +12,9 @@ type Xml = Record<string, unknown>[]
 function xml(data: Uint8Array): Xml {
   const source = new TextDecoder('utf-8', { fatal: true }).decode(data)
   if (/<!DOCTYPE|<!ENTITY/i.test(source))
-    throw new Error('External entities and document types are not supported.')
-  if (XMLValidator.validate(source) !== true) throw new Error('The document contains invalid XML.')
+    throw new AtcError('ATC_USAGE', 'External entities and document types are not supported.')
+  if (XMLValidator.validate(source) !== true)
+    throw new AtcError('ATC_USAGE', 'The document contains invalid XML.')
   return parser.parse(source) as Xml
 }
 function nodes(value: unknown, tag: string): Xml {
@@ -49,14 +51,14 @@ export function officeText(data: Uint8Array, extension: string): string {
   const files = readArchive(data)
   if (extension === 'docx') {
     const body = files.get('word/document.xml')
-    if (!body) throw new Error('This is not a valid DOCX document.')
+    if (!body) throw new AtcError('ATC_USAGE', 'This is not a valid DOCX document.')
     return paragraphs(body, 'w:p', 'w:t')
   }
   if (extension === 'pptx') {
     const slides = [...files.keys()]
       .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    if (!slides.length) throw new Error('This presentation contains no slides.')
+    if (!slides.length) throw new AtcError('ATC_USAGE', 'This presentation contains no slides.')
     return slides
       .map((name, i) => `Slide ${i + 1}\n${paragraphs(files.get(name)!, 'a:p', 'a:t')}`)
       .join('\n\n')
@@ -72,7 +74,7 @@ export function officeText(data: Uint8Array, extension: string): string {
   const sheets = [...files.keys()]
     .filter((name) => /^xl\/worksheets\/sheet\d+\.xml$/.test(name))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  if (!sheets.length) throw new Error('This workbook contains no worksheets.')
+  if (!sheets.length) throw new AtcError('ATC_USAGE', 'This workbook contains no worksheets.')
   return sheets
     .map(
       (name, i) =>
