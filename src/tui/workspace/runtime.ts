@@ -35,6 +35,7 @@ export class WorkspaceRuntime {
         paths: this.paths,
         config: this.config,
         fetch: this.request,
+        ...(this.deps.env ? { env: this.deps.env } : {}),
       })
     }
     return this.service

@@ -6,6 +6,8 @@ interface McpOptions {
   version: string
   allowWrites: boolean
   allowSecrets: boolean
+  /** Tools that define or run a program on the server's host (MCP connectors), on top of writes. */
+  allowExec: boolean
 }
 type RpcId = string | number | null
 const failure = (id: RpcId, code: number, message: string) => ({
@@ -19,7 +21,12 @@ export class McpSession {
   private initialized = false
   constructor(private readonly options: McpOptions) {}
   private allowed(op: WorkspaceOperation): boolean {
-    return (!op.mutates || this.options.allowWrites) && (op.effect !== 'secret' || this.options.allowSecrets)
+    const { allowWrites, allowSecrets, allowExec } = this.options
+    return (
+      (!op.mutates || allowWrites) &&
+      (op.effect !== 'secret' || allowSecrets) &&
+      (op.effect !== 'execute' || allowExec)
+    )
   }
   async handle(line: string): Promise<unknown | undefined> {
     let raw: unknown
@@ -48,7 +55,7 @@ export class McpSession {
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'atomic-server', version: this.options.version },
         instructions:
-          'Inspect operations first. Plan downloads before installing. Long jobs return operation IDs; inspect or resume them. Secrets require explicit server permission.',
+          'Inspect operations first. Plan downloads before installing. Long jobs return operation IDs; inspect or resume them. Secrets and connector programs require explicit server permission.',
       })
     }
     if (m['method'] === 'ping') return success(id, {})
@@ -64,7 +71,8 @@ export class McpSession {
             inputSchema: op.inputSchema,
             annotations: {
               readOnlyHint: !op.mutates,
-              destructiveHint: op.effect === 'interrupt' || /\.(remove|revoke)$/.test(op.name),
+              destructiveHint:
+                op.effect === 'interrupt' || op.effect === 'execute' || /\.(remove|revoke)$/.test(op.name),
               openWorldHint: true,
             },
           })),

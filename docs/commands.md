@@ -385,11 +385,13 @@ Global options:
 ```
 Usage: atc mcp [options]
 
-Read-only by default. --allow-writes enables server changes; --allow-secrets additionally permits credential export. The client launches this command as a subprocess. Only JSON-RPC is written to stdout.
+Read-only by default. --allow-writes enables server changes; --allow-secrets additionally permits credential export; --allow-exec additionally permits MCP connectors, which run programs on the server's host. The client launches this command as a subprocess. Only JSON-RPC is written to stdout.
 
 Options:
       --allow-writes   Allow installation, generation and configuration tools
       --allow-secrets  Allow explicitly requested API credentials and agent profiles
+      --allow-exec     Allow saving, connecting and calling MCP connectors (with --allow-writes):
+                       they run programs on the server's host
 
 Global options:
   --json                Print the result as one JSON document (errors go to stderr as JSON)

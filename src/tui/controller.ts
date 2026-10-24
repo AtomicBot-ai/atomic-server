@@ -50,6 +50,8 @@ export interface TuiDeps {
   loginUrl: (adminUrl: string) => Promise<string>
   openUrl: (url: string) => Promise<void>
   now: () => Date
+  /** The terminal's environment: the workspace runs in this process when no server answers. */
+  env?: NodeJS.ProcessEnv
 }
 
 export interface TuiControllerLike {

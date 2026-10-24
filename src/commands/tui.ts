@@ -81,6 +81,7 @@ export const tuiCommand = defineCommand({
       root: ctx.root,
       deps: {
         paths,
+        env: io.env,
         attach: (options) => ctx.core.attach(options),
         loadConfig,
         runDoctor: async () => {

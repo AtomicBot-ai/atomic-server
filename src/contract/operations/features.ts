@@ -5,8 +5,8 @@ export const FEATURE_OPERATIONS = [
   operation(
     'connectors.import',
     'Save connector JSON',
-    'configure',
-    'Validate and atomically replace MCP connectors from mcpServers JSON.',
+    'execute',
+    'Validate and atomically replace MCP connectors from mcpServers JSON; a stdio connector names a program the server runs on connect.',
     value
   ),
   operation(
@@ -93,7 +93,7 @@ export const FEATURE_OPERATIONS = [
   operation(
     'connectors.save',
     'Save connector',
-    'configure',
+    'execute',
     'Save an MCP HTTP or stdio connection. No command runs until connection is requested.',
     value
   ),
@@ -101,14 +101,14 @@ export const FEATURE_OPERATIONS = [
   operation(
     'connectors.check',
     'Connect MCP',
-    'configure',
+    'execute',
     'Initialize an MCP connection and read its tools. For stdio this launches the saved command.',
     id
   ),
   operation(
     'connectors.call',
     'Run MCP tool',
-    'generate',
+    'execute',
     'Run one explicitly selected MCP tool with supplied arguments.',
     {
       properties: { id: { type: 'string' }, tool: { type: 'string' }, arguments: { type: 'object' } },

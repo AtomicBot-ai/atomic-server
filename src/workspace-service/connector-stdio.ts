@@ -1,10 +1,46 @@
 import { spawn } from 'node:child_process'
 import type { ConnectorConfig } from '../contract/index.js'
 import { object } from './validation.js'
-/** The child receives only the environment explicitly supplied to the connector service. */
+/**
+ * What a program needs from the server's environment to start at all (finding executables, a home and
+ * temporary folder, the locale; Windows' system folders), by name in any case. Nothing else of the server's
+ * environment — `HF_TOKEN`, `ATC_API_KEY`, cloud keys — reaches a connector; its own `env` is added on top.
+ */
+const HOST_BASICS = new Set([
+  'PATH',
+  'PATHEXT',
+  'HOME',
+  'USER',
+  'LOGNAME',
+  'SHELL',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'TZ',
+  'TMPDIR',
+  'TEMP',
+  'TMP',
+  'SYSTEMROOT',
+  'SYSTEMDRIVE',
+  'WINDIR',
+  'COMSPEC',
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'PROGRAMDATA',
+  'PROGRAMFILES',
+  'HOMEDRIVE',
+  'HOMEPATH',
+])
+const connectorEnv = (env: NodeJS.ProcessEnv, own: Record<string, string>): NodeJS.ProcessEnv => ({
+  ...Object.fromEntries(Object.entries(env).filter(([name]) => HOST_BASICS.has(name.toUpperCase()))),
+  ...own,
+})
+
+/** A stdio connector: the server's host basics and the connector's own environment, nothing more. */
 export function connectorStdio(config: ConnectorConfig, env: NodeJS.ProcessEnv) {
   const child = spawn(config.command, config.args, {
-    env: { ...env, ...config.env },
+    env: connectorEnv(env, config.env),
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: false,
   })

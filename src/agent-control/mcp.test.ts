@@ -34,11 +34,32 @@ const operations: WorkspaceOperation[] = [
     effect: 'secret',
     inputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false },
   },
+  {
+    name: 'connectors.check',
+    title: 'Connect MCP',
+    description: 'Launches the saved command',
+    group: 'connectors',
+    mutates: true,
+    effect: 'execute',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+      additionalProperties: false,
+    },
+  },
 ]
 const message = (method: string, params = {}) => JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
-function fixture(allowWrites = false, allowSecrets = false) {
+function fixture(allowWrites = false, allowSecrets = false, allowExec = false) {
   const execute = vi.fn(async () => ({ ok: true }))
-  const server = new McpSession({ operations, execute, version: 'test', allowWrites, allowSecrets })
+  const server = new McpSession({
+    operations,
+    execute,
+    version: 'test',
+    allowWrites,
+    allowSecrets,
+    allowExec,
+  })
   return { server, execute }
 }
 describe('MCP lifecycle and authority', () => {
@@ -63,6 +84,35 @@ describe('MCP lifecycle and authority', () => {
         error: { code: -32602 },
       })
     expect(execute).not.toHaveBeenCalled()
+  })
+  it('keeps tools that run programs on the host out of a write session without --allow-exec', async () => {
+    const writes = fixture(true, true)
+    await writes.server.handle(message('initialize'))
+    const listed = (await writes.server.handle(message('tools/list'))) as {
+      result: { tools: { name: string }[] }
+    }
+    expect(listed.result.tools.map((t) => t.name)).not.toContain('connectors_check')
+    expect(
+      await writes.server.handle(message('tools/call', { name: 'connectors_check', arguments: { id: 'c' } }))
+    ).toMatchObject({ error: { code: -32602 } })
+    expect(writes.execute).not.toHaveBeenCalled()
+    const execOnly = fixture(false, false, true)
+    await execOnly.server.handle(message('initialize'))
+    expect(
+      await execOnly.server.handle(
+        message('tools/call', { name: 'connectors_check', arguments: { id: 'c' } })
+      )
+    ).toMatchObject({ error: { code: -32602 } })
+    const exec = fixture(true, false, true)
+    await exec.server.handle(message('initialize'))
+    const tools = (await exec.server.handle(message('tools/list'))) as {
+      result: { tools: { name: string; annotations: { destructiveHint: boolean } }[] }
+    }
+    expect(tools.result.tools.find((t) => t.name === 'connectors_check')?.annotations.destructiveHint).toBe(
+      true
+    )
+    await exec.server.handle(message('tools/call', { name: 'connectors_check', arguments: { id: 'c' } }))
+    expect(exec.execute).toHaveBeenCalledWith('connectors.check', { id: 'c' })
   })
   it('executes typed operations when explicitly enabled', async () => {
     const { server, execute } = fixture(true, true)

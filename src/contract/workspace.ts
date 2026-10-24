@@ -25,7 +25,8 @@ export interface WorkspaceOperation {
   group: string
   description: string
   mutates: boolean
-  effect: 'read' | 'configure' | 'download' | 'load' | 'interrupt' | 'generate' | 'secret'
+  /** `execute`: defines or runs a program on the server's host (an MCP connector); agents need `--allow-exec`. */
+  effect: 'read' | 'configure' | 'download' | 'load' | 'interrupt' | 'generate' | 'secret' | 'execute'
   inputSchema: {
     type: 'object'
     properties: Record<string, WorkspaceField>

@@ -8,7 +8,7 @@ export const mcpCommand = defineCommand({
   summary: 'Serve agent tools over MCP stdio',
   group: 'server',
   description:
-    'Read-only by default. --allow-writes enables server changes; --allow-secrets additionally permits credential export. The client launches this command as a subprocess. Only JSON-RPC is written to stdout.',
+    "Read-only by default. --allow-writes enables server changes; --allow-secrets additionally permits credential export; --allow-exec additionally permits MCP connectors, which run programs on the server's host. The client launches this command as a subprocess. Only JSON-RPC is written to stdout.",
   options: {
     'allow-writes': {
       type: 'boolean',
@@ -17,6 +17,11 @@ export const mcpCommand = defineCommand({
     'allow-secrets': {
       type: 'boolean',
       description: 'Allow explicitly requested API credentials and agent profiles',
+    },
+    'allow-exec': {
+      type: 'boolean',
+      description:
+        "Allow saving, connecting and calling MCP connectors (with --allow-writes): they run programs on the server's host",
     },
   },
   run: async (inv, ctx) => {
@@ -27,6 +32,7 @@ export const mcpCommand = defineCommand({
       version: ATC_VERSION,
       allowWrites: inv.values['allow-writes'] === true,
       allowSecrets: inv.values['allow-secrets'] === true,
+      allowExec: inv.values['allow-exec'] === true,
       execute: (name, input) => (service ??= workspace(ctx)).then((s) => s.execute(name, input)),
     })
     const pending = new Set<Promise<void>>()
