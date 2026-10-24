@@ -6,7 +6,7 @@ import { catalogIndexes } from './catalog-filters.js'
 import { catalogMenuAction } from './catalog-menu.js'
 import { record } from './library-model.js'
 import { bytes } from '../setup/setup-panel.js'
-import { modelImportError } from '../../../workspace-view/index.js'
+import { modelImportError, toggleLike } from '../../../workspace-view/index.js'
 import { oneLine } from '../../controller.js'
 
 /** A GGUF quant's, a Foundry Local variant's or a LiteRT-LM variant's file size. */
@@ -46,9 +46,7 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
   if (id.startsWith('catalog-like:')) {
     const row = s.libraryRows[Number(id.slice(13))]
     if (!row) return true
-    const likes = s.catalogLikes.includes(row.id)
-      ? s.catalogLikes.filter((item) => item !== row.id)
-      : [...s.catalogLikes, row.id]
+    const likes = toggleLike(s.catalogLikes, row.id)
     await ctx.controller.saveCatalogLikes(likes)
     patch({ catalogLikes: likes })
     return true

@@ -1,7 +1,6 @@
 import { expect, it } from 'vitest'
 import {
   installedModels,
-  matchesCatalogModel,
   modelCategory,
   modelFormat,
   modelId,
@@ -37,17 +36,6 @@ it('keeps artifact job identity while reconciling its model metadata with instal
   expect(rows[1]).toMatchObject({ id: 'image-job', model_id: 'flux:q4', category: 'image', size_bytes: 300 })
   expect(modelId(rows[1]!)).toBe('flux:q4')
   expect(modelCategory(rows[0]!)).toBe('text')
-})
-
-it.each([
-  ['flux:q4', 'flux', true],
-  ['flux:fp16', 'flux', true],
-  ['repo/model/q4.gguf', 'repo/model', true],
-  ['repo/model', 'repo/model', true],
-  ['flux-next:q4', 'flux', false],
-  ['repo/model-new', 'repo/model', false],
-])('matches installed %s to catalog family %s: %s', (id, family, expected) => {
-  expect(matchesCatalogModel(id, family)).toBe(expected)
 })
 
 it.each([

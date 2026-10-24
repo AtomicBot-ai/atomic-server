@@ -6,7 +6,15 @@ import { button, text, COLORS } from '../draw/canvas.js'
 import { panel } from '../draw/cards.js'
 import { libraryFormats, catalogAction } from './catalog-actions.js'
 import { computeRowWindow } from '../../row-window.js'
-import { CATALOG_FORMAT_LABELS, engineCatalogFormat, engineName } from '../../../workspace-view/index.js'
+import {
+  CATALOG_FORMAT_LABELS,
+  engineCatalogFormat,
+  engineName,
+  matchesEngineFilter,
+  mentionsUncensored,
+  modelEngines,
+  toggleLike,
+} from '../../../workspace-view/index.js'
 import { catalogValue } from './catalog-table.js'
 import { modelInstalled } from './model-job.js'
 export interface CatalogFilters {
@@ -27,18 +35,11 @@ export function catalogIndexes(s: WorkspaceState): number[] {
   const f = s.catalogFilters
   const indices = s.libraryRows.flatMap((row, i) => {
     const source = row.source ?? {},
-      format = String(source['format'] ?? 'gguf')
-    const engine = String(
-      source['engine'] ??
-        source['provider'] ??
-        (format === 'mlx' ? 'mlx' : /bonsai|prism/i.test(row.id) ? 'atomic-prism' : 'llamacpp-upstream')
-    )
-    if (f.engine && engine !== f.engine && !(f.engine === 'llamacpp' && engine === 'llamacpp-upstream'))
-      return []
-    if (
-      f.uncensored &&
-      !/uncensored|abliterated/i.test(`${row.name} ${row.description} ${JSON.stringify(source)}`)
-    )
+      format = String(source['format'] ?? 'gguf'),
+      own = source['engine'] ?? source['provider']
+    const engines = modelEngines(own ? [String(own)] : [], format, row.id)
+    if (!matchesEngineFilter(f.engine, engines)) return []
+    if (f.uncensored && !mentionsUncensored(`${row.name} ${row.description} ${JSON.stringify(source)}`))
       return []
     if (f.downloaded && !modelInstalled(s, row.id)) return []
     if (f.liked && !s.catalogLikes.includes(row.id)) return []
@@ -92,9 +93,7 @@ export async function catalogFilterAction(id: string, ctx: ActionContext) {
   if (id === 'library-like') {
     const row = s.libraryRows[catalogIndexes(s)[s.selected] ?? -1]
     if (row) {
-      const likes = s.catalogLikes.includes(row.id)
-        ? s.catalogLikes.filter((v) => v !== row.id)
-        : [...s.catalogLikes, row.id]
+      const likes = toggleLike(s.catalogLikes, row.id)
       await ctx.controller.saveCatalogLikes(likes)
       ctx.update((v) => ({ ...v, catalogLikes: likes }))
     }

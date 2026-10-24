@@ -48,15 +48,6 @@ export function modelFormat(model: RecordValue): string {
   return modelCategory(model) === 'text' ? 'gguf' : ''
 }
 
-export function matchesCatalogModel(installedId: string, catalogId: string): boolean {
-  return (
-    Boolean(catalogId) &&
-    (installedId === catalogId ||
-      installedId.startsWith(`${catalogId}/`) ||
-      installedId.startsWith(`${catalogId}:`))
-  )
-}
-
 /** Preserve the job ID for load/delete while making raw artifact metadata available to the catalog. */
 export function installedModels(chat: unknown, artifacts: unknown): RecordValue[] {
   const models = new Map<string, RecordValue>()

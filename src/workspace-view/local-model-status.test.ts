@@ -59,3 +59,14 @@ it('preserves catalog repository, filename and quantized-family matching', () =>
   for (const id of ['other/family', 'owner/family-large', ''])
     expect(catalogModelMatches(id, 'owner/family', jobs)).toBe(false)
 })
+
+it.each([
+  ['flux:q4', 'flux', true],
+  ['flux:fp16', 'flux', true],
+  ['repo/model/q4.gguf', 'repo/model', true],
+  ['repo/model', 'repo/model', true],
+  ['flux-next:q4', 'flux', false],
+  ['repo/model-new', 'repo/model', false],
+])('matches installed %s to catalog family %s: %s', (id, family, expected) => {
+  expect(catalogModelMatches(id, family)).toBe(expected)
+})

@@ -9,7 +9,6 @@ import { CatalogMedia } from './CatalogMedia'
 import { CatalogTable } from './CatalogTable'
 import {
   installedModels,
-  matchesCatalogModel,
   modelCategory,
   modelFormat,
   modelId,
@@ -21,6 +20,7 @@ import { CatalogRuntimeOptions } from './CatalogRuntimeOptions'
 import type { CatalogFormat } from './catalog-data'
 import { CatalogToolbar } from './CatalogToolbar'
 import { initialCatalogFilters } from './catalog-models'
+import { catalogModelMatches, matchesEngineFilter, mentionsUncensored, modelEngines, toggleLike } from '@view'
 import { catalogStatus } from './catalog-status'
 import './catalog-desktop.css'
 export function CatalogBrowse({
@@ -87,30 +87,25 @@ export function CatalogBrowse({
     }
   }, [execute, catalog, revision, workspace?.snapshot])
   const idOf = modelId
-  const isInstalled = (id: string) => installed.some((m) => matchesCatalogModel(idOf(m), id))
+  const isInstalled = (id: string) => installed.some((m) => catalogModelMatches(idOf(m), id))
   const deviceStatus = (model: RecordValue) =>
     catalogStatus(workspace?.snapshot, model, installed, category, filters.engine)
   const available = [
     ...catalog,
     ...installed.filter(
-      (m) => !catalog.some((c) => matchesCatalogModel(idOf(m), idOf(c))) && modelCategory(m) === category
+      (m) => !catalog.some((c) => catalogModelMatches(idOf(m), idOf(c))) && modelCategory(m) === category
     ),
   ]
   const visible = available
     .filter((m) => {
       const id = idOf(m)
-      const providers = modelProviders(m)
-      const engines = providers.length
-        ? providers
-        : [modelFormat(m) === 'mlx' ? 'mlx' : /prism|bonsai/i.test(id) ? 'atomic-prism' : 'llamacpp-upstream']
+      const engines = modelEngines(modelProviders(m), modelFormat(m), id)
       return (
         JSON.stringify(m).toLowerCase().includes(query.toLowerCase()) &&
-        (!filters.engine ||
-          engines.includes(filters.engine) ||
-          (filters.engine === 'llamacpp' && engines.includes('llamacpp-upstream'))) &&
+        matchesEngineFilter(filters.engine, engines) &&
         (!filters.liked || liked.includes(id)) &&
         (!filters.downloaded || isInstalled(id)) &&
-        (!filters.uncensored || /uncensored|abliterated/i.test(JSON.stringify(m))) &&
+        (!filters.uncensored || mentionsUncensored(JSON.stringify(m))) &&
         (category !== 'text' || modelFormat(m) === format)
       )
     })
@@ -133,7 +128,7 @@ export function CatalogBrowse({
         <InstalledModels
           compact
           workspace={workspace}
-          installed={installed.filter((m) => matchesCatalogModel(idOf(m), idOf(model)))}
+          installed={installed.filter((m) => catalogModelMatches(idOf(m), idOf(model)))}
           loading={false}
           browse={() => {}}
           openCommand={importFile}
@@ -199,7 +194,7 @@ export function CatalogBrowse({
           isInstalled={isInstalled}
           deviceStatus={deviceStatus}
           onLike={(id) => {
-            const next = liked.includes(id) ? liked.filter((v) => v !== id) : [...liked, id]
+            const next = toggleLike(liked, id)
             setLiked(next)
             try {
               localStorage.setItem('atomic-server-model-likes', JSON.stringify(next))
