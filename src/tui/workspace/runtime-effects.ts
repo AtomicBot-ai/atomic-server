@@ -1,8 +1,22 @@
+import { applyWorkspaceSnapshot } from './shared-state.js'
+import { advanceWaitingGame } from './waiting-game.js'
 import { useEffect } from 'react'
 import type { RefObject } from 'react'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { WORKSPACE_OPERATIONS } from '../../contract/index.js'
+export function useWaitingGame(
+  s: WorkspaceState,
+  update: (fn: (s: WorkspaceState) => WorkspaceState) => void
+) {
+  const playing =
+    s.overlay === 'waiting-game' && s.waitingGame?.outcome === 'playing' && !s.waitingGame.paused
+  useEffect(() => {
+    if (!playing) return
+    const timer = setInterval(() => update(advanceWaitingGame), 160)
+    return () => clearInterval(timer)
+  }, [playing, update])
+}
 export function useRuntimeData(
   ready: boolean,
   controller: RefObject<WorkspaceController | undefined>,
@@ -18,8 +32,7 @@ export function useRuntimeData(
       pending = true
       try {
         const workspace = await controller.current.runtime.snapshot()
-        if (live)
-          update((s) => ({ ...s, workspace, ...(workspace.setup?.complete ? { setupComplete: true } : {}) }))
+        if (live) update((s) => applyWorkspaceSnapshot(s, workspace, Date.now()))
       } catch {
         if (live) update((s) => (s.workspace ? { ...s, workspace: null } : s))
       } finally {

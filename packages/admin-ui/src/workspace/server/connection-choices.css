@@ -1,0 +1,99 @@
+.connection-choice-grid .intent-card > svg {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+}
+.connection-guide .intent-card {
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+.connection-guide .intent-card:hover,
+.connection-guide .intent-card:focus-visible {
+  transform: translateY(-2px);
+}
+.connection-agent-grid {
+  max-height: min(52vh, 470px);
+  overflow-y: auto;
+  padding: 3px;
+}
+.connection-agent-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.connection-agent-icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+@media (prefers-reduced-motion: reduce) {
+  .connection-guide .intent-card {
+    transition: none;
+    transform: none;
+  }
+}
+.desktop-workspace .connection-guide {
+  background: var(--ew-panel);
+  border: 1px solid var(--ew-line);
+  margin-bottom: 0;
+  border-radius: 14px;
+}
+.desktop-workspace .connection-guide > .panel-heading {
+  align-items: start;
+}
+.desktop-workspace .connection-guide h2 {
+  font-size: 22px;
+  line-height: 1.3;
+}
+.connection-guide > .panel-heading .ew-button {
+  width: 34px;
+  min-height: 34px;
+  padding: 7px;
+  border: 0;
+  display: grid;
+  place-items: center;
+}
+.connection-guide .connection-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.connection-guide .intent-card {
+  position: relative;
+  background: var(--ew-bg);
+  border-color: var(--ew-line);
+  border-radius: 12px;
+  padding: 24px;
+}
+.connection-guide .intent-card:hover {
+  border-color: var(--ew-muted);
+  background: var(--ew-raised);
+}
+.connection-guide .intent-card > span {
+  color: var(--ew-muted);
+  font-size: 13px;
+}
+.connection-guide .intent-card > .connection-choice-arrow {
+  width: 18px;
+  height: 18px;
+  margin: auto 0 0 auto;
+}
+.connection-guide .connection-manual {
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--ew-muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.connection-guide .connection-agent-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+@media (max-width: 560px) {
+  .connection-guide .connection-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}

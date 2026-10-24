@@ -1,281 +1,225 @@
-import { useEffect, useState } from 'react'
-import { SETUP_GOALS } from '@contract'
+// Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 807b4d9; adapted: shared real services and browser permissions.
+import { useEffect, useRef, useState } from 'react'
+import { FIRST_RUN_STEPS, FIRST_RUN_TITLES } from '@contract'
+import { setupFinished, setupModelPending } from '@view'
+import type { FirstRunStep } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
-import { Downloads } from '../library/Downloads'
-import { SetupChoices } from './SetupChoices'
-import { useDialog } from '../useDialog'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
-import { SetupReady } from './SetupReady'
-import { SetupResume } from './SetupResume'
-import { SetupDetails } from './SetupDetails'
-import { useSetupVerify } from './useSetupVerify'
-import { SetupReview } from './SetupReview'
-import { SetupEngineInstall } from './SetupEngineInstall'
-import { engineDialog, setupModels } from './setup-data'
-import { useEngines } from '../useEngines'
-import { Eye } from '../Eye'
-import { describeError } from '@/services/admin-api'
+import { useDialog } from '../useDialog'
+import { ModelInstall } from '../library/ModelInstall'
+import { FloatingDownloads } from '../library/FloatingDownloads'
+import { WorkspaceBrand } from '../WorkspaceBrand'
+import { CloudProviders } from '../library/CloudProviders'
+import { FirstModel } from './FirstModel'
+import { Permissions, PermissionsWarning } from './Permissions'
+import { Destinations } from './Purpose'
+import { OptionalMedia } from './OptionalMedia'
+import { WaitingSetup } from './WaitingSetup'
+import './onboarding.css'
+import './onboarding-model.css'
 
 export function SetupWizard({
   workspace: w,
   onClose,
   onOpenGoal,
+  onDestination,
+  onWelcome,
 }: {
   workspace: Workspace
   onClose: () => void
-  onOpenGoal: (id: string) => void
+  onOpenGoal: (id: string, agent?: string) => void
+  onPrepared?: (id: string) => void
+  onConfigure?: () => void
+  onChat?: () => void
+  onWelcome?: () => void
+  onDestination?: (destination: 'endpoint' | 'agents') => void
 }) {
-  const [step, setStep] = useState(0)
-  const [method, setMethod] = useState('guided')
-  const [engine, setEngine] = useState('')
-  const [engineConfirmed, setEngineConfirmed] = useState(false)
-  const [goal, setGoal] = useState('chat')
-  const selectedGoal = SETUP_GOALS.find((item) => item.id === goal) ?? SETUP_GOALS[0]
-  const category = selectedGoal.category
-  const [models, setModels] = useState<RecordValue[]>([])
-  const [choice, setChoice] = useState('')
-  const [query, setQuery] = useState('')
-  const [revision, setRevision] = useState(0)
+  const [step, setStep] = useState<FirstRunStep>(w.snapshot?.setups.length ? 'permissions' : 'model')
+  const [waitingDestination, setWaitingDestination] = useState<'endpoint' | 'agents' | null>(null)
   const [review, setReview] = useState<RecordValue | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [access, setAccess] = useState('local')
-  const [target, setTarget] = useState('')
-  const [enginesRevision, setEnginesRevision] = useState(0)
-  const installed = useEngines(w.execute, enginesRevision)
-    .engines.filter((e) => e.active)
-    .map((e) => text(e.engine))
-  const dialog = useDialog(onClose)
-  const progress = step === 0 ? (engineConfirmed ? 1 : 0) : step + 1
-  const { execute } = w
+  const [category, setCategory] = useState('image')
+  const [mediaAdded, setMediaAdded] = useState(false)
+  const [cloudConnected, setCloudConnected] = useState(false)
+  const [permissionsGranted, setPermissionsGranted] = useState(false)
+  const [permissionExit, setPermissionExit] = useState<'cloud' | 'chat' | null>(null)
+  const [modelActionContainer, setModelActionContainer] = useState<HTMLDivElement | null>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
-    if (!engineConfirmed || step !== 0) return
-    let active = true
-    setLoading(true)
-    setError('')
-    setModels([])
-    setChoice('')
-    void setupModels(execute, engine, category)
-      .then((result) => {
-        if (active) setModels(result)
-      })
-      .catch((e) => {
-        if (active) setError(describeError(e))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
+    heading.current?.focus()
+  }, [step])
+  const checking = w.pending.includes('cloud.connect')
+  const dialog = useDialog(() => {
+    if (!checking) {
+      if (waitingDestination) {
+        setWaitingDestination(null)
+        return
+      }
+      const previous = FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1]
+      if (previous) setStep(previous)
+      else onWelcome?.()
     }
-  }, [category, execute, revision, engineConfirmed, step, engine])
-  const recoverable = w.snapshot?.setups.map(record).filter((job) => job.id || job.setup_id) ?? []
-  const { verify, verifying, targetJob, attempted } = useSetupVerify({
-    workspace: w,
-    target,
-    engine,
-    access,
-    step,
-    setStep,
-    setError,
   })
-  const manual = async () => {
-    await execute('setup.manual')
+  const skip = async () => {
+    if (!setupFinished(w.snapshot?.setup)) await w.execute('setup.manual')
     onClose()
   }
+  const leavePermissions = (destination: 'cloud' | 'chat') => {
+    if (!permissionsGranted) setPermissionExit(destination)
+    else if (destination === 'cloud') setStep('cloud')
+    else void skip()
+  }
+  const next = () => setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) + 1] ?? 'connect')
+  const finish = async (destination: 'endpoint' | 'agents') => {
+    if (!setupFinished(w.snapshot?.setup)) await w.execute('setup.manual')
+    if (onDestination) onDestination(destination)
+    else onOpenGoal('api')
+  }
   return (
-    <div className="wizard-overlay">
+    <div className="wizard-overlay first-run-overlay">
       <section
         ref={dialog}
         tabIndex={-1}
-        className="wizard"
+        className="wizard first-run"
         role="dialog"
         aria-modal="true"
         aria-label="Set up Atomic Server"
       >
-        <div className="wizard-top">
-          <strong>ATOMIC SERVER</strong>
-          <button className="ew-button" onClick={onClose}>
-            Close
-          </button>
-        </div>
-        <div className="wizard-title">
-          <Eye state={step === 2 ? 'starting' : step === 3 ? 'ready' : 'stopped'} />
-          <div>
-            <h1>
-              {step === 0
-                ? 'Set up your server'
-                : step === 2
-                  ? 'Preparing your model'
-                  : step === 3
-                    ? 'Your model is ready'
-                    : 'Review download'}
+        <header className="workspace-status-header">
+          <WorkspaceBrand />
+          <FloatingDownloads workspace={w} onboarding />
+        </header>
+        <main className={`first-run-content ${step === 'model' ? 'first-run-model' : ''}`}>
+          {
+            <h1 ref={heading} tabIndex={-1}>
+              {waitingDestination
+                ? setupModelPending(w.snapshot)
+                  ? 'Getting your model ready'
+                  : 'Your model is downloaded'
+                : FIRST_RUN_TITLES[step]}
             </h1>
-            <ol className="wizard-steps">
-              {['Engine', 'Model', 'Review', 'Prepare', 'Ready'].map((label, i) => (
-                <li
-                  key={label}
-                  className={i === progress ? 'current' : i < progress ? 'done' : ''}
-                  aria-current={i === progress ? 'step' : undefined}
-                >
-                  {i + 1} {label}
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-        {step === 0 && (
-          <nav className="subnav" aria-label="Setup method">
-            <button
-              className={method === 'guided' ? 'active' : ''}
-              onClick={() => {
-                setMethod('guided')
-                if (goal !== 'chat') {
-                  setGoal('chat')
-                  setEngine('')
-                  setEngineConfirmed(false)
-                  setChoice('')
-                  setQuery('')
-                }
-              }}
-            >
-              Power my agent
-            </button>
-            <button className={method === 'technical' ? 'active' : ''} onClick={() => setMethod('technical')}>
-              Configure with commands
-            </button>
-          </nav>
-        )}
-        {error && (
-          <p className="ew-error" role="alert">
-            {error}
-          </p>
-        )}
-        {step === 0 ? (
-          <>
-            {method === 'technical' && (
-              <SetupDetails workspace={w} engine={engine} expanded onConfigSaved={() => setAccess('saved')} />
-            )}
-            <SetupResume
-              jobs={recoverable}
-              onResume={(job) => {
-                const plan = record(job.plan)
-                const matching = SETUP_GOALS.find((item) => item.category === (plan.category ?? 'text'))
-                if (matching && selectedGoal.category !== matching.category) setGoal(matching.id)
-                setEngine(text(plan.provider ?? plan.engine, ''))
-                attempted.current = ''
-                setTarget(text(job.id ?? job.setup_id, ''))
-                setStep(2)
-              }}
-            />
-            {engineConfirmed && engineDialog(engine) && !installed.includes(engine) ? (
-              <SetupEngineInstall
-                workspace={w}
-                engine={engine}
-                onDone={() => setEnginesRevision((v) => v + 1)}
-              />
-            ) : null}
-            <SetupChoices
+          }
+          {waitingDestination && (
+            <WaitingSetup
               workspace={w}
-              technical={method === 'technical'}
-              engine={engine}
-              setEngine={(id) => {
-                setEngine(id)
-                setEngineConfirmed(false)
-                setChoice('')
-                setQuery('')
-              }}
-              engineConfirmed={engineConfirmed}
-              confirmEngine={() => setEngineConfirmed(true)}
-              backToEngine={() => {
-                setEngineConfirmed(false)
-                setChoice('')
-              }}
-              goal={goal}
-              setGoal={(id) => {
-                setGoal(id)
-                setEngine('')
-                setEngineConfirmed(false)
-                setQuery('')
-                setChoice('')
-              }}
-              models={models}
-              choice={choice}
-              setChoice={setChoice}
-              query={query}
-              setQuery={(value) => {
-                setQuery(value)
-                setChoice('')
-              }}
-              loading={loading}
-              retry={() => setRevision((v) => v + 1)}
-              access={access}
-              setAccess={setAccess}
-              continueSetup={() => {
-                setReview(models.find((model) => model.id === choice) ?? null)
-                setStep(1)
-              }}
-              manual={manual}
+              onBack={() => setWaitingDestination(null)}
+              onContinue={() => finish(waitingDestination)}
             />
-          </>
-        ) : step === 1 ? (
-          <p className="ew-muted">Review the selected model before starting the download.</p>
-        ) : step === 2 ? (
-          <>
-            <Downloads workspace={w} />
-            <p className="setup-guidance">
-              {verifying
-                ? 'Loading your selected model and testing real inference…'
-                : 'Downloads continue when you close this page. Reopen setup to continue this job.'}
-            </p>
-            <div className="wizard-bottom">
-              <Action primary disabled={verifying || targetJob?.stage !== 'ready'} onClick={verify}>
-                Retry verification
-              </Action>
-              <Action
-                disabled={verifying}
-                onClick={() => {
-                  setStep(0)
-                  setTarget('')
-                  setError('')
+          )}
+          {!waitingDestination && step === 'model' && (
+            <FirstModel
+              workspace={w}
+              actionContainer={modelActionContainer}
+              select={async (m, installed) => {
+                if (installed) {
+                  await w.execute('config.update', { values: { 'tui.model': text(m.id ?? m.model_id) } })
+                  next()
+                } else setReview(m)
+              }}
+            />
+          )}
+          {!waitingDestination && step === 'permissions' && <Permissions onGranted={setPermissionsGranted} />}
+          {!waitingDestination && step === 'cloud' && (
+            <>
+              <CloudProviders workspace={w} onboarding onConnected={() => setCloudConnected(true)} />
+            </>
+          )}
+          {!waitingDestination && step === 'media' && (
+            <>
+              <OptionalMedia
+                workspace={w}
+                select={(model, kind) => {
+                  setCategory(kind)
+                  setReview(model)
                 }}
+              />
+            </>
+          )}
+          {!waitingDestination && step === 'connect' && (
+            <Destinations
+              choose={async (destination) => {
+                if (setupModelPending(w.snapshot)) setWaitingDestination(destination)
+                else await finish(destination)
+              }}
+            />
+          )}
+        </main>
+        {!waitingDestination && (
+          <footer className="first-run-footer">
+            {step !== 'model' || onWelcome ? (
+              <Action
+                disabled={checking}
+                onClick={() =>
+                  step === 'model'
+                    ? onWelcome?.()
+                    : setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1])
+                }
               >
-                Choose another model
+                Back
               </Action>
-              <Action disabled={verifying} onClick={manual}>
-                Continue manually
-              </Action>
-            </div>
-          </>
-        ) : (
-          <SetupReady goal={goal} endpoint={w.snapshot?.api.endpoint ?? ''} onOpenGoal={onOpenGoal} />
+            ) : (
+              <span />
+            )}
+            {
+              <div className="first-run-actions" ref={setModelActionContainer}>
+                <span className="first-run-skip">
+                  <Action
+                    disabled={checking}
+                    onClick={() => (step === 'permissions' ? leavePermissions('chat') : skip())}
+                  >
+                    Skip setup
+                  </Action>
+                </span>
+                {['permissions', 'cloud', 'media'].includes(step) && (
+                  <Action
+                    primary
+                    disabled={checking}
+                    onClick={() => (step === 'permissions' ? leavePermissions('cloud') : next())}
+                  >
+                    {(
+                      step === 'permissions'
+                        ? permissionsGranted
+                        : step === 'cloud'
+                          ? cloudConnected
+                          : mediaAdded
+                    )
+                      ? 'Continue'
+                      : 'Skip'}
+                  </Action>
+                )}
+              </div>
+            }
+          </footer>
+        )}
+        {permissionExit && (
+          <PermissionsWarning
+            close={() => setPermissionExit(null)}
+            proceed={async () => {
+              const destination = permissionExit
+              setPermissionExit(null)
+              if (destination === 'cloud') setStep('cloud')
+              else await skip()
+            }}
+          />
         )}
         {review && (
-          <SetupReview
-            workspace={w}
+          <ModelInstall
+            autoStart
             model={review}
-            category={category}
-            engine={engine}
-            technical={method === 'technical'}
-            onClose={() => {
-              setReview(null)
-              setStep((current) => (current === 1 ? 0 : current))
-            }}
-            onStarted={(id) => {
-              attempted.current = ''
-              setTarget(id)
-              setStep(2)
-            }}
-            onEngine={(id) => {
-              // The engine that would take the model: chosen, and its install shown in the wizard.
-              setReview(null)
-              setStep(0)
-              setEngine(id)
-              setChoice('')
-              setQuery('')
-              setEngineConfirmed(true)
+            expectedEngine={step === 'model' ? text(review.onboarding_engine, '') || undefined : undefined}
+            category={step === 'media' ? category : 'text'}
+            execute={w.execute}
+            onClose={() => setReview(null)}
+            onStarted={async (result) => {
+              const job = record(result)
+              if (!text(job.id ?? job.setup_id, ''))
+                throw new Error('The server did not return a download ID. Open Downloads to check its state.')
+              if (step === 'model') {
+                const model = text(record(job.plan).model_id ?? job.model_id ?? review.id, '')
+                await w.execute('config.update', { values: { 'tui.model': model } })
+                next()
+              } else setMediaAdded(true)
             }}
           />
         )}

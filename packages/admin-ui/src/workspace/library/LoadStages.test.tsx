@@ -107,6 +107,7 @@ describe('a managed load in the admin', () => {
         onCatalog={() => {}}
       />
     )
+    await userEvent.click(screen.getByRole('button', { name: 'Choose chat model' }))
     const select = await screen.findByLabelText('Installed model and engine')
     await waitFor(() => expect(select).toHaveTextContent('tensorrt-llm'))
     await userEvent.selectOptions(select, `tensorrt-llm|${MODEL}`)

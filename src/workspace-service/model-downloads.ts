@@ -1,3 +1,4 @@
+import type { EngineDownloads } from './engine-downloads.js'
 import { join } from 'node:path'
 import { Downloader } from '../downloads/index.js'
 import { captureReport, downloadFailureReport } from '../telemetry/index.js'
@@ -13,7 +14,8 @@ import type { WorkspaceServiceOptions } from './service.js'
 export function modelDownloads(
   options: WorkspaceServiceOptions,
   catalog: WorkspaceCatalog,
-  request: typeof fetch
+  request: typeof fetch,
+  engines?: EngineDownloads
 ) {
   const downloader = new Downloader({
     dataFolder: options.paths.dataFolder,
@@ -24,7 +26,7 @@ export function modelDownloads(
   })
   return {
     downloader,
-    artifacts: new ArtifactService(options, catalog, request, downloader),
+    artifacts: new ArtifactService(options, catalog, request, downloader, engines?.ensure.bind(engines)),
     managed: new ManagedModelSetups({
       link: options.link,
       fetch: request,
@@ -48,6 +50,12 @@ export function modelDownloads(
       proxy: downloadProxy(options.config),
     }),
     setups: new ModelSetups({
+      ...(engines
+        ? {
+            installEngine: (engine, taskId) =>
+              engines.ensure('atomic-prism', taskId, { version: engine.version, variant: engine.backend }),
+          }
+        : {}),
       link: options.link,
       paths: options.paths,
       downloader,

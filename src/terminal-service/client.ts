@@ -9,7 +9,9 @@ export function messageText(content: ChatContent): string {
     : content.map((p) => (p.type === 'text' ? p.text : '[Image]')).join('\n')
 }
 export interface ChatMessage {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system' | 'tool'
+  tool_call_id?: string
+  tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[]
   content: ChatContent
 }
 export function endpointUrl(value: string): string {
@@ -17,6 +19,19 @@ export function endpointUrl(value: string): string {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash)
     throw new Error('Use an HTTP endpoint without credentials, a query, or a fragment.')
   return url.toString().replace(/\/$/, '')
+}
+/** Loopback aliases share a listener, but a different port or API path is a different server. */
+export function sameEndpoint(first: string, second: string): boolean {
+  try {
+    const normalize = (value: string) => {
+      const url = new URL(endpointUrl(value))
+      if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) url.hostname = '127.0.0.1'
+      return url.toString().replace(/\/$/, '')
+    }
+    return normalize(first) === normalize(second)
+  } catch {
+    return false
+  }
 }
 export async function listChatModels(
   endpoint: string,

@@ -1,3 +1,4 @@
+import { cloudChatServices } from './chat-readiness.js'
 import type { CoreLink } from '../core-link/index.js'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
 import type { WorkspaceEngine, WorkspaceSnapshot, WorkspaceServiceRow } from '../contract/index.js'
@@ -73,11 +74,16 @@ export async function workspaceSnapshot(
       id: String(safe['id'] ?? `${safe['provider']}:${safe['model_id']}`),
       provider: String(safe['provider'] ?? ''),
       model: String(safe['model_id'] ?? ''),
-      kind: 'chat',
+      kind: safe['is_embedding'] === true ? 'embedding' : 'chat',
       state: String(safe['state'] ?? 'ready'),
       details: safe,
     }
   })
+  try {
+    services.push(...(await cloudChatServices(link)))
+  } catch (error) {
+    errors.push({ source: 'cloud', message: error instanceof Error ? error.message : String(error) })
+  }
   results.forEach((result, i) => {
     const kind = (['image-video', 'embedding', 'decision'] as const)[i]!
     if (result.status === 'rejected') {

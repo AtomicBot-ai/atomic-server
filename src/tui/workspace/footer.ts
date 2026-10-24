@@ -1,38 +1,58 @@
 import { text, textWidth, COLORS } from './draw/canvas.js'
 import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
-/** One clickable target per footer command, using the same action as its shortcut. */
+import { escapeAction } from './escape-action.js'
+/** Contextual commands have one location and share their keyboard action. */
 export function drawFooter(c: Canvas, s: WorkspaceState, focus: string) {
+  const back = escapeAction(s)
+  const duplicate = c.targets.filter((t) => t.id === back.id && t.height === 1)
+  for (const t of duplicate) {
+    const surface = c.cells[t.y]?.[Math.max(0, t.x - 1)]?.background ?? COLORS.ground
+    text(c, t.x, t.y, ' '.repeat(t.width), COLORS.text, t.width, surface)
+  }
+  c.targets = c.targets.filter((t) => !duplicate.includes(t))
+  const browsing =
+    /^(?:server-agent:|sidebar-agent:|server-choice:|setting:|config-choice:|media-model:|media-queue:|media-select:|guide-select:|connection-option:)/.test(
+      focus
+    )
   const rows =
-    s.page === 'welcome'
+    s.finalSetup && !s.overlay
       ? [
-          ['hosting', '1 Set up'],
-          ['setup-manual', '2 Manual'],
-          ['agent-setup', '3 Agent'],
-          ['quit', 'Ctrl+Q Quit'],
+          ['', '↑↓←→ Move'],
+          ['', 'Enter Open'],
+          ['', 'F Flag'],
+          ['wait-back', 'Esc Back'],
+          ['quit', '^Q Quit'],
         ]
-      : s.page === 'setup'
+      : s.overlay === 'waiting-game'
         ? [
-            ['setup-manual', 'Skip setup'],
-            ['agent-setup', 'Agent setup'],
-            ['help', 'Ctrl+K Help'],
-            ['quit', 'Ctrl+Q Quit'],
+            ['', c.width < 76 ? '< > Move' : '< > / A D Move'],
+            ['', 'Space Fire'],
+            ['waiting-game-toggle', s.waitingGame?.paused ? 'P Play' : 'P Pause'],
+            ['waiting-game-reset', 'R Reset'],
+            ['waiting-game-close', 'Esc Back'],
           ]
         : [
-            ['help', 'Ctrl+K Help'],
-            ['console', 'F4 Console'],
-            ['menu', 'Ctrl+G Menu'],
-            ['mouse', 'Ctrl+X Mouse'],
-            ['quit', 'Ctrl+Q Quit'],
+            ['', browsing ? '↑↓ Browse' : 'Tab Move'],
+            ['', c.width < 76 ? 'Enter' : 'Enter Select'],
+            ...(back.id ? [[back.id, `Esc ${back.label}`]] : []),
+            ...(c.width >= 76 ? [['help', 'Ctrl+K Help']] : []),
+            ['quit', c.width < 76 ? '^Q Quit' : 'Ctrl+Q Quit'],
           ]
-  let x = 2
+  let x = Math.max(1, Math.floor((c.width - rows.reduce((n, r) => n + textWidth(r[1]!) + 3, -3)) / 2))
   for (const [id, label] of rows) {
     const width = textWidth(label!)
-    if (x + width > c.width - 2) break
-    text(c, x, c.height - 1, label!, focus === id ? COLORS.gold : COLORS.stone, width)
-    c.targets.push({ id: id!, x, y: c.height - 1, width, height: 1, hint: label! })
-    x += width
-    if (x + 3 < c.width - 2) text(c, x, c.height - 1, ' | ', COLORS.stone, 3)
-    x += 3
+    if (x + width > c.width) break
+    text(
+      c,
+      x,
+      c.height - 1,
+      label!,
+      focus === id && id ? COLORS.gold : COLORS.muted,
+      width,
+      focus === id && id ? COLORS.focus : undefined
+    )
+    if (id) c.targets.push({ id, x, y: c.height - 1, width, height: 1, hint: label! })
+    x += width + 3
   }
 }

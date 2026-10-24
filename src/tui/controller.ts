@@ -224,7 +224,10 @@ export class TuiController implements TuiControllerLike {
     const link = this.link
     if (!link) return
     try {
-      await this.onDaemon({ kind: 'up', link, snapshot: await link.snapshot() })
+      await Promise.all([
+        this.onDaemon({ kind: 'up', link, snapshot: await link.snapshot() }),
+        this.reloadConfig(),
+      ])
     } catch {
       // The watcher notices a dead link on its own heartbeat.
     }

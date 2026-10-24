@@ -217,7 +217,7 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
       }
       if (path === ADMIN_API.workspaceExecute && method === 'POST') {
         if (!deps.workspace) throw notImplemented('Workspace operations', 'a workspace-enabled server')
-        const body = (await readJson(req, 64 * 1024 * 1024)) as { operation?: unknown; input?: unknown }
+        const body = (await readJson(req, 140 * 1024 * 1024)) as { operation?: unknown; input?: unknown }
         if (typeof body?.operation !== 'string') throw new AtcError('ATC_USAGE', 'Choose an operation.')
         send(
           res,

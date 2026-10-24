@@ -1,8 +1,8 @@
 /** Draws guided setup's steps for a managed engine or Foundry Local: models, review, download. */
 
-import type { FoundryModelPlan, ManagedModelPlan, ManagedVerdict } from '../../../contract/index.js'
+import type { FoundryModelPlan, ManagedModelPlan } from '../../../contract/index.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
-import { formatSize, foundryVerdictText, variantLabel, verdictLine } from '../../../workspace-view/index.js'
+import { formatSize, foundryVerdictText, variantLabel } from '../../../workspace-view/index.js'
 import { computeRowWindow } from '../../row-window.js'
 import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
@@ -19,16 +19,6 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
     a.y + 3,
     v.query ? `Results for “${v.query}”` : `Models for ${path.engine}`,
     COLORS.gold,
-    a.width
-  )
-  text(
-    c,
-    a.x,
-    a.y + 4,
-    path.kind === 'managed'
-      ? 'Checkpoints the engine’s release was measured with; Search looks further on Hugging Face.'
-      : 'Atomic Chat’s list, then Microsoft’s catalog; the variant for this machine is chosen for you.',
-    COLORS.muted,
     a.width
   )
   const win = computeRowWindow(path.rows.length, s.selected, Math.max(1, a.bottom - a.y - 8))
@@ -52,7 +42,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
   button(c, 'setup-query', a.x + 13, a.bottom, 'Search', 'Search more models.', a.focus)
 }
 
-function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan, verdicts?: ManagedVerdict[]): string[] {
+function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan): string[] {
   if ('variant_id' in plan)
     return [
       `${plan.name}: ${plan.variant_id} (${variantLabel(plan)})`,
@@ -60,11 +50,7 @@ function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan, verdicts?: Manag
       `${plan.pending.length} of ${plan.files.length} files, ${formatSize(plan.download_bytes)}`,
       ...(plan.unverified ? ['A Microsoft catalog model: unverified by Atomic Chat.'] : []),
     ]
-  return [
-    `${plan.repository} @ ${plan.revision.slice(0, 12)}`,
-    ...(verdicts?.length ? verdicts : [plan.verdict]).map(verdictLine),
-    `${plan.pending.length} of ${plan.files.length} files, ${formatSize(plan.download_bytes)}, into ${plan.root}`,
-  ]
+  return [plan.repository, `Download: ${formatSize(plan.download_bytes)}`]
 }
 
 /** A Foundry variant that runs once Foundry Local is ready: the step its panel takes. */
@@ -76,8 +62,8 @@ const FOUNDRY_STEP: Record<string, string> = {
 export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   const plan = v.path?.plan
   if (!plan) return
-  text(c, a.x, a.y + 3, 'Review before downloading', COLORS.gold, a.width)
-  const lines = [...planLinesOf(plan, v.path?.verdicts), ...plan.blockers].flatMap((l) => wrap(l, a.width))
+  text(c, a.x, a.y + 3, 'Download', COLORS.gold, a.width)
+  const lines = [...planLinesOf(plan), ...plan.blockers].flatMap((l) => wrap(l, a.width))
   lines
     .slice(0, Math.max(1, a.bottom - a.y - 6))
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))
@@ -94,15 +80,7 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
 export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: Area) {
   const job = v.path?.job
   const state = pathJob(v, s.workspace)
-  text(c, a.x, a.y + 3, 'DOWNLOADING YOUR MODEL.', COLORS.gold, a.width)
-  text(
-    c,
-    a.x,
-    a.y + 4,
-    'It runs in the server: close this terminal and come back later if you like.',
-    COLORS.muted,
-    a.width
-  )
+  text(c, a.x, a.y + 3, 'Downloading', COLORS.gold, a.width)
   text(c, a.x, a.y + 6, `${job?.model ?? ''} for ${job?.engine ?? ''}`, COLORS.text, a.width)
   const total = state?.total ?? 0,
     done = state?.done ?? 0

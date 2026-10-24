@@ -1,7 +1,22 @@
+import { drawChatFeatures } from './chat/features.js'
+import { drawFeatureOverlay } from './server/feature-panel.js'
+import { drawHelp } from './support.js'
+import { SETTING_LABELS } from '../../contract/index.js'
+import { drawApiConfirmation } from './server/api-confirmation.js'
+import { drawMediaOverlay } from './media/media-overlay.js'
+import { drawPermissionDialog } from './setup/access-purpose.js'
+import { drawWaitingGame } from './waiting-game.js'
+import { drawCatalogMenu } from './library/catalog-menu.js'
+import { drawCatalogFilters } from './library/catalog-filters.js'
+import { drawDownloadDetail } from './library/download-detail.js'
+import { drawCloud } from './library/cloud-view.js'
+import { drawConnectionGuide } from './server/connection-guide-view.js'
+import { drawConnectionPicker } from './server/connection-picker.js'
 import { drawInstallReview } from './library/library-panel.js'
 import { drawEnginePanel } from './library/engine-panel.js'
 import { drawGoalSetup } from './setup/goal-setup.js'
 import { drawOperationOverlay } from './operations/operation-panel.js'
+import { sectionMenu } from './navigation.js'
 import { AGENTS } from '../../agent-launch/index.js'
 import { button, COLORS, text, wrap } from './draw/canvas.js'
 import type { Canvas } from './draw/canvas.js'
@@ -11,16 +26,35 @@ import { helpLines } from '../command-list.js'
 import { example } from './actions.js'
 import { tooltip } from './draw/tooltip.js'
 const ms = (v: number | null) => (v === null ? 'Not available' : `${Math.round(v)} ms`)
-export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
+export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds = 0): void {
+  c.popover = { x: 3, y: 3, width: c.width - 6, height: c.height - 6 }
+  if (drawChatFeatures(c, s, focus)) return
+  if (drawFeatureOverlay(c, s, focus)) return
+  if (s.overlay === 'help') return drawHelp(c, focus)
+  if (s.overlay === 'stop') return drawApiConfirmation(c, s, focus)
+  if (drawMediaOverlay(c, s, focus)) return
+  if (s.overlay === 'setup-permission') return drawPermissionDialog(c, s, focus)
+  if (s.overlay === 'waiting-game') return drawWaitingGame(c, s)
+  if (s.overlay === 'connection-model' || s.overlay === 'connection-engine') {
+    drawConnectionGuide(c, s, focus, seconds)
+    return drawConnectionPicker(c, s, focus)
+  }
+  if (s.overlay === 'catalog-menu') return drawCatalogMenu(c, s, focus)
+  if (s.overlay === 'catalog-filters') return drawCatalogFilters(c, s, focus)
+  if (s.overlay === 'download-detail' || s.overlay === 'download-remove')
+    return drawDownloadDetail(c, s, focus)
+  if (s.overlay === 'cloud') {
+    drawCloud(c, s, focus, seconds)
+    return
+  }
+  if (s.overlay === 'connection-guide') {
+    drawConnectionGuide(c, s, focus, seconds)
+    return
+  }
   if (s.overlay === 'setup-goal') {
     drawGoalSetup(c, focus)
     return
   }
-  for (const row of c.cells)
-    for (const cell of row) {
-      cell.background = COLORS.ground
-      cell.color = COLORS.stone
-    }
   if (s.overlay === 'install-review') {
     drawInstallReview(c, s, focus)
     return
@@ -30,29 +64,53 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     return
   }
   if (drawOperationOverlay(c, s, focus)) return
-  const x = 3,
-    y = 3,
-    w = c.width - 6,
-    h = c.height - 6
+  const cloudEdit = s.overlay === 'endpoint' && s.edit.startsWith('cloud-')
+  const w = cloudEdit ? Math.min(64, c.width - 8) : c.width - 6,
+    h = cloudEdit ? 13 : c.height - 6,
+    x = cloudEdit ? Math.floor((c.width - w) / 2) : 3,
+    y = cloudEdit ? Math.floor((c.height - h) / 2) : 3
   for (let r = y; r < y + h; r++) text(c, x, r, ' '.repeat(w), COLORS.text, w, COLORS.header)
+  c.popover = { x, y, width: w, height: h }
   c.targets = []
   const put = (row: number, v: string, color: string = COLORS.text) =>
     text(c, x + 2, y + row, v, color, w - 4, COLORS.header)
   const b = (id: string, row: number, label: string, hint: string) =>
     button(c, id, x + 2, y + row, label, hint, focus)
+  if (s.overlay === 'sections') {
+    const menu = sectionMenu(s)
+    put(1, menu.title, COLORS.gold)
+    const columns = c.height < 24 && menu.items.length > h - 6 ? 2 : 1
+    const rows = Math.ceil(menu.items.length / columns)
+    menu.items.forEach((item, i) =>
+      button(
+        c,
+        `${menu.prefix}:${item.id}`,
+        x + 2 + Math.floor(i / rows) * Math.floor((w - 4) / columns),
+        y + 3 + (i % rows),
+        item.label,
+        `Open ${item.label}`,
+        focus
+      )
+    )
+    b('close', h - 2, 'Close', 'Return to the current section')
+    return
+  }
   if (s.overlay === 'images') {
-    put(2, 'Attached images', COLORS.gold)
+    put(2, 'Attachments', COLORS.gold)
     s.images.forEach((image, i) =>
       b(`image-remove:${i}`, 4 + i, `${image.name}  ×`, 'Remove image from this message')
     )
-    b('image-add', h - 3, '+ Image', 'Attach another image | Up to four, 8 MB each')
+    s.documents?.forEach((doc, i) =>
+      b(`document-remove:${i}`, 4 + s.images.length + i, `${doc.name} ×`, 'Remove document')
+    )
+    b('document-add', h - 5, '+ Document', 'Attach a local text document')
+    b('image-add', h - 3, '+ Image', 'Attach an image | Up to five files total; 8 MB per image')
     button(c, 'close', x + 16, y + h - 3, 'Done', 'Return to composer', focus)
     return
   } else if (s.overlay === 'workspace') {
-    put(2, 'Starting workspace', COLORS.gold)
-    put(4, 'Choose where Atomic Chat opens next time.', COLORS.muted)
-    b('personal', 6, 'Personal terminal', 'Open directly into chat.')
-    b('hosting', 8, 'Server console', 'Open directly into API controls.')
+    put(2, 'Atomic Server', COLORS.gold)
+    put(4, 'Manage the server, then connect your apps and agents.', COLORS.muted)
+    b('hosting', 6, 'Open Server', 'Open API controls and connections.')
   } else if (s.overlay === 'credential') {
     put(2, 'Your API key', COLORS.gold)
     wrap(s.secret || 'Key hidden.', w - 4).forEach((line, i) => put(5 + i, line))
@@ -79,14 +137,14 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
     return
   } else if (s.overlay === 'remove-model') {
     const model = s.installed.find((m) => m.id === s.libraryRemove)
-    put(2, `Remove ${s.libraryRemove}?`, COLORS.gold)
+    put(2, `Delete ${s.libraryRemove}?`, COLORS.gold)
     wrap(
       model?.store === 'managed'
         ? `It is in the managed engines' shared store: removing it removes it for every managed engine (${(model.providers ?? []).join(', ')}), loaded or not.`
-        : 'Its files are deleted from this server; a loaded model is unloaded first.',
+        : 'Its files will be deleted. Unload the model before deleting it.',
       w - 4
     ).forEach((line, i) => put(4 + i, line))
-    b('remove-model-confirm', h - 3, 'Remove model', 'Delete it now.')
+    b('remove-model-confirm', h - 3, 'Delete model', 'Delete it now.')
     button(c, 'close', x + 20, y + h - 3, 'Keep it', 'Cancel without making changes.', focus)
     return
   } else if (s.overlay === 'menu' && !s.setupComplete) {
@@ -96,21 +154,21 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
   } else if (s.overlay === 'menu') {
     put(2, 'Go to', COLORS.gold)
     PAGES.forEach((p, i) => b(`page:${p.id}`, 4 + i, `${p.name}  [${p.key}]`, p.hint))
-    b('page:history', 9, 'History  [Ctrl+P]', 'Search and resume saved conversations.')
-    b('new', 10, 'New chat  [Ctrl+N]', 'Start another conversation.')
+    b('library:downloads', 9, 'Downloads', 'Review background downloads and resume interrupted jobs.')
+    b('choose-goal', 10, 'Set up a service', 'Prepare an engine and model for your clients.')
   } else if (s.overlay === 'agent') {
     put(2, `Use with ${AGENTS.find((a) => a.id === s.agent)?.name}`, COLORS.gold)
-    put(4, 'Atomic Chat will provide the model for this session.', COLORS.muted)
+    put(4, 'Atomic Server provides the model for this session.', COLORS.muted)
     b('agent-model', 6, `Model: ${s.agentModel}`, 'Choose the next available model.')
     put(8, 'Launch switches this terminal to the agent. Exit it to return.', COLORS.muted)
     put(
       10,
       s.agent === 'atomic-agent'
-        ? 'Uses a separate Atomic Chat profile for Atomic Agent.'
+        ? 'Uses a separate server profile for Atomic Agent.'
         : 'Your existing provider settings are preserved.',
       COLORS.muted
     )
-    b('launch-agent', h - 3, 'Launch and switch', 'Open the agent with Atomic Chat as its model provider.')
+    b('launch-agent', h - 3, 'Launch and switch', 'Open the agent with Atomic Server as its model provider.')
     button(c, 'close', x + 25, y + h - 3, 'Cancel', 'Return to Server.', focus)
     return
   } else if (s.overlay === 'command') {
@@ -121,28 +179,21 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
         .slice(s.scroll, s.scroll + h - 7)
         .forEach((line, i) => put(4 + i, line))
     }
-  } else if (s.overlay === 'help') {
-    put(2, 'Keyboard shortcuts', COLORS.gold)
-    ;[
-      'Tab / Shift+Tab | Next / previous control',
-      'Enter | Open or activate',
-      'Esc | Close dialog or open menu',
-      'Alt+1/2/3 | Playground / Server / Engines & Models',
-      'Ctrl+K Help | F4 Server console',
-      'Ctrl+N / Ctrl+P | New chat / history',
-      'Ctrl+X | Mouse / text selection',
-      'Ctrl+C | Stop a response',
-      'Ctrl+Q | Close terminal; server stays running',
-      'Shift+Enter / Alt+Enter | New line in composer',
-      'PageUp / PageDown | Scroll current view',
-    ]
-      .slice(0, h - 6)
-      .forEach((r, i) => tooltip(c, x + 2, y + i + 4, r, w - 4, COLORS.header))
   } else if (s.overlay === 'endpoint') {
     const titles: Record<string, string> = {
+      'guide-port': 'Server port',
+      'cloud-provider': 'Provider name',
+      'cloud-url': 'Base URL',
+      'cloud-key': 'API key',
+      'cloud-models': 'Model IDs (comma-separated)',
       'setup-query': 'Find a model',
       'library-query': 'Search model catalog',
+      'library-import': 'Import a local GGUF file',
       'image-path': 'Attach image',
+      'document-path': 'Attach document',
+      'media-save': 'Save result to server path',
+      'media-source:request.initImage': 'Source image path',
+      'media-source:request.maskImage': 'Mask image path',
       'history-search': 'Search your conversations',
       'key-name': 'Name this API key',
       'rename-chat': 'Rename conversation',
@@ -155,7 +206,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
             ? 'Request JSON'
             : s.edit.slice(16).replace(/^request\./, '')
           : s.edit.startsWith('setting:')
-            ? 'Edit setting'
+            ? (SETTING_LABELS[s.edit.slice(8)] ?? 'Edit setting')
             : 'Connect a model endpoint'),
       COLORS.gold
     )
@@ -163,33 +214,44 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string): void {
       4,
       s.edit.startsWith('operation-')
         ? 'Enter a value. Leave empty to use the server default.'
-        : titles[s.edit]
-          ? s.edit === 'key-name'
-            ? 'For example: Atomic Agent, work laptop, or test app'
-            : 'Type a name or search term'
-          : s.edit.startsWith('setting:')
-            ? s.edit.slice(8)
-            : 'OpenAI-compatible base URL, including /v1',
+        : s.edit === 'cloud-key'
+          ? 'Paste your provider API key'
+          : s.edit === 'library-import'
+            ? 'Path to a GGUF file'
+            : s.edit === 'document-path' || s.edit === 'image-path'
+              ? 'Enter a local file path.'
+              : s.edit.startsWith('media-')
+                ? 'Enter a file path on the server.'
+                : titles[s.edit]
+                  ? s.edit === 'key-name'
+                    ? 'For example: Atomic Agent, work laptop, or test app'
+                    : 'Type a name or search term'
+                  : s.edit.startsWith('setting:')
+                    ? (s.base.config.rows.find((r) => r.path === s.edit.slice(8))?.description ?? '')
+                    : 'OpenAI-compatible base URL, including /v1',
       COLORS.muted
     )
-    put(6, (s.editValue + '_').slice(-(w - 4)), COLORS.text)
-    tooltip(c, x + 2, y + 8, 'Enter Confirm | Esc Cancel | Ctrl+U Clear', w - 4, COLORS.header)
+    put(
+      6,
+      (
+        (/key|token|password/.test(s.edit) && s.edit !== 'key-name'
+          ? '•'.repeat(s.editValue.length)
+          : s.editValue) + '_'
+      ).slice(-(w - 4)),
+      COLORS.text
+    )
+    if (!cloudEdit)
+      tooltip(c, x + 2, y + 8, 'Enter Confirm | Esc Cancel | Ctrl+U Clear', w - 4, COLORS.header)
+    if (s.edit === 'library-import' && s.message)
+      wrap(s.message, w - 4)
+        .slice(0, Math.max(0, h - 12))
+        .forEach((line, i) => put(9 + i, line, COLORS.red))
+    if (s.edit.startsWith('media-') && s.media.error)
+      wrap(s.media.error, w - 4)
+        .slice(0, Math.max(1, h - 12))
+        .forEach((line, i) => put(9 + i, line, COLORS.red))
     b('save-edit', h - 3, 'Save', 'Validate and save this setting.')
     button(c, 'close', x + 12, y + h - 3, 'Cancel', 'Discard this edit.', focus)
-    return
-  } else if (s.overlay === 'stop') {
-    put(2, s.edit === 'api-restart' ? 'Restart API?' : 'Stop accepting API requests?', COLORS.gold)
-    wrap(
-      'Active requests may be interrupted. The background server and loaded models will remain available.',
-      w - 4
-    ).forEach((r, i) => put(4 + i, r))
-    b(
-      'stop-confirm',
-      h - 3,
-      s.edit === 'api-restart' ? 'Restart API' : 'Stop API',
-      'Active requests will be interrupted'
-    )
-    button(c, 'close', x + 17, y + h - 3, 'Keep running', 'Close without changing the server.', focus)
     return
   } else if (s.overlay === 'detail') {
     const r = s.requests[s.selected]

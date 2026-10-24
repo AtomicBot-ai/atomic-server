@@ -12,7 +12,8 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import type { WorkspaceState } from '../state.js'
-import { settingsAction } from './engine-settings.js'
+import { buildAction, readBuilds } from './engine-builds.js'
+import { settingsAction, readEngineForm } from './engine-settings.js'
 import { foundryAction, refreshFoundry } from './foundry-actions.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ManagedInstallResult, ServerLaunch } from '../../../contract/index.js'
@@ -45,11 +46,13 @@ export function engineRunner(engine: string, source: unknown): Partial<Workspace
 }
 
 /** Engines with settings in the core: every local provider; the panel opens for them. */
-export const hasPanel = (id: string) => (LOCAL_PROVIDER_IDS as readonly string[]).includes(id)
+export const hasPanel = (id: string) =>
+  (LOCAL_PROVIDER_IDS as readonly string[]).includes(id) || id in ENGINE_KINDS
 
 export async function engineAction(id: string, ctx: PanelContext): Promise<boolean> {
   const { get, update, controller: c } = ctx
   if (await settingsAction(id, ctx)) return true
+  if (await buildAction(id, ctx)) return true
   if (await foundryAction(id, ctx)) return true
   if (id.startsWith('engine-open:')) {
     const engine = id.slice('engine-open:'.length)
@@ -59,7 +62,7 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
     update((v) => ({
       ...v,
       overlay: 'engine-panel',
-      focus: managed ? 'engine-refresh' : 'engine-settings',
+      focus: 'engine-refresh',
       enginePanel: {
         engine,
         kind,
@@ -78,17 +81,33 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
       },
     }))
     await refresh(ctx)
+    const opened = get().enginePanel
+    if (opened?.engine === engine) {
+      await readBuilds(ctx).catch(() => {})
+      try {
+        if (engine !== 'sd-cpp') panel(ctx, engine, { form: await readEngineForm(ctx, opened) })
+      } catch (error) {
+        panel(ctx, engine, { error: error instanceof Error ? error.message : String(error) })
+      }
+    }
     return true
   }
   const s = get(),
     p = s.enginePanel
   if (s.overlay !== 'engine-panel' || !p || !id.startsWith('engine-')) return false
   const set = (part: Partial<EnginePanel>) => panel(ctx, p.engine, part)
-  if (id === 'engine-refresh') return refresh(ctx).then(() => true)
-  if (id === 'engine-builds') {
-    const row = s.libraryRows.find((r) => r.id === p.engine)
-    return (update((v) => ({ ...v, ...engineRunner(p.engine, row?.source ?? {}), enginePanel: null })), true)
+  if (id === 'engine-refresh') {
+    if (p.busy || p.updateCheck?.phase === 'checking') return true
+    set({ error: '' })
+    try {
+      await readBuilds(ctx, true)
+      await refresh(ctx)
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : String(error) })
+    }
+    return true
   }
+  if (id === 'engine-builds') return readBuilds(ctx).then(() => true)
   if (id === 'engine-remove') return (set({ removing: true }), true)
   if (id === 'engine-remove-cancel') return (set({ removing: false }), true)
   if (id === 'engine-keep-models') return (set({ keepModels: !p.keepModels }), true)

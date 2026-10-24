@@ -16,9 +16,7 @@ export function drawSetupReview(
   if (!selection) return
   const plan = selection.plan as unknown as Record<string, unknown>
   const blockers = Array.isArray(plan['blockers']) ? plan['blockers'] : []
-  text(c, x, y + 3, 'Review before downloading', COLORS.gold, width)
   text(c, x, y + 5, selection.plan.model_id, COLORS.text, width)
-  text(c, x, y + 6, selection.request.file, COLORS.muted, width)
   text(
     c,
     x,
@@ -27,9 +25,7 @@ export function drawSetupReview(
     COLORS.text,
     width
   )
-  const detail = blockers.length
-    ? JSON.stringify(blockers)
-    : 'Includes required engine and model files. Downloads can continue after closing the console.'
+  const detail = blockers.length ? JSON.stringify(blockers) : ''
   wrap(detail, width)
     .slice(0, Math.max(1, bottom - y - 11))
     .forEach((line, i) => text(c, x, y + 10 + i, line, blockers.length ? COLORS.red : COLORS.muted, width))

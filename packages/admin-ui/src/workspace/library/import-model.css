@@ -1,0 +1,17 @@
+.import-model-dialog {
+  width: min(560px, calc(100% - 32px));
+}
+.import-model-dialog > p {
+  color: var(--ew-muted);
+}
+.import-model-dialog > .panel-heading .ew-button {
+  min-height: 34px;
+  padding: 7px;
+  border: 0;
+}
+.import-model-dialog .wizard-bottom .ew-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}

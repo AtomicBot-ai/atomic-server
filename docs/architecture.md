@@ -29,6 +29,7 @@ the code disagree, fix the page.
 | engines | per session | Children of the daemon, journalled by the core in `processes.json`; a later owner reaps orphans. |
 | `atc host-step exec` (hidden) | seconds | The privileged half of a managed-runtime step: file in, file out, no network. |
 | `atc foundry-host …` (hidden) | per Foundry Local session | The core's Foundry Local host, started by the core as `<this binary> foundry-host …`. `src/bin.ts` hands that argv to `@atomic-chat/core/foundry-host` before parsing any command, so its stdout carries the host protocol alone; the binary carries the core's FFI module. |
+| `atc litert-host …` (hidden) | per LiteRT-LM probe or session | The core's LiteRT-LM host, dispatched to `@atomic-chat/core/litert-host` before command parsing. Its native FFI loader is bundled into the executable; engine libraries are installed separately by the core. |
 
 Crashes: the daemon is the core; they fall together. Recovery is the core's model — the next command
 respawns, the new owner reaps orphans, managed operations recover from the core's store. Supervision

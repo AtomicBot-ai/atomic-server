@@ -1,6 +1,12 @@
+import { EngineBuilds } from './EngineBuilds'
+import { EngineSetup } from './EngineSetup'
+import { FoundryLocal } from './FoundryLocal'
+import { useConfirmation } from '../use-confirmation'
+import { EngineReload } from './EngineReload'
+import { useEngineSettingsData } from './use-engine-settings-data'
 import { useEffect, useState } from 'react'
 import type { GpuFacts } from '@atomic-chat/core/contracts'
-import { engineFamily } from '@view'
+import { changedValues, engineFamily, engineName } from '@view'
 import { useDialog } from '../useDialog'
 import type { Workspace } from '../useWorkspace'
 import { Action, Field } from '../Controls'
@@ -20,19 +26,26 @@ export function EngineSettings({
   workspace: Workspace
   onClose: () => void
 }) {
-  const [values, setValues] = useState<RecordValue>({}),
-    [saved, setSaved] = useState<RecordValue>({})
-  const [schema, setSchema] = useState<RecordValue[]>([]),
-    [revision, setRevision] = useState<number>()
-  const [error, setError] = useState(''),
-    [query, setQuery] = useState(''),
-    [group, setGroup] = useState('Common')
+  const { values, setValues, saved, schema, revision, error, setError, loading, markSaved } =
+    useEngineSettingsData(provider, w.execute, provider !== 'sd-cpp')
+  const [query, setQuery] = useState(''),
+    [group, setGroup] = useState('All')
   const [notice, setNotice] = useState(''),
-    [loading, setLoading] = useState(true),
     [changedOnly, setChangedOnly] = useState(false)
-  const changes = Object.fromEntries(Object.entries(values).filter(([name, value]) => value !== saved[name]))
+  const { ask, confirmation, waiting } = useConfirmation()
+  const [saving, setSaving] = useState(false)
+  const changes = changedValues(saved, values, schema)
   const close = () => {
-    if (!Object.keys(changes).length || window.confirm('Discard unsaved engine settings?')) onClose()
+    if (saving || waiting) return
+    if (!Object.keys(changes).length) onClose()
+    else
+      ask({
+        title: 'Discard unsaved engine settings?',
+        actionLabel: 'Discard changes',
+        danger: true,
+        children: <p>Your changes have not been saved.</p>,
+        onConfirm: async () => onClose(),
+      })
   }
   const dialog = useDialog(close),
     { execute } = w
@@ -43,27 +56,6 @@ export function EngineSettings({
       (list) => setGpus((rows(list)[0]?.gpus as GpuFacts[]) ?? []),
       () => {}
     )
-  }, [provider, execute])
-  useEffect(() => {
-    let active = true
-    void Promise.all([execute('settings.get', { provider }), execute('settings.schema', { provider })])
-      .then(([settings, descriptors]) => {
-        if (!active) return
-        const data = record(settings)
-        setValues(record(data.values))
-        setSaved(record(data.values))
-        setRevision(Number(data.revision))
-        setSchema(rows(descriptors))
-      })
-      .catch((e) => {
-        if (active) setError(describeError(e))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
   }, [provider, execute])
   const fields: RecordValue[] = (
     schema.length
@@ -104,14 +96,20 @@ export function EngineSettings({
         aria-label={`${provider} settings`}
       >
         <div className="panel-heading">
-          <h2>{provider}</h2>
-          <button className="ew-button" onClick={close}>
+          <h2>{engineName(provider)}</h2>
+          <button className="ew-button" disabled={saving} onClick={close}>
             Close
           </button>
         </div>
+        <EngineBuilds provider={provider} execute={execute} />
+        {engineFamily(provider) === 'managed' && (
+          <EngineSetup workspace={w} engine={provider} onClose={onClose} embedded />
+        )}
+        {provider === 'foundry-local' && <FoundryLocal workspace={w} onClose={onClose} embedded />}
         <p className="ew-muted">
-          Server profile · Saved engine configuration. Changes apply on the next model load. Values here do
-          not prove what a running model is using.
+          {provider === 'sd-cpp'
+            ? 'Generation settings are saved with image and video tasks.'
+            : 'Settings apply on the next model load.'}
         </p>
         {loading && <p role="status">Loading engine settings…</p>}
         {error && (
@@ -153,7 +151,7 @@ export function EngineSettings({
           />
           Review changes ({Object.keys(changes).length})
         </label>
-        {!visible.length && !loading && (
+        {!visible.length && !loading && provider !== 'sd-cpp' && (
           <p className="ew-muted">No settings match. Search another term or choose All.</p>
         )}
         <div className="form-grid">
@@ -217,81 +215,70 @@ export function EngineSettings({
         </details>
         <div className="settings-footer">
           {notice && <p role="status">{notice}</p>}
-          <div className="ew-actions">
-            <Action
-              primary
-              disabled={loading || !Object.keys(changes).length}
-              onClick={async () => {
-                if (values.mtp && values.dflash)
-                  throw new Error('Choose MTP or DFlash; they cannot be enabled together.')
-                for (const field of fields) {
-                  const key = text(field.key),
-                    props = record(field.controllerProps),
-                    value = changes[key]
-                  if (
-                    key in changes &&
-                    props.type === 'number' &&
-                    (typeof value !== 'number' ||
-                      !Number.isFinite(value) ||
-                      (typeof props.min === 'number' && value < props.min) ||
-                      (typeof props.max === 'number' && value > props.max))
-                  )
-                    throw new Error(`Enter a valid number for ${text(field.title, key)}.`)
-                }
-                const result = record(
-                  await execute('settings.update', {
-                    provider,
-                    values: changes,
-                    ...(revision !== undefined ? { expected_revision: revision } : {}),
-                  })
-                )
-                setSaved({ ...values })
-                setRevision(Number(result.revision ?? revision))
-                setError('')
-                setNotice('Saved. Running models keep their current settings until reloaded.')
-              }}
-            >
-              Save changes
-            </Action>
-            <Action
-              disabled={!Object.keys(changes).length}
-              onClick={() => {
-                setValues({ ...saved })
-                setNotice('Unsaved changes discarded.')
-              }}
-            >
-              Discard changes
-            </Action>
-          </div>
-          {loaded.length > 0 && (
-            <details>
-              <summary>Reload a model to apply saved settings</summary>
-              <p>Reload interrupts active requests. Save or discard pending edits first.</p>
-              {loaded.map((model) => (
-                <Action
-                  key={model.id}
-                  disabled={Object.keys(changes).length > 0}
-                  onClick={async () => {
-                    if (!window.confirm(`Reload ${model.model}? Active requests will be interrupted.`)) return
-                    setNotice(`Reloading ${model.model}…`)
+          {Object.keys(changes).length > 0 && (
+            <div className="ew-actions">
+              <Action
+                primary
+                disabled={loading || saving || waiting || !Object.keys(changes).length}
+                onClick={async () => {
+                  if (values.mtp && values.dflash)
+                    throw new Error('Choose MTP or DFlash; they cannot be enabled together.')
+                  for (const field of fields) {
+                    const key = text(field.key),
+                      props = record(field.controllerProps),
+                      value = changes[key]
+                    if (
+                      key in changes &&
+                      props.type === 'number' &&
+                      (typeof value !== 'number' ||
+                        !Number.isFinite(value) ||
+                        (typeof props.min === 'number' && value < props.min) ||
+                        (typeof props.max === 'number' && value > props.max))
+                    )
+                      throw new Error(`Enter a valid number for ${text(field.title, key)}.`)
+                  }
+                  setSaving(true)
+                  try {
+                    const result = record(
+                      await execute('settings.update', {
+                        provider,
+                        values: changes,
+                        ...(revision !== undefined ? { expected_revision: revision } : {}),
+                      })
+                    )
+                    markSaved(values, Number(result.revision ?? revision))
                     setError('')
-                    try {
-                      await execute('models.unload', { provider, model_id: model.model })
-                      await execute('models.load', { provider, model_id: model.model })
-                      setNotice(`Reloaded ${model.model} with saved settings.`)
-                    } catch (error) {
-                      setNotice('')
-                      setError(`${describeError(error)} Open Engines & Models to retry loading.`)
-                    }
-                  }}
-                >
-                  Reload {model.model}
-                </Action>
-              ))}
-            </details>
+                    setNotice('Saved. Running models keep their current settings until reloaded.')
+                    dialog.current?.querySelector<HTMLButtonElement>('.panel-heading button')?.focus()
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+              >
+                Save changes
+              </Action>
+              <Action
+                disabled={saving || waiting || !Object.keys(changes).length}
+                onClick={() => {
+                  setValues({ ...saved })
+                  setNotice('Unsaved changes discarded.')
+                  dialog.current?.querySelector<HTMLButtonElement>('.panel-heading button')?.focus()
+                }}
+              >
+                Discard changes
+              </Action>
+            </div>
           )}
+          <EngineReload
+            provider={provider}
+            models={loaded}
+            execute={execute}
+            disabled={saving || waiting || Object.keys(changes).length > 0}
+            onNotice={setNotice}
+          />
         </div>
       </section>
+      {confirmation}
     </div>
   )
 }

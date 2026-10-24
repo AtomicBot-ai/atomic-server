@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { WORKSPACE_OPERATIONS } from '@contract'
 import type { WorkspaceInput, WorkspaceOperation, WorkspaceSnapshot } from '@contract'
 import { describeError, isUnauthorized } from '@/services/admin-api'
 import { useStatusStore } from '@/stores/status-store'
@@ -12,16 +13,21 @@ export function useWorkspace() {
   const [loading, setLoading] = useState(true)
   const active = useRef(true)
   const requestId = useRef(0)
+  const appliedId = useRef(0)
   const refresh = useCallback(async () => {
     const id = ++requestId.current
     try {
       const result = await workspaceApi.snapshot()
-      if (active.current && id === requestId.current) {
+      if (active.current && id > appliedId.current) {
+        appliedId.current = id
         setSnapshot(result)
         setError('')
       }
     } catch (e) {
-      if (active.current) setError(describeError(e))
+      if (active.current && id > appliedId.current) {
+        appliedId.current = id
+        setError(describeError(e))
+      }
       if (isUnauthorized(e)) useStatusStore.setState({ unauthorized: true, status: null })
     } finally {
       if (active.current) setLoading(false)
@@ -52,7 +58,7 @@ export function useWorkspace() {
       setPending((items) => [...items, operation])
       try {
         const result = await workspaceApi.execute<T>(operation, input)
-        await refresh()
+        if (WORKSPACE_OPERATIONS.find((item) => item.name === operation)?.mutates !== false) await refresh()
         return result
       } finally {
         if (active.current)

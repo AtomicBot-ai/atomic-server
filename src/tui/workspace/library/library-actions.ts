@@ -1,13 +1,21 @@
+import { withInstalledRows } from './catalog-installed.js'
+import { installedModelRows } from './installed-model-rows.js'
+import { catalogBrowseAction } from './catalog-browse.js'
+import { catalogFilterAction, catalogIndexes } from './catalog-filters.js'
 import { engineAction, engineRunner, hasPanel } from './engine-actions.js'
-import { catalogAction, jobRunner, libraryFormats, managedChoice } from './catalog-actions.js'
+import { catalogAction, libraryFormats, managedChoice } from './catalog-actions.js'
 import { downloadRows } from '../../../workspace-view/index.js'
 import { isNoGguf } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import type { LibraryView } from './library-model.js'
 import { libraryRows, record } from './library-model.js'
-import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
+import { downloadAction } from './download-detail.js'
 export async function libraryAction(id: string, ctx: ActionContext): Promise<boolean> {
+  if (await catalogFilterAction(id, ctx)) return true
+  if (await catalogBrowseAction(id, ctx)) return true
+  if (id.startsWith('catalog-download:')) id = `library-row:${id.slice(17)}`
+  if (await downloadAction(id, ctx)) return true
   if (await catalogAction(id, ctx)) return true
   const { get, update, controller: c } = ctx,
     s = get()
@@ -15,8 +23,9 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
   if (id === 'page:models') {
     patch({
       page: 'models',
+      serverView: 'overview',
       setup: null,
-      libraryView: 'installed',
+      libraryView: 'catalog',
       selected: 0,
       overlay: null,
       focus: 'library:catalog',
@@ -24,7 +33,7 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     })
     const [installed, models] = await Promise.all([c.installed(), c.models(s.endpoint).catch(() => s.models)])
     patch({ installed, models })
-    return true
+    return libraryAction('library:catalog', ctx)
   }
   if (id.startsWith('library:') || id.startsWith('category:') || id === 'library-refresh') {
     const view = id.startsWith('library:') ? (id.slice(8) as LibraryView) : s.libraryView
@@ -35,6 +44,18 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       edit: '',
       libraryView: view,
       libraryCategory: category,
+      ...(category !== s.libraryCategory
+        ? {
+            catalogFilters: {
+              ...s.catalogFilters,
+              engine: '',
+              uncensored: false,
+              liked: false,
+              downloaded: false,
+            },
+          }
+        : {}),
+      ...(id === 'library-refresh' ? {} : { catalogOpen: '', catalogVariants: [], catalogVariant: '' }),
       ...(id === 'library-refresh' ? {} : { libraryFormat: 'gguf' as const }),
       selected: 0,
       focus: 'library-row:0',
@@ -50,8 +71,12 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       return true
     }
     // Refresh re-reads the format shown: a managed engine's checkpoints are not the GGUF catalog.
-    if (view === 'catalog' && id === 'library-refresh' && s.libraryFormat === 'safetensors')
-      return catalogAction('format:safetensors', ctx)
+    if (
+      view === 'catalog' &&
+      id === 'library-refresh' &&
+      ['safetensors', 'foundry'].includes(s.libraryFormat)
+    )
+      return catalogAction(`format:${s.libraryFormat}`, ctx)
     patch({ busy: true, libraryRows: [] })
     if (view === 'catalog' && !s.libraryEngines.length)
       patch({
@@ -66,7 +91,13 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
           ? { force: id === 'library-refresh' }
           : { category, query: s.libraryQuery, refresh: id === 'library-refresh' }
       )
-      patch({ libraryRows: libraryRows(result, view), message: String(record(result)['error'] ?? '') })
+      patch({
+        libraryRows:
+          view === 'catalog'
+            ? withInstalledRows(libraryRows(result, view), get())
+            : libraryRows(result, view),
+        message: String(record(result)['error'] ?? ''),
+      })
     } finally {
       patch({ busy: false })
     }
@@ -86,30 +117,49 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     if (!row || s.busy) return true
     if (s.libraryView === 'engines' && hasPanel(row.id)) return engineAction(`engine-open:${row.id}`, ctx)
     if (s.libraryView === 'engines') return (patch(engineRunner(row.id, row.source)), true)
-    patch({ busy: true, message: 'Checking installation requirements…', selected: index })
+    patch({
+      busy: true,
+      message: 'Checking installation requirements…',
+      selected: s.catalogOpen ? Math.max(0, catalogIndexes(s).indexOf(index)) : index,
+    })
     try {
       let request: Record<string, unknown>
       if (s.libraryCategory === 'text' && row.source?.['format'] === 'safetensors')
         return await managedChoice(row.id, ctx)
       if (s.libraryCategory === 'text' && row.source?.['format'] !== 'mlx') {
         const files = await c.files(row.id).catch((e: unknown) => (isNoGguf(e) ? [] : Promise.reject(e))),
-          file = files[0] // modelFiles puts the default quant first
+          file =
+            (s.catalogOpen === row.id
+              ? files.find((file) => file.filename === s.catalogVariant)
+              : undefined) ?? files[0]
         // A repository without GGUF may be a managed engine's: the core's verdicts lead there.
         if (!file && libraryFormats(s.libraryEngines).includes('safetensors'))
           return await managedChoice(row.id, ctx)
         if (!file) throw new Error('No GGUF file found. Use engine-specific controls for this model format.')
         request = { repo: row.id, file: file.filename, include_projector: true }
-      } else request = { category: s.libraryCategory, model_id: row.id }
+      } else
+        request = {
+          category: s.libraryCategory,
+          model_id: row.id,
+          ...(s.catalogOpen === row.id && s.catalogVariant ? { quant: s.catalogVariant } : {}),
+        }
       const plan = record(
         await c.runtime.execute('category' in request ? 'artifacts.plan' : 'models.plan', request)
       )
       patch({
         libraryPlan: plan,
         libraryRequest: request,
-        overlay: 'install-review',
+        overlay: null,
         focus: 'library-install',
         message: '',
+        busy: false,
       })
+      const blockers = plan['blockers']
+      if (Array.isArray(blockers) && blockers.length)
+        throw new Error(
+          blockers.map((b) => (typeof b === 'string' ? b : String(record(b)['message'] ?? b))).join(' ')
+        )
+      return await libraryAction('library-install', ctx)
     } finally {
       patch({ busy: false })
     }
@@ -126,11 +176,12 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
         request_id: `terminal-${Date.now()}`,
       })
       patch({
-        libraryView: 'downloads',
+        libraryView: s.firstRun === 'media' || s.catalogOpen ? 'catalog' : 'downloads',
+        page: s.firstRun === 'media' ? 'welcome' : s.page,
         overlay: null,
         message: '',
         workspace: await c.runtime.snapshot(),
-        focus: 'library:downloads',
+        focus: s.catalogOpen ? `catalog-row:${s.selected}` : 'library:downloads',
       })
     } finally {
       patch({ busy: false })
@@ -147,35 +198,12 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     }
     return true
   }
-  if (id.startsWith('download-row:')) {
-    const job = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? [])[Number(id.slice(13))]
-    if (!job) return true
-    const runner = jobRunner(job)
-    if (runner) return (patch(runner), true)
-    const media = job.owner === 'artifacts',
-      standalone = job.owner === 'download'
-    const name = standalone ? '' : media ? 'artifacts.resume' : 'setup.resume'
-    patch({
-      operations: [...WORKSPACE_OPERATIONS],
-      toolGroup: standalone ? 'download' : media ? 'artifacts' : 'setup',
-      operation: name,
-      operationInput: JSON.stringify(standalone ? {} : media ? { id: job.id } : { setup_id: job.id }),
-      operationResult: JSON.stringify(job, null, 2),
-      page: 'tools',
-      operationReturn: 'models',
-      edit: 'operation-output',
-      focus: standalone ? 'operation-copy' : 'operation-select',
-      selected: 0,
-      scroll: 0,
-    })
-    return true
-  }
   if ((id === 'scroll-up' || id === 'scroll-down') && s.page === 'models' && !s.setup) {
     const length =
       s.libraryView === 'downloads'
-        ? downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? []).length
+        ? downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? [], true).length
         : s.libraryView === 'installed'
-          ? s.installed.length + s.models.length
+          ? installedModelRows(s).length
           : s.libraryRows.length
     patch({
       selected: Math.max(0, Math.min(length - 1, s.selected + (id === 'scroll-up' ? -3 : 3))),

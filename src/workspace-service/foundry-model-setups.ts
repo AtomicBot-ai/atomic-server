@@ -1,3 +1,4 @@
+import { rm } from 'node:fs/promises'
 /**
  * Durable downloads of Foundry Local variants (design D9): a reviewed plan by its digest, then a job
  * under the caller's request id. The job resolves the variant's short-lived container link, downloads
@@ -44,13 +45,13 @@ export function foundryModelYml(plan: FoundryModelPlan): string {
 
 export interface FoundryModelSetupsDeps extends Omit<FoundryPlanDeps, 'files'> {
   directory: string
-  downloader: Pick<Downloader, 'download' | 'cancel'>
+  downloader: Pick<Downloader, 'download' | 'cancel'> & Partial<Pick<Downloader, 'snapshot'>>
   files?: FoundryPlanDeps['files']
   proxy?: ProxyConfig | null | undefined
 }
 
 export class FoundryModelSetups {
-  private readonly running = new Map<string, { cancelled: boolean }>()
+  private readonly running = new Map<string, { cancelled: boolean; done: Promise<void> }>()
   private readonly mutations = new SerialWork()
   readonly directory: string
   constructor(private readonly d: FoundryModelSetupsDeps) {
@@ -94,13 +95,30 @@ export class FoundryModelSetups {
 
   async cancel(id: string): Promise<FoundryModelJob> {
     const worker = this.running.get(id)
+    const transferred = this.d.downloader.snapshot?.().find((transfer) => transfer.taskId === id)?.transferred
     if (worker) worker.cancelled = true
     this.d.downloader.cancel(id)
+    await worker?.done
     return this.mutations.run(id, async () => {
       const job = await readDocument<FoundryModelJob | null>(this.path(id), null)
       if (!job?.plan) throw new AtcError('ATC_USAGE', 'No such Foundry Local download.')
+      if (transferred !== undefined) Object.assign(job, { transferred })
       if (job.stage !== 'ready') await this.write(job, 'cancelled')
       return job
+    })
+  }
+
+  async remove(id: string, cleanup: (job: FoundryModelJob) => Promise<void>) {
+    const worker = this.running.get(id)
+    await this.cancel(id)
+    await worker?.done
+    return this.mutations.run(id, async () => {
+      if (this.running.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
+      const job = await readDocument<FoundryModelJob | null>(this.path(id), null)
+      if (!job?.plan) throw new AtcError('ATC_USAGE', 'No such download.')
+      await cleanup(job)
+      await rm(this.path(id), { force: true })
+      return { removed: true, id }
     })
   }
 
@@ -114,10 +132,10 @@ export class FoundryModelSetups {
 
   private async start(job: FoundryModelJob): Promise<FoundryModelJob> {
     if (job.stage === 'ready' || this.running.has(job.id)) return job
-    const worker = { cancelled: false }
+    const worker = { cancelled: false, done: Promise.resolve() }
     this.running.set(job.id, worker)
     await this.write(job, 'queued')
-    void this.run(job, worker).finally(() => {
+    worker.done = this.run(job, worker).finally(() => {
       if (this.running.get(job.id) === worker) this.running.delete(job.id)
     })
     return { ...job }
@@ -153,6 +171,7 @@ export class FoundryModelSetups {
             ...(this.d.proxy ? { proxy: this.d.proxy } : {}),
           }))
           try {
+            if (worker.cancelled) return void (await this.step(job, worker, 'cancelled'))
             await this.d.downloader.download(job.id, items, { resume: true })
             break
           } catch (error) {

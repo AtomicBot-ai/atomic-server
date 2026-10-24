@@ -1,0 +1,14 @@
+---
+date: 2026-10-23
+title: "Follow the current desktop composition in both server clients"
+---
+
+# 2026-10-23 — Follow the current desktop composition in both server clients
+
+- **Context:** Earlier server adaptations retained generic forms, an Installed/Catalog navigation stack, and repeated entry screens. The owner requested the latest `atomic-chat-ui` prototype, including the composition of controls, not just equivalent operations. The reference was re-read at `5043013` and compared with its running preview.
+- **Decision:** Use the desktop primary rail and contextual sidebar, Server control panel, overview cards, staged configuration selectors, Models Hub discovery navigation, responsive model table, separate filter/sort menus, expandable variants, and media family rows. Both clients use the same shared navigation contract. First-use engine entry is skipped for resumable or completed profiles. Server setup keeps its selected connection when a nested model picker is used. Cloud checks discover model IDs when none are supplied.
+- **Consequences:** Onboarding has a top download strip, independent scrolling content, fixed footer, explicit skip controls, and prominent forward actions. Installed/imported models remain reachable from Local models; downloads remain server-owned. The terminal preserves these controls with ASCII drawings, focus, keyboard hints, and compact layouts down to 54×24. The server cannot reproduce native client permissions, voice features, or unsupported provider protocols; these are documented rather than represented by nonfunctional controls. Existing runtime settings and accelerator preparation continue to use the core's actual operations.
+- **Alternatives:** Keeping legacy navigation and generic operation forms was rejected because matching functionality alone did not match the requested interface. Simulated metadata, memory-fit verdicts, and provider success states were rejected because the live server must report actual state.
+- **Control parity follow-up:** Use the reference Inter/Studio typography, identity-rich engine/model listboxes, paired connection fields and summary, inline onboarding provider keys, responsive provider tiles, and a collapsible contextual sidebar including outgoing HTTPS proxy. Dropdown Escape dismisses the inner control before a containing dialog. Pending actions retain their accessible name and geometry. The terminal uses the same choices with spatial provider navigation, distinct fields/switches/actions, compact background downloads, expandable catalog rows and right-aligned Save actions. It retains compact credential dialogs where inline editing cannot fit in 54×24.
+- **Owner:** team.
+- **Links:** [Desktop flow mapping](../desktop-flow-parity.md); [prior server structure decision](2026-10-22-server-first-desktop-structure.md); [connection recovery decision](2026-10-23-preserve-setup-and-check-connections.md).

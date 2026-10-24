@@ -1,158 +1,179 @@
+// Lifted from Atomic-Chat/web-app/src/containers/Card.tsx and routes/settings/general.tsx @ 5043013; adapted: schema-backed settings, isolated section drafts and explicit saves.
+import { watchSharedRead } from '../watch-shared-read'
 import { useEffect, useState } from 'react'
+import { SETTINGS_SECTIONS, SERVER_SETTINGS_GROUPS } from '@contract'
 import type { Workspace } from '../useWorkspace'
-import { Action, Field, Panel } from '../Controls'
+import { Action, Field } from '../Controls'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
+import { RuntimeSettingRow } from './RuntimeSettingRow'
+import { runtimeSettingError } from './runtime-setting-error'
 
-export function RuntimeSettings({ workspace: w, onSaved }: { workspace: Workspace; onSaved?: () => void }) {
+const getValue = (config: RecordValue, path: string) =>
+  path.split('.').reduce<unknown>((value, part) => record(value)[part], config)
+export function RuntimeSettings({
+  workspace: w,
+  onSaved,
+  section,
+}: {
+  workspace: Workspace
+  onSaved?: () => void
+  section?: string
+}) {
   const [config, setConfig] = useState<RecordValue>({})
   const [fields, setFields] = useState<RecordValue[]>([])
-  const [changes, setChanges] = useState<RecordValue>({})
+  const [draft, setDraft] = useState<RecordValue>({})
+  const [arrayText, setArrayText] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [group, setGroup] = useState('api')
+  const [noticeGroup, setNoticeGroup] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [revision, setRevision] = useState(0)
+  const [localGroup, setGroup] = useState('api')
+  const group = section ?? localGroup
   const { execute } = w
   useEffect(() => {
-    let active = true
-    void execute('config.get')
-      .then((result) => {
-        if (active) {
-          const value = record(result)
-          setConfig(record(value.values))
-          setFields(rows(value.fields))
-        }
+    setLoading(true)
+    setError('')
+    return watchSharedRead(
+      () => execute('config.get'),
+      (result) => {
+        const value = record(result)
+        setConfig(record(value.values))
+        setFields(rows(value.fields))
+        setLoading(false)
+        setError('')
+      },
+      (e) => {
+        setError(describeError(e))
+        setLoading(false)
+      }
+    )
+  }, [execute, revision])
+  const visible = fields.filter(
+    (field) =>
+      text(field.path).startsWith(`${group}.`) && !['api.cors', 'tui.mode'].includes(text(field.path))
+  )
+  const value = (path: string) => draft[path] ?? getValue(config, path)
+  const changes = Object.fromEntries(
+    visible
+      .map((field) => {
+        const path = text(field.path),
+          current = value(path)
+        return [
+          path,
+          current !== '' && (field.type === 'number' || typeof getValue(config, path) === 'number')
+            ? Number(current)
+            : current,
+        ]
       })
-      .catch((e) => {
-        if (active) setError(describeError(e))
-      })
-    return () => {
-      active = false
-    }
-  }, [execute])
-  const value = (path: string) =>
-    changes[path] ?? path.split('.').reduce<unknown>((current, part) => record(current)[part], config)
-  const update = (path: string, next: unknown) => {
-    setChanges((current) => ({ ...current, [path]: next }))
+      .filter(([path, current]) => JSON.stringify(current) !== JSON.stringify(getValue(config, String(path))))
+  )
+  const dirty = Object.keys(changes).length > 0
+  const valid = visible.every((field) => !runtimeSettingError(field, value(text(field.path))))
+  const clear = () => {
+    const keep = ([path]: [string, unknown]) => !path.startsWith(`${group}.`)
+    setDraft((current) => Object.fromEntries(Object.entries(current).filter(keep)))
+    setArrayText((current) => Object.fromEntries(Object.entries(current).filter(keep)))
     setNotice('')
   }
-  const choices = [...new Set(fields.map((field) => text(field.path).split('.')[0]))]
+  const control = (field: RecordValue) => (
+    <RuntimeSettingRow
+      key={text(field.path)}
+      field={field}
+      value={value(text(field.path))}
+      arrayText={arrayText[text(field.path)]}
+      disabled={saving}
+      update={(next, raw) => {
+        setDraft((current) => ({ ...current, [text(field.path)]: next }))
+        if (raw !== undefined) setArrayText((current) => ({ ...current, [text(field.path)]: raw }))
+        setNotice('')
+      }}
+    />
+  )
+  const advanced =
+    group === 'admin' ? ['admin.host', 'admin.port'] : group === 'tui' ? ['tui.endpoint', 'tui.model'] : []
   return (
-    <Panel title="Server configuration">
-      <div className="ew-actions">
+    <section
+      className="runtime-settings server-settings"
+      aria-label={`${[...SETTINGS_SECTIONS, ...SERVER_SETTINGS_GROUPS].find((item) => item.id === group)?.label ?? group} settings`}
+    >
+      {!section && (
         <Field label="Section">
-          <select value={group} onChange={(e) => setGroup(e.target.value)}>
-            {choices.map((name) => (
-              <option key={name}>{name}</option>
+          <select
+            disabled={saving}
+            value={group}
+            onChange={(e) => {
+              setGroup(e.target.value)
+              setNotice('')
+            }}
+          >
+            {[...new Set(fields.map((field) => text(field.path).split('.')[0]))].map((name) => (
+              <option key={name} value={name}>
+                {[...SETTINGS_SECTIONS, ...SERVER_SETTINGS_GROUPS].find((item) => item.id === name)?.label ??
+                  name}
+              </option>
             ))}
           </select>
         </Field>
-      </div>
+      )}
+      {loading && <p role="status">Loading settings…</p>}
       {error && (
-        <p className="ew-error" role="alert">
+        <div className="ew-error" role="alert">
           {error}
-        </p>
+          <Action onClick={() => setRevision((n) => n + 1)}>Retry</Action>
+        </div>
       )}
-      {notice && (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      )}
-      <div className="form-grid">
-        {fields
-          .filter((field) => text(field.path).startsWith(`${group}.`) && field.path !== 'api.cors')
-          .map((field) => {
-            const path = text(field.path),
-              current = value(path),
-              options = Array.isArray(field.values) ? field.values : []
-            return (
-              <Field
-                key={path}
-                label={path.replace(`${group}.`, '')}
-                hint={`${text(field.description, '')}${field.source && field.source !== 'default' ? ` · Source: ${text(field.source)}` : ''}`}
+      {!loading && !error && (
+        <>
+          <div className="settings-card">
+            {visible.filter((field) => !advanced.includes(text(field.path))).map(control)}
+            {!visible.length && <p>No settings available.</p>}
+          </div>
+          {visible.some((field) => advanced.includes(text(field.path))) && (
+            <details className="settings-card settings-advanced">
+              <summary>Advanced settings</summary>
+              {visible.filter((field) => advanced.includes(text(field.path))).map(control)}
+            </details>
+          )}
+          {dirty && (
+            <div className="server-save-bar">
+              <span role="status">Unsaved changes</span>
+              <Action disabled={saving} onClick={clear}>
+                Discard
+              </Action>
+              <Action
+                primary
+                disabled={saving || !valid}
+                onClick={async () => {
+                  setSaving(true)
+                  try {
+                    const result = record(await execute('config.update', { values: changes }))
+                    if (group === 'api' && w.snapshot?.api.running) await execute('api.restart')
+                    const next = record(await execute('config.get'))
+                    setConfig(record(next.values))
+                    clear()
+                    setNoticeGroup(group)
+                    setNotice(
+                      result.restart_required
+                        ? 'Saved. Restart the server to apply changes.'
+                        : 'Changes saved.'
+                    )
+                    onSaved?.()
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
               >
-                {options.length ? (
-                  <select value={text(current, '')} onChange={(e) => update(path, e.target.value)}>
-                    {options.map((option) => (
-                      <option key={text(option)}>{text(option)}</option>
-                    ))}
-                  </select>
-                ) : typeof current === 'boolean' ? (
-                  <select value={String(current)} onChange={(e) => update(path, e.target.value === 'true')}>
-                    <option value="true">On</option>
-                    <option value="false">Off</option>
-                  </select>
-                ) : (
-                  <input
-                    type={
-                      typeof current === 'number'
-                        ? 'number'
-                        : /token|password/.test(path)
-                          ? 'password'
-                          : 'text'
-                    }
-                    value={Array.isArray(current) ? current.join(', ') : text(current, '')}
-                    onChange={(e) =>
-                      update(
-                        path,
-                        Array.isArray(current)
-                          ? e.target.value
-                              .split(',')
-                              .map((item) => item.trim())
-                              .filter(Boolean)
-                          : typeof current === 'number'
-                            ? Number(e.target.value)
-                            : e.target.value
-                      )
-                    }
-                  />
-                )}
-              </Field>
-            )
-          })}
-      </div>
-      <div className="ew-actions">
-        <Action
-          primary
-          disabled={!Object.keys(changes).length}
-          onClick={async () => {
-            const result = record(await execute('config.update', { values: changes }))
-            setNotice(
-              result.restart_required
-                ? 'Saved. Restart the server process to apply these settings.'
-                : 'Saved.'
-            )
-            setChanges({})
-            const next = record(await execute('config.get'))
-            setConfig(record(next.values))
-            onSaved?.()
-          }}
-        >
-          Save configuration
-        </Action>
-        {group === 'api' && (
-          <Action
-            onClick={async () => {
-              if (
-                w.snapshot?.api.running &&
-                !window.confirm('Apply API listener settings? Active requests will be interrupted.')
-              )
-                return
-              await execute(w.snapshot?.api.running ? 'api.restart' : 'api.start', {
-                request: {
-                  host: value('api.host'),
-                  port: value('api.port'),
-                  prefix: value('api.prefix'),
-                  trusted_hosts: value('api.trustedHosts'),
-                },
-              })
-              setNotice('Listener settings applied. Save configuration to use them on future starts.')
-            }}
-          >
-            Apply to API now
-          </Action>
-        )}
-      </div>
-    </Panel>
+                Save changes
+              </Action>
+            </div>
+          )}
+          {notice && noticeGroup === group && <p role="status">{notice}</p>}
+        </>
+      )}
+    </section>
   )
 }

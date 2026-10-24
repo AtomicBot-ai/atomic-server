@@ -79,10 +79,23 @@ export function fieldText(d: SettingDescriptor, value: unknown, gpus: readonly G
   return value === undefined || value === null ? '' : String(value)
 }
 
-/** The draft's keys whose value differs from the core's. */
+/** The draft's keys whose value differs from the stored value or the displayed schema default. */
 export function changedValues(
   values: Readonly<Record<string, unknown>>,
-  draft: Readonly<Record<string, unknown>>
+  draft: Readonly<Record<string, unknown>>,
+  descriptors: readonly { key?: unknown; controllerProps?: unknown }[] = []
 ): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(draft).filter(([k, v]) => values[k] !== v))
+  const defaults = new Map(
+    descriptors.map((field) => [
+      field.key,
+      field.controllerProps && typeof field.controllerProps === 'object'
+        ? (field.controllerProps as Record<string, unknown>)['value']
+        : undefined,
+    ])
+  )
+  return Object.fromEntries(
+    Object.entries(draft).filter(
+      ([k, v]) => JSON.stringify(k in values ? values[k] : defaults.get(k)) !== JSON.stringify(v)
+    )
+  )
 }

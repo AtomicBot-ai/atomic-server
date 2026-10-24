@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { enginesList, snapshotFixture, workspaceFixture } from '@/test/workspace-fixture'
-import { SetupWizard } from './SetupWizard'
+import { AdvancedSetupWizard as SetupWizard } from './AdvancedSetupWizard'
 
 const REPO = 'Qwen/Qwen3.5-2B'
 const LINUX = ['llamacpp-upstream', 'vllm', 'foundry-local']
@@ -24,6 +24,7 @@ const ok = {
 }
 
 async function chooseEngine(engine: string) {
+  await userEvent.click(screen.getByRole('button', { name: 'Choose an engine' }))
   await waitFor(() => expect(screen.getByLabelText('Setup engine')).toBeEnabled())
   await userEvent.selectOptions(screen.getByLabelText('Setup engine'), engine)
   await userEvent.click(screen.getByRole('button', { name: 'Choose models for this engine' }))
@@ -100,7 +101,6 @@ describe('the admin setup wizard with a managed engine', () => {
     await waitFor(() => expect(screen.getByLabelText('Setup model')).toHaveTextContent(REPO))
     await userEvent.selectOptions(screen.getByLabelText('Setup model'), REPO)
     await userEvent.click(screen.getByRole('button', { name: 'Review model' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Review download' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Download' }))
     const install = execute.mock.calls.find(([n]) => n === 'managed.install')![1] as { request_id: string }
     workspace.snapshot = snapshotFixture({

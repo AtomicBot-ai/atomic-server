@@ -7,7 +7,16 @@
  */
 import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -126,6 +135,11 @@ describe.skipIf(PLATFORM === null)(`Foundry Local (${ATC.join(' ')})`, () => {
     azure.files.get(WEIGHTS_PATH)!.holdAfterBytes = 200_000
     const pulling = atc('models', 'pull', 'gemma-4-e2b-it', '--engine', 'foundry-local', '--device', 'cpu')
     await waitFor(() => (azure.sent.get(WEIGHTS_PATH) ?? 0) >= 200_000, 20_000)
+    // The fixture's write can precede the child's receive/write under parallel test load.
+    // Expire only after there is a persisted partial to resume, not merely bytes in the socket buffer.
+    const partial = join(dataFolder, 'foundry-local', 'models', VARIANT, 'model.onnx.tmp')
+    await waitFor(() => existsSync(partial) && statSync(partial).size >= 200_000, 20_000)
+    const offset = statSync(partial).size
     // The link expires: it answers 403 from now on, and the resolver names a fresh one.
     azure.files.set(WEIGHTS_PATH, { body: WEIGHTS, failStatus: 403, failTimes: 99 })
     serveAzure(azure, base, 'generic-cpu', '2')
@@ -133,9 +147,9 @@ describe.skipIf(PLATFORM === null)(`Foundry Local (${ATC.join(' ')})`, () => {
     const res = await pulling
     expect(res.code, res.err).toBe(0)
     expect(res.out).toContain(`atc run ${VARIANT} --engine foundry-local`)
-    expect(azure.requests.find((r) => r.path === '/container/v3/model.onnx?sig=2')?.range).toMatch(
-      /^bytes=[1-9]\d*-$/
-    )
+    expect(
+      azure.requests.find((r) => r.method === 'GET' && r.path === '/container/v3/model.onnx?sig=2')?.range
+    ).toBe(`bytes=${offset}-`)
     const list = await atc('models', 'list')
     expect(list.out).toMatch(new RegExp(`${VARIANT}\\s+foundry-local \\(CPU\\)`))
   })

@@ -1,17 +1,14 @@
+import { drawCloudList, drawCustomProviders } from './cloud-view.js'
+import { drawCatalogBrowser } from './catalog-browser.js'
+import { installedModelRows } from './installed-model-rows.js'
+import { drawDownloadCard } from '../setup/download-card.js'
+import { card } from '../draw/cards.js'
 import { downloadRows, verdictLine } from '../../../workspace-view/index.js'
 import type { ManagedVerdict } from '../../../contract/index.js'
-import { libraryFormats } from './catalog-actions.js'
-import type { LibraryFormat } from './catalog-actions.js'
 
-const FORMAT_NAMES: Record<LibraryFormat, string> = {
-  gguf: 'GGUF',
-  safetensors: 'Safetensors',
-  foundry: 'Foundry Local',
-}
 import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
-import { CATEGORIES, record } from './library-model.js'
 import { computeRowWindow } from '../../row-window.js'
 import { bytes } from '../setup/setup-panel.js'
 export function drawLibrary(
@@ -23,115 +20,60 @@ export function drawLibrary(
   bottom: number,
   focus: string
 ) {
-  let bx = x,
-    row = y
-  if (s.libraryView === 'catalog') {
-    bx = x
-    for (const category of CATEGORIES) {
-      if (bx + category.length + 2 > x + width) {
-        bx = x
-        row++
-      }
-      bx +=
-        button(
-          c,
-          `category:${category}`,
-          bx,
-          row,
-          category,
-          `Browse ${category} models`,
-          focus,
-          s.libraryCategory === category
-        ) + 1
-    }
-    row += 2
-    const formats = s.libraryCategory === 'text' ? libraryFormats(s.libraryEngines) : []
-    if (formats.length > 1) {
-      bx = x
-      for (const f of formats)
-        bx +=
-          button(
-            c,
-            `format:${f}`,
-            bx,
-            row - 1,
-            FORMAT_NAMES[f],
-            `Show ${FORMAT_NAMES[f]} models`,
-            focus,
-            s.libraryFormat === f
-          ) + 1
-      row += 1
-    }
+  if (s.libraryView === 'endpoint') return drawCustomProviders(c, s, x, y, width, focus)
+  if (s.libraryView === 'cloud') {
+    text(c, x, y, 'Cloud providers', COLORS.text, width, undefined, true)
+    return drawCloudList(c, s, x, y + 2, width, bottom - 1, focus)
   }
+  if (s.libraryView === 'catalog') return drawCatalogBrowser(c, s, x, y, width, bottom, focus)
+  let bx = x
+  const row = y
   if (s.libraryView === 'installed') {
-    const items = [
-      ...s.installed.map((m, i) => ({
-        id: `installed:${i}`,
-        name: `${s.models.includes(m.id) ? '●' : '○'} ${m.id}${m.providers?.length ? `  ${m.providers.join(', ')}` : ''}`,
-      })),
-      ...s.models
-        .filter((m) => !s.installed.some((i) => i.id === m))
-        .map((m) => ({ id: `model:${s.models.indexOf(m)}`, name: `● ${m}` })),
-      ...(s.workspace?.setups ?? []).flatMap((v) => {
-        const j = record(v),
-          p = record(j['plan'])
-        return j['stage'] === 'ready' && p['category']
-          ? [{ id: `media-installed:${j['id']}`, name: `${p['category']} · ${p['name'] ?? p['model_id']}` }]
-          : []
-      }),
-    ]
-    const win = computeRowWindow(items.length, s.selected, Math.max(1, bottom - row - 1))
-    items
-      .slice(win.start, win.start + win.count)
-      .forEach((v, i) =>
-        button(
-          c,
-          v.id,
-          x,
-          row + i,
-          v.name.slice(0, width - 2),
-          'Load this model | GPU models may be unloaded',
-          focus
-        )
-      )
-    if (!items.length)
-      text(c, x, row, 'No chat model installed. Browse Catalog to add one.', COLORS.muted, width)
-  } else if (s.libraryView === 'downloads') {
-    const items = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? [])
+    const items = installedModelRows(s)
     const win = computeRowWindow(items.length, s.selected, Math.max(1, bottom - row - 1))
     items.slice(win.start, win.start + win.count).forEach((v, i) => {
-      const d = v,
-        total = d.total,
-        done = d.transferred
       button(
         c,
-        `download-row:${win.start + i}`,
+        v.id,
         x,
         row + i,
-        `${d.state}  ${d['model_id'] ?? record(d['plan'])['name'] ?? d['id'] ?? d['taskId'] ?? 'Transfer'} ${total ? Math.round((done / total) * 100) + '%' : ''}`.slice(
-          0,
-          width - 2
-        ),
-        'Inspect and manage this download',
+        `${v.name.slice(0, Math.max(1, width - (v.remove ? 12 : 2) - v.status.length - 3))} [${v.status}]`,
+        'Load this model | GPU models may be unloaded',
         focus
       )
+      if (v.remove) button(c, v.remove, x + width - 10, row + i, 'X Delete', 'Delete this model', focus)
     })
+    if (!items.length) text(c, x, row, 'No model installed. Browse Catalog to add one.', COLORS.muted, width)
+  } else if (s.libraryView === 'downloads') {
+    const items = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? [], true)
+    const win = computeRowWindow(items.length, s.selected, Math.max(1, Math.floor((bottom - row) / 5)))
+    items
+      .slice(win.start, win.start + win.count)
+      .forEach((_, i) => drawDownloadCard(c, s, x, row + i * 5, width, win.start + i, focus, true))
     if (!items.length) text(c, x, row, 'No downloads.', COLORS.muted, width)
   } else {
-    const win = computeRowWindow(s.libraryRows.length, s.selected, Math.max(1, bottom - row - 1))
-    s.libraryRows
-      .slice(win.start, win.start + win.count)
-      .forEach((v, i) =>
-        button(
-          c,
-          `library-row:${win.start + i}`,
+    const indices = s.libraryRows.map((_, i) => i)
+    const h = bottom - row >= 6 ? 3 : 1
+    const win = computeRowWindow(indices.length, s.selected, Math.max(1, Math.floor((bottom - row - 1) / h)))
+    indices.slice(win.start, win.start + win.count).forEach((index, i) => {
+      const v = s.libraryRows[index]!
+      const id = `library-row:${index}`
+      if (h === 1) button(c, id, x, row + i, v.name.slice(0, width - 2), v.description || v.id, focus)
+      else
+        card(c, {
+          id,
           x,
-          row + i,
-          `${v.name}${s.libraryView === 'engines' ? ' · ' + v.description : ''}`.slice(0, width - 2),
-          v.description || v.id,
-          focus
-        )
-      )
+          y: row + i * h,
+          width,
+          height: h,
+          title: `${s.catalogLikes.includes(v.id) ? '* ' : ''}${v.name}`,
+          icon: s.libraryView === 'engines' ? '[E]' : '[M]',
+          detail: v.description || v.id,
+          focus,
+        })
+    })
+    if (!indices.length && s.libraryRows.length)
+      text(c, x, row, 'No models match these filters.', COLORS.muted, width)
     if (!s.libraryRows.length)
       text(
         c,
@@ -146,10 +88,6 @@ export function drawLibrary(
   for (const [id, label, hint] of [
     ['library-refresh', 'Refresh', 'Refresh live list'],
     ['library-search', 'Search', 'Search model catalogs'],
-    ['tools:models', 'Manage ▾', 'All engine and model controls'],
-    ...(s.libraryView === 'installed' && s.installed.length
-      ? [['library-remove', 'Remove', 'Remove the selected installed model']]
-      : []),
   ]) {
     bx += button(c, id!, bx, bottom, label!, hint!, focus) + 1
   }
@@ -161,6 +99,7 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
     height = c.height - 6
   for (let i = y; i < y + height; i++) text(c, x, i, ' '.repeat(width), COLORS.text, width, COLORS.header)
   c.targets = []
+  c.popover = { x, y, width, height }
   const p = s.libraryPlan ?? {}
   text(c, x + 2, y + 1, 'Review installation', COLORS.gold)
   if (s.libraryRequest['managed']) {

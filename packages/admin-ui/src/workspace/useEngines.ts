@@ -1,3 +1,4 @@
+import { watchSharedRead } from './watch-shared-read'
 import { useEffect, useState } from 'react'
 import { orderEngines } from '@view'
 import { describeError } from '@/services/admin-api'
@@ -14,25 +15,22 @@ export function useEngines(execute: Workspace['execute'], revision = 0) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   useEffect(() => {
-    let active = true
     setLoading(true)
     setError('')
-    void execute('engines.list')
-      .then((result) => {
-        if (!active) return
+    return watchSharedRead(
+      () => execute('engines.list'),
+      (result) => {
         const all = rows(result)
         const order = orderEngines(all.map((e) => text(e.engine)))
         setEngines(order.map((id) => all.find((e) => text(e.engine) === id)!))
-      })
-      .catch((e) => {
-        if (active) setError(describeError(e))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
+        setLoading(false)
+        setError('')
+      },
+      (e) => {
+        setError(describeError(e))
+        setLoading(false)
+      }
+    )
   }, [execute, revision])
   return { engines, loading, error }
 }

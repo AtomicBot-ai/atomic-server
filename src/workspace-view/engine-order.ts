@@ -27,6 +27,7 @@ const NAMES: Readonly<Record<string, string>> = {
   'sglang': 'SGLang',
   'tensorrt-llm': 'TensorRT-LLM',
   'foundry-local': 'Foundry Local',
+  'litert-lm': 'LiteRT-LM',
   'sd-cpp': 'stable-diffusion.cpp',
 }
 

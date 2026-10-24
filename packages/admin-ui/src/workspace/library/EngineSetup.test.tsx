@@ -224,10 +224,10 @@ describe('the managed engine modal', () => {
       'artifacts.list': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Engines' }))
-    const install = await screen.findAllByRole('button', { name: 'Install' })
+    await userEvent.click(screen.getByRole('button', { name: 'Inference engines' }))
+    const install = await screen.findAllByRole('button', { name: 'Engine settings' })
     await userEvent.click(install.at(-1)!)
-    expect(await screen.findByRole('dialog', { name: 'vLLM setup' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'vllm settings' })).toBeInTheDocument()
     expect(execute).not.toHaveBeenCalledWith('engines.install', expect.anything())
   })
 })

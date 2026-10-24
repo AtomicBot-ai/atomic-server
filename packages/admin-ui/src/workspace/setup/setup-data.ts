@@ -17,7 +17,8 @@ export async function setupModels(
   category: string
 ): Promise<RecordValue[]> {
   const kind = engineDialog(engine)
-  if (kind === 'managed') return catalogCards(await execute('models.catalog', { engine }), 'safetensors')
+  if (kind === 'managed')
+    return catalogCards(await execute('models.catalog', { engine }), 'safetensors', engine)
   if (kind === 'foundry')
     return catalogCards(await execute('models.search', { engine: 'foundry-local', query: '' }), 'foundry')
   return rows(await execute('models.catalog', { category }))

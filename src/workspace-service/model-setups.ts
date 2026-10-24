@@ -5,7 +5,7 @@
  * files on disk. Credentials are never stored: the Hugging Face token goes into download headers.
  */
 import { randomUUID } from 'node:crypto'
-import { readdir } from 'node:fs/promises'
+import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type {
   ModelSetup,
@@ -176,13 +176,28 @@ export class ModelSetups {
   async cancel(id: string): Promise<ModelSetup> {
     const record = await this.get(id)
     const run = this.runs.get(id)
+    const ids = Object.values(record.task_ids)
+    const transferred = this.deps.downloader
+      .snapshot()
+      .filter((transfer) => ids.includes(transfer.taskId))
+      .reduce((sum, transfer) => sum + transfer.transferred, 0)
     if (run) {
       run.controller.abort()
       await run.done
-      return this.get(id)
+      return this.writes.run(id, async () => this.commit(id, { ...(await this.get(id)), ...{ transferred } }))
     }
     if (FINAL.includes(record.stage)) return record
     return this.writes.run(id, () => this.commit(id, { stage: 'cancelled', stopped_at: record.stage }))
+  }
+
+  async remove(id: string, cleanup: (job: ModelSetup) => Promise<void>) {
+    await this.cancel(id)
+    return this.writes.run(id, async () => {
+      if (this.runs.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
+      await cleanup(await this.get(id))
+      await rm(this.path(id), { force: true })
+      return { removed: true, id }
+    })
   }
 
   private async commit(id: string, patch: Partial<ModelSetup>, clear = false): Promise<ModelSetup> {
@@ -245,6 +260,7 @@ export class ModelSetups {
 
   /** One install per build, shared by every setup waiting on it. */
   private install1(engine: ModelSetupEngine, taskId: string): Promise<void> {
+    if (this.deps.installEngine) return this.deps.installEngine(engine, taskId)
     const key = `${engine.version}/${engine.backend}`
     let pending = this.engines.get(key)
     if (!pending) {

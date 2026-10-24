@@ -6,3 +6,18 @@
 @import './workspace-navigation.css';
 @import './workspace-media.css';
 @import './workspace-enhancements.css';
+
+/* Modal surfaces share one shade; the first-run route is a page, not a modal. */
+.eye-workspace .modal-shade,
+.eye-workspace .wizard-overlay:not(.first-run-overlay),
+.eye-workspace .cloud-provider-overlay,
+.eye-workspace .chat-parameters-backdrop {
+  background: rgb(0 0 0 / 60%);
+  backdrop-filter: grayscale(1);
+}
+.modal-shade.support-shade {
+  z-index: 180;
+}
+.modal-shade.chat-model-shade {
+  z-index: 180;
+}

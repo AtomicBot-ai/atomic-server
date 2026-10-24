@@ -43,7 +43,8 @@ export async function ensureArtifactEngine(
   link: CoreLink,
   engine: string,
   taskId: string,
-  proxy?: ProxyConfig | null
+  proxy?: ProxyConfig | null,
+  install?: () => Promise<void>
 ) {
   const kind = engineKind(engine)
   if (kind === 'llamacpp') {
@@ -57,7 +58,8 @@ export async function ensureArtifactEngine(
     )
     if (Object.keys(object(catalog['active'])).length) return
   }
-  await installEngine(link, engine, { task_id: taskId }, proxy)
+  if (install) await install()
+  else await installEngine(link, engine, { task_id: taskId }, proxy)
 }
 
 /**

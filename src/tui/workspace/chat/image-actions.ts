@@ -12,7 +12,8 @@ export async function imageAction(id: string, ctx: ActionContext): Promise<boole
     return true
   }
   if (id === 'image-add') {
-    if (s.images.length >= 4) throw new Error('Attach up to four images per message.')
+    if (s.images.length + (s.documents?.length ?? 0) >= 5)
+      throw new Error('Attach up to five files per message.')
     update((v) => ({ ...v, overlay: 'endpoint', edit: 'image-path', editValue: '', focus: 'save-edit' }))
     return true
   }

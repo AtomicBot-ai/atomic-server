@@ -1,9 +1,11 @@
+import { sharedChat } from './chat/shared-chat.js'
 import type { WorkspaceState } from './state.js'
 import { WorkspaceRuntime } from './runtime.js'
 import { contextExceeded } from '../../workspace-service/index.js'
 import { AtcError } from '../../errors/index.js'
 import { installedModels } from '../../terminal-setup/index.js'
-import { dirname } from 'node:path'
+import { readDocument, writeDocument } from '../../terminal-data/index.js'
+import { dirname, join } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
 import {
   TerminalSetup,
@@ -24,10 +26,13 @@ import { setConfigValue } from '../../config/index.js'
 import type { CoreLink } from '../../core-link/index.js'
 import {
   listChatModels,
+  sameEndpoint,
   streamChat,
-  startApi,
   requestRow,
   readChatImage,
+  readChatDocument,
+  readSelectedFile,
+  writeSelectedFile,
 } from '../../terminal-service/index.js'
 import type { ChatMessage, RequestRow } from '../../terminal-service/index.js'
 export interface WorkspaceDeps {
@@ -71,6 +76,12 @@ export class WorkspaceController {
     )
     this.catalog = new ModelCatalog(directory, deps.request)
   }
+  catalogLikes(): Promise<string[]> {
+    return readDocument(join(dirname(this.deps.base.paths.configFile), 'catalog-likes.json'), [])
+  }
+  saveCatalogLikes(likes: string[]): Promise<void> {
+    return writeDocument(join(dirname(this.deps.base.paths.configFile), 'catalog-likes.json'), likes)
+  }
   start(): void {
     this.legacy.start()
   }
@@ -104,6 +115,11 @@ export class WorkspaceController {
       server ? await this.localKey() : await this.keyFor(endpoint),
       AbortSignal.any([this.abort.signal, AbortSignal.timeout(10000)])
     )
+  }
+  file = readSelectedFile
+  saveFile = writeSelectedFile
+  document(path: string, maxMb: number) {
+    return readChatDocument(path, maxMb)
   }
   image(path: string) {
     return readChatImage(path)
@@ -176,12 +192,27 @@ export class WorkspaceController {
     endpoint: string,
     model: string,
     messages: ChatMessage[],
-    onText: (text: string) => void
-  ): Promise<void> {
+    onText: (text: string) => void,
+    preferences: Record<string, unknown> = {},
+    conversationId?: string,
+    documents: { name: string; text: string }[] = []
+  ): Promise<{ message: ChatMessage; conversation_id: string; messages?: ChatMessage[] } | undefined> {
+    if (!model.trim()) throw new Error('Choose a model to continue.')
     this.turn?.abort()
     const turn = new AbortController()
     this.turn = turn
     try {
+      if (sameEndpoint(endpoint, await this.localEndpoint()))
+        return await sharedChat(
+          this.runtime,
+          model,
+          messages,
+          preferences,
+          turn.signal,
+          onText,
+          conversationId,
+          documents
+        )
       await streamChat({
         endpoint,
         model,
@@ -222,7 +253,7 @@ export class WorkspaceController {
             await this.runtime.execute('models.load', { provider, model_id: selected.id })
           }
         }
-        await startApi(link, config, await this.localKey())
+        await this.runtime.execute('api.start')
       }
     } else await link.server.stop()
     await this.legacy.run({ name: 'refresh' })

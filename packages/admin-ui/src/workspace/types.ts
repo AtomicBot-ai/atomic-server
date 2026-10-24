@@ -1,6 +1,6 @@
 export type RecordValue = Record<string, unknown>
 export type Execute = <T = unknown>(operation: string, input?: RecordValue) => Promise<T>
-export type Page = 'playground' | 'server' | 'catalog'
+export type Page = 'playground' | 'server' | 'catalog' | 'settings'
 export function record(value: unknown): RecordValue {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as RecordValue) : {}
 }

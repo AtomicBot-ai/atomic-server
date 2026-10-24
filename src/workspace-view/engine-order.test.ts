@@ -37,6 +37,7 @@ describe('engine order and names', () => {
     ['sglang', 'SGLang'],
     ['tensorrt-llm', 'TensorRT-LLM'],
     ['foundry-local', 'Foundry Local'],
+    ['litert-lm', 'LiteRT-LM'],
     ['something', 'something'],
   ])('%s is %s', (id, name) => expect(engineName(id)).toBe(name))
 })
@@ -49,6 +50,7 @@ describe('engineFamily', () => {
     ['tensorrt-llm', 'managed'],
     ['foundry-local', 'foundry'],
     ['mlx', 'build'],
+    ['litert-lm', 'build'],
     ['something-new', 'build'],
   ])('%s is %s, by the core’s kinds', (id, family) => expect(engineFamily(id)).toBe(family))
 })

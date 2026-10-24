@@ -6,6 +6,7 @@
  * the server's store and Foundry Local jobs opened on Cancel or Resume.
  */
 
+import { withInstalledRows } from './catalog-installed.js'
 import { randomUUID } from 'node:crypto'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
@@ -15,10 +16,10 @@ import { verdictLine } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { engineAction } from './engine-actions.js'
-import { foundryAction } from './foundry-actions.js'
-import { record } from './library-model.js'
+import { loadFoundryCatalog } from './catalog-foundry.js'
+import { libraryRows, record } from './library-model.js'
 
-export type LibraryFormat = 'gguf' | 'safetensors' | 'foundry'
+export type LibraryFormat = 'mlx' | 'gguf' | 'safetensors' | 'foundry'
 const managed = (engines: readonly string[]) =>
   engines.filter((e) => ENGINE_KINDS[e as EngineId] === 'managed')
 const ACTIVE = ['queued', 'downloading', 'verifying']
@@ -27,6 +28,7 @@ const ACTIVE = ['queued', 'downloading', 'verifying']
 export function libraryFormats(engines: readonly string[]): LibraryFormat[] {
   return [
     'gguf',
+    ...(engines.includes('mlx') ? (['mlx'] as const) : []),
     ...(managed(engines).length ? (['safetensors'] as const) : []),
     ...(engines.includes('foundry-local') ? (['foundry'] as const) : []),
   ]
@@ -50,6 +52,8 @@ export async function managedChoice(repository: string, ctx: ActionContext): Pro
       focus: 'library-install',
       message: '',
     }))
+    if (!Array.isArray(plan['blockers']) || !plan['blockers'].length)
+      return catalogAction('library-install', ctx)
     return true
   }
   if (takes[0]) {
@@ -79,8 +83,14 @@ async function catalogRows(
   format: LibraryFormat
 ): Promise<WorkspaceState['libraryRows']> {
   const s = ctx.get()
-  const engine = managed(s.libraryEngines)[0]
-  if (format !== 'safetensors' || !engine) return s.libraryRows
+  if (format === 'foundry') return loadFoundryCatalog(ctx)
+  const engine =
+    managed(s.libraryEngines).find((e) => e === s.catalogFilters.engine) ?? managed(s.libraryEngines)[0]
+  if (format !== 'safetensors' || !engine)
+    return libraryRows(
+      await ctx.controller.runtime.execute('models.catalog', { category: s.libraryCategory }),
+      'catalog'
+    )
   const query = s.libraryQuery
   const result = record(
     await ctx.controller.runtime.execute(query ? 'models.search' : 'models.catalog', {
@@ -96,7 +106,7 @@ async function catalogRows(
     name: String(r['repository']),
     category: 'text',
     description: String(r['note'] ?? r['section'] ?? 'safetensors'),
-    source: { format: 'safetensors' },
+    source: { format: 'safetensors', engine },
   }))
 }
 
@@ -106,20 +116,18 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
   if (id.startsWith('format:')) {
     const format = id.slice('format:'.length) as LibraryFormat
-    if (format === 'foundry') {
-      await engineAction('engine-open:foundry-local', ctx)
-      return foundryAction('foundry-models', ctx)
-    }
     patch({ libraryFormat: format, busy: true, selected: 0 })
     try {
-      patch({ libraryRows: await catalogRows(ctx, format) })
+      patch({ libraryRows: withInstalledRows(await catalogRows(ctx, format), get()) })
     } finally {
       patch({ busy: false })
     }
     return true
   }
-  if (id === 'library-remove' && s.libraryView === 'installed') {
-    const model = s.installed[s.selected]
+  if ((id === 'library-remove' && s.libraryView === 'installed') || id.startsWith('installed-delete:')) {
+    const model = id.startsWith('installed-delete:')
+      ? s.installed.find((m) => m.id === decodeURIComponent(id.slice(17)))
+      : s.installed[s.selected]
     if (model) patch({ overlay: 'remove-model', libraryRemove: model.id, focus: 'close' })
     return true
   }
@@ -127,7 +135,12 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
     patch({ overlay: null, busy: true, message: `Removing ${s.libraryRemove}…` })
     try {
       await c.runtime.execute('models.remove', { model_id: s.libraryRemove })
-      patch({ installed: await c.installed(), message: `Removed ${s.libraryRemove}.`, libraryRemove: '' })
+      patch({
+        installed: await c.installed(),
+        libraryRows: s.libraryRows.filter((row) => row.id !== s.libraryRemove || !row.source?.['installed']),
+        message: `Removed ${s.libraryRemove}.`,
+        libraryRemove: '',
+      })
     } finally {
       patch({ busy: false })
     }
@@ -141,7 +154,7 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
         plan_digest: s.libraryPlan['digest'],
       })
       patch({
-        libraryView: 'downloads',
+        libraryView: s.catalogOpen ? 'catalog' : 'downloads',
         overlay: null,
         message: '',
         workspace: await c.runtime.snapshot(),

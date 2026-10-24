@@ -44,8 +44,11 @@
     "verify": "npm run lint && npm run typecheck && npm run format:check && node scripts/gen-third-party-notices.mjs --check && npm test && npm run test:ui && npm run build && npm run build:ui && npm run build:bin && npm run test:e2e && npm run test:runtime-compat && npm run test:installers"
   },
   "dependencies": {
-    "@atomic-chat/core": "0.18.5",
+    "@atomic-chat/core": "0.19.0",
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3",
     "ink": "^7.1.1",
+    "pdfjs-dist": "4.8.69",
     "react": "^19.2.0"
   },
   "devDependencies": {

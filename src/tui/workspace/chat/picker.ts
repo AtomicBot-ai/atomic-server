@@ -42,6 +42,7 @@ export function pickerRows(s: WorkspaceState): PickerRow[] {
       rows.push({ id: `model:${i}`, title: model, detail: 'Connected endpoint', current: model === s.model })
   return [
     ...rows,
+    { id: 'choose-engine', title: 'Inference engine', detail: 'Choose the engine used for local models' },
     { id: 'install-models', title: 'Get more models', detail: 'Browse Atomic Chat’s catalog' },
     { id: 'endpoint', title: 'Connect an endpoint', detail: 'Use another OpenAI-compatible provider' },
   ]
@@ -51,12 +52,12 @@ export function drawPicker(c: Canvas, s: WorkspaceState, focus: string) {
   const l = workspaceLayout(c.width, c.height),
     rows = pickerRows(s)
   const anchorId = s.overlay === 'engine-picker' ? 'choose-engine' : 'choose-model'
-  const anchor = c.targets.find((t) => t.id === anchorId)
+  const anchor = c.targets.find((t) => t.id === anchorId) ?? c.targets.find((t) => t.id === 'choose-model')
   if (!anchor) return
   const width = Math.min(62, c.width - l.inset * 2)
   const x = Math.min(anchor.x - 1, c.width - l.inset - width)
-  const bottom = l.bottom - COMPOSER_HEIGHT
-  const height = Math.min(22, bottom - l.top - 1, Math.max(8, rows.length * 2 + 4))
+  const bottom = (c.targets.find((t) => t.id === 'composer')?.y ?? l.bottom - COMPOSER_HEIGHT + 3) - 3
+  const height = Math.min(22, bottom - 1, Math.max(8, rows.length * 2 + 4))
   const y = bottom - height + 1,
     count = Math.max(1, Math.floor((height - 4) / 2))
   const selected = Math.max(

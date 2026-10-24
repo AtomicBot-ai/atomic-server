@@ -1,3 +1,4 @@
+import { SUPPORT_LINKS } from '../support.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { PAGE_FOCUS } from '../state.js'
@@ -37,8 +38,13 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
           : 'operation-run',
       })
   }
+  if (id.startsWith('support:')) {
+    const link = SUPPORT_LINKS.find((item) => item.id === id)
+    if (link) await c.run({ name: 'open-url', url: link.url })
+    return true
+  }
   if (id === 'help' || id === 'menu') {
-    patch({ overlay: id, focus: id === 'help' ? 'close' : 'page:chat' })
+    patch({ overlay: id, focus: id === 'help' ? 'support:email' : 'page:server' })
     return true
   }
   if (id === 'agent-setup') {
@@ -57,8 +63,9 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
       setupComplete: true,
       setup: null,
       page: 'server',
+      serverView: 'overview',
       overlay: null,
-      focus: 'copy-endpoint',
+      focus: 'api-toggle',
       message: '',
     })
     return true

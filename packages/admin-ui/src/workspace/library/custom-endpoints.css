@@ -1,0 +1,85 @@
+/* Adapted from atomic-chat-ui/routes/endpoints.tsx @ 807b4d9. */
+.custom-provider-summary {
+  padding: 8px 16px 20px;
+  min-width: 0;
+}
+.custom-endpoints-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.custom-endpoints-heading h1 {
+  font-size: 18px;
+  margin: 0;
+}
+.custom-endpoints-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: min(320px, 58dvh);
+  padding: 32px 20px;
+  gap: 20px;
+  border: 1px dashed var(--ew-line);
+  border-radius: 12px;
+  text-align: center;
+}
+.custom-endpoints-empty > svg {
+  color: var(--ew-muted);
+}
+.custom-endpoints-empty p {
+  margin: 0;
+  color: var(--ew-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.custom-endpoints-list {
+  display: grid;
+  gap: 12px;
+}
+.custom-endpoint-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  background: var(--ew-panel);
+}
+.custom-endpoint-card > svg {
+  flex-shrink: 0;
+  color: var(--ew-muted);
+}
+.custom-endpoint-info {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.custom-endpoint-info h2,
+.custom-endpoint-info p {
+  margin: 0;
+}
+.custom-endpoint-info h2 {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.custom-endpoint-info code,
+.custom-endpoint-info p,
+.custom-endpoint-status {
+  font-size: 12px;
+  color: var(--ew-muted);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .custom-provider-summary {
+    padding: 4px 0 16px;
+  }
+  .custom-endpoint-card {
+    padding: 16px;
+  }
+}

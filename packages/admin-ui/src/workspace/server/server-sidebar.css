@@ -1,0 +1,232 @@
+/* Adapted from Atomic-Chat server-concept desktop styles @ 807b4d9. */
+.desktop-server-control {
+  border: 1px solid color-mix(in srgb, var(--ew-teal) 20%, var(--ew-line));
+  background: color-mix(in srgb, var(--ew-teal) 5%, var(--ew-panel));
+  border-radius: 14px;
+  padding: 10px;
+  margin: 0 0 14px;
+}
+.server-power > .action-wrap,
+.server-power button {
+  display: block;
+  width: 100%;
+}
+.server-power button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 24px;
+  min-height: 38px;
+  margin-bottom: 7px;
+}
+.server-power.is-running button {
+  background: var(--ew-raised);
+  color: var(--ew-text);
+}
+.server-control-detail {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 2px;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ew-muted);
+  text-align: left;
+  font-size: 11px;
+}
+.server-control-detail:hover {
+  background: var(--ew-raised);
+}
+.server-control-detail strong {
+  max-width: 85px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ew-text);
+}
+.desktop-sidebar {
+  padding: 20px 10px 16px;
+}
+.desktop-sidebar header {
+  padding: 0 10px 20px;
+}
+.sidebar-agents {
+  margin-top: 20px;
+}
+.sidebar-agents p {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.sidebar-agents button {
+  justify-content: start;
+  gap: 8px;
+  padding: 8px;
+}
+.sidebar-agents button > span:not(.connection-agent-icon) {
+  flex: 1;
+}
+.sidebar-agents .connection-agent-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex: 0 0 24px;
+}
+.sidebar-agents .connection-agent-icon img {
+  width: 20px;
+  height: 20px;
+}
+.agent-state {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ew-muted);
+}
+.agent-state.prepared {
+  background: var(--ew-teal);
+}
+.desktop-topbar .sidebar-toggle,
+.sidebar-scrim {
+  display: none;
+}
+@media (max-width: 900px) {
+  .desktop-workspace {
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .desktop-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .desktop-sidebar {
+    display: none;
+    position: absolute;
+    left: 64px;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    z-index: 45;
+    padding: 20px 10px;
+  }
+  .sidebar-open .desktop-sidebar {
+    display: flex;
+  }
+  .desktop-sidebar header,
+  .sidebar-agents,
+  .sidebar-bottom,
+  .sidebar-heading {
+    display: grid;
+  }
+  .sidebar-sections {
+    display: grid;
+    overflow: visible;
+  }
+  .sidebar-sections button {
+    font-size: 13px;
+  }
+  .desktop-topbar .sidebar-toggle {
+    display: block;
+    margin-right: 12px;
+    padding: 6px;
+    font-size: 20px;
+  }
+  .desktop-topbar > span {
+    margin-right: auto;
+  }
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0 0 0 304px;
+    z-index: 40;
+    border: 0;
+    background: #0007;
+  }
+  .desktop-topbar {
+    padding: 0 16px;
+  }
+}
+@media (max-width: 560px) {
+  .server-ready-strip,
+  .server-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .server-search {
+    width: 100%;
+  }
+  .server-settings-panel {
+    padding: 16px;
+  }
+  .server-settings .form-grid,
+  .server-connection-facts {
+    grid-template-columns: 1fr;
+  }
+  .server-save-bar {
+    flex-wrap: wrap;
+  }
+  .server-save-bar > span:first-child {
+    width: 100%;
+  }
+  .server-connections .connect-address {
+    flex-wrap: wrap;
+  }
+  .desktop-topbar .topbar-context {
+    display: none;
+  }
+}
+
+.rail-brand img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+.sidebar-group-label {
+  margin: 16px 12px 5px;
+  font-size: 12px;
+  color: var(--ew-muted);
+}
+
+.server-power-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  animation: server-label-in 0.22s ease-out;
+}
+.server-state-spinner {
+  animation: server-spin 0.7s linear infinite;
+}
+.server-power.is-changing button {
+  opacity: 1;
+  background: var(--ew-raised);
+  color: var(--ew-teal);
+  cursor: progress;
+}
+@keyframes server-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes server-label-in {
+  from {
+    opacity: 0.4;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .server-power-label,
+  .server-state-spinner {
+    animation: none;
+  }
+}

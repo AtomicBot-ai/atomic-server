@@ -11,6 +11,12 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-10-24** — [Show engine update results before offering installation](2026-10-24-show-engine-update-results.md) — shared update feedback, explicit install offers, and Save only for changed settings.
+
+- **2026-10-24** — [Separate model selection from load status](2026-10-24-separate-model-selection-from-load-status.md) — qualified local badges and immediate terminal selection with pending/error feedback inside the composer.
+
+- **2026-10-24** — [Keep waiting controls and navigation reachable](2026-10-24-keep-waiting-controls-and-navigation-reachable.md) — local email confirmation, shared header download status, and focus-following compact terminal controls.
+
 - **2026-09-24** — [Adopt atomic-chat-core as an embedded library and single binary](2026-09-24-adopt-atomic-chat-core-as-an-embedded-library-and-single-binary.md) — the core is an exactly pinned dependency compiled into `atc`; never copy its logic, request an export.
 - **2026-09-24** — [Embed the admin UI as a generated module](2026-09-24-embed-the-admin-ui-as-a-generated-module.md) — gzipped assets in `static-assets.generated.ts`, a placeholder when the SPA is not built.
 - **2026-09-24** — [Hand-rolled command specs on parseArgs](2026-09-24-hand-rolled-command-specs-on-parseargs.md) — help, docs and completion render from one spec; stubs exit 3.
@@ -63,3 +69,32 @@ add a new one that says which record it supersedes.
 - **2026-10-20** — [Enforce the core boundary in lint](2026-10-20-enforce-the-core-boundary-in-lint.md) — only the core's `exports`; core-owned names need a `core-boundary` reason; `core-workaround` expires with the core pin.
 - **2026-10-21** — [Report atc's server errors to its own Sentry project](2026-10-21-report-atc-server-errors-to-its-own-project.md) — the core's `ErrorReporter` with atc's DSN baked at release; one consent; uncaught throws, start-up, admin 5xx and failed downloads, tagged by `component`.
 - **2026-10-21** — [Turn Foundry Local's 1DS upload off on Linux](2026-10-21-foundry-local-1ds-off-on-linux.md) — `TF_BUILD=True` in the core's environment on Linux, since the library's v2.1.0 `ProcessInfo` upload crashes its host (microsoft/Foundry-Local#1182); drop it with a later library build.
+
+- **2026-10-22** — [Adapt the desktop structure to a server-first workspace](2026-10-22-server-first-desktop-structure.md) — server overview and connections, dedicated settings, shared terminal/web navigation, setup ends at Server, secondary Playground.
+
+- **2026-10-23** — [Terminal onboarding and direct downloads](2026-10-23-terminal-onboarding-cards.md) — engine-first intro, automatic checked downloads, contextual footer, provider/media cards and catalog filters.
+- **2026-10-23** — [Preserve setup choices and verify connections](2026-10-23-preserve-setup-and-check-connections.md) — nested model selection, checked providers, engine progress, direct pause/removal and consistent primary actions.
+- [2026-10-23 — Follow the current desktop composition in both server clients](2026-10-23-follow-current-desktop-composition.md)
+
+- **2026-10-23** — [Keep pending connections in place](2026-10-23-keep-pending-connections-in-place.md) — preserve pending engines, explicit readiness, optional waiting games and predictable compact provider dialogs.
+- **2026-10-23** — [Update the embedded core to 0.19.0](2026-10-23-update-embedded-core-to-0-19.md) — exact core pin, native LiteRT host dispatch, and rebuilt web/TUI backend.
+
+- **2026-10-23** — [Keep the browser and terminal on one live workspace](2026-10-23-share-live-state-between-clients.md) — shared onboarding, API and panel status; preserve local navigation, drafts and the current connection result.
+- [Share the latest desktop screen structure](2026-10-23-align-desktop-screen-structure.md)
+
+- [Keep engine controls and completed downloads together](2026-10-23-unify-model-hub-dialogs.md)
+
+- [Apply prototype annotations to both real frontends](2026-10-23-apply-prototype-annotations.md) — engine-first onboarding, shared choices, labelled navigation, support and desktop conversation composition.
+
+- [Share assistants, connectors, skills and document settings](2026-10-23-shared-workspace-features.md) — shared feature state and runtime, with binary parser dependency approval recorded separately.
+
+- [Require intentional intro input and restore navigation origins](2026-10-23-require-intentional-intro-and-return-navigation.md) — explicit first-run entry, terminal report filtering, and direct Escape returns for Settings and existing-server connections.
+
+- [2026-10-23 — Gate inference and keep downloads visible](2026-10-23-gate-inference-and-keep-downloads-visible.md) — includes local-only email confirmation and waiting-screen exits.
+- **2026-10-24** — [Drafting terminal brand and server-status eyes](2026-10-24-drafting-terminal-brand.md) — approved ASCII artwork, authoritative status colors, and compact header bounds.
+- **2026-10-24** — [Symmetric Drafting header and restrained contour motion](2026-10-24-symmetric-drafting-motion.md) — balanced lower contour, anchored status eyes, and reduced-motion-aware arm movement.
+
+- **2026-10-24** — [Own engine downloads in the shared server queue](2026-10-24-share-background-engine-downloads.md) — background engine jobs, selection intent, shared progress and supported recovery controls.
+
+- **2026-10-24** — [Shade dialogs and keep short terminals usable](2026-10-24-shade-dialogs-and-fit-short-terminals.md) — consistent modal backdrops, functional60×20 status layout, and approved Beacon/Rover card artwork.
+- **2026-10-24** — [Share semantic colors between Web and the terminal](2026-10-24-share-interface-colors.md) — one palette for matching navigation, composer, action and download controls.

@@ -7,8 +7,6 @@ import { fakeTerminal, eventually } from '../helpers/fake-terminal.js'
 import { waitFor } from '../helpers/wait-for.js'
 import { WorkspaceApp } from '../../src/tui/workspace/WorkspaceApp.js'
 import type { WorkspaceDeps } from '../../src/tui/workspace/controller.js'
-import { createWorkspace } from '../../src/tui/workspace/state.js'
-import { workspaceFrame } from '../../src/tui/workspace/frame.js'
 import { readTextFile, resolveConfig } from '../../src/config/index.js'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { defaultConfig } from '../../src/config/index.js'
@@ -20,6 +18,7 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
     terminal = fakeTerminal(120, 36),
     link = fakeCoreLink()
   let engine = false
+  let finishEngine: (() => void) | undefined
   link.request = async <T>(method: string, path: string, body?: unknown) => {
     link.calls.push({ method, path, body })
     if (path.endsWith('/catalog'))
@@ -34,10 +33,18 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
     if (path === '/models/atomic-prism/families') return { families: [] } as T
     if (path === '/models/compatibility')
       return { outcome: 'compatible', provider: null, requires: [], reason: 'stock' } as T
-    if (path === '/backends/llamacpp-upstream')
+    if (path.startsWith('/backends/'))
       return { backends: engine ? [{ version: 'b1', backend: 'cpu' }] : [] } as T
-    if (path.endsWith('/install')) {
+    if (path.endsWith('/install') || path.endsWith('/update')) {
+      const taskId = (body as { task_id?: string }).task_id
+      if (taskId && !engine) {
+        await new Promise<void>((resolve) => {
+          finishEngine = resolve
+          link.snapshotValue.downloads = [{ taskId, transferred: 50, total: 100, percent: 50 }]
+        })
+      }
       engine = true
+      link.snapshotValue.downloads = []
       return {} as T
     }
     return {} as T
@@ -134,37 +141,82 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
       patchConsole: false,
     })
   let ui = mount()
-  const sees = (text: string) => eventually(() => terminal.stdout.lastFrame().includes(text), text)
-  const click = (id: string, state = createWorkspace('welcome')) => {
-    const t = workspaceFrame(state, 120, 36, 0).targets.find((t) => t.id === id)!
-    terminal.stdin.press(`\u001b[<0;${t.x + 2};${t.y + 2}M`)
+  const sees = async (text: string) => {
+    try {
+      await eventually(() => terminal.stdout.lastFrame().includes(text), text)
+    } catch (error) {
+      throw new Error(`${String(error)}\n${terminal.stdout.lastFrame()}`)
+    }
+  }
+  const click = async (label: string) => {
+    await sees(label)
+    const lines = terminal.stdout.lastFrame().split('\n')
+    const y = lines.findLastIndex((line, i) => i < lines.length - 2 && line.includes(label))
+    const x = lines[y]!.lastIndexOf(label)
+    terminal.stdin.press(`\u001b[<0;${x + 1};${y + 1}M`)
+  }
+  const skipPermissions = async () => {
+    await sees('Notifications')
+    await click('Skip')
+    expect(terminal.stdout.lastFrame()).not.toContain('Continue without permissions?')
+    await sees('Cloud providers')
   }
   try {
-    await sees('SET UP SERVER')
-    click('hosting')
-    // A goal comes first; the text goals continue into the engine-first setup.
-    await sees('What will you use it for?')
+    await sees('Choose engine')
+    expect(terminal.stdout.lastFrame()).not.toContain('Choose your engine')
+    await click('Choose engine')
+    await sees('Choose your engine')
+    await sees('llama.cpp')
+    terminal.stdin.press('\u001b')
+    await sees('Choose engine')
+    expect(terminal.stdout.lastFrame()).not.toContain('Choose your engine')
+    expect(terminal.stdout.lastFrame()).not.toContain('Choose your first model')
+    await click('Choose engine')
+    await sees('Choose your engine')
+    await sees('llama.cpp')
     terminal.stdin.press('\r')
-    await sees('Choose models >')
+    await sees('50%')
+    expect(terminal.stdout.lastFrame()).not.toContain('Press any key')
+    expect(engine).toBe(false)
+    await sees('Fixture')
+    // Select a radio card, then Continue starts the transfer without a confirmation screen.
     terminal.stdin.press('\r')
-    await sees('fixture/repo')
-    // The first curated model has focus; searching is optional. Its plan is reviewed before downloading.
-    terminal.stdin.press('\r')
-    await sees('Review before downloading')
-    terminal.stdin.press('\r')
-    await sees('BUILDING YOUR LOCAL WORKSPACE')
+    await click('Continue')
+    await skipPermissions()
     terminal.stdin.press('\u0007')
     terminal.stdin.press('c')
     await sees('Prepare your workspace first')
     expect(link.calls.some((c) => c.path.endsWith('/load'))).toBe(false)
     await waitFor(async () => (await setups()).length === 1)
+    await waitFor(async () => (await deps.base.loadConfig()).values.tui.model === 'fixture/model.Q4_K_M')
     await eventually(() => ranges.length === 0 && weightRequests === 1, 'first half downloading')
+    expect(link.calls.filter((c) => c.path.endsWith('/update'))).toHaveLength(1)
+    expect(engine).toBe(false)
+    finishEngine?.()
+    await waitFor(() => engine)
+    await waitFor(async () =>
+      (await server.snapshot()).downloads.some(
+        (row) =>
+          (row as { kind?: string; stage?: string }).kind === 'engine' &&
+          (row as { stage?: string }).stage === 'ready'
+      )
+    )
     ui.unmount()
     // The server restarts mid-download: its record is left behind, the partial file stays.
     server = daemon()
     expect((await setups())[0]?.stage).toBe('interrupted')
     ui = mount()
-    await sees('Copy address')
+    await skipPermissions()
+    await click('Skip')
+    await sees('Image and video models')
+    await click('Skip')
+    await sees('How will you use Atomic Server?')
+    expect(terminal.stdout.lastFrame()).not.toContain('Everyday use')
+    await sees('Configure an endpoint')
+    await click('Configure an endpoint')
+    await sees('Server host')
+    expect(terminal.stdout.lastFrame()).toContain('Configuration')
+    await waitFor(async () => link.calls.some((c) => c.path === '/server/start'))
     expect(ranges).toEqual(['bytes=500-'])
     expect(link.calls.some((c) => c.path === '/models/llamacpp-upstream/fixture/model.Q4_K_M/load')).toBe(
       true

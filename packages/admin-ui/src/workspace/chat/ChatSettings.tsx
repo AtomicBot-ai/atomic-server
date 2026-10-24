@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { useDialog } from '../useDialog'
 import { Action, Field } from '../Controls'
@@ -25,7 +26,7 @@ export function ChatSettings({
     [draft, set] = useState(value),
     [section, setSection] = useState('General'),
     [error, setError] = useState('')
-  return (
+  return createPortal(
     <div className="modal-shade">
       <section
         ref={ref}
@@ -159,6 +160,7 @@ export function ChatSettings({
           <Action onClick={() => set({ ...CHAT_DEFAULTS })}>Reset draft to defaults</Action>
         </div>
       </section>
-    </div>
+    </div>,
+    document.querySelector('.desktop-workspace') ?? document.body
   )
 }

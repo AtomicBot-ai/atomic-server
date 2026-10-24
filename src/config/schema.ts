@@ -61,7 +61,7 @@ export const FIELDS: readonly FieldSpec[] = [
     type: 'enum',
     default: 'ask',
     values: ['ask', 'personal', 'server'],
-    description: 'Choose a landing workspace: ask, personal chat, or server',
+    description: 'Legacy workspace preference; the terminal now always opens on Server',
   },
   {
     path: 'tui.endpoint',

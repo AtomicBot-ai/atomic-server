@@ -1,3 +1,5 @@
+import { chatProvider } from './chat-readiness.js'
+import { WorkspaceFeatureService } from './features.js'
 import { randomUUID } from 'node:crypto'
 import type { WorkspaceInput } from '../contract/index.js'
 import type { ChatHistory, ClientKeys, Conversation } from '../terminal-data/index.js'
@@ -50,19 +52,15 @@ export class ChatJobs {
       model = String(request['model'] ?? '')
     if (!model || !Array.isArray(request['messages']) || !request['messages'].length)
       throw new AtcError('ATC_USAGE', 'Choose a ready model and provide messages.')
-    const sessions = (await this.options.link.models.sessions()).filter((s) => s.model_id === model)
-    if (sessions.length !== 1 || (input['provider'] && sessions[0]?.provider !== input['provider']))
-      throw new AtcError(
-        'ATC_USAGE',
-        sessions.length > 1
-          ? 'This model ID is loaded in multiple engines. Unload the other instance before testing this endpoint.'
-          : 'Load the selected model in Engines & Models, then retry.'
-      )
-    // What this session's engine accepts; images for an engine without them are refused here.
-    const provider = String(sessions[0]!.provider)
+    const provider = await chatProvider(this.options.link, model, String(input['provider'] ?? ''))
     const body = chatRequestFor(
       provider,
-      { ...request, stream: true, stream_options: { include_usage: true }, n: 1 },
+      {
+        ...(await new WorkspaceFeatureService(this.options.paths.atcDir).enrich(request)),
+        stream: true,
+        stream_options: { include_usage: true },
+        n: 1,
+      },
       provider === 'foundry-local' ? { tools: await foundryTakesTools(this.options.paths.layout, model) } : {}
     )
     const status = await this.options.link.server.status()
@@ -104,7 +102,7 @@ export class ChatJobs {
         state: 'preparing',
         message: { role: 'assistant', content: '' },
         model,
-        provider: String(sessions[0]!.provider),
+        provider,
         started_at: Date.now(),
         duration_ms: 0,
       },

@@ -1,5 +1,6 @@
 import type { WorkspaceState } from './state.js'
 export function serverEndpoint(s: WorkspaceState): string {
+  if (s.workspace) return s.workspace.api.endpoint
   const api =
     s.base.daemon.kind === 'up' && s.base.daemon.snapshot.server.running
       ? s.base.daemon.snapshot.server
@@ -11,6 +12,8 @@ export function serverEndpoint(s: WorkspaceState): string {
   return `http://${host.includes(':') ? '[' + host + ']' : host}:${api?.port ?? value('api.port', '1337')}${api?.prefix ?? value('api.prefix', '/v1')}`
 }
 export function example(s: WorkspaceState): string {
+  if (s.connectionLanguage === 'python')
+    return `import os\nfrom openai import OpenAI\n\nclient = OpenAI(base_url=${JSON.stringify(serverEndpoint(s))}, api_key=os.environ["ATC_API_KEY"])\nprint(client.chat.completions.create(model="MODEL_ID", messages=[{"role": "user", "content": "Hello"}]))`
   // Shell placeholders intentionally contain no model IDs or credentials from the server.
   return `curl '${serverEndpoint(s).replaceAll("'", "'\\''")}'/chat/completions -H 'Content-Type: application/json' -H "Authorization: Bearer $ATC_API_KEY" -d '{"model":"MODEL_ID","messages":[{"role":"user","content":"Hello"}]}'`
 }

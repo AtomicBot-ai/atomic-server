@@ -1,11 +1,13 @@
 # eye-cli
 
-Atomic Chat's terminal workspace: local conversations, model and engine installation, and an
-OpenAI-compatible server console. Keyboard shortcuts and mouse controls share the same interface,
-with an animated turquoise eye and layouts that adapt to the terminal window.
+Atomic Server provides a web interface and terminal UI for the same local inference server. Both
+support keyboard and mouse controls and share onboarding, downloads, models, and server status.
+The executable is named **`atc`**.
 
-Choose Personal terminal for chat or Server console for API controls and credentials. First run installs
-an engine and model before opening the workspace. The executable is still named **`atc`**.
+On a fresh profile, the intro waits at **Choose engine**. Open the engine picker and select an engine
+to start its installation. When installation finishes, the intro waits at **Press any key** before
+model selection. If an engine is already installed, unfinished onboarding starts at **Press any key**.
+Completed onboarding resumes the workspace in either interface.
 
 This repository continues the terminal work built on
 [`atomic-chat-cli`](https://github.com/AtomicBot-ai/atomic-chat-cli). Build from source with Bun and Node 22:
@@ -96,7 +98,7 @@ removes it and leaves the data folder. The repository keeps the last ten release
 [releases page](https://github.com/AtomicBot-ai/eye-cli/releases) as `.deb` and `.rpm` files.
 
 ```sh
-atc                  # on a terminal: the terminal UI — choose a workspace, install an engine and a model
+atc                  # on a terminal: the terminal UI — choose an engine, then a model
 atc service install  # keep the server running: systemd, launchd or a scheduled task; back after a crash
 atc status           # pid, versions, API endpoint, running models, admin URL   (--json for one document)
 atc api start        # the OpenAI-compatible API; every client needs a key from atc/client-keys.json

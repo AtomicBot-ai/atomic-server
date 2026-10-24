@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { readdir } from 'node:fs/promises'
+import { readdir, rm } from 'node:fs/promises'
 import { ModelRegistry } from '@atomic-chat/core/models'
 import { Downloader } from '../downloads/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
@@ -28,7 +28,8 @@ export class ArtifactService {
     private options: WorkspaceServiceOptions,
     private catalog: WorkspaceCatalog,
     private request: typeof fetch,
-    downloader?: Downloader
+    downloader?: Downloader,
+    private ensureEngine?: (engine: string, taskId: string) => Promise<void>
   ) {
     this.directory = join(options.paths.atcDir, 'media-installations')
     this.downloader =
@@ -160,7 +161,8 @@ export class ArtifactService {
       }
       await this.persist(job, worker, 'installing_engine')
       if (worker.cancelled) return
-      await ensureArtifactEngine(this.options.link, job.plan.engine, `media-engine-${job.id}`)
+      if (this.ensureEngine) await this.ensureEngine(job.plan.engine, `media-engine-${job.id}`)
+      else await ensureArtifactEngine(this.options.link, job.plan.engine, `media-engine-${job.id}`)
       if (worker.cancelled) {
         await this.persist(job, worker, 'cancelled')
         return
@@ -185,6 +187,7 @@ export class ArtifactService {
   }
   async cancel(id: string): Promise<ArtifactJob> {
     const active = this.running.get(id)
+    const transferred = this.downloader.snapshot().find((transfer) => transfer.taskId === id)?.transferred
     if (active) active.cancelled = true
     this.downloader.cancel(id)
     const job = await this.mutations.run(id, async () => {
@@ -192,6 +195,7 @@ export class ArtifactService {
       if (current.stage === 'ready') return current
       const worker = this.running.get(id)
       if (worker) worker.cancelled = true
+      if (transferred !== undefined) Object.assign(current, { transferred })
       current.stage = 'cancelled'
       current.updated_at = Date.now()
       await writeDocument(this.path(id), current)
@@ -199,7 +203,25 @@ export class ArtifactService {
     })
     if (job.stage !== 'ready')
       await this.options.link.request('POST', `/downloads/media-engine-${id}/cancel`, {})
+    if (active && transferred !== undefined)
+      await active.done.then(() =>
+        this.mutations.run(id, async () => {
+          const current = await this.get(id)
+          await writeDocument(this.path(id), { ...current, transferred })
+        })
+      )
     return job
+  }
+  async remove(id: string, cleanup: (job: ArtifactJob) => Promise<void>) {
+    const worker = this.running.get(id)
+    await this.cancel(id)
+    await worker?.done
+    return this.mutations.run(id, async () => {
+      if (this.running.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
+      await cleanup(await this.get(id))
+      await rm(this.path(id), { force: true })
+      return { removed: true, id }
+    })
   }
   async load(id: string) {
     const job = await this.get(id)

@@ -149,6 +149,20 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     required: ['setup_id'],
   }),
   operation(
+    'downloads.remove',
+    'Remove download',
+    'configure',
+    'Stop a model download and delete its unshared files and partial download data. Installed models require installed=true and are deleted through the core; loaded models are protected.',
+    {
+      properties: {
+        id: { type: 'string' },
+        owner: { type: 'string', enum: ['setup', 'artifacts', 'managed', 'foundry'] },
+        installed: { type: 'boolean' },
+      },
+      required: ['id', 'owner'],
+    }
+  ),
+  operation(
     'artifacts.plan',
     'Review media installation',
     'read',

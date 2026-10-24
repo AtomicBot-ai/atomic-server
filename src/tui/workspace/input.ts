@@ -1,4 +1,22 @@
-import { downloadRows } from '../../workspace-view/index.js'
+import { waitingSetupInput } from './setup/waiting-setup.js'
+import { railInput } from './rail.js'
+import { featureInput } from './server/feature-actions.js'
+import { enginePanelInput } from './library/engine-panel-input.js'
+import { serverShellInput } from './server/server-shell-input.js'
+import { mediaInput } from './media/media-input.js'
+import { inputKey } from './input-key.js'
+import { waitingGameInput } from './waiting-game.js'
+import { connectionGuideInput } from './server/connection-picker.js'
+import { catalogMenuItems } from './library/catalog-menu.js'
+import { mouseReport, outsidePopover } from './mouse-report.js'
+export { mouseReport } from './mouse-report.js'
+import { firstModelInput } from './setup/first-model-input.js'
+import { setupCloudInput } from './setup/cloud-step.js'
+import { catalogIndexes, catalogFilterControls } from './library/catalog-filters.js'
+import { escapeAction } from './escape-action.js'
+import { cloudGridInput } from './library/cloud-layout.js'
+import { cloudChoices } from './library/cloud-catalog.js'
+import { listInput } from './list-input.js'
 import { operationFields } from './operations/operation-model.js'
 import type { Key } from 'ink'
 import type { Canvas } from './draw/canvas.js'
@@ -6,22 +24,8 @@ import { graphemes, hit } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { isPicker, pickerRows } from './chat/picker.js'
-export interface InputResult {
-  patch?: Partial<WorkspaceState>
-  action?: string | undefined
-  quit?: true
-  leader?: boolean
-}
-/** SGR reports are recognized before editor input; their bytes can never become chat text. */
-export function mouseReport(
-  input: string
-): { code: number; x: number; y: number; released: boolean } | undefined {
-  // eslint-disable-next-line no-control-regex
-  const m = /^(?:\u001b)?\[<(\d+);(\d+);(\d+)([Mm])$/.exec(input)
-  return m
-    ? { code: Number(m[1]), x: Number(m[2]) - 1, y: Number(m[3]) - 1, released: m[4] === 'm' }
-    : undefined
-}
+import type { InputResult } from './input-types.js'
+export type { InputResult } from './input-types.js'
 export function workspaceInput(
   input: string,
   key: Key,
@@ -29,16 +33,55 @@ export function workspaceInput(
   frame: Canvas,
   leader = false
 ): InputResult {
-  // Legacy xterm modified-Enter encodings complement Ink's CSI-u/Kitty parser.
-  // eslint-disable-next-line no-control-regex
-  if (/^(?:\u001b)?\[(?:27;2;13~|13;2~)$/.test(input)) {
-    key = { ...key, return: true, shift: true }
-    input = ''
-  }
+  ;({ input, key } = inputKey(input, key))
+  const shell =
+    railInput(input, key, s, frame) ??
+    waitingSetupInput(input, key, s) ??
+    enginePanelInput(input, key, s) ??
+    mediaInput(input, key, s) ??
+    connectionGuideInput(input, key, s, frame) ??
+    serverShellInput(input, key, s, frame)
+  if (shell) return shell
   const mouse = mouseReport(input)
   if (mouse) {
     if (!s.mouse) return {}
+    if (s.overlay === 'waiting-game' && mouse.code & 64) return {}
     if (mouse.code & 64) {
+      const firstModel = firstModelInput(key, s, mouse.code & 1 ? 1 : -1)
+      if (firstModel) return firstModel
+      if (s.overlay === 'catalog-menu') {
+        const items = catalogMenuItems(s),
+          at = items.findIndex((item) => item.id === s.focus)
+        return {
+          patch: {
+            focus:
+              items[Math.max(0, Math.min(items.length - 1, at + (mouse.code & 1 ? 1 : -1)))]?.id ?? 'close',
+            hover: '',
+          },
+        }
+      }
+      const prefix =
+        (!s.cloud.editing || s.firstRun === 'cloud') &&
+        ((s.firstRun === 'cloud' && !s.overlay) ||
+          s.overlay === 'cloud' ||
+          (s.page === 'models' && s.libraryView === 'cloud' && !s.overlay))
+          ? 'cloud-choice:'
+          : s.firstRun === 'media' && !s.overlay
+            ? 'media-queue:'
+            : s.libraryView === 'catalog' && s.page === 'models' && !s.overlay
+              ? 'catalog-row:'
+              : ''
+      if (prefix) {
+        const length =
+          prefix === 'cloud-choice:'
+            ? cloudChoices(s.cloud).length
+            : prefix === 'media-queue:'
+              ? 2
+              : catalogIndexes(s).length
+        const current = s.focus.startsWith(prefix) ? Number(s.focus.slice(prefix.length)) : s.selected
+        const selected = Math.max(0, Math.min(length - 1, current + (mouse.code & 1 ? 1 : -1)))
+        return { patch: { selected, focus: `${prefix}${selected}`, hover: '' } }
+      }
       if (s.overlay === 'operation-choice') {
         const at = Number(s.focus.replace('operation-choice:', '')) || 0
         return {
@@ -71,28 +114,29 @@ export function workspaceInput(
         },
       }
     if ((mouse.code & 3) !== 0) return {}
-    if (!target) {
-      const p = frame.popover
-      return isPicker(s.overlay) &&
-        (!p || mouse.x < p.x || mouse.x >= p.x + p.width || mouse.y < p.y || mouse.y >= p.y + p.height)
-        ? { action: 'close' }
-        : {}
-    }
+    if (s.overlay && outsidePopover(frame, mouse)) return { action: escapeAction(s).id || undefined }
+    if (!target) return {}
     return { patch: { focus: target.id, hover: '', message: '' }, action: target.id }
   }
   const focused = () => {
     const id = frame.targets.find((t) => t.id === (s.hover || s.focus))?.id ?? frame.targets[0]?.id
     return { action: id, patch: { focus: id ?? '', hover: '' } }
   }
+  const game = waitingGameInput(input, key, s, frame)
+  if (game) return game
+  const featureEdit = featureInput(input, key, s)
+  if (featureEdit) return featureEdit
+  const cloudEdit = setupCloudInput(input, key, s)
+  if (cloudEdit) return cloudEdit
   if (input.startsWith('[<') || input.startsWith('\u001b[<')) return {}
-  if (key.meta && ['1', '2', '3'].includes(input))
-    return { action: `page:${['chat', 'server', 'models'][Number(input) - 1]}` }
+  if (key.meta && ['1', '2', '3', '4'].includes(input))
+    return { action: `page:${['server', 'models', 'access', 'chat'][Number(input) - 1]}` }
   if (input === '[S' || input === '\u001bOS') return { action: 'console' }
   if (key.ctrl && input === 'q') return { quit: true }
   if (key.ctrl && input === 'x') return { action: 'mouse' }
   if (key.ctrl && input === 'c')
     return { action: s.page === 'setup' ? (s.setup?.preparing ? 'setup-cancel' : 'setup-pause') : 'cancel' }
-  if (key.ctrl && input === 'g') return { patch: { overlay: 'menu', focus: 'page:chat' }, leader: true }
+  if (key.ctrl && input === 'g') return { patch: { overlay: 'menu', focus: 'page:server' }, leader: true }
   if (key.ctrl && input === 'k') return { patch: { overlay: 'help', focus: 'close' } }
   if (leader) {
     const p = PAGES.find((p) => p.key === input.toLowerCase())
@@ -126,11 +170,25 @@ export function workspaceInput(
     const next = Math.max(0, Math.min(fields.length - 1, at + (key.upArrow ? -1 : 1)))
     return { patch: { focus: `operation-field:${fields[next]?.path ?? ''}`, selected: next, hover: '' } }
   }
+  if (s.overlay === 'catalog-menu' && (key.upArrow || key.downArrow || key.tab)) {
+    const items = catalogMenuItems(s),
+      at = items.findIndex((item) => item.id === s.focus)
+    const delta = key.upArrow || key.shift ? -1 : 1
+    return { patch: { focus: items[(at + delta + items.length) % items.length]?.id ?? 'close', hover: '' } }
+  }
+  if (s.overlay === 'catalog-filters' && (key.upArrow || key.downArrow || key.tab)) {
+    const controls = [...catalogFilterControls(s).map(([id]) => id!), 'close']
+    const at = controls.indexOf(s.focus),
+      delta = key.upArrow || key.shift ? -1 : 1
+    return { patch: { focus: controls[(at + delta + controls.length) % controls.length]!, hover: '' } }
+  }
   if (key.tab) {
     const i = frame.targets.findIndex((t) => t.id === s.focus),
       next = (i + (key.shift ? -1 : 1) + frame.targets.length) % frame.targets.length
     return { patch: { focus: frame.targets[next]?.id ?? '', hover: '', message: '' } }
   }
+  const firstModel = firstModelInput(key, s)
+  if (firstModel) return firstModel
   if (s.overlay === 'console' && s.focus === 'console-input') {
     if (key.return) return { action: 'console-run' }
     if (key.escape) return { action: 'close' }
@@ -146,8 +204,12 @@ export function workspaceInput(
     if (key.backspace || key.delete)
       return { patch: { editValue: graphemes(s.editValue).slice(0, -1).join('') } }
     if (key.ctrl && input === 'u') return { patch: { editValue: '' } }
-    if (input && !key.ctrl && !key.meta)
-      return { patch: { editValue: s.editValue + input.replace(/\r?\n/g, '') } }
+    if (input && !key.ctrl && !key.meta) {
+      // A paste may contain CR or control bytes in one Ink input event; never save those in a field.
+      // eslint-disable-next-line no-control-regex
+      const value = input.replace(/[\u0000-\u001f\u007f]/g, '')
+      return { patch: { editValue: s.editValue + value } }
+    }
   }
   if (s.base.logs.filtering && !s.overlay) {
     if (key.escape || key.return)
@@ -157,29 +219,13 @@ export function workspaceInput(
       : s.base.logs.filter + (!key.ctrl ? input : '')
     return { patch: { base: { ...s.base, logs: { ...s.base.logs, filter } } } }
   }
-  if (key.escape && !s.overlay && (s.page === 'setup' || (s.page === 'models' && s.setup))) {
-    const stage = s.setup?.stage
-    return {
-      action: s.setup?.preparing
-        ? 'setup-cancel'
-        : stage === 'engine'
-          ? s.setupComplete
-            ? 'library-close'
-            : 'setup-intro'
-          : stage === 'download' || stage === 'ready'
-            ? 'setup-pause'
-            : s.setup?.repository
-              ? 'setup-back'
-              : s.setupComplete
-                ? 'library-close'
-                : 'setup-engine-back',
-    }
-  }
-  if (key.escape) return s.overlay ? { action: 'close' } : { patch: { overlay: 'menu', focus: 'page:chat' } }
-  if (key.ctrl && input === 'p') return { action: 'page:history' }
-  if (key.ctrl && input === 'n') return { action: 'new' }
+  if (key.escape) return { action: escapeAction(s).id || undefined }
+  if (s.page === 'chat' && !s.overlay && key.ctrl && input === 'p') return { action: 'page:history' }
+  if (s.page === 'chat' && !s.overlay && key.ctrl && input === 'n') return { action: 'new' }
   if (s.overlay === 'command' && (key.pageDown || key.pageUp))
     return { action: key.pageUp ? 'scroll-up' : 'scroll-down' }
+  const cloud = cloudGridInput(key, s, frame)
+  if (cloud) return cloud
   if (s.overlay) {
     if (key.return) return focused()
     if (key.upArrow || key.downArrow) {
@@ -234,43 +280,8 @@ export function workspaceInput(
     }
     return {}
   }
-  const listPrefixes = [
-    'model:',
-    'installed:',
-    'request:',
-    'command:',
-    'setup-repo:',
-    'setup-file:',
-    'setup-job:',
-    'library-row:',
-    'download-row:',
-  ]
-  const prefix = listPrefixes.find((p) => s.focus.startsWith(p))
-  if ((key.upArrow || key.downArrow) && prefix) {
-    const length =
-      prefix === 'download-row:'
-        ? downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? []).length
-        : prefix === 'library-row:'
-          ? s.libraryRows.length
-          : prefix === 'model:'
-            ? s.models.length
-            : prefix === 'installed:'
-              ? s.installed.length
-              : prefix === 'request:'
-                ? s.requests.length
-                : prefix === 'command:'
-                  ? s.commands.length
-                  : prefix === 'setup-repo:'
-                    ? (s.setup?.repositories.length ?? 0)
-                    : prefix === 'setup-job:'
-                      ? (s.setup?.selections.length ?? 0)
-                      : (s.setup?.files.length ?? 0)
-    const selected = Math.max(
-      0,
-      Math.min(length - 1, Number(s.focus.slice(prefix.length)) + (key.upArrow ? -1 : 1))
-    )
-    return { patch: { selected, focus: `${prefix}${selected}`, hover: '' } }
-  }
+  const list = listInput(key, s)
+  if (list) return list
   if (input === ' ' && s.focus.startsWith('setup-file:')) return { action: s.focus }
   if (key.return) return focused()
   if (input === '?') return { patch: { overlay: 'help', focus: 'close' } }

@@ -1,3 +1,5 @@
+import { chatProvider } from './chat-readiness.js'
+import { WorkspaceFeatureService } from './features.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import type { Conversation, ChatHistory, ClientKeys } from '../terminal-data/index.js'
 import { AtcError } from '../errors/index.js'
@@ -17,8 +19,7 @@ export async function completeChat(
   const body = object(input['request'])
   if (!Array.isArray(body['messages']) || !body['model'])
     throw new AtcError('ATC_USAGE', 'Choose a model and provide messages.')
-  const provider =
-    (await options.link.models.sessions()).find((s) => s.model_id === body['model'])?.provider ?? ''
+  const provider = await chatProvider(options.link, String(body['model']), String(input['provider'] ?? ''))
   const { result } = await callPublic(
     options.link,
     options.config,
@@ -27,7 +28,7 @@ export async function completeChat(
     '/chat/completions',
     chatRequestFor(
       provider,
-      { ...body, stream: false },
+      { ...(await new WorkspaceFeatureService(options.paths.atcDir).enrich(body)), stream: false },
       provider === 'foundry-local'
         ? { tools: await foundryTakesTools(options.paths.layout, String(body['model'])) }
         : {}

@@ -90,7 +90,7 @@ it('opens later downloads in Models without numbered onboarding, retaining compl
   await activate('library-close', ctx)
   expect(ctx.get()).toMatchObject({ page: 'models', setup: null, setupComplete: true })
   await activate('switch-mode', ctx)
-  expect(ctx.get()).toMatchObject({ page: 'models', overlay: 'workspace' })
+  expect(ctx.get()).toMatchObject({ page: 'server', overlay: null })
   await activate('hosting', ctx)
   expect(ctx.get()).toMatchObject({ page: 'server', overlay: null, setupComplete: true })
 })
@@ -119,4 +119,46 @@ it('loads a store model with the provider of the row picked', async () => {
   ctx.update((s) => ({ ...s, installed: [store], overlay: 'model-picker' }))
   await activate('installed:0:tensorrt-llm', ctx)
   expect(loadModel).toHaveBeenCalledWith('tensorrt-llm', store.id)
+})
+
+it('does not restore an engine switch’s old model after a newer model selection', async () => {
+  const { ctx, loadModel, engine, installed, save } = harness()
+  let finishEngineLoad!: () => void
+  loadModel.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finishEngineLoad = resolve
+      })
+  )
+  const second = { id: 'newer', name: 'Newer model', provider: 'llamacpp-upstream' }
+  ctx.update((s) => ({ ...s, installed: [...installed, second], engines: [engine] }))
+  const old = activate('pick-engine:0', ctx)
+  await vi.waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+  await activate('installed:1', ctx)
+  expect(ctx.get().model).toBe('newer')
+  finishEngineLoad()
+  await old
+  expect(ctx.get()).toMatchObject({ model: 'newer', modelLoad: null, loadError: null, busy: false })
+  expect(save).not.toHaveBeenCalledWith('tui.model', 'local')
+})
+
+it('ignores an engine selection that finishes after a newer model was chosen', async () => {
+  const { ctx, select, loadModel, engine, installed, save } = harness()
+  let finishSelection!: () => void
+  select.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finishSelection = resolve
+      })
+  )
+  const second = { id: 'newer', name: 'Newer model', provider: 'llamacpp-upstream' }
+  ctx.update((s) => ({ ...s, installed: [...installed, second], engines: [engine] }))
+  const old = activate('pick-engine:0', ctx)
+  await vi.waitFor(() => expect(select).toHaveBeenCalledOnce())
+  await activate('installed:1', ctx)
+  finishSelection()
+  await old
+  expect(ctx.get()).toMatchObject({ model: 'newer', modelLoad: null, pickerBusy: false })
+  expect(loadModel).not.toHaveBeenCalledWith('llamacpp', 'local')
+  expect(save).not.toHaveBeenCalledWith('tui.model', 'local')
 })

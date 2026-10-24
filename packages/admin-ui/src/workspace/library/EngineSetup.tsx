@@ -35,12 +35,14 @@ export function EngineSetup({
   workspace: w,
   engine,
   onClose,
+  embedded = false,
 }: {
   workspace: Workspace
   engine: string
   onClose: () => void
+  embedded?: boolean
 }) {
-  const dialog = useDialog(onClose)
+  const dialog = useDialog(onClose, !embedded)
   const launch = useStatusStore((s) => s.status?.launch) ?? 'terminal'
   const [state, setState] = useState<ManagedEngineState | null>(null)
   const [busy, setBusy] = useState(false)
@@ -86,21 +88,23 @@ export function EngineSetup({
   const progress = op ? operationView(op) : null
   const lines = (list: string[]) => list.map((line, i) => <p key={i}>{line}</p>)
   return (
-    <div className="modal-shade">
+    <div className={embedded ? 'engine-setup-inline' : 'modal-shade'}>
       <section
         ref={dialog}
         tabIndex={-1}
-        className="ew-modal"
-        role="dialog"
-        aria-modal="true"
+        className={embedded ? undefined : 'ew-modal'}
+        role={embedded ? 'region' : 'dialog'}
+        aria-modal={embedded ? undefined : true}
         aria-label={`${engineName(engine)} setup`}
       >
-        <div className="panel-heading">
-          <h2>{engineName(engine)}</h2>
-          <button className="ew-button" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        {!embedded && (
+          <div className="panel-heading">
+            <h2>{engineName(engine)}</h2>
+            <button className="ew-button" onClick={onClose}>
+              Close
+            </button>
+          </div>
+        )}
         {!view && <p className="ew-muted">{error ? '' : 'Reading the core’s plan…'}</p>}
         {view && <p className="ew-muted">{view.summary}</p>}
         {merged && view && (

@@ -18,7 +18,7 @@ it.each([
   [54, 24],
   [100, 30],
   [160, 50],
-])('keeps media fields and cockpit controls accessible at %s by %s', (w, h) => {
+])('keeps media fields and server controls accessible at %s by %s', (w, h) => {
   const s = {
     ...createWorkspace('tools'),
     setupComplete: true,
@@ -28,8 +28,11 @@ it.each([
   }
   const frame = workspaceFrame(s, w, h, 1)
   expect(frame.targets.some((t) => t.id === s.focus)).toBe(true)
-  for (const id of ['api-toggle', 'api-ping', 'operation-run', 'operation-json', 'operation-down'])
-    expect(frame.targets.some((t) => t.id === id)).toBe(true)
+  for (const id of ['api-toggle', 'operation-run', 'operation-json', 'operation-down'])
+    expect(
+      frame.targets.some((t) => t.id === id),
+      id
+    ).toBe(true)
   for (const target of frame.targets) {
     expect(target.x + target.width).toBeLessThanOrEqual(w)
     expect(target.y + target.height).toBeLessThanOrEqual(h)

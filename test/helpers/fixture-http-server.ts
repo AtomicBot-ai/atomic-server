@@ -47,7 +47,14 @@ export class FixtureHttpServer {
   }
 
   async stop(): Promise<void> {
-    await new Promise<void>((r) => this.server?.close(() => r()))
+    const server = this.server
+    if (!server) return
+    this.server = undefined
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve())
+      // Cancelled downloads may leave an in-flight socket after release().
+      server.closeAllConnections()
+    })
   }
 
   /** Finish every body `holdAfterBytes` is holding. */

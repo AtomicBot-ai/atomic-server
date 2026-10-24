@@ -1417,7 +1417,7 @@ Global options:
 ```
 Usage: atc tui [options]
 
-A keyboard-first workspace for chat and API hosting, with mouse navigation, model selection, request activity, settings, logs, and system checks. Choose Personal terminal or Server console on first launch. Ctrl+G opens navigation; Ctrl+K shows shortcuts; Ctrl+Q leaves the console without stopping the server. Bare `atc` opens it on an interactive terminal.
+A keyboard-first server workspace with connections, models, request activity, settings, logs, and system checks. First launch guides server setup; Playground is available for test requests. Ctrl+G opens navigation; Ctrl+K shows shortcuts; Ctrl+Q leaves the console without stopping the server. Bare `atc` opens it on an interactive terminal.
 
 Options:
       --screen <name>  Open on chat, server, models, welcome, logs, config, doctor, or commands

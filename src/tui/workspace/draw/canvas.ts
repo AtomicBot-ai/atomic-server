@@ -1,24 +1,6 @@
 import type { Drawing } from './art.js'
-export const COLORS = {
-  black: '#000000',
-  text: '#f2f4f4',
-  muted: '#a3aaac',
-  stone: '#596164',
-  line: '#303638',
-  red: '#b2fff4',
-  gold: '#53dcca',
-  green: '#70c9bf',
-  ground: '#090b0c',
-  focus: '#17322f',
-  surface: '#171b1d',
-  header: '#202628',
-  composer: '#effaf7',
-  composerFrame: '#b7d4cd',
-  composerInk: '#102d28',
-  engineButton: '#265951',
-  modelButton: '#c0e6de',
-  sendButton: '#50d5bf',
-}
+import { WORKSPACE_COLORS } from '../../../contract/index.js'
+export const COLORS = WORKSPACE_COLORS
 
 export interface Cell {
   char: string
@@ -35,6 +17,7 @@ export interface Target {
   hint: string
 }
 export interface Canvas {
+  contentTop?: number
   popover?: { x: number; y: number; width: number; height: number }
   cells: Cell[][]
   targets: Target[]
@@ -91,7 +74,13 @@ export function text(
     const n = cellWidth(char)
     if (at + n > x + max || at + n > c.width) break
     if (y >= 0 && y < c.height && at >= 0) {
-      c.cells[y]![at] = { char, color, ...(background ? { background } : {}), ...(bold ? { bold } : {}) }
+      const surface = background ?? c.cells[y]![at]?.background
+      c.cells[y]![at] = {
+        char,
+        color,
+        ...(surface ? { background: surface } : {}),
+        ...(bold ? { bold } : {}),
+      }
       if (n === 2) c.cells[y]![at + 1] = { ...c.cells[y]![at]!, char: '' }
     }
     at += n
@@ -114,6 +103,26 @@ export function wrap(value: string, width: number): string[] {
       n += w
     }
     rows.push(row)
+  }
+  return rows
+}
+/** Wrap readable prose at word boundaries; only oversized words are split into cells. */
+export function wrapWords(value: string, width: number): string[] {
+  if (width < 1 || !value) return []
+  const rows: string[] = []
+  for (const paragraph of cleanText(value).split('\n')) {
+    let line = ''
+    for (const word of paragraph.trim().split(/\s+/)) {
+      const candidate = line ? `${line} ${word}` : word
+      if (textWidth(candidate) <= width) line = candidate
+      else {
+        if (line) rows.push(line)
+        const pieces = wrap(word, width)
+        rows.push(...pieces.slice(0, -1))
+        line = pieces.at(-1) ?? ''
+      }
+    }
+    rows.push(line)
   }
   return rows
 }
@@ -145,9 +154,9 @@ export function button(
     x,
     y,
     shown,
-    selected || focused === id ? COLORS.gold : COLORS.text,
+    selected || focused === id ? COLORS.ground : COLORS.text,
     width,
-    selected || focused === id ? COLORS.focus : COLORS.surface,
+    selected || focused === id ? COLORS.gold : COLORS.surface,
     bold
   )
   c.targets.push({ id, x, y, width: Math.min(width, c.width - x), height: 1, hint })

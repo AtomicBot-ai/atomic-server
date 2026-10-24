@@ -1,0 +1,176 @@
+/* Adapted from Atomic-Chat server-concept desktop styles @ 5043013. */
+.server-settings {
+  display: grid;
+  gap: 16px;
+  max-width: 900px;
+}
+.server-settings-panel {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  background: var(--ew-panel);
+}
+.server-settings-panel .form-grid {
+  margin: 0;
+}
+.server-settings .ew-field {
+  min-width: 0;
+}
+.server-key-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.server-key-field select {
+  flex: 1;
+  min-width: min(200px, 100%);
+}
+.server-key-field .ew-button {
+  white-space: nowrap;
+}
+.server-switch {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: space-between;
+}
+.server-switch span {
+  display: grid;
+  gap: 5px;
+}
+.server-switch strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.server-switch small {
+  color: var(--ew-muted);
+}
+.server-switch input {
+  width: 36px;
+  height: 22px;
+  accent-color: var(--ew-teal);
+  flex-shrink: 0;
+}
+.server-advanced {
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+.server-advanced summary {
+  cursor: pointer;
+}
+.server-advanced[open] summary {
+  margin-bottom: 20px;
+}
+.server-save-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  background: var(--ew-raised);
+}
+.server-save-bar > span:first-child {
+  margin-right: auto;
+  font-size: 12px;
+}
+.server-icon-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  border: 1px solid var(--ew-line);
+  border-radius: 10px;
+  background: var(--ew-bg);
+}
+.server-icon-field > svg {
+  color: var(--ew-muted);
+  flex-shrink: 0;
+}
+.server-icon-field select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+}
+.server-state-tag {
+  color: var(--ew-teal);
+  background: color-mix(in srgb, var(--ew-teal) 10%, transparent);
+  padding: 5px 9px;
+  border-radius: 15px;
+  font-size: 12px;
+}
+.server-connections {
+  display: grid;
+  gap: 16px;
+  max-width: 900px;
+}
+.server-connection-empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--ew-panel);
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+}
+.server-connection-empty > svg {
+  color: var(--ew-muted);
+}
+.server-connection-empty p {
+  color: var(--ew-muted);
+  margin: 0 0 20px;
+}
+.server-connection-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--ew-line);
+  margin-bottom: 20px;
+}
+.server-connection-facts dt {
+  font-size: 12px;
+  color: var(--ew-muted);
+  margin-bottom: 8px;
+}
+.server-connection-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.server-prepared-tool {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+.server-prepared-tool > span:not(.connection-agent-icon) {
+  flex: 1;
+  display: grid;
+  gap: 5px;
+}
+.server-prepared-tool small {
+  color: var(--ew-muted);
+}
+.server-connections pre {
+  max-height: 340px;
+  overflow: auto;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--ew-bg);
+}
+.server-connections .connect-address {
+  overflow-wrap: anywhere;
+}
+
+fieldset.server-settings-panel {
+  margin: 0;
+  min-width: 0;
+}

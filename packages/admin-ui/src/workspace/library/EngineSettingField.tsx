@@ -1,5 +1,5 @@
 import type { GpuFacts } from '@atomic-chat/core/contracts'
-import { gpuLabel } from '@view'
+import { changedValues, gpuLabel } from '@view'
 import { Field } from '../Controls'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
@@ -25,8 +25,10 @@ export function EngineSettingField({
     options = Array.isArray(props.options) ? props.options : []
   const disabled = inactiveSetting(field, values),
     value = values[name] ?? descriptorDefault(field) ?? ''
+  const changed =
+    Object.keys(changedValues(saved, name in values ? { [name]: values[name] } : {}, [field])).length > 0
   return (
-    <div className={`engine-setting ${values[name] !== saved[name] ? 'setting-changed' : ''}`}>
+    <div className={`engine-setting ${changed ? 'setting-changed' : ''}`}>
       <Field label={text(field.title, name)}>
         {name === 'gpu_id' && managed ? (
           <select
@@ -81,7 +83,7 @@ export function EngineSettingField({
       </Field>
       {disabled && <small>{disabled}</small>}
       <details>
-        <summary>Details & default{values[name] !== saved[name] ? ' · changed' : ''}</summary>
+        <summary>Details & default{changed ? ' · changed' : ''}</summary>
         <p>{text(field.description, '')}</p>
         <p>
           Key: <code>{name}</code>

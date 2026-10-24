@@ -116,7 +116,7 @@ export function SetupChoices({
                 <Empty>
                   {query
                     ? 'No models match. Clear the filter or try another name.'
-                    : 'No models are available. Retry or choose another goal.'}
+                    : 'No models are available. Retry or choose another engine.'}
                 </Empty>
                 {query && <Action onClick={() => setQuery('')}>Clear filter</Action>}
                 <Action onClick={retry}>Retry catalog</Action>
@@ -158,7 +158,7 @@ export function SetupChoices({
             Review model
           </Action>
         )}
-        <Action onClick={manual}>Explore without installing</Action>
+        <Action onClick={manual}>Set up later</Action>
       </div>
     </>
   )

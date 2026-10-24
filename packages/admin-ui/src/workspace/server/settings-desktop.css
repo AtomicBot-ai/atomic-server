@@ -1,0 +1,116 @@
+/* Lifted from Atomic-Chat/web-app/src/containers/Card.tsx @ 5043013; adapted: settings controls in shared CSS. */
+.settings-page {
+  max-width: 900px;
+  display: grid;
+  gap: 16px;
+}
+.settings-page .page-heading,
+.settings-page .ew-panel {
+  margin: 0;
+}
+.settings-page .page-intro {
+  margin: 0;
+}
+.settings-card {
+  padding: 20px;
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  background: var(--ew-panel);
+}
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ew-line);
+}
+.settings-item:first-child {
+  padding-top: 0;
+}
+.settings-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.settings-item > label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.settings-item strong {
+  font-weight: 500;
+  color: var(--ew-text);
+}
+.settings-item small {
+  font-size: 12px;
+  color: var(--ew-muted);
+  line-height: 1.5;
+}
+.settings-item-control {
+  flex: 0 1 280px;
+  min-width: 0;
+}
+.settings-item-control input,
+.settings-item-control select {
+  width: 100%;
+}
+.settings-item-control:has([role='switch']) {
+  flex: 0 0 auto;
+}
+.settings-item-control [role='switch'] {
+  width: 36px;
+  height: 22px;
+  accent-color: var(--ew-teal);
+}
+.settings-advanced > summary {
+  cursor: pointer;
+}
+.settings-advanced[open] > summary {
+  margin-bottom: 20px;
+}
+.settings-card-heading {
+  margin: 0 0 16px;
+}
+.settings-value {
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.settings-shortcuts {
+  margin: 0;
+}
+.settings-shortcuts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ew-line);
+}
+.settings-shortcuts > div:last-child {
+  border-bottom: 0;
+}
+.settings-shortcuts dt {
+  font-size: 13px;
+}
+.settings-shortcuts dd {
+  margin: 0;
+}
+.settings-shortcuts kbd {
+  font:
+    12px ui-monospace,
+    monospace;
+  color: var(--ew-muted);
+}
+@media (max-width: 620px) {
+  .settings-item {
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .settings-item-control {
+    flex-basis: 100%;
+  }
+  .settings-item:has([role='switch']) {
+    flex-wrap: nowrap;
+  }
+}

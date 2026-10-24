@@ -103,9 +103,11 @@ describe('real workspace controls', () => {
     const user = userEvent.setup()
     const write = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
     const execute = vi.fn().mockResolvedValue({ key: 'test-only-client-key' })
-    render(<Server workspace={workspace(execute)} openCommand={vi.fn()} openSetup={vi.fn()} />)
+    render(
+      <Server section="connect" workspace={workspace(execute)} openCommand={vi.fn()} openSetup={vi.fn()} />
+    )
     expect(execute).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Copy address' }))
+    await user.click(screen.getByRole('button', { name: 'Copy URL' }))
     expect(write).toHaveBeenCalledWith('http://127.0.0.1:1337/v1')
     await user.click(screen.getByRole('button', { name: 'Copy API key' }))
     await waitFor(() => expect(write).toHaveBeenCalledWith('test-only-client-key'))
@@ -116,11 +118,13 @@ describe('real workspace controls', () => {
     const execute = vi.fn().mockResolvedValue({ rows: [{ id: 'AtomicChat/model', name: 'Model' }] })
     const close = vi.fn()
     render(<SetupWizard workspace={workspace(execute)} onClose={close} onOpenGoal={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Explore without installing' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Skip setup' }))
     await waitFor(() => expect(close).toHaveBeenCalled())
-    expect(execute).toHaveBeenCalledWith('setup.manual')
+    expect(close).toHaveBeenCalledOnce()
     expect(
-      execute.mock.calls.some(([name]) => String(name).includes('install') || String(name).includes('load'))
+      execute.mock.calls.some(([name]) =>
+        ['models.install', 'models.load', 'artifacts.install', 'artifacts.load'].includes(String(name))
+      )
     ).toBe(false)
   })
   it('downloads only after the user reviews the exact plan', async () => {
@@ -146,9 +150,8 @@ describe('real workspace controls', () => {
         onStarted={started}
       />
     )
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Review download' })).toBeEnabled())
+    await screen.findByRole('button', { name: 'Download', exact: true })
     expect(execute).not.toHaveBeenCalledWith('models.install', expect.anything())
-    await userEvent.click(screen.getByRole('button', { name: 'Review download' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Download' }))
     await waitFor(() =>
       expect(execute).toHaveBeenCalledWith('models.install', {
@@ -189,6 +192,7 @@ describe('real workspace controls', () => {
       return {}
     }) as typeof workspaceApi.execute)
     render(<Chat workspace={workspace(vi.fn())} onCatalog={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Chat options' })).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('button', { name: 'Earlier' }))
     await screen.findByText('Earlier reply')
     const input = screen.getByLabelText('Message')

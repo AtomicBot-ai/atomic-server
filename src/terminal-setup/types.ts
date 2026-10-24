@@ -57,6 +57,12 @@ export interface SetupView {
   /** Setup with a managed engine or Foundry Local instead of a GGUF download. */
   path: EngineSetupPath | null
   engine: string
+  /** First-run model radio selection; keyboard focus can move without changing it. */
+  firstChoice?: string
+  /** Preserve the chosen workspace destination when a background first model becomes ready. */
+  destination?: 'chat' | 'server'
+  /** Core-reported hardware summary used by first run. Memory is in MiB. */
+  device?: { name: string; memory: number }
   query: string
   repositories: HubRepository[]
   repository: string

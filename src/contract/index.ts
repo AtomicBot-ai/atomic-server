@@ -13,3 +13,10 @@ export * from './workspace-navigation.js'
 export * from './setup-goals.js'
 export * from './model-setup.js'
 export * from './managed.js'
+export * from './desktop-flows.js'
+export * from './workspace-features.js'
+
+export { MCP_CONNECTORS } from './mcp-catalog.js'
+export type { ConnectorTemplate } from './mcp-catalog.js'
+
+export { WORKSPACE_COLORS } from './workspace-colors.js'

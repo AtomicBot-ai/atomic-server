@@ -9,7 +9,7 @@ export async function callPublic(
   config: AtcConfig,
   keys: ClientKeys,
   request: typeof fetch,
-  path: '/models' | '/chat/completions',
+  path: '/models' | '/chat/completions' | '/embeddings',
   body?: Record<string, unknown>
 ) {
   const state = await link.server.status()

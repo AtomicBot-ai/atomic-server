@@ -69,7 +69,11 @@
   min-width: 0;
 }
 .download-row {
-  margin-bottom: 22px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid #35413f;
+  border-radius: 10px;
+  background: #101718;
 }
 .download-heading {
   display: flex;

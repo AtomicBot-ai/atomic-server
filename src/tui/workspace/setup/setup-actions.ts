@@ -4,6 +4,7 @@ import type { SetupView } from '../../../terminal-setup/index.js'
 import type { WorkspaceController } from '../controller.js'
 import { explained } from '../../controller.js'
 import { engineSetupAction, isPathAction, pathKind } from './engine-setup.js'
+import { returnToConnection } from '../server/connection-model-return.js'
 const operations = new WeakMap<WorkspaceController, AbortController>()
 export async function setupAction(
   id: string,
@@ -13,28 +14,30 @@ export async function setupAction(
   const change = (p: Partial<SetupView>) =>
     update((s) => ({ ...s, setup: s.setup ? { ...s.setup, ...p } : null }))
   const focus = (value: string) =>
-    update((s) => ({ ...s, focus: value, selected: 0, hover: '', overlay: null }))
+    update((s) =>
+      (s.firstRun && s.page === 'welcome') || (s.setup?.destination && !['setup', 'models'].includes(s.page))
+        ? s
+        : { ...s, focus: value, selected: 0, hover: '', overlay: null }
+    )
+  if (id === 'setup-picker-close') {
+    operations.get(c)?.abort()
+    return returnToConnection(ctx)
+  }
   if (id === 'library-close') {
     operations.get(c)?.abort()
     update((s) => ({ ...s, page: 'models', setup: null, overlay: null, focus: 'install-models', hover: '' }))
     return true
   }
-  if (id === 'personal' || id === 'hosting' || id === 'install-models') {
+  if (id === 'personal' || id === 'hosting' || id === 'install-models' || id === 'setup-browse') {
+    const browse = id === 'setup-browse'
     operations.get(c)?.abort()
-    const mode =
-      id === 'personal'
-        ? 'personal'
-        : id === 'hosting'
-          ? 'server'
-          : (await c.config()).values.tui.mode === 'server'
-            ? 'server'
-            : 'personal'
+    const mode = 'server'
     await c.save('tui.mode', mode)
-    if (get().setupComplete && id !== 'install-models') {
+    if (get().setupComplete && id !== 'install-models' && !browse) {
       update((s) => ({
         ...s,
-        page: mode === 'personal' ? 'chat' : 'server',
-        focus: mode === 'personal' ? 'composer' : 'api-toggle',
+        page: 'server',
+        focus: 'api-toggle',
         overlay: null,
         hover: '',
       }))
@@ -50,7 +53,7 @@ export async function setupAction(
     }))
     id = 'setup-refresh'
     const job = await Promise.resolve()
-      .then(() => c.setup.readPath())
+      .then(() => (browse ? null : c.setup.readPath()))
       .catch(() => null)
     const kind = job ? pathKind(job.engine) : null
     if (job && kind) {
@@ -62,7 +65,7 @@ export async function setupAction(
       focus('setup-cancel')
       return true
     }
-    if (get().setupComplete) {
+    if (get().setupComplete && !browse) {
       const manifest = await c.setup.read()
       if (manifest && !manifest.complete) {
         change({
@@ -83,7 +86,7 @@ export async function setupAction(
   if (id === 'setup-intro') {
     if (get().setupComplete) return setupAction('library-close', ctx)
     operations.get(c)?.abort()
-    update((s) => ({ ...s, page: 'welcome', setup: null, focus: 'personal', overlay: null, message: '' }))
+    update((s) => ({ ...s, page: 'welcome', setup: null, focus: 'hosting', overlay: null, message: '' }))
     return true
   }
   if (id.startsWith('setup-job:')) {
@@ -137,17 +140,15 @@ export async function setupAction(
         Promise.all([c.setup.catalogs(), c.setup.engines(), c.setup.installed()]),
         20000
       )
-      const first = catalogs.find((cat) => cat.provider === 'llamacpp-upstream') ?? catalogs[0]!
+      const first =
+        catalogs.find((cat) => cat.provider === 'llamacpp-upstream' && cat.available.length) ??
+        catalogs.find((cat) => cat.available.length)
       const build =
-        first.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first.available[0]!
-      patch({
-        catalogs,
-        registered,
-        installed,
-        engine: view.engine || `${first.provider}|${build.version}|${build.backend}`,
-      })
-      if (!operation.signal.aborted)
-        focus(`setup-engine:${view.engine || `${first.provider}|${build.version}|${build.backend}`}`)
+        first?.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first?.available[0]
+      const engine =
+        view.engine || (first && build ? `${first.provider}|${build.version}|${build.backend}` : '')
+      patch({ catalogs, registered, installed, engine })
+      if (!operation.signal.aborted) focus(engine ? `setup-engine:${engine}` : 'setup-refresh')
     } else if (id.startsWith('setup-engine:')) {
       patch({ engine: id.slice(13), busy: false, path: null })
       return setupAction('setup-models', ctx)
@@ -170,11 +171,15 @@ export async function setupAction(
         editValue: view.query,
         focus: 'save-edit',
       }))
-    } else if (id.startsWith('setup-repo:') || id === 'setup-variants') {
-      const index = id === 'setup-variants' ? get().selected : Number(id.slice(11))
+    } else if (id.startsWith('setup-repo:') || id.startsWith('setup-variants')) {
+      const index = id.startsWith('setup-variants:')
+        ? Number(id.slice(15))
+        : id === 'setup-variants'
+          ? get().selected
+          : Number(id.slice(11))
       const repository = view.repositories[index]?.id
       if (repository) {
-        const browse = id === 'setup-variants'
+        const browse = id.startsWith('setup-variants')
         patch({
           repository,
           files: [],
@@ -228,16 +233,33 @@ export async function setupAction(
           throw new Error('This model needs llama.cpp or TurboQuant. Go back to Engines and choose one.')
         }
         if (operation.signal.aborted) return true
-        patch({ selections: [selection], engine, preparing: false, stage: 'review' })
-        focus('setup-install')
+        patch({ selections: [selection], engine, preparing: false, stage: 'review', busy: false })
+        return setupAction('setup-install', ctx)
       }
     } else if (id === 'setup-install' && view.stage === 'review' && view.selections.length) {
       const plan = view.selections[0]!.plan as unknown as Record<string, unknown>
       if (Array.isArray(plan['blockers']) && plan['blockers'].length)
         throw new Error('Resolve the compatibility blockers before downloading.')
+      patch({ stage: 'download', preparing: true })
       const progress = await wait(c.setup.begin(view.mode, view.engine, view.selections))
-      patch({ stage: 'download', progress, pending: null, startedAt: progress.manifest.startedAt })
+      patch({
+        stage: 'download',
+        preparing: false,
+        progress,
+        pending: null,
+        startedAt: progress.manifest.startedAt,
+      })
       focus('setup-pause')
+      if (
+        returnToConnection(ctx, {
+          model: view.selections[0]!.plan.model_id,
+          provider: view.engine.split('|')[0]!,
+          downloading: true,
+        })
+      )
+        return true
+      if (get().firstRun === 'model')
+        update((s) => ({ ...s, page: 'welcome', firstRun: 'permissions', focus: 'first-next', selected: 0 }))
     } else if (id === 'setup-pause') {
       await wait(c.setup.pause())
       patch({ error: 'Downloads paused. Resume whenever you are ready.' })
@@ -257,28 +279,16 @@ export async function setupAction(
       const endpoint = await c.localEndpoint()
       await c.save('tui.endpoint', endpoint)
       await c.save('tui.model', model)
-      const current = get()
-      const page =
-        current.setupComplete && !['models', 'setup'].includes(current.page)
-          ? current.page
-          : manifest.mode === 'personal'
-            ? 'chat'
-            : 'server'
       update((s) => ({
         ...s,
+        firstRun: null,
         setupComplete: true,
         setup: null,
         model,
         engine: engineId,
         endpoint,
-        page,
-        focus:
-          page === current.page && current.setupComplete
-            ? s.focus
-            : page === 'chat'
-              ? 'composer'
-              : 'api-toggle',
-        message: 'Model loaded. API ready.',
+        ...(view.destination ? {} : { page: 'server', serverView: 'connect', focus: 'copy-endpoint' }),
+        message: view.destination ? '' : 'Server verified. Connect your app or agent below.',
       }))
     }
   } catch (e) {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { endpointUrl, listChatModels, streamChat } from './client.js'
+import { endpointUrl, sameEndpoint, listChatModels, streamChat } from './client.js'
 
 function response(chunks: string[]) {
   const cancel = vi.fn()
@@ -127,4 +127,18 @@ describe('a refused chat request', () => {
       })
     ).rejects.toThrow('maximum context length is 4096 tokens')
   })
+})
+
+it('matches loopback aliases without treating a different listener or API path as local', () => {
+  const local = 'http://127.0.0.1:63163/v1'
+  expect(sameEndpoint('http://localhost:63163/v1/', local)).toBe(true)
+  expect(sameEndpoint('http://[::1]:63163/v1', local)).toBe(true)
+  for (const other of [
+    'http://127.0.0.1:1337/v1',
+    'https://127.0.0.1:63163/v1',
+    'http://localhost:63163/other',
+    'http://host:63163/v1',
+    'http://user:secret@localhost:63163/v1',
+  ])
+    expect(sameEndpoint(other, local)).toBe(false)
 })

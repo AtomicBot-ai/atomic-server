@@ -9,6 +9,7 @@ export function Action({
   danger = false,
   disabled = false,
   title,
+  ariaLabel,
 }: {
   children: ReactNode
   onClick: () => void | Promise<unknown>
@@ -16,6 +17,7 @@ export function Action({
   danger?: boolean
   disabled?: boolean
   title?: string
+  ariaLabel?: string
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -24,6 +26,8 @@ export function Action({
       <button
         type="button"
         title={title}
+        aria-label={ariaLabel}
+        aria-busy={busy || undefined}
         disabled={busy || disabled}
         className={`ew-button ${primary ? 'primary' : ''} ${danger ? 'danger' : ''}`}
         onClick={() => {
@@ -35,7 +39,8 @@ export function Action({
             .finally(() => setBusy(false))
         }}
       >
-        {busy ? 'Working…' : children}
+        <span className={busy ? 'action-label busy' : 'action-label'}>{children}</span>
+        {busy && <span className="action-spinner" aria-hidden="true" />}
       </button>
       {error && (
         <span className="inline-error" role="alert">
@@ -49,15 +54,18 @@ export function Copy({
   value,
   label = 'Copy',
   secret = false,
+  children,
 }: {
   value: string | (() => Promise<string>)
   label?: string
   secret?: boolean
+  children?: ReactNode
 }) {
   const [copied, setCopied] = useState(false)
   return (
     <Action
       title={secret ? 'Copy API key to clipboard' : label}
+      ariaLabel={copied ? 'Copied' : label}
       onClick={async () => {
         const content = typeof value === 'function' ? await value() : value
         if (!navigator.clipboard?.writeText)
@@ -67,7 +75,7 @@ export function Copy({
         setTimeout(() => setCopied(false), 1800)
       }}
     >
-      {copied ? 'Copied' : label}
+      {copied ? 'Copied' : (children ?? label)}
     </Action>
   )
 }

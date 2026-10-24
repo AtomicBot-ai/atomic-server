@@ -79,6 +79,8 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
       // Downloads run in the server process; this one may exit before they finish.
       if (
         [
+          'engines.enqueue',
+          'engines.retry',
           'artifacts.install',
           'artifacts.resume',
           'models.install',
@@ -87,7 +89,7 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
           'foundry.install',
         ].includes(operation)
       )
-        throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading models.', {
+        throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading engines or models.', {
           hint: 'atc config set admin.autoStart true, then restart the server.',
         })
       return service.execute(operation, input)

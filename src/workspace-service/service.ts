@@ -1,49 +1,37 @@
-import { readFile } from 'node:fs/promises'
+import { EngineDownloads } from './engine-downloads.js'
+import { embedWorkspaceDocuments } from './workspace-embeddings.js'
+import { requireReadiness } from './require-readiness.js'
+import { WorkspaceFeatureService } from './features.js'
+import { enginePreferenceOperation } from './engine-preference.js'
+import { workspaceLogs } from './workspace-logs.js'
 import { join } from 'node:path'
-import type { AtcConfig, AtcPaths } from '../config/index.js'
-import type { CoreLink } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
 import { AGENTS, agentProfile, type AgentId } from '../agent-launch/index.js'
-import type { Conversation } from '../terminal-data/index.js'
-import { ChatHistory, ClientKeys } from '../terminal-data/index.js'
-import { WORKSPACE_OPERATIONS } from '../contract/index.js'
-import type { WorkspaceInput } from '../contract/index.js'
+import { ChatHistory, ClientKeys, type Conversation } from '../terminal-data/index.js'
+import { WORKSPACE_OPERATIONS, type WorkspaceInput } from '../contract/index.js'
 import { inputFor, object, sanitized } from './validation.js'
 import { WorkspaceMetrics } from './metrics.js'
 import { LoadStages } from './load-stages.js'
 import { publicEndpoint, workspaceSnapshot } from './snapshot.js'
 import { saveWorkspaceSetup } from './state.js'
 import { coreOperation, NOT_CORE } from './core-operations.js'
+import { cloudOperation } from './cloud-connections.js'
 import { modelOperation } from './model-operations.js'
 import { WorkspaceCatalog } from './catalog.js'
 import { engineSettingsSchema, workspaceConfig, updateWorkspaceConfig } from './settings.js'
 import { verifyWorkload } from './readiness.js'
 import { callPublic } from './public-api.js'
 import { completeChat } from './chat-complete.js'
-import type { ArtifactService } from './artifacts.js'
-import type { ModelSetups } from './model-setups.js'
-import type { ManagedModelSetups } from './managed-model-setups.js'
 import { downloadProxy } from './download-proxy.js'
 import { FoundryAccelerators } from './foundry.js'
 import { foundryOperation } from './foundry-operations.js'
-import type { FoundryModelSetups } from './foundry-model-setups.js'
-import type { Downloader } from '../downloads/index.js'
-import type { ErrorSink } from '../telemetry/index.js'
+import { DownloadMutations } from './download-mutations.js'
+import { removeDownload } from './download-removal.js'
 import { modelDownloads } from './model-downloads.js'
 import { ChatJobs } from './chat-jobs.js'
 import { importConversations } from './history-transfer.js'
-export interface WorkspaceServiceOptions {
-  link: CoreLink
-  paths: AtcPaths
-  config: AtcConfig
-  fetch?: typeof fetch
-  platform?: NodeJS.Platform
-  selfCommand?: readonly string[]
-  /** The server's environment: `HF_TOKEN` for gated model downloads. */
-  env?: NodeJS.ProcessEnv
-  /** atc's own error reports: failed model downloads go there. */
-  errors?: ErrorSink
-}
+import type { WorkspaceServiceOptions } from './service-options.js'
+export type { WorkspaceServiceOptions } from './service-options.js'
 export class WorkspaceService {
   readonly metrics = new WorkspaceMetrics()
   private readonly loads = new LoadStages()
@@ -51,36 +39,41 @@ export class WorkspaceService {
   private history: ChatHistory
   private request: typeof fetch
   private catalog: WorkspaceCatalog
-  private artifacts: ArtifactService
-  private setups: ModelSetups
-  private managed: ManagedModelSetups
   private foundry: FoundryAccelerators
-  private foundryModels: FoundryModelSetups
-  /** Every model download of this server: GGUF setups, media and MLX. */
-  private downloader: Downloader
+  private readonly mutations = new DownloadMutations()
+  private downloads: ReturnType<typeof modelDownloads>
+  private features: WorkspaceFeatureService
   private chats: ChatJobs
+  private engineDownloads: EngineDownloads
   constructor(private options: WorkspaceServiceOptions) {
+    this.features = new WorkspaceFeatureService(
+      options.paths.atcDir,
+      options.fetch ?? fetch,
+      options.env ?? {},
+      (input, model) => embedWorkspaceDocuments(options, this.keys, input, model)
+    )
     this.keys = new ClientKeys(options.paths.atcDir)
     this.history = new ChatHistory(options.paths.atcDir)
     this.chats = new ChatJobs(options, this.keys, this.history)
     this.request = options.fetch ?? fetch
     this.catalog = new WorkspaceCatalog(options.paths, this.request)
-    const downloads = modelDownloads(options, this.catalog, this.request)
-    this.downloader = downloads.downloader
-    this.artifacts = downloads.artifacts
-    this.setups = downloads.setups
-    this.managed = downloads.managed
+    this.engineDownloads = new EngineDownloads(
+      options.paths.atcDir,
+      options.link,
+      downloadProxy(options.config)
+    )
+    this.downloads = modelDownloads(options, this.catalog, this.request, this.engineDownloads)
     this.foundry = new FoundryAccelerators(options.link)
-    this.foundryModels = downloads.foundry
   }
   /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
   start(): Promise<{ kept: string[] }> {
-    return this.artifacts.migrate()
+    return this.downloads.artifacts.migrate()
   }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
     this.foundry.event(name, payload)
+    this.engineDownloads.event(name, payload)
   }
   async snapshot() {
     const result = await workspaceSnapshot(
@@ -91,30 +84,53 @@ export class WorkspaceService {
       this.metrics
     )
     // The core's own downloads are engine builds; every model transfer is this server's.
-    result.downloads.push(...this.downloader.snapshot())
+    result.downloads.push(
+      ...(await this.engineDownloads.list(result.downloads)),
+      ...this.downloads.downloader.snapshot()
+    )
     result.loads = this.loads.list()
     result.setups.push(
-      ...(await this.setups.list()),
-      ...(await this.artifacts.list()),
-      ...(await this.managed.list()),
-      ...(await this.foundryModels.list())
+      ...(await this.downloads.setups.list()),
+      ...(await this.downloads.artifacts.list()),
+      ...(await this.downloads.managed.list()),
+      ...(await this.downloads.foundry.list())
     )
+    result.features = await this.features.view()
     return result
   }
-  async execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
+  execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
+    return this.mutations.run(operation, () => this.dispatch(operation, raw))
+  }
+  private async dispatch(operation: string, raw: WorkspaceInput): Promise<unknown> {
     const descriptor = WORKSPACE_OPERATIONS.find((op) => op.name === operation)
     if (!descriptor) throw new AtcError('ATC_USAGE', `Unknown operation: ${operation}. Use operations.list.`)
     const input = inputFor(descriptor, raw),
       { link, paths, config } = this.options
+    await requireReadiness(operation, input, () => this.snapshot())
+    const preference = await enginePreferenceOperation(link, paths.atcDir, operation, input)
+    if (preference !== NOT_CORE) return preference
+    const feature = await this.features.execute(operation, input)
+    if (feature !== NOT_CORE) return feature
+    const cloud = await cloudOperation(link, paths, this.request, operation, input)
+    if (cloud !== NOT_CORE) return sanitized(cloud)
     const model = await modelOperation(
-      { options: this.options, catalog: this.catalog, request: this.request, managed: this.managed },
+      {
+        options: this.options,
+        catalog: this.catalog,
+        request: this.request,
+        managed: this.downloads.managed,
+      },
       operation,
       input
     )
     if (model !== NOT_CORE) return model
-    const foundry = foundryOperation(this.foundry, this.foundryModels, operation, input)
+    const foundry = foundryOperation(this.foundry, this.downloads.foundry, operation, input)
     if (foundry !== NOT_CORE) return foundry
     switch (operation) {
+      case 'engines.enqueue':
+        return this.engineDownloads.enqueue(String(input['engine']), input)
+      case 'engines.retry':
+        return this.engineDownloads.retry(String(input['id']))
       case 'settings.schema':
         return engineSettingsSchema(String(input['provider']))
       case 'config.get':
@@ -211,20 +227,8 @@ export class WorkspaceService {
         await verifyWorkload(link, config, this.keys, this.request, selected)
         return saveWorkspaceSetup(paths, 'guided')
       }
-      case 'logs.read': {
-        const text = await readFile(paths.daemonLog, 'utf8').catch((e: NodeJS.ErrnoException) => {
-          if (e.code === 'ENOENT') return ''
-          throw e
-        })
-        return {
-          lines: text
-            .split('\n')
-            .slice(-Number(input['lines'] ?? 150))
-            .map((line) =>
-              line.replace(/atc_[a-f0-9]{64}/g, '[API key]').replace(/(Bearer\s+)\S+/gi, '$1[redacted]')
-            ),
-        }
-      }
+      case 'logs.read':
+        return workspaceLogs(paths.daemonLog, Number(input['lines'] ?? 150))
       case 'history.list':
         return this.history.list()
       case 'history.load':
@@ -254,28 +258,34 @@ export class WorkspaceService {
       case 'setup.status':
       case 'setup.resume':
       case 'setup.cancel':
-        return this.setups.operation(operation, input)
+        return this.downloads.setups.operation(operation, input)
+      case 'downloads.remove':
+        return removeDownload(this.downloads, this.options, input, () => this.snapshot())
       case 'artifacts.plan':
-        return this.artifacts.plan(input)
+        return this.downloads.artifacts.plan(input)
       case 'artifacts.install':
-        return this.artifacts.install(input)
+        return this.downloads.artifacts.install(input)
       case 'artifacts.list':
-        return this.artifacts.list()
+        return this.downloads.artifacts.list()
       case 'artifacts.resume':
-        return this.artifacts.resume(String(input['id']))
+        return this.downloads.artifacts.resume(String(input['id']))
       case 'artifacts.cancel':
-        return this.artifacts.cancel(String(input['id']))
+        return this.downloads.artifacts.cancel(String(input['id']))
       case 'artifacts.load':
-        return this.artifacts.load(String(input['id']))
+        return this.downloads.artifacts.load(String(input['id']))
     }
     if (operation === 'media.configure')
       input['request'] = { ...object(input['request']), dataFolder: paths.dataFolder }
-    const result = await coreOperation(link, operation, input, downloadProxy(this.options.config)).catch(
-      (error: unknown) => {
-        if (operation === 'models.load') this.loads.drop(String(input['provider']), String(input['model_id']))
-        throw error
-      }
-    )
+    const result = await coreOperation(
+      link,
+      operation,
+      input,
+      downloadProxy(this.options.config),
+      (engine, taskId) => this.engineDownloads.ensure(engine, taskId)
+    ).catch((error: unknown) => {
+      if (operation === 'models.load') this.loads.drop(String(input['provider']), String(input['model_id']))
+      throw error
+    })
     if (result === NOT_CORE) throw new AtcError('ATC_USAGE', `No implementation for ${operation}.`)
     // Inference results are content, not session credentials. Keep token statistics and user JSON intact.
     return operation.endsWith('.run') || operation.includes('.job') || operation.endsWith('.create')
