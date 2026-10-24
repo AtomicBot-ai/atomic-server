@@ -1,6 +1,6 @@
 /** Server-owned engine build jobs. UI lifetimes never own or cancel a core installation. */
 import { randomUUID } from 'node:crypto'
-import { readdir } from 'node:fs/promises'
+import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import type { CoreLink } from '../core-link/index.js'
@@ -27,6 +27,8 @@ interface EngineJob extends Record<string, unknown> {
   updated_at: number
 }
 const terminal = new Set(['ready', 'failed', 'interrupted'])
+/** A finished install stays in Downloads for a day; failed and interrupted ones stay until retried. */
+const KEEP_READY_MS = 24 * 60 * 60 * 1000
 export class EngineDownloads {
   private jobs = new Map<string, EngineJob>()
   private runs = new Map<string, Promise<void>>()
@@ -37,7 +39,8 @@ export class EngineDownloads {
   constructor(
     private directory: string,
     private link: CoreLink,
-    private proxy?: ProxyConfig | null
+    private proxy?: ProxyConfig | null,
+    private now: () => number = Date.now
   ) {
     this.selection = new EngineSelection(directory, async () => link)
   }
@@ -54,16 +57,23 @@ export class EngineDownloads {
       for (const file of files.filter((name) => /^[\w-]+\.json$/.test(name))) {
         const job = await readDocument<EngineJob | null>(join(dir, file), null)
         if (!job || job.kind !== 'engine' || !/^[\w-]+$/.test(job.id)) continue
+        if (job.stage === 'ready' && this.now() - job.updated_at > KEEP_READY_MS) {
+          await rm(join(dir, file), { force: true })
+          continue
+        }
         if (!terminal.has(job.stage)) job.stage = 'interrupted'
         this.jobs.set(job.id, job)
       }
     })())
   }
-  /** Read-only progress copies preserve the job after the core removes its transient transfer. */
-  async list(transfers: readonly unknown[] = []) {
+  /** Copies of every job, so a job outlives the core's transient transfer row. */
+  async list() {
     await this.load()
-    for (const transfer of transfers) this.event('download:progress', transfer)
     return [...this.jobs.values()].map((job) => ({ ...job, state: job.stage }))
+  }
+  /** Progress from the core's current transfers, for events this server may have missed. */
+  sync(transfers: readonly unknown[]) {
+    for (const transfer of transfers) this.event('download:progress', transfer)
   }
   event(name: string, payload: unknown) {
     const value = object(payload)
@@ -73,7 +83,7 @@ export class EngineDownloads {
       job.transferred = Math.max(0, Number(value['transferred']) || 0)
       job.total = Math.max(0, Number(value['total']) || 0)
       job.stage = job.total > 0 && job.transferred >= job.total ? 'installing' : 'downloading'
-      job.updated_at = Date.now()
+      job.updated_at = this.now()
     }
     if (
       name === 'download:stage' &&
@@ -119,7 +129,7 @@ export class EngineDownloads {
           job.target['version'] === target['version'] &&
           job.target['variant'] === target['variant']
       )
-      const now = Date.now()
+      const now = this.now()
       const id = randomUUID()
       const job: EngineJob = existing ??
         stopped ?? {
@@ -208,7 +218,7 @@ export class EngineDownloads {
     const run = this.worker
       .run('engine-builds', async () => {
         job.stage = 'connecting'
-        job['started_at'] = Date.now()
+        job['started_at'] = this.now()
         await writeDocument(this.path(job.id), job)
         try {
           await installEngine(
@@ -231,7 +241,7 @@ export class EngineDownloads {
           job.stage = 'failed'
           job['error'] = error instanceof Error ? error.message : String(error)
         }
-        job.updated_at = Date.now()
+        job.updated_at = this.now()
         await writeDocument(this.path(job.id), job)
       })
       .catch(() => {

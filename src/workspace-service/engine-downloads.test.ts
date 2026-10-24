@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
@@ -161,4 +163,45 @@ it('waits for the selected queued version, not an older build of the same engine
   second.resolve()
   await load
   expect(ready).toBe(true)
+})
+it('forgets finished installs older than a day when it starts, keeping what can still be retried', async () => {
+  const { tmp, link } = fixture()
+  const dir = join(tmp.paths.atcDir, 'engine-downloads')
+  mkdirSync(dir, { recursive: true })
+  const day = 24 * 60 * 60 * 1000,
+    now = 10 * day
+  const job = (id: string, stage: string, age: number) => ({
+    id,
+    taskId: id,
+    kind: 'engine',
+    engine: 'llamacpp-upstream',
+    name: 'llama.cpp',
+    target: {},
+    stage,
+    transferred: 0,
+    total: 0,
+    created_at: now - age,
+    updated_at: now - age,
+  })
+  for (const j of [
+    job('old-ready', 'ready', 2 * day),
+    job('new-ready', 'ready', 60_000),
+    job('old-failed', 'failed', 3 * day),
+  ])
+    writeFileSync(join(dir, `${j.id}.json`), JSON.stringify(j))
+  const queue = new EngineDownloads(tmp.paths.atcDir, link, null, () => now)
+  expect((await queue.list()).map((j) => j.id).sort()).toEqual(['new-ready', 'old-failed'])
+  expect(existsSync(join(dir, 'old-ready.json'))).toBe(false)
+})
+it('takes progress from the core’s transfers in sync, and lists without changing a job', async () => {
+  const { link, queue } = fixture(),
+    hold = held()
+  link.responses['POST /engines/llamacpp-upstream/update'] = () => hold.promise
+  const job = await queue.enqueue('llamacpp-upstream')
+  await vi.waitFor(() => expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(true))
+  const before = await queue.list()
+  queue.sync([{ taskId: job.id, transferred: 40, total: 80 }])
+  expect(before[0]).toMatchObject({ transferred: 0 })
+  expect((await queue.list())[0]).toMatchObject({ stage: 'downloading', transferred: 40, total: 80 })
+  hold.resolve()
 })

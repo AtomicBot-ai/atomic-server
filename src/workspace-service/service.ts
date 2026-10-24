@@ -86,10 +86,8 @@ export class WorkspaceService {
       this.metrics
     )
     // The core's own downloads are engine builds; every model transfer is this server's.
-    result.downloads.push(
-      ...(await this.engineDownloads.list(result.downloads)),
-      ...this.downloads.downloader.snapshot()
-    )
+    this.engineDownloads.sync(result.downloads)
+    result.downloads.push(...(await this.engineDownloads.list()), ...this.downloads.downloader.snapshot())
     result.loads = this.loads.list()
     result.setups.push(
       ...(await this.downloads.setups.list()),
