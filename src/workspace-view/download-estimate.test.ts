@@ -11,6 +11,11 @@ describe('download estimates both clients show', () => {
     expect(nextTransferSample(second, 'b', 900, 4000).speed).toBe(0)
   })
 
+  it('keeps the last sample until a second has passed, so two quick renders make no spike', () => {
+    const sample = { id: 'a', bytes: 600, at: 3000, speed: 250 }
+    expect(nextTransferSample(sample, 'a', 1600, 3020)).toBe(sample)
+  })
+
   it.each([
     ['the server’s own estimate', { progress: { eta_seconds: 12 }, total: 100, transferred: 0 }, 50, 12],
     ['the server’s estimate in milliseconds', { eta_ms: 4500, total: 100, transferred: 0 }, 50, 4.5],

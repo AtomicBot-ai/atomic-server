@@ -11,7 +11,7 @@ export interface TransferSample {
   speed: number
 }
 
-/** The next sample of a download's bytes: a speed only between two samples of the same download that moved. */
+/** The next sample of a download's bytes: a speed only between two samples of the same download, a second or more apart, that moved. */
 export function nextTransferSample(
   previous: TransferSample | undefined,
   id: string,
@@ -19,6 +19,8 @@ export function nextTransferSample(
   now: number
 ): TransferSample {
   const elapsed = previous ? (now - previous.at) / 1000 : 0
+  // Two renders a moment apart would make a spike: a speed needs a second between samples.
+  if (previous?.id === id && elapsed < 1) return previous
   const speed =
     previous?.id === id && elapsed > 0 && bytes > previous.bytes ? (bytes - previous.bytes) / elapsed : 0
   return { id, bytes, at: now, speed }

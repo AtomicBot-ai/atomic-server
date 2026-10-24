@@ -39,3 +39,16 @@ it('round-trips desktop JSON without losing disabled state or masked credentials
   expect(() => parseConnectorJson('{"mcpServers":{"bad":{"args":[12]}}}')).toThrow('list of strings')
   expect(() => parseConnectorJson('{"mcpServers":{"bad":{"headers":{"token":12}}}}')).toThrow('text values')
 })
+
+// The catalog is JSON: TypeScript no longer checks it, so this does.
+it.each(MCP_CONNECTORS.map((t) => [t.serverKey, t] as const))(
+  '%s is a complete connector card',
+  (_key, t) => {
+    expect(t.serverKey).toMatch(/^[a-z0-9-]+$/)
+    expect(t.name && t.author && t.description && t.tagline).toBeTruthy()
+    const draft = connectorDraft(t, t.secret ? 'key' : '')
+    expect(['http', 'sse', 'stdio']).toContain(draft.type)
+    expect(draft.type === 'stdio' ? draft.command : draft.url).toBeTruthy()
+    expect(t.icon.bg).toMatch(/^#[0-9a-f]{6}$/i)
+  }
+)
