@@ -30,6 +30,14 @@ describe('catalog formats', () => {
     ])
   })
 
+  it('takes the core’s own kind over atc’s table for an engine it does not know', () => {
+    expect(engineCatalogFormat('engine-of-tomorrow', 'managed')).toBe('safetensors')
+    expect(catalogFormatsFor([{ engine: 'engine-of-tomorrow', kind: 'managed' }])).toEqual([
+      'gguf',
+      'safetensors',
+    ])
+  })
+
   it('names every format and reads Foundry Local and LiteRT-LM from their own engine', () => {
     expect(CATALOG_FORMAT_LABELS).toEqual({
       gguf: 'GGUF',

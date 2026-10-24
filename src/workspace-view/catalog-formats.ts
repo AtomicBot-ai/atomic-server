@@ -23,14 +23,24 @@ export const FORMAT_ENGINE: Partial<Record<CatalogFormat, string>> = {
   litert: 'litert-lm',
 }
 
-/** The format an engine runs: its own catalog's, MLX, safetensors for a managed engine, else GGUF. */
-export function engineCatalogFormat(engine: string): CatalogFormat {
+/**
+ * The format an engine runs: its own catalog's, MLX, safetensors for a managed engine, else GGUF. The core's
+ * `kind` from `engines.list` wins over atc's table, which may not know a newer core's engine.
+ */
+export function engineCatalogFormat(engine: string, kind?: string): CatalogFormat {
   if (engine === 'mlx') return 'mlx'
   const own = (Object.keys(FORMAT_ENGINE) as CatalogFormat[]).find((f) => FORMAT_ENGINE[f] === engine)
-  return own ?? (ENGINE_KINDS[engine as EngineId] === 'managed' ? 'safetensors' : 'gguf')
+  return own ?? ((kind ?? ENGINE_KINDS[engine as EngineId]) === 'managed' ? 'safetensors' : 'gguf')
 }
 
-export function catalogFormatsFor(engines: readonly string[]): CatalogFormat[] {
-  const present = new Set(engines.map(engineCatalogFormat))
+/** An engine by name, or as `engines.list` reports it (with the core's kind). */
+type EngineEntry = string | { engine: string; kind?: string }
+
+export function catalogFormatsFor(engines: readonly EngineEntry[]): CatalogFormat[] {
+  const present = new Set(
+    engines.map((e) =>
+      typeof e === 'string' ? engineCatalogFormat(e) : engineCatalogFormat(e.engine, e.kind)
+    )
+  )
   return (Object.keys(CATALOG_FORMAT_LABELS) as CatalogFormat[]).filter((f) => f === 'gguf' || present.has(f))
 }

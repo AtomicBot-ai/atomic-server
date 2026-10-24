@@ -27,3 +27,21 @@ it('shows the chosen model only in its card and continues with the shared engine
     false
   )
 })
+
+it('does not offer a LiteRT-LM family again when one of its variants is installed', async () => {
+  const variant = (id: string) => ({ id, backend: 'cpu', file: { size: 1 }, verdict: { verdict: 'ok' } })
+  const { workspace } = workspaceFixture({
+    'engines.selected': { engine: 'litert-lm' },
+    'models.installed': [{ id: 'gemma-4-e4b-cpu', name: 'Gemma 4 E4B (CPU)', provider: 'litert-lm' }],
+    'models.search': {
+      models: [
+        { model_id: 'gemma-4-e4b', name: 'Gemma 4 E4B', variants: [variant('gemma-4-e4b-cpu')] },
+        { model_id: 'qwen3-4b', name: 'Qwen3 4B', variants: [variant('qwen3-4b-cpu')] },
+      ],
+    },
+  })
+  render(<FirstModel workspace={workspace} select={vi.fn()} />)
+  expect(await screen.findByRole('button', { name: /^Qwen3 4B/ })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^Gemma 4 E4B\b(?! \(CPU\))/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Gemma 4 E4B \(CPU\)/ })).toHaveTextContent('Downloaded')
+})

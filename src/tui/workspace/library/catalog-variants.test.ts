@@ -19,7 +19,7 @@ function fixture(ops: string, verdict = 'ok', blockers: string[] = []) {
       default_variant: 'model-cpu',
     },
   ]
-  const execute = vi.fn(async (name: string) => {
+  const execute = vi.fn(async (name: string, _input?: unknown) => {
     if (name === 'models.search') return { models: models() }
     if (name === `${ops}.prepare`) {
       verdict = 'ok'
@@ -66,6 +66,27 @@ describe.each(ENGINES)('$engine in Local models', ({ format, engine, ops }) => {
     expect(variantNext(t.get().libraryRows[0]?.source, 'model-cpu').action).toBe('download')
     expect(t.get().catalogOpen).toBe('model')
     expect(variantNext({ variants: [variant('engine-not-installed')] }, 'model-cpu').action).toBe('engine')
+  })
+  it('continues the same request when an install of the same plan is retried', async () => {
+    const t = fixture(ops)
+    let fail = true
+    const answer = t.execute.getMockImplementation()!
+    t.execute.mockImplementation(async (name: string, input?: unknown) => {
+      if (name === `${ops}.install` && fail) {
+        fail = false
+        throw new Error('Lost connection')
+      }
+      return answer(name, input)
+    })
+    const libraryRows = await loadVariantCatalog(t.ctx, format)
+    t.ctx.update((s) => ({ ...s, libraryRows, catalogVariant: 'model-cpu' }))
+    await expect(variantCatalogAction('catalog-download:0', t.ctx)).rejects.toThrow('Lost connection')
+    await variantCatalogAction('catalog-download:0', t.ctx)
+    const requests = t.execute.mock.calls.filter(([name]) => name === `${ops}.install`).map(([, i]) => i)
+    expect(requests).toEqual([
+      { request_id: 'terminal-checked-plan', plan_digest: 'checked-plan' },
+      { request_id: 'terminal-checked-plan', plan_digest: 'checked-plan' },
+    ])
   })
   it('keeps an incompatible variant out of the download queue', async () => {
     const t = fixture(ops, 'ok', ['Not enough disk space'])

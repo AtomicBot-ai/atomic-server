@@ -7,7 +7,9 @@ export type { CatalogFormat } from '@view'
 
 /** The formats the chat catalog offers on this host: GGUF, plus what the core's engines here run. */
 export function catalogFormats(engines: readonly RecordValue[]): CatalogFormat[] {
-  return catalogFormatsFor(engines.map((e) => text(e.engine)))
+  return catalogFormatsFor(
+    engines.map((e) => ({ engine: text(e.engine), kind: text(e.kind, '') || undefined }))
+  )
 }
 
 /**

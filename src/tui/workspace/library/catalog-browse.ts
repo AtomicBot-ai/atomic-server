@@ -11,7 +11,7 @@ import { oneLine } from '../../controller.js'
 
 /** A GGUF quant's, a Foundry Local variant's or a LiteRT-LM variant's file size. */
 const sizeOf = (v: Record<string, unknown>) =>
-  Number(v['bytes'] ?? v['size_bytes'] ?? record(v['file'])['size'] ?? 0)
+  Number(v['bytes'] || v['size_bytes'] || record(v['file'])['size'] || 0)
 
 /** Opening a catalog family reveals its versions; downloading remains a separate, direct action. */
 export async function catalogBrowseAction(id: string, ctx: ActionContext) {

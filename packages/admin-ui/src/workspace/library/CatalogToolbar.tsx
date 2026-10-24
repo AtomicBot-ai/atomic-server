@@ -130,7 +130,8 @@ export function CatalogToolbar({
                           onChange={() => {
                             setFilters({ ...filters, engine: e.engine })
                             const selected = engines.find((v) => v.engine === e.engine)
-                            if (selected) setFormat(engineCatalogFormat(e.engine))
+                            if (selected)
+                              setFormat(engineCatalogFormat(e.engine, text(selected.kind, '') || undefined))
                           }}
                         />
                         {e.label}

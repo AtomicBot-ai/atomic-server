@@ -73,8 +73,9 @@ export async function variantCatalogAction(id: string, ctx: ActionContext) {
     )
     if (Array.isArray(plan['blockers']) && plan['blockers'].length)
       throw new Error(plan['blockers'].join(' '))
+    // One request per plan: a retry after a failed call continues the job the server may already hold.
     await ctx.controller.runtime.execute(`${ops}.install`, {
-      request_id: `terminal-${Date.now()}`,
+      request_id: `terminal-${String(plan['digest'])}`,
       plan_digest: plan['digest'],
     })
     const workspace = await ctx.controller.runtime.snapshot()

@@ -72,7 +72,9 @@ export function FirstModel({
               !rows(local).some((l) => {
                 const id = text(l.id ?? l.model_id, '')
                 const repo = text(m.id ?? m.model_id, '')
-                return id === repo || id.startsWith(repo + '/')
+                // A Foundry Local or LiteRT-LM family is installed as one of its variants.
+                const variants = rows(record(m.litert ?? m.foundry).variants).map((v) => text(v.id, ''))
+                return id === repo || id.startsWith(repo + '/') || variants.includes(id)
               })
           )
         )

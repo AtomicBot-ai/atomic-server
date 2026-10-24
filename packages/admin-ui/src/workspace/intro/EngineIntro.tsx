@@ -5,6 +5,11 @@ import { useWorkspace } from '../useWorkspace'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { IntroScreen } from './IntroScreen'
+/** A llama.cpp build to download, or an engine already installed that guided setup can continue with. */
+const offered = (e: RecordValue) =>
+  (engineFamily(text(e.engine)) === 'llamacpp' && Boolean(e.latest)) ||
+  (Boolean(e.active) && ['llamacpp', 'managed', 'foundry', 'litert'].includes(engineFamily(text(e.engine))))
+
 export function EngineIntro({ onContinue, replay = false }: { onContinue: () => void; replay?: boolean }) {
   const w = useWorkspace()
   const [stage, setStage] = useState<'checking' | 'choose' | 'engines' | 'installing' | 'ready'>(
@@ -53,14 +58,7 @@ export function EngineIntro({ onContinue, replay = false }: { onContinue: () => 
         if (completed.current) return
         if (rows(record(result).engines).some((e) => e.active)) setStage('ready')
         else {
-          setEngines(
-            rows(record(result).engines).filter(
-              (e) =>
-                (engineFamily(text(e.engine)) === 'llamacpp' && e.latest) ||
-                (e.active &&
-                  ['llamacpp', 'managed', 'foundry', 'litert'].includes(engineFamily(text(e.engine))))
-            )
-          )
+          setEngines(rows(record(result).engines).filter(offered))
           setStage('choose')
         }
       })
@@ -76,13 +74,7 @@ export function EngineIntro({ onContinue, replay = false }: { onContinue: () => 
     try {
       const result = record(await w.execute('engines.list'))
       const list = rows(result.engines)
-      setEngines(
-        list.filter(
-          (e) =>
-            (engineFamily(text(e.engine)) === 'llamacpp' && e.latest) ||
-            (e.active && ['llamacpp', 'managed', 'foundry', 'litert'].includes(engineFamily(text(e.engine))))
-        )
-      )
+      setEngines(list.filter(offered))
     } catch (e) {
       setError(describeError(e))
     } finally {
