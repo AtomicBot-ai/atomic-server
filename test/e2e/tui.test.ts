@@ -178,7 +178,9 @@ describe(`atc tui (${command.join(' ')})`, () => {
         { wait: 'How can I help you today?' },
         { type: '\u001b1' },
         { type: '\u000b' },
-        { wait: 'Keyboard shortcuts' },
+        // Settings shows "Keyboard shortcuts" too: wait for what only the Help overlay draws.
+        { wait: 'Email support', fresh: true },
+        // Esc and Ctrl+Q may reach a busy atc as one event; it reads that as both keys.
         { type: '\u001b' },
         { type: '\u0011' },
       ]
@@ -206,6 +208,37 @@ describe(`atc tui (${command.join(' ')})`, () => {
       expect(result.out).toContain('\u001b[?1006l')
       expect(result.out).toContain('\u001b[?1049h')
       expect(result.out).toContain('\u001b[?1049l')
+    }
+  )
+  it.skipIf(process.platform === 'win32' || !hasPython())(
+    'quits when Esc and Ctrl+Q reach it as one write, as on a busy runner',
+    () => {
+      const folder = join(dataFolder, '..', 'glued-keys')
+      readyWorkspace(folder)
+      expect(runAtc(['config', 'set', 'admin.port', '0', '--data-folder', folder]).code).toBe(0)
+      const steps = [
+        { wait: 'Agents & tools' },
+        { type: '\u000b' },
+        { wait: 'Email support', fresh: true },
+        { type: '\u001b\u0011' },
+      ]
+      const res = spawnSync(
+        'python3',
+        ['-c', DRIVER, JSON.stringify(steps), ...command, '--data-folder', folder],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, TERM: 'xterm-256color', NO_COLOR: '1' },
+          timeout: 60_000,
+        }
+      )
+      expect(res.status, res.stderr).toBe(0)
+      const result = JSON.parse(res.stdout.trim().split('\n').at(-1) as string) as {
+        ok: boolean
+        code: number | null
+        out: string
+      }
+      expect(result.ok, strip(result.out).slice(-2000)).toBe(true)
+      expect(result.code, strip(result.out).slice(-2000)).toBe(0)
     }
   )
 })

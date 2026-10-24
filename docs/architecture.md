@@ -215,14 +215,18 @@ Not done here: auto-starting the public API and `models.autoLoad` (iteration 2).
 - **Gates** (`gates.ts`, before any handler, in the control server's style): peer address must be loopback
   (403), `Host` must be a loopback name — DNS-rebinding defence (421); a mutating request must carry
   `X-Atc-Admin: 1` and an `Origin` equal to our own `Host` (403) — a cross-site form or fetch has neither.
-  Bodies are capped at 8 MiB. The SPA is served with `Content-Security-Policy: default-src 'self'`.
+  Bodies are capped at 8 MiB, `POST /api/workspace/execute` at 140 MiB (documents and images travel as
+  base64 in the operation's input). The SPA is served with `Content-Security-Policy: default-src 'self'`.
 - **Routes** (`bff.ts`): `GET /api/status`, `POST|DELETE /api/session`, `GET /api/config` (`PATCH` is
   iteration 5), `GET /api/events` (SSE), `ANY /api/core/*` → the control API with the daemon's token, but only
   on the allowlist: reads of `/health /snapshot /sessions /server /backends /hardware /environments
   /settings /telemetry /disk` and their sub-paths; writes only on the exact routes of `WRITE_ROUTES` (model
   load/unload, server start/stop, backends, hardware override, `PATCH /settings/:provider`, environment
-  operations, download cancel, disk, GGUF validation). A page can never post a host-step receipt. `/shutdown`, `/clients`, telemetry consent and
-  cloud keys are never reachable from a page. `/api/setup/*`, `/api/logs`, `/api/engines/:p/schema` answer
+  operations, download cancel, disk, GGUF validation). `POST /api/workspace/execute` runs any workspace
+  operation for the signed-in operator, the same registry `atc control` and `atc mcp` use. A page can never
+  post a host-step receipt. `/shutdown`, `/clients` and telemetry consent are never reachable from a page; a
+  cloud key can be saved (`cloud.save`, `cloud.connect`) but never read back — snapshots carry
+  `has_api_key` only. `/api/setup/*`, `/api/logs`, `/api/engines/:p/schema` answer
   501 until their iterations.
 - **Events** (`relay.ts`): one stream for the browser — the core's events plus `atc:*` — numbered `r<n>` by
   the relay; `Last-Event-ID` resumes from a 1000-entry ring, older cursors get a `resync`; `: ping` every 15 s.

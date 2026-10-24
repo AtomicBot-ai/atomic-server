@@ -25,7 +25,7 @@ import type { WorkspaceDeps } from './controller.js'
 import { createWorkspace } from './state.js'
 import type { Page, WorkspaceState } from './state.js'
 import { workspaceFrame } from './frame.js'
-import { workspaceInput } from './input.js'
+import { workspaceInputs } from './input-sequence.js'
 import { activate } from './actions.js'
 import { CanvasRow } from './draw/CanvasRow.js'
 export interface WorkspaceProps {
@@ -258,27 +258,23 @@ function WorkspaceContent(
   }
   useInput((input, key: Key) => {
     if (!latest.current.ready) return
-    const result = workspaceInput(
-      input,
-      key,
-      latest.current,
-      workspaceFrame(latest.current, columns, rows, seconds),
-      leader.current
-    )
-    if (result.leader !== undefined) leader.current = result.leader
-    else if (leader.current) leader.current = false
-    if (result.patch) patch(result.patch)
-    if (result.quit || result.action === 'quit') {
-      const current = controller.current
-      if (current)
-        void persistConversation({ get: () => latest.current, controller: current }).then(
-          () => exit(),
-          (e) => patch({ message: oneLine(e) })
-        )
-      else exit()
-      return
+    const frame = workspaceFrame(latest.current, columns, rows, seconds)
+    for (const result of workspaceInputs(input, key, latest.current, frame, leader.current)) {
+      if (result.leader !== undefined) leader.current = result.leader
+      else if (leader.current) leader.current = false
+      if (result.patch) patch(result.patch)
+      if (result.quit || result.action === 'quit') {
+        const current = controller.current
+        if (current)
+          void persistConversation({ get: () => latest.current, controller: current }).then(
+            () => exit(),
+            (e) => patch({ message: oneLine(e) })
+          )
+        else exit()
+        return
+      }
+      if (result.action) run(result.action)
     }
-    if (result.action) run(result.action)
   })
   if (!state.ready)
     return (
