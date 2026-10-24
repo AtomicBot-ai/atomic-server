@@ -59,3 +59,15 @@ it('confirms the exact interrupting command and does not execute on Cancel', asy
   await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: operation.title }))
   expect(execute).toHaveBeenCalledWith('api.restart', { request: { port: 1400 } })
 })
+
+it('asks before the operation console runs a connector program on the server’s host', async () => {
+  const { workspace, execute } = workspaceFixture({})
+  const operation = WORKSPACE_OPERATIONS.find((item) => item.name === 'connectors.check')!
+  render(<OperationForm operation={operation} execute={workspace.execute} initial={{ id: 'local-tool' }} />)
+  await userEvent.click(screen.getByRole('button', { name: operation.title }))
+  const dialog = screen.getByRole('dialog')
+  expect(dialog).toHaveTextContent('runs a program on the server’s host')
+  expect(execute).not.toHaveBeenCalled()
+  await userEvent.click(within(dialog).getByRole('button', { name: operation.title }))
+  expect(execute).toHaveBeenCalledWith('connectors.check', { id: 'local-tool' })
+})

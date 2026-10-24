@@ -13,8 +13,8 @@ title: "Gate MCP connector programs behind --allow-exec"
 - **Decision:** A new operation effect, `execute`, for every operation that defines or runs a connector
   program (`connectors.save`, `connectors.import`, `connectors.check`, `connectors.call`). An MCP session
   offers them only with `--allow-exec` on top of `--allow-writes`, marks them destructive, and refuses a
-  guessed name otherwise. A stdio connector's process gets the host basics (an allowlist by name, any case)
-  plus its own `env`. Saving is gated with running because a saved command is what a person later starts
+  guessed name otherwise. A stdio connector's process gets the host basics (an allowlist by name, any case,
+  including the proxy and certificate variables `npx` connectors need) plus its own `env`. Saving is gated with running because a saved command is what a person later starts
   with one click.
 - **Consequences:** Existing `--allow-writes` sessions lose the connector tools until the operator adds
   `--allow-exec`. The admin and terminal UIs are the signed-in operator's and stay ungated. A connector

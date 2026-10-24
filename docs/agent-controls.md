@@ -54,7 +54,7 @@ Add `--allow-secrets` as well to allow API key creation/reveal and agent connect
 `--allow-exec` as well to allow MCP connectors (`connectors.save`, `connectors.import`, `connectors.check`,
 `connectors.call`): a stdio connector is a program the server starts on its host, so these tools amount to
 running commands as the server's user. A connector's process gets the host basics (`PATH`, `HOME`, locale,
-temporary and Windows system folders) and its own `env`, never the server's `HF_TOKEN`, `ATC_API_KEY` or
+temporary and Windows system folders, the proxy and certificate settings) and its own `env`, never the server's `HF_TOKEN`, `ATC_API_KEY` or
 other variables. Discovery omits disallowed tools, and calling a guessed tool name cannot bypass those
 restrictions. Do not log secret-bearing tool results.
 

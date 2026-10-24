@@ -147,7 +147,7 @@ it('rejects SSE message endpoints on another origin before sending credentials',
 it('gives a stdio connector the host basics and its own env, never the server’s secrets', async () => {
   const script = `process.stdin.on('data', c => { for (const line of String(c).trim().split('\\n')) {
     const q=JSON.parse(line); if(!q.id) continue;
-    const tools=Object.keys(process.env).filter(k=>/^(PATH|HOME|HF_TOKEN|ATC_API_KEY|CONNECTOR_KEY)$/i.test(k))
+    const tools=Object.keys(process.env).filter(k=>/^(PATH|HOME|HF_TOKEN|ATC_API_KEY|CONNECTOR_KEY|HTTPS_PROXY|NODE_EXTRA_CA_CERTS)$/i.test(k))
       .map(name=>({name,inputSchema:{type:'object'}}));
     const result=q.method==='initialize'?{protocolVersion:'2025-03-26'}:{tools};
     process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:q.id,result})+'\\n');
@@ -161,8 +161,15 @@ it('gives a stdio connector the host basics and its own env, never the server’
       env: { CONNECTOR_KEY: 'k' },
     },
     fetch,
-    { PATH: process.env['PATH'], HOME: '/home/atc', HF_TOKEN: 'hf_secret', ATC_API_KEY: 'atc_secret' },
+    {
+      PATH: process.env['PATH'],
+      HOME: '/home/atc',
+      HTTPS_PROXY: 'http://proxy:3128',
+      NODE_EXTRA_CA_CERTS: '/etc/ca.pem',
+      HF_TOKEN: 'hf_secret',
+      ATC_API_KEY: 'atc_secret',
+    },
     async (_client, tools) => tools.map((t) => t.name.toUpperCase()).sort()
   )
-  expect(names).toEqual(['CONNECTOR_KEY', 'HOME', 'PATH'])
+  expect(names).toEqual(['CONNECTOR_KEY', 'HOME', 'HTTPS_PROXY', 'NODE_EXTRA_CA_CERTS', 'PATH'])
 })

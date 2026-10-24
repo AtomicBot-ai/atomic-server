@@ -94,11 +94,17 @@ export function OperationForm({
             const input = parseValues(operation, values)
             const missing = required.filter((name) => input[name] === undefined)
             if (missing.length) throw new Error(`Required: ${missing.join(', ')}`)
-            if (operation.effect === 'interrupt') {
+            if (operation.effect === 'interrupt' || operation.effect === 'execute') {
               ask({
                 title: `${operation.title}?`,
                 actionLabel: operation.title,
-                children: <p>Running requests may be interrupted.</p>,
+                children: (
+                  <p>
+                    {operation.effect === 'execute'
+                      ? 'A stdio connector runs a program on the server’s host as the server’s user.'
+                      : 'Running requests may be interrupted.'}
+                  </p>
+                ),
                 onConfirm: () => run(input),
               })
               return

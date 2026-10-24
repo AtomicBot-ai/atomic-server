@@ -3,8 +3,10 @@ import type { ConnectorConfig } from '../contract/index.js'
 import { object } from './validation.js'
 /**
  * What a program needs from the server's environment to start at all (finding executables, a home and
- * temporary folder, the locale; Windows' system folders), by name in any case. Nothing else of the server's
- * environment — `HF_TOKEN`, `ATC_API_KEY`, cloud keys — reaches a connector; its own `env` is added on top.
+ * temporary folder, the locale, Windows' system folders and processor, the XDG folders) and to reach the
+ * network as the server does (its proxy and certificate authorities, which `npx` connectors need to fetch
+ * their package), by name in any case. Nothing else of the server's environment — `HF_TOKEN`,
+ * `ATC_API_KEY`, cloud keys — reaches a connector; its own `env` is added on top.
  */
 const HOST_BASICS = new Set([
   'PATH',
@@ -31,6 +33,23 @@ const HOST_BASICS = new Set([
   'PROGRAMFILES',
   'HOMEDRIVE',
   'HOMEPATH',
+  'PROGRAMFILES(X86)',
+  'COMMONPROGRAMFILES',
+  'NUMBER_OF_PROCESSORS',
+  'PROCESSOR_ARCHITECTURE',
+  'OS',
+  'XDG_CONFIG_HOME',
+  'XDG_CACHE_HOME',
+  'XDG_DATA_HOME',
+  'XDG_RUNTIME_DIR',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'ALL_PROXY',
+  'NO_PROXY',
+  'NODE_EXTRA_CA_CERTS',
+  'SSL_CERT_FILE',
+  'SSL_CERT_DIR',
+  'REQUESTS_CA_BUNDLE',
 ])
 const connectorEnv = (env: NodeJS.ProcessEnv, own: Record<string, string>): NodeJS.ProcessEnv => ({
   ...Object.fromEntries(Object.entries(env).filter(([name]) => HOST_BASICS.has(name.toUpperCase()))),
