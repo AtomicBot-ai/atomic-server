@@ -325,6 +325,7 @@ Note: the core's own CLI defaults its public API to port 6767; `atc` uses 1337, 
 - [`docs/release.md`](docs/release.md) — releasing, installers, self-update, the core pin
 - [`docs/admin-ui.md`](docs/admin-ui.md) — the web admin SPA
 - [`docs/decisions/INDEX.md`](docs/decisions/INDEX.md) — engineering decisions
+- [`docs/project-review-2026-10-24.md`](docs/project-review-2026-10-24.md) — architecture, security, testing and production-readiness review
 
 ## License
 
