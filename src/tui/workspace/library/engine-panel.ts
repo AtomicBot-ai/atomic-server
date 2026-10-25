@@ -14,7 +14,7 @@ const TONES: Record<PanelLine['tone'], string> = {
   text: COLORS.text,
   muted: COLORS.muted,
   warn: COLORS.accent,
-  error: COLORS.accentLight,
+  error: COLORS.statusError,
   command: COLORS.green,
 }
 export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string): void {

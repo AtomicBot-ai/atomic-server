@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { downloadControl, downloadOwner, downloadPaused, downloadRows } from '../index.js'
+import { downloadControl, downloadOwner, downloadStopped, downloadRows } from '../index.js'
 it.each([
   ['setup', {}, 'setup.resume', { setup_id: 'job' }],
   ['artifacts', { plan: { category: 'image' } }, 'artifacts.resume', { id: 'job' }],
@@ -24,7 +24,7 @@ it.each([
 ])('routes %s controls to the owning service', (owner, more, operation, input) => {
   const row = downloadRows([{ id: 'job', state: 'cancelled', ...more }], [])[0]!
   expect(downloadOwner(row)).toBe(owner)
-  expect(downloadPaused(row.state)).toBe(true)
+  expect(downloadStopped(row.state)).toBe(true)
   expect(downloadControl(row, 'resume')).toEqual({ operation, input })
   expect(downloadControl(row, 'pause')?.operation).toBe(`${owner}.cancel`)
 })

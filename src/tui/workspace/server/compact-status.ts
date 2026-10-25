@@ -29,7 +29,7 @@ export function drawCompactStatus(
     x,
     y,
     status,
-    status === 'Server error' ? COLORS.accentLight : COLORS.accent,
+    status === 'Server error' ? COLORS.statusError : COLORS.accent,
     width,
     undefined,
     true

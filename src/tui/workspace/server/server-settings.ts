@@ -216,5 +216,5 @@ export function drawServerChoice(c: Canvas, s: WorkspaceState, focus: string) {
     })
   if (!s.pickerBusy && !choices.length)
     button(c, 'library:catalog', x + 2, y + 3, 'Download a model', 'Open the model catalog', focus)
-  if (s.pickerError) text(c, x + 2, y + height - 2, s.pickerError, COLORS.accentLight, width - 4)
+  if (s.pickerError) text(c, x + 2, y + height - 2, s.pickerError, COLORS.statusError, width - 4)
 }

@@ -1,7 +1,7 @@
 import {
   downloadHeld,
   downloadOwner,
-  downloadPaused,
+  downloadStopped,
   downloadRows,
   formatEta,
 } from '../../../workspace-view/index.js'
@@ -55,7 +55,7 @@ export function drawDownloadCard(
   const speed = first ? (s.transferSamples[first.id]?.speed ?? 0) : (progress?.speed ?? 0)
   const eta = speed > 0 ? Math.max(0, (total - done) / speed) : !first ? progress?.eta : null
   let remaining =
-    ready || downloadPaused(state.toLowerCase())
+    ready || downloadStopped(state.toLowerCase())
       ? ''
       : eta && eta > 0
         ? `~${formatEta(eta)} left`
@@ -83,7 +83,7 @@ export function drawDownloadCard(
   const owner = first ? downloadOwner(first) : null
   text(c, x + 2, y + 1, name, COLORS.text, width - (owner ? 19 : 4), undefined, true)
   if (first && owner) {
-    const paused = downloadPaused(first.state),
+    const paused = downloadStopped(first.state),
       key = `${owner}:${encodeURIComponent(first.id)}`
     if (!ready)
       button(

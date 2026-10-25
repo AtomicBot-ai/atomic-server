@@ -27,7 +27,7 @@ export function drawMediaOverlay(c: Canvas, s: WorkspaceState, focus: string) {
   if (s.overlay === 'media-stop') {
     text(c, x + 2, y + 1, 'Stop generation?', COLORS.text, width - 4, undefined, true)
     text(c, x + 2, y + 3, 'The unfinished result will be discarded.', COLORS.muted, width - 4)
-    if (s.media.error) text(c, x + 2, y + 4, s.media.error, COLORS.accentLight, width - 4)
+    if (s.media.error) text(c, x + 2, y + 4, s.media.error, COLORS.statusError, width - 4)
     button(c, 'media-keep', x + 2, y + 6, 'Keep generating', 'Return to the current generation', focus)
     actionButton(
       c,
@@ -71,7 +71,7 @@ export function drawMediaOverlay(c: Canvas, s: WorkspaceState, focus: string) {
         s.media.loading
           ? 'Reading downloaded models…'
           : s.media.error || `No ${mediaTask(s)} models downloaded.`,
-        s.media.error ? COLORS.accentLight : COLORS.muted,
+        s.media.error ? COLORS.statusError : COLORS.muted,
         width - 4
       )
     button(

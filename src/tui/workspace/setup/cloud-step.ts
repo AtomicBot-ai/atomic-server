@@ -160,7 +160,7 @@ export function drawSetupCloud(
       focus
     )
   else text(c, x + width - 12, formY + 2, 'Connect', COLORS.stone, 12)
-  if (s.cloud.error) text(c, x, bottom - 1, s.cloud.error, COLORS.accentLight, width)
+  if (s.cloud.error) text(c, x, bottom - 1, s.cloud.error, COLORS.statusError, width)
 }
 
 export function setupCloudInput(input: string, key: Key, s: WorkspaceState) {

@@ -43,7 +43,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
     )
   if (!path.rows.length)
     text(c, a.x, a.y + 6, v.busy ? 'Reading models…' : 'No models found.', COLORS.muted, a.width)
-  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.accentLight, a.width)
+  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.statusError, a.width)
   button(c, 'setup-engine-back', a.x, a.bottom, '< Engine', 'Change inference engine.', a.focus)
   button(c, 'setup-query', a.x + 13, a.bottom, 'Search', 'Search more models.', a.focus)
 }
@@ -86,7 +86,7 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   lines
     .slice(0, Math.max(1, a.bottom - a.y - 6))
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))
-  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.accentLight, a.width)
+  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.statusError, a.width)
   const litert = 'backend' in plan
   const waits = 'variant_id' in plan ? (litert ? LITERT_STEP : FOUNDRY_STEP)[plan.verdict.verdict] : undefined
   let bx = a.x
@@ -127,8 +127,8 @@ export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: 
     COLORS.accent,
     a.width
   )
-  if (state?.error) text(c, a.x, a.y + 9, state.error, COLORS.accentLight, a.width)
-  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.accentLight, a.width)
+  if (state?.error) text(c, a.x, a.y + 9, state.error, COLORS.statusError, a.width)
+  if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.statusError, a.width)
   let bx = a.x
   if (state && STOPPED.includes(state.stage))
     bx +=

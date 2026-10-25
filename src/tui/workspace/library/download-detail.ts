@@ -1,7 +1,7 @@
 import {
   downloadRows,
   downloadOwner,
-  downloadPaused,
+  downloadStopped,
   downloadControl,
 } from '../../../workspace-view/index.js'
 import { workspaceDownloadRows } from '../downloads/download-layout.js'
@@ -87,10 +87,10 @@ export async function downloadAction(id: string, ctx: ActionContext) {
         overlay: 'download-detail',
         focus:
           job['kind'] === 'engine'
-            ? downloadPaused(job.state)
+            ? downloadStopped(job.state)
               ? 'download-do:retry'
               : 'close'
-            : downloadPaused(job.state)
+            : downloadStopped(job.state)
               ? 'download-do:resume'
               : 'download-do:pause',
       }))
@@ -233,11 +233,11 @@ export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) 
       width - 4
     )
       .slice(0, 2)
-      .forEach((line, i) => text(c, x + 2, y + 7 + i, line, COLORS.accentLight, width - 4))
-  if (job['kind'] === 'engine' && downloadPaused(job.state))
+      .forEach((line, i) => text(c, x + 2, y + 7 + i, line, COLORS.statusError, width - 4))
+  if (job['kind'] === 'engine' && downloadStopped(job.state))
     button(c, 'download-do:retry', x + 2, y + 9, 'Retry download', 'Retry this engine installation', focus)
   if (downloadOwner(job)) {
-    const paused = downloadPaused(job.state)
+    const paused = downloadStopped(job.state)
     if (!chosen.installed)
       button(
         c,

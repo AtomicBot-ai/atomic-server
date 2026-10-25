@@ -87,7 +87,7 @@ export function drawMediaGallery(
       button(c, 'media-models', x + 1, contentY + 3, 'Choose a model', 'Load a downloaded media model', focus)
   }
   const error = s.media.error || String(record(job?.['error'])['message'] ?? job?.['error'] ?? '')
-  if (error) text(c, x + 1, bottom - 5, error, COLORS.accentLight, width - 2)
+  if (error) text(c, x + 1, bottom - 5, error, COLORS.statusError, width - 2)
   if (item) {
     let bx = x
     for (const [id, label] of [

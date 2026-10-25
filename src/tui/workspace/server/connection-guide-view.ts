@@ -128,7 +128,7 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
             i === available - 1 && errorLines.length > available
               ? line.slice(0, width - 1).trimEnd() + '…'
               : line,
-            COLORS.accentLight,
+            COLORS.statusError,
             width
           )
         )
@@ -152,5 +152,5 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
     b('guide-open', 'Connect another tool', 'Return to connection choices')
     actionButton(c, 'guide-close', x + width - 10, bottom - 2, 'Done', 'Open Server connections', focus)
   }
-  if (d.error && d.step !== 'review') text(c, x, bottom - 1, d.error, COLORS.accentLight, width)
+  if (d.error && d.step !== 'review') text(c, x, bottom - 1, d.error, COLORS.statusError, width)
 }

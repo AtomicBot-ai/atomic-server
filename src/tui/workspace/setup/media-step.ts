@@ -10,7 +10,7 @@ import type { WorkspaceState } from '../state.js'
 import { computeRowWindow } from '../../row-window.js'
 import {
   downloadEta,
-  downloadPaused,
+  downloadStopped,
   downloadRows,
   formatEta,
   formatSize,
@@ -183,7 +183,7 @@ export function drawSetupMedia(
         const eta = downloadEta(transfer, speed) ?? 0
         const status = transfer['completed'] ? 'Downloaded' : transfer.state.replaceAll('_', ' ')
         const remaining =
-          active && !downloadPaused(transfer.state)
+          active && !downloadStopped(transfer.state)
             ? eta
               ? ` · ~${formatEta(eta)} left`
               : ' · Estimating time'
@@ -191,7 +191,7 @@ export function drawSetupMedia(
         text(c, cardX + 2, cardY + 5, status + remaining, COLORS.muted, cardWidth - 4)
       }
       if (active) {
-        const paused = downloadPaused(transfer.state)
+        const paused = downloadStopped(transfer.state)
         button(
           c,
           `download-${paused ? 'resume' : 'pause'}:artifacts:${encodeURIComponent(transfer.id)}`,

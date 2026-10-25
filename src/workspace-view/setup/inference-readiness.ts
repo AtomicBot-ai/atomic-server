@@ -1,7 +1,7 @@
 import type { WorkspaceSnapshot } from '../../contract/index.js'
 import { connectionDownload, connectionDownloadTarget } from './connection-model.js'
 import { downloadRows } from '../downloads/downloads.js'
-import { downloadPaused } from '../downloads/download-controls.js'
+import { downloadStopped } from '../downloads/download-controls.js'
 
 export interface InferenceReadiness {
   ready: boolean
@@ -45,7 +45,7 @@ export function inferenceReadiness(
     // (a stale failed one of another engine) says nothing about this model.
     engine = options.model ? undefined : downloads.find((row) => row.owner === 'download')
   if (model) {
-    const paused = downloadPaused(model.state)
+    const paused = downloadStopped(model.state)
     return blocked(
       paused
         ? 'Resume the model download to continue.'
@@ -57,7 +57,7 @@ export function inferenceReadiness(
     )
   }
   if (engine) {
-    const paused = downloadPaused(engine.state)
+    const paused = downloadStopped(engine.state)
     return blocked(
       paused
         ? engine['kind'] === 'engine'

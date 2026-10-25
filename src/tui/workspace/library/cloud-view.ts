@@ -52,7 +52,7 @@ export function drawCloudList(
   })
   scrollTrack(c, x + width - 1, y, rows * 3, win.start, win.count, Math.ceil(choices.length / columns))
 
-  errors.forEach((line, i) => text(c, x, bottom - errors.length + i, line, COLORS.accentLight, width))
+  errors.forEach((line, i) => text(c, x, bottom - errors.length + i, line, COLORS.statusError, width))
   text(
     c,
     x,
@@ -123,7 +123,7 @@ export function drawCloud(c: Canvas, s: WorkspaceState, focus: string, seconds =
   }
   const actionY = bottom - 3
   errors.forEach((line, i) =>
-    text(c, x + 1, actionY - errors.length + i, line, COLORS.accentLight, width - 2)
+    text(c, x + 1, actionY - errors.length + i, line, COLORS.statusError, width - 2)
   )
   if (s.cloud.checking) {
     c.targets = []

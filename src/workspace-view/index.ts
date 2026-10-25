@@ -82,7 +82,7 @@ export { engineApproval, engineRefreshKey, liveEngineState, updateLine } from '.
 export type { EngineApproval } from './engines/engine-live.js'
 export {
   downloadOwner,
-  downloadPaused,
+  downloadStopped,
   downloadHeld,
   downloadControl,
 } from './downloads/download-controls.js'

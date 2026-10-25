@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { connectionDownload, downloadPaused, setupModelPending } from '@view'
+import { connectionDownload, downloadStopped, setupModelPending } from '@view'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { DownloadGame } from '../games/DownloadGame'
@@ -26,7 +26,7 @@ export function WaitingSetup({
   }, [emailStatus])
   const pending = setupModelPending(workspace.snapshot)
   const job = connectionDownload(workspace.snapshot?.setups ?? [])
-  const stopped = downloadPaused(String(job?.stage ?? job?.state ?? ''))
+  const stopped = downloadStopped(String(job?.stage ?? job?.state ?? ''))
   return (
     <div className="waiting-setup">
       <p role="status">

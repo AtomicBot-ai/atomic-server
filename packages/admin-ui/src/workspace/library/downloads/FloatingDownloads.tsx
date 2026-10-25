@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { downloadPaused, downloadRows, formatEta, prioritizeDownloads } from '@view'
+import { downloadStopped, downloadRows, formatEta, prioritizeDownloads } from '@view'
 import type { Workspace } from '../../useWorkspace'
 import { Downloads } from './Downloads'
 import { useDialog } from '../../useDialog'
@@ -49,7 +49,7 @@ function DownloadEta({ row }: { row: Record<string, unknown> }) {
   const { eta } = useDownloadEstimate(row)
   return (
     <small>
-      {downloadPaused(String(row.state))
+      {downloadStopped(String(row.state))
         ? row.kind === 'engine'
           ? 'Open Downloads to retry'
           : 'Open Downloads to resume'

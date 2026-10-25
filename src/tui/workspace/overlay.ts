@@ -245,11 +245,11 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     if (s.edit === 'library-import' && s.message)
       wrap(s.message, w - 4)
         .slice(0, Math.max(0, h - 12))
-        .forEach((line, i) => put(9 + i, line, COLORS.accentLight))
+        .forEach((line, i) => put(9 + i, line, COLORS.statusError))
     if (s.edit.startsWith('media-') && s.media.error)
       wrap(s.media.error, w - 4)
         .slice(0, Math.max(1, h - 12))
-        .forEach((line, i) => put(9 + i, line, COLORS.accentLight))
+        .forEach((line, i) => put(9 + i, line, COLORS.statusError))
     b('save-edit', h - 3, 'Save', 'Validate and save this setting.')
     button(c, 'close', x + 12, y + h - 3, 'Cancel', 'Discard this edit.', focus)
     return

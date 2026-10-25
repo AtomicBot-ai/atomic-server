@@ -1,6 +1,6 @@
 import { isVariantFormat, variantNext } from './catalog-variants.js'
 import { downloadCardHeight, drawDownloadCard } from '../setup/download-card.js'
-import { downloadRows, downloadOwner, downloadPaused } from '../../../workspace-view/index.js'
+import { downloadRows, downloadOwner, downloadStopped } from '../../../workspace-view/index.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text, wrap, rule } from '../draw/canvas.js'
 import { fieldControl, scrollTrack } from '../draw/controls.js'
@@ -154,7 +154,7 @@ export function drawCatalogBrowser(
       const owner = transfer && downloadOwner(transfer)
       if (transfer && owner && available >= 1) {
         const key = `${owner}:${encodeURIComponent(transfer.id)}`,
-          paused = downloadPaused(transfer.state)
+          paused = downloadStopped(transfer.state)
         button(
           c,
           `download-${paused ? 'resume' : 'pause'}:${key}`,

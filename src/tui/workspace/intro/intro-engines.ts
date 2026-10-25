@@ -49,7 +49,7 @@ export function drawIntroEngines(
       width
     )
   if (error) {
-    text(c, x, rows - 5, error, COLORS.accentLight, width)
+    text(c, x, rows - 5, error, COLORS.statusError, width)
     button(c, 'retry', x, rows - 3, 'Retry', 'Reload compatible engines', '')
   }
   text(c, x, rows - 2, 'Arrows Choose  Enter Select', COLORS.muted, width)

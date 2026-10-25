@@ -125,7 +125,7 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
     text(c, x, top, v.busy ? 'Loading models…' : 'No models available.', COLORS.muted, width)
     if (!v.busy) quietButton(c, 'first-model', x, top + 2, 'Retry', 'Reload available models', focus)
   }
-  if (v.error) text(c, x, bottom - 1, v.error.split('\n')[0]!, COLORS.accentLight, width)
+  if (v.error) text(c, x, bottom - 1, v.error.split('\n')[0]!, COLORS.statusError, width)
   text(c, x, barY, '-'.repeat(width), COLORS.line, width)
   const label = 'Continue',
     actionX = x + width - textWidth(label) - 6,

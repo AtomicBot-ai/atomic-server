@@ -58,3 +58,8 @@ it('keeps the existing bright status color readable on dark surfaces', () => {
   expect(contrast(COLORS.accentLight, COLORS.ground)).toBeGreaterThanOrEqual(4.5)
   expect(contrast(COLORS.composerError, COLORS.composer)).toBeGreaterThanOrEqual(4.5)
 })
+
+it('draws errors in the palette’s error color, readable on the dark ground and its surfaces', () => {
+  for (const ground of [COLORS.ground, COLORS.surface, COLORS.header])
+    expect(contrast(COLORS.statusError, ground)).toBeGreaterThanOrEqual(4.5)
+})

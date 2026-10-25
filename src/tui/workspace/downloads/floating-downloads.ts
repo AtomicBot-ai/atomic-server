@@ -1,7 +1,7 @@
 import {
   downloadEta,
   downloadOwner,
-  downloadPaused,
+  downloadStopped,
   downloadSpeed,
   formatEta,
 } from '../../../workspace-view/index.js'
@@ -27,7 +27,7 @@ export function drawFloatingDownloads(
     plan = row['plan'] as Record<string, unknown> | undefined,
     name = String(plan?.['name'] ?? row['name'] ?? row['model_id'] ?? row.id),
     percent = row.total > 0 ? Math.min(100, Math.floor((row.transferred / row.total) * 100)) : null,
-    paused = downloadPaused(row.state),
+    paused = downloadStopped(row.state),
     owner = downloadOwner(row),
     eta = downloadEta(row, downloadSpeed(row, s.transferSamples[row.id]?.speed ?? 0)),
     status = row.state.replaceAll('_', ' '),

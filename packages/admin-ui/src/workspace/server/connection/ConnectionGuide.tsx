@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/Setup.tsx @ 5043013; adapted: real server operations and download readiness.
-import { downloadPaused } from '@view'
+import { downloadStopped } from '@view'
 import { ConnectionHelp } from './ConnectionHelp'
 import { ConnectionModelPicker } from './ConnectionModelPicker'
 import { ConnectionModelFields } from './ConnectionModelFields'
@@ -179,7 +179,7 @@ export function ConnectionGuide({
               browse={() => setPickingModel(true)}
             />
             {selected.waiting && <Action onClick={() => setPlaying(true)}>Play while waiting</Action>}
-            {!selected.ready && job && downloadPaused(text(job.stage ?? job.state, '')) && (
+            {!selected.ready && job && downloadStopped(text(job.stage ?? job.state, '')) && (
               <Action
                 primary
                 onClick={() => {

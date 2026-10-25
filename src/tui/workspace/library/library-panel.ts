@@ -113,7 +113,7 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
       `Download: ${bytes(Number(p['download_bytes'] ?? 0))}`,
     ]
     ;[...lines, ...blockers].forEach((l, i) =>
-      text(c, x + 2, y + 3 + i, l, i >= lines.length ? COLORS.accentLight : COLORS.text, width - 4)
+      text(c, x + 2, y + 3 + i, l, i >= lines.length ? COLORS.statusError : COLORS.text, width - 4)
     )
     if (!blockers.length)
       button(c, 'library-install', x + 2, y + height - 3, 'Download', 'Download in the server', focus)
@@ -142,7 +142,7 @@ export function drawInstallReview(c: Canvas, s: WorkspaceState, focus: string) {
     x + 2,
     y + 7,
     blockers.length ? JSON.stringify(blockers) : 'Installs required engine and model files.',
-    blockers.length ? COLORS.accentLight : COLORS.muted,
+    blockers.length ? COLORS.statusError : COLORS.muted,
     width - 4
   )
   if (!blockers.length)

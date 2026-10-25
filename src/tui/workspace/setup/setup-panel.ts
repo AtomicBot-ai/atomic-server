@@ -81,7 +81,7 @@ export function drawSetup(
       put(row++, v.pending?.repo ?? v.repository, COLORS.text)
       if (preparationFailed) {
         put(row++, 'Model setup stopped', COLORS.accent)
-        for (const line of wrapWords(error!, width)) put(row++, line, COLORS.accentLight)
+        for (const line of wrapWords(error!, width)) put(row++, line, COLORS.statusError)
       } else {
         const track = Array.from({ length: Math.min(30, width - 4) }, (_, i) =>
           Math.abs(i - (Math.floor(seconds * 4) % Math.min(30, width - 4))) < 2 ? '=' : '.'
@@ -166,6 +166,6 @@ export function drawSetup(
     )
   // The engine screen shows a failed check in full; elsewhere one line fits above the buttons.
   if (engineCheckFailed(v)) return
-  if (error && !preparationFailed) text(c, x, bottom - 1, error.split('\n')[0]!, COLORS.accentLight, width)
+  if (error && !preparationFailed) text(c, x, bottom - 1, error.split('\n')[0]!, COLORS.statusError, width)
   else if (v.busy) text(c, x, bottom - 1, v.preparing ? 'Checking model…' : 'Working…', COLORS.stone, width)
 }
