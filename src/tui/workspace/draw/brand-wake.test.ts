@@ -2,7 +2,7 @@ import { expect, it } from 'vitest'
 import { introPupil } from './brand-wake.js'
 import { drawBrandMark } from './brand-mark.js'
 import { canvas } from './canvas.js'
-import { introCanvas } from '../intro-canvas.js'
+import { introCanvas } from '../intro/intro-canvas.js'
 import { INTRO_WORDMARK, SERVER_WORDMARK } from './brand-lettering.js'
 
 it.each([

@@ -1,5 +1,5 @@
 import { workspaceHeaderRows } from '../draw/brand-header.js'
-import { downloadContentBottom } from '../download-layout.js'
+import { downloadContentBottom } from '../downloads/download-layout.js'
 import type { Key } from 'ink'
 import {
   flagMine,

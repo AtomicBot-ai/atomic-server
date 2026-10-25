@@ -4,7 +4,7 @@ import type { Key } from 'ink'
 import type { WorkspaceState } from '../state.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { InputResult } from '../input.js'
-import { mouseReport } from '../mouse-report.js'
+import { mouseReport } from '../input/mouse-report.js'
 
 export function agentChoiceRows(d: ConnectionDraft, width: number, available: number) {
   const columns = width >= 66 ? 3 : available < 11 ? 2 : 1

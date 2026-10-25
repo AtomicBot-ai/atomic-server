@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import { sharedChat } from './shared-chat.js'
-import type { WorkspaceRuntime } from '../runtime.js'
+import type { WorkspaceRuntime } from '../runtime/runtime.js'
 it('sends prepared documents and feature choices through shared jobs without mutating drafts', async () => {
   const read = vi.fn(async (operation: string) =>
     operation === 'attachments.prepare'

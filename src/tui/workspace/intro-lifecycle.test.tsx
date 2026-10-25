@@ -2,7 +2,7 @@ import { render } from 'ink'
 import { act } from 'react'
 import { expect, it, vi } from 'vitest'
 import { fakeTerminal, eventually } from '../../../test/helpers/fake-terminal.js'
-import { IntroScreen } from './IntroScreen.js'
+import { IntroScreen } from './intro/IntroScreen.js'
 import type { WorkspaceDeps } from './controller.js'
 
 const state = vi.hoisted(() => ({ engine: '', installed: false }))

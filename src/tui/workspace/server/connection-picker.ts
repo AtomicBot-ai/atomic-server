@@ -8,7 +8,7 @@ import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text } from '../draw/canvas.js'
 import { panel } from '../draw/cards.js'
 import { computeRowWindow } from '../../row-window.js'
-import { mouseReport } from '../mouse-report.js'
+import { mouseReport } from '../input/mouse-report.js'
 import { agentChoiceInput } from './connection-agent-list.js'
 import { connectionModelState } from '../../../workspace-view/index.js'
 const isPicker = (s: WorkspaceState) => ['connection-model', 'connection-engine'].includes(s.overlay ?? '')

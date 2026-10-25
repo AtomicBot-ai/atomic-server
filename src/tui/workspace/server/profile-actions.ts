@@ -1,5 +1,5 @@
 import type { ActionContext } from '../actions.js'
-import { persistConversation } from '../data-actions.js'
+import { persistConversation } from './data-actions.js'
 import { featureData, featureDraft } from './feature-model.js'
 export async function profileAction(id: string, ctx: ActionContext) {
   const s = ctx.get()

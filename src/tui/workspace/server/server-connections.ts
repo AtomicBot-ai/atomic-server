@@ -3,7 +3,7 @@ import { panel, actionButton } from '../draw/cards.js'
 import { fieldControl } from '../draw/controls.js'
 import { drawViewport } from '../draw/viewport.js'
 import { serverRunning, serverChatModel } from './server-status.js'
-import { serverEndpoint, example } from '../connection.js'
+import { serverEndpoint, example } from './connection.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 

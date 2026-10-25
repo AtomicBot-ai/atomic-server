@@ -1,7 +1,7 @@
 import type { Key } from 'ink'
 import type { WorkspaceState } from '../state.js'
 import type { InputResult } from '../input-types.js'
-import { mouseReport } from '../mouse-report.js'
+import { mouseReport } from '../input/mouse-report.js'
 import { graphemes } from '../draw/canvas.js'
 import { enginePanelModel } from './engine-panel-model.js'
 

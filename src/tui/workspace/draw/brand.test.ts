@@ -3,7 +3,7 @@ import { canvas, COLORS } from './canvas.js'
 import { atomicHeader, brandHeaderRows } from './brand-header.js'
 import { brandStatus, BRAND_COLORS, drawBrandMark } from './brand-mark.js'
 import { INTRO_WORDMARK, SERVER_WORDMARK } from './brand-lettering.js'
-import { introCanvas } from '../intro-canvas.js'
+import { introCanvas } from '../intro/intro-canvas.js'
 import { createWorkspace } from '../state.js'
 import { workspaceFrame } from '../frame.js'
 

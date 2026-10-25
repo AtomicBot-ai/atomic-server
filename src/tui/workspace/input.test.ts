@@ -1,7 +1,7 @@
 import type { Key } from 'ink'
 import { describe, expect, it } from 'vitest'
 import { workspaceInput } from './input.js'
-import { mouseReport } from './mouse-report.js'
+import { mouseReport } from './input/mouse-report.js'
 import { workspaceFrame } from './frame.js'
 import { createWorkspace } from './state.js'
 import { newSetup } from '../../terminal-setup/index.js'

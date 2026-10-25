@@ -5,7 +5,7 @@ import { activate } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
 import { createWorkspace } from '../state.js'
 import type { WorkspaceState } from '../state.js'
-import { escapeAction } from '../escape-action.js'
+import { escapeAction } from '../input/escape-action.js'
 
 const selection = {
   request: { repo: 'repo/new', file: 'new.gguf' },

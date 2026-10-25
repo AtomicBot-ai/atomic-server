@@ -2,7 +2,7 @@ import type { Key } from 'ink'
 import type { WorkspaceState } from '../state.js'
 import type { InputResult } from '../input.js'
 import { mediaFields, mediaTask } from './media-model.js'
-import { mouseReport } from '../mouse-report.js'
+import { mouseReport } from '../input/mouse-report.js'
 
 export function mediaInput(input: string, key: Key, s: WorkspaceState): InputResult | null {
   if (!mediaTask(s)) return null

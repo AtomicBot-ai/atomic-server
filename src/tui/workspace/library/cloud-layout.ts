@@ -11,7 +11,7 @@ export function cloudListLayout(width: number, available: number) {
 import type { Key } from 'ink'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
-import { shellLayout } from '../shell-layout.js'
+import { shellLayout } from '../navigation/shell-layout.js'
 import { cloudChoices } from './cloud-catalog.js'
 
 export function cloudGridInput(key: Key, s: WorkspaceState, frame: Canvas) {

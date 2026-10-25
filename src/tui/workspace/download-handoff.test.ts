@@ -2,7 +2,7 @@ import { expect, it } from 'vitest'
 import type { ModelSetup } from '../../contract/index.js'
 import { newSetup } from '../../terminal-setup/index.js'
 import { createWorkspace } from './state.js'
-import { workspaceDownloadRows } from './download-layout.js'
+import { workspaceDownloadRows } from './downloads/download-layout.js'
 import { workspaceFrame } from './frame.js'
 
 const model = {

@@ -9,7 +9,7 @@ import { resolveConfig } from '../../config/index.js'
 import { ChatHistory } from '../../terminal-data/index.js'
 import { WorkspaceApp } from './WorkspaceApp.js'
 import { WorkspaceController } from './controller.js'
-import { WorkspaceRuntime } from './runtime.js'
+import { WorkspaceRuntime } from './runtime/runtime.js'
 
 it.each(['mouse', 'keyboard'])(
   'blocks an empty-model %s Send before any request, conversation, or draft clearing',

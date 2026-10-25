@@ -3,7 +3,7 @@ import { activate } from '../actions.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
 import { createWorkspace } from '../state.js'
-import { workspacePage } from '../navigation.js'
+import { workspacePage } from '../navigation/navigation.js'
 it('leaves the Server model section when the Models navigation item is opened', async () => {
   let state = { ...createWorkspace('models'), setupComplete: true, serverView: 'model' }
   const ctx: ActionContext = {

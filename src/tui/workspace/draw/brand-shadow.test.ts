@@ -10,7 +10,7 @@ import {
 import { canvas, COLORS, text } from './canvas.js'
 import { animatedIntroContour } from './brand-intro-motion.js'
 import { contourSilhouette } from './brand-silhouette.js'
-import { introCanvas } from '../intro-canvas.js'
+import { introCanvas } from '../intro/intro-canvas.js'
 import { atomicHeader } from './brand-header.js'
 
 it.each(['large', 'compact', 'small'] as const)(

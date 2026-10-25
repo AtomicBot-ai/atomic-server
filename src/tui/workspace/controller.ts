@@ -1,6 +1,6 @@
 import { sharedChat } from './chat/shared-chat.js'
 import type { WorkspaceState } from './state.js'
-import { WorkspaceRuntime } from './runtime.js'
+import { WorkspaceRuntime } from './runtime/runtime.js'
 import { contextExceeded } from '../../workspace-service/index.js'
 import { AtcError } from '../../errors/index.js'
 import { installedModels } from '../../terminal-setup/index.js'

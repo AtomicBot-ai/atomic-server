@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest'
 import { activate, type ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
 import { createWorkspace, type WorkspaceState } from '../state.js'
-import { escapeAction } from '../escape-action.js'
+import { escapeAction } from '../input/escape-action.js'
 import { workspaceFrame } from '../frame.js'
 
 const job = {

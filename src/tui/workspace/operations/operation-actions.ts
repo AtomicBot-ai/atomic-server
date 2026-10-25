@@ -1,4 +1,4 @@
-import { SUPPORT_LINKS } from '../support.js'
+import { SUPPORT_LINKS } from '../navigation/support.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { PAGE_FOCUS } from '../state.js'

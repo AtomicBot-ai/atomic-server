@@ -9,7 +9,7 @@ import { drawServer } from './server/server-panel.js'
 import type { Canvas } from './draw/canvas.js'
 import { button, COLORS, text, wrap } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
-import { drawReference } from './reference.js'
+import { drawReference } from './navigation/reference.js'
 import { computeRowWindow } from '../row-window.js'
 import { visibleLogLines } from '../state.js'
 interface Bounds {

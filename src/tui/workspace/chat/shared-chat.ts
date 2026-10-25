@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../../../terminal-service/index.js'
-import type { WorkspaceRuntime } from '../runtime.js'
+import type { WorkspaceRuntime } from '../runtime/runtime.js'
 export async function sharedChat(
   runtime: WorkspaceRuntime,
   model: string,

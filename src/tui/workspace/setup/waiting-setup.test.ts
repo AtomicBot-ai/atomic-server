@@ -6,7 +6,7 @@ import { workspaceFrame } from '../frame.js'
 import { workspaceInput } from '../input.js'
 import { hit } from '../draw/canvas.js'
 import { waitingSetupAction } from './waiting-setup.js'
-import { floatingDownloadBounds } from '../download-layout.js'
+import { floatingDownloadBounds } from '../downloads/download-layout.js'
 function fixture() {
   let state = {
     ...createWorkspace('welcome'),

@@ -1,8 +1,8 @@
 import type { Canvas } from '../draw/canvas.js'
 import { COLORS, text, wrapWords } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
-import { workspaceDownloadRows } from '../download-layout.js'
-import { drawFloatingDownloads } from '../floating-downloads.js'
+import { workspaceDownloadRows } from '../downloads/download-layout.js'
+import { drawFloatingDownloads } from '../downloads/floating-downloads.js'
 import { agentColor, agentMark } from './agent-brand.js'
 import { connectionAgentName } from './connection-guide-actions.js'
 

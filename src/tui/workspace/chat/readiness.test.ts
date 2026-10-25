@@ -3,7 +3,7 @@ import type { WorkspaceSnapshot } from '../../../contract/index.js'
 import { workspaceFrame } from '../frame.js'
 import { createWorkspace } from '../state.js'
 import { chatReadiness, readinessPatch } from './readiness.js'
-import { applyWorkspaceSnapshot } from '../shared-state.js'
+import { applyWorkspaceSnapshot } from '../runtime/shared-state.js'
 
 const endpoint = 'http://127.0.0.1:1337/v1'
 function ready(provider: string) {

@@ -4,7 +4,7 @@ import {
   downloadPaused,
   downloadControl,
 } from '../../../workspace-view/index.js'
-import { workspaceDownloadRows } from '../download-layout.js'
+import { workspaceDownloadRows } from '../downloads/download-layout.js'
 import type { DownloadRow } from '../../../workspace-view/index.js'
 import { record } from './library-model.js'
 import type { ActionContext } from '../actions.js'

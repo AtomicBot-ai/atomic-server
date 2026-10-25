@@ -1,4 +1,4 @@
-import { serverRunning } from '../sidebar.js'
+import { serverRunning } from '../navigation/sidebar.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { inferenceReadiness } from '../../../workspace-view/index.js'

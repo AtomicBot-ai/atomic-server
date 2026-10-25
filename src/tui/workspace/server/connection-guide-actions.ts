@@ -1,7 +1,7 @@
 import type { ConnectionDraft } from '../../../contract/index.js'
 import { CONNECTION_AGENTS, PROFILE_AGENTS } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
-import { workspaceLocation } from '../navigation-return.js'
+import { workspaceLocation } from '../navigation/navigation-return.js'
 import { record } from '../library/library-model.js'
 import { setupAction } from '../setup/setup-actions.js'
 import { connectionPickerAction } from './connection-picker.js'

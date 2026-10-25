@@ -2,7 +2,7 @@ import { expect, it } from 'vitest'
 import { canvas } from './canvas.js'
 import { COMPACT_MARK, drawBrandMark, LARGE_MARK, HEADER_MARK, BRAND_SHADOW } from './brand-mark.js'
 import { paintArmPoses } from './brand-arm-poses.js'
-import { introCanvas } from '../intro-canvas.js'
+import { introCanvas } from '../intro/intro-canvas.js'
 import { contourSilhouette } from './brand-silhouette.js'
 import { animatedIntroContour } from './brand-intro-motion.js'
 
