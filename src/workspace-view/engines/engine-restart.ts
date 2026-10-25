@@ -1,6 +1,6 @@
 /** What a person does after a managed engine's operation needs a new sign-in or a restart of the machine. */
 
-import type { ServerLaunch } from '../contract/index.js'
+import type { ServerLaunch } from '../../contract/index.js'
 
 /**
  * After the person was added to the `docker` group (`relogin-required`): how the group reaches this

@@ -1,4 +1,4 @@
-import type { WorkspaceServiceRow, WorkspaceSnapshot } from '../contract/index.js'
+import type { WorkspaceServiceRow, WorkspaceSnapshot } from '../../contract/index.js'
 
 export type LocalModelIdentity = {
   model: string

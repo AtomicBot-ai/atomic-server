@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import type { WorkspaceLoad, WorkspaceServiceRow } from '../contract/index.js'
+import type { WorkspaceLoad, WorkspaceServiceRow } from '../../contract/index.js'
 import { catalogModelMatches, localModelStatus } from './local-model-status.js'
 
 const identity = { model: 'local/model', providers: ['llamacpp-upstream'], kind: 'chat' as const }

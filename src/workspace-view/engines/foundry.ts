@@ -1,6 +1,6 @@
 /** Foundry Local as a person reads it: variant and accelerator names, the library's accelerators, verdicts. */
 
-import type { FoundryAcceleratorsView } from '../contract/index.js'
+import type { FoundryAcceleratorsView } from '../../contract/index.js'
 
 const LABELS: Readonly<Record<string, string>> = {
   cpu: 'CPU',

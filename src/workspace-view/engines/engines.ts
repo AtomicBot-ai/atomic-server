@@ -10,7 +10,7 @@ import type {
   ManagedPhase,
   RequirementPlan,
 } from '@atomic-chat/core/contracts'
-import type { ManagedEngineState, ManagedVerdict } from '../contract/index.js'
+import type { ManagedEngineState, ManagedVerdict } from '../../contract/index.js'
 
 const UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB']
 

@@ -5,7 +5,7 @@
  * consent is offered only for the plan on screen — its digest, never another.
  */
 
-import type { ManagedEngineState, WorkspaceSnapshot } from '../contract/index.js'
+import type { ManagedEngineState, WorkspaceSnapshot } from '../../contract/index.js'
 import { planBlocked } from './engines.js'
 
 /** `state` with this engine's operation and installation, and another engine's operation, from `live`. */

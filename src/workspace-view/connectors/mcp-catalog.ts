@@ -1,5 +1,5 @@
 // Lifted from atomic-chat-ui/web-app/src/constants/mcp-connectors.ts @ 807b4d9; adapted: one JSON catalog shared by both clients.
-import type { ConnectorConfig, ConnectorTemplate } from '../contract/index.js'
+import type { ConnectorConfig, ConnectorTemplate } from '../../contract/index.js'
 import connectors from './mcp-connectors.json' with { type: 'json' }
 
 /** The built-in MCP connectors both clients offer, in the desktop app's order. */

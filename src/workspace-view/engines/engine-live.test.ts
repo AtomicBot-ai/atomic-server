@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ManagedEngineState, WorkspaceSnapshot } from '../contract/index.js'
-import { DIGEST_A, DIGEST_B, installation, operation, plan } from '../../test/helpers/managed-fixtures.js'
+import type { ManagedEngineState, WorkspaceSnapshot } from '../../contract/index.js'
+import { DIGEST_A, DIGEST_B, installation, operation, plan } from '../../../test/helpers/managed-fixtures.js'
 import { engineApproval, engineRefreshKey, liveEngineState } from './engine-live.js'
 
 const state = (over: Partial<ManagedEngineState> = {}): ManagedEngineState => ({

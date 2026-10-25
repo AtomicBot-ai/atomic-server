@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import type { WorkspaceSnapshot } from '../contract/index.js'
+import type { WorkspaceSnapshot } from '../../contract/index.js'
 import { inferenceReadiness, setupModelPending } from './inference-readiness.js'
 const snapshot = (over: Partial<WorkspaceSnapshot> = {}) =>
   ({

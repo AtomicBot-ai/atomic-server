@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { downloadControl, downloadOwner, downloadPaused, downloadRows } from './index.js'
+import { downloadControl, downloadOwner, downloadPaused, downloadRows } from '../index.js'
 it.each([
   ['setup', {}, 'setup.resume', { setup_id: 'job' }],
   ['artifacts', { plan: { category: 'image' } }, 'artifacts.resume', { id: 'job' }],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FoundryAcceleratorsView } from '../contract/index.js'
+import type { FoundryAcceleratorsView } from '../../contract/index.js'
 import { acceleratorLines, foundryVerdictText, prepareResultLines, variantLabel } from './foundry.js'
 
 const view = (over: Partial<FoundryAcceleratorsView> = {}): FoundryAcceleratorsView => ({

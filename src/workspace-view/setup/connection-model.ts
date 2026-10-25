@@ -1,5 +1,5 @@
-import { downloadRows } from './downloads.js'
-import { downloadHeld } from './download-controls.js'
+import { downloadRows } from '../downloads/downloads.js'
+import { downloadHeld } from '../downloads/download-controls.js'
 
 type Row = Record<string, unknown>
 const record = (value: unknown): Row =>

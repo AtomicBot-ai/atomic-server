@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ManagedPhase } from '@atomic-chat/core/contracts'
-import type { ManagedEngineState } from '../contract/index.js'
-import { DIGEST_A, installation, operation, plan } from '../../test/helpers/managed-fixtures.js'
+import type { ManagedEngineState } from '../../contract/index.js'
+import { DIGEST_A, installation, operation, plan } from '../../../test/helpers/managed-fixtures.js'
 import {
   engineView,
   formatSize,

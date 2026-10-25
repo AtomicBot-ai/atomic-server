@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { connectorToolBindings } from './connector-tools.js'
-import type { WorkspaceFeatures } from '../contract/index.js'
+import type { WorkspaceFeatures } from '../../contract/index.js'
 
 it('offers only connected enabled selections with stable distinct protocol-safe names', () => {
   const f = {

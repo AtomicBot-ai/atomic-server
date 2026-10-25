@@ -1,7 +1,7 @@
-import type { WorkspaceSnapshot } from '../contract/index.js'
+import type { WorkspaceSnapshot } from '../../contract/index.js'
 import { connectionDownload, connectionDownloadTarget } from './connection-model.js'
-import { downloadRows } from './downloads.js'
-import { downloadPaused } from './download-controls.js'
+import { downloadRows } from '../downloads/downloads.js'
+import { downloadPaused } from '../downloads/download-controls.js'
 
 export interface InferenceReadiness {
   ready: boolean

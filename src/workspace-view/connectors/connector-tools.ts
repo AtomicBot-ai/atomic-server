@@ -1,4 +1,4 @@
-import type { WorkspaceFeatures } from '../contract/index.js'
+import type { WorkspaceFeatures } from '../../contract/index.js'
 
 /** Stable, collision-resistant names keep connector tools distinct in a model's function list. */
 export function connectorToolBindings(features: WorkspaceFeatures | undefined, ids: string[]) {

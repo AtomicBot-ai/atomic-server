@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { downloadRows } from './index.js'
+import { downloadRows } from '../index.js'
 
 describe('shared Downloads view', () => {
   it('removes verified models and their stale transfer events without changing records', () => {
@@ -183,7 +183,7 @@ it('merges a durable engine job with its transient progress, retains only comple
 })
 
 it('prioritizes live progress without losing paused or failed jobs', async () => {
-  const { prioritizeDownloads } = await import('./index.js')
+  const { prioritizeDownloads } = await import('../index.js')
   const rows = downloadRows(
     [
       { id: 'failed', stage: 'failed' },
