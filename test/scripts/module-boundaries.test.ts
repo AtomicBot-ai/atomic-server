@@ -118,6 +118,19 @@ describe('module boundaries and relative paths', () => {
     ])
   })
 
+  it('checks the folder a template URL starts with, since the file part is only known at run time', () => {
+    expect(
+      specifiers('const f = (n: string) => new URL(`../fixtures/${n}`, import.meta.url)', 'x.ts')
+    ).toEqual([{ kind: 'url', text: '../fixtures/', line: 1 }])
+    expect(
+      check(
+        'src/a/x.ts',
+        'const ok = (n: string) => new URL(`../../test/fixtures/${n}`, import.meta.url)\n' +
+          'const moved = (n: string) => new URL(`../test/fixtures/${n}.json`, import.meta.url)'
+      )
+    ).toEqual(['src/a/x.ts:2: ../test/fixtures/ names no file'])
+  })
+
   it('resolves the admin SPA as its bundler does: no extension, tsx, css, assets and the @/ alias', () => {
     const file = 'packages/admin-ui/src/workspace/library/Catalog.tsx'
     expect(

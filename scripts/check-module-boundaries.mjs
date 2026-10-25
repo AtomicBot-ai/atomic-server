@@ -58,10 +58,16 @@ export function specifiers(source, fileName = 'file.tsx') {
       ts.isNewExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === 'URL' &&
-      literal(node.arguments?.[0]) &&
       isImportMetaUrl(node.arguments?.[1])
-    )
-      add('url', node.arguments[0])
+    ) {
+      const [first] = node.arguments
+      if (literal(first)) add('url', first)
+      // `new URL(`../fixtures/${name}`, …)`: the folder before the first slot is all that is known here.
+      else if (ts.isTemplateExpression(first) && first.head.text.includes('/')) {
+        const folder = first.head.text.slice(0, first.head.text.lastIndexOf('/') + 1)
+        found.push({ kind: 'url', text: folder, line: lineOf(file, first) })
+      }
+    }
     node.forEachChild(visit)
   }
   visit(file)
