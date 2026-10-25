@@ -47,9 +47,25 @@ describe('migrateConfig', () => {
       { api: { port: 9 } },
     ],
     ['an api without it is left as it was', { version: 3, api: { port: 9 } }, { api: { port: 9 } }],
-    ['no api at all', { version: 3, tui: { mode: 'personal' } }, { tui: { mode: 'personal' } }],
+    ['no api at all', { version: 3, tui: { model: 'm' } }, { tui: { model: 'm' } }],
   ])('3 → 4: %s', (_name, from, to) => {
     expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 3 })
+  })
+
+  it.each([
+    [
+      'tui.mode is dropped, the rest of tui kept',
+      { version: 4, tui: { mode: 'personal', model: 'm' } },
+      { tui: { model: 'm' } },
+    ],
+    [
+      'a tui left empty goes too',
+      { version: 4, tui: { mode: 'server' }, api: { port: 9 } },
+      { api: { port: 9 } },
+    ],
+    ['a file without it is left as it was', { version: 4, api: { port: 9 } }, { api: { port: 9 } }],
+  ])('4 → 5: %s', (_name, from, to) => {
+    expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 4 })
   })
 
   it('refuses a newer file with an update hint', () => {

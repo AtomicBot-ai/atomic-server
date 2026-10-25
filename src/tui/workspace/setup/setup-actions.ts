@@ -31,8 +31,6 @@ export async function setupAction(
   if (id === 'personal' || id === 'hosting' || id === 'install-models' || id === 'setup-browse') {
     const browse = id === 'setup-browse'
     operations.get(c)?.abort()
-    const mode = 'server'
-    await c.save('tui.mode', mode)
     if (get().setupComplete && id !== 'install-models' && !browse) {
       update((s) => ({
         ...s,
@@ -46,7 +44,7 @@ export async function setupAction(
     update((s) => ({
       ...s,
       page: s.setupComplete ? 'models' : 'setup',
-      setup: { ...newSetup(mode), engine: s.engine },
+      setup: { ...newSetup('server'), engine: s.engine },
       overlay: null,
       focus: 'setup-refresh',
       message: '',

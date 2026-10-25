@@ -23,12 +23,11 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 4
+export const CONFIG_VERSION = 5
 
 export interface AtcConfig {
   version: number
   tui: {
-    mode: 'ask' | 'personal' | 'server'
     endpoint: string
     model: string
     motion: boolean
@@ -56,13 +55,6 @@ export interface AtcConfig {
 const PROVIDERS: readonly string[] = LOCAL_PROVIDER_IDS
 
 export const FIELDS: readonly FieldSpec[] = [
-  {
-    path: 'tui.mode',
-    type: 'enum',
-    default: 'ask',
-    values: ['ask', 'personal', 'server'],
-    description: 'Legacy workspace preference; the terminal now always opens on Server',
-  },
   {
     path: 'tui.endpoint',
     type: 'string',

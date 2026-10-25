@@ -34,7 +34,7 @@ describe('workspace actions', () => {
     const { ctx, save } = context()
     ctx.update((s) => ({ ...s, draft: 'Keep this' }))
     await activate('personal', ctx)
-    expect(save).toHaveBeenCalledWith('tui.mode', 'server')
+    expect(save).not.toHaveBeenCalledWith('tui.mode', expect.anything())
     await activate('page:models', ctx)
     await activate('model:0', ctx)
     expect(ctx.get()).toMatchObject({ page: 'chat', model: 'one', draft: 'Keep this', focus: 'composer' })

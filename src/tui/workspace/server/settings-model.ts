@@ -11,7 +11,7 @@ export type SettingsEntry =
 export function settingsEntries(s: WorkspaceState): SettingsEntry[] {
   const fields = (group: string): SettingsEntry[] =>
     s.base.config.rows
-      .filter((r) => r.path.startsWith(`${group}.`) && r.path !== 'tui.mode')
+      .filter((r) => r.path.startsWith(`${group}.`))
       .map((row) => ({ id: `setting:${row.path}`, kind: 'field', row }))
   if (s.settingsGroup !== 'admin') return fields(s.settingsGroup)
   const admin = fields('admin'),

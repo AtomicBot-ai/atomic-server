@@ -58,7 +58,6 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
   }
   if (id === 'setup-manual') {
     await c.runtime.execute('setup.manual')
-    await c.save('tui.mode', 'server')
     patch({
       setupComplete: true,
       setup: null,
