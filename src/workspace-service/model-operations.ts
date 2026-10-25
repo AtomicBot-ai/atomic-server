@@ -100,7 +100,7 @@ export async function modelOperation(
               url: d.options.env?.['ATC_FOUNDRY_LOCAL_MODELS_URL'],
             },
             platform: d.options.platform ?? process.platform,
-            arch: process.arch,
+            arch: d.options.arch ?? process.arch,
           },
           String(input['query'] ?? '')
         )

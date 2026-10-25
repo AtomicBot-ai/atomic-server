@@ -1,7 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { CACHE_TTL_MS, fetchLiteRtLmList, parseLiteRtLmList } from './litert-list.js'
 
@@ -91,7 +90,7 @@ describe('fetchLiteRtLmList', () => {
   it('reads a file:// list and caches it; within the hour the cache answers', async () => {
     const d = scratch()
     const cachePath = join(d, 'cache', 'litert-lm-models.json')
-    const url = pathToFileURL(FIXTURE.pathname).href
+    const url = FIXTURE.href
     const first = await fetchLiteRtLmList({ cachePath, url, fetch: failing, now: () => 1000 })
     expect(first).toMatchObject({ source: 'remote', fetchedAt: 1000 })
     const second = await fetchLiteRtLmList({

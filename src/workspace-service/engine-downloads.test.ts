@@ -205,3 +205,20 @@ it('takes progress from the core’s transfers in sync, and lists without changi
   expect((await queue.list())[0]).toMatchObject({ stage: 'downloading', transferred: 40, total: 80 })
   hold.resolve()
 })
+it('keeps an installed engine ready when refreshing its selection afterwards fails', async () => {
+  const { link, queue } = fixture()
+  const versions = link.responses['POST /engines/versions']
+  let installed = false
+  link.responses['POST /engines/llamacpp-upstream/update'] = () => {
+    installed = true
+    return {}
+  }
+  // The build is installed; only the read that names the active build afterwards breaks.
+  link.responses['POST /engines/versions'] = () => {
+    if (installed) throw new Error('versions unavailable')
+    return versions
+  }
+  const job = await queue.enqueue('llamacpp-upstream', { select: true })
+  await vi.waitFor(async () => expect((await queue.list())[0]?.stage).not.toMatch(/queued|connecting/))
+  expect((await queue.list()).find((j) => j.id === job.id)).toMatchObject({ stage: 'ready' })
+})

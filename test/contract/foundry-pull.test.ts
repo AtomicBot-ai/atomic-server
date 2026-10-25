@@ -32,7 +32,10 @@ const out = () => t.io.out.join('')
 const err = () => t.io.err.join('')
 
 /** A server whose core registers Foundry Local and judges each device by `verdicts`. */
-async function server(verdicts: Record<string, string> = {}) {
+async function server(
+  verdicts: Record<string, string> = {},
+  host: { platform: NodeJS.Platform; arch: string } = { platform: 'linux', arch: 'x64' }
+) {
   azure.reset()
   serveAzure(azure, base, 'openvino-npu', '1')
   serveAzure(azure, base, 'generic-cpu', '1')
@@ -41,12 +44,21 @@ async function server(verdicts: Record<string, string> = {}) {
   t.link.responses['POST /engines/versions'] = { engines: [{ engine: 'foundry-local' }] }
   t.link.responses['POST /models/foundry-local/check'] = foundryCheck(verdicts)
   const url = confList(join(scratch, `${Math.random().toString(36).slice(2)}.json`), base)
-  const ws = await workspaceServer(t.link, paths, { ATC_FOUNDRY_LOCAL_MODELS_URL: url })
+  // A named machine, not the runner's: conf's list has no variant for every runner (win-arm64).
+  const ws = await workspaceServer(t.link, paths, { ATC_FOUNDRY_LOCAL_MODELS_URL: url }, undefined, host)
   close = ws.close
   return join(paths.dataFolder, 'foundry-local', 'models')
 }
 
 describe('atc models pull --engine foundry-local', () => {
+  // On an arm64 runner (this one's process) only the server's machine, win32/x64, names conf's win-x64 variants.
+  it('reads the variants for the server’s machine, not the process’s own architecture', async () => {
+    await server({}, { platform: 'win32', arch: 'x64' })
+    expect(await t.run(['models', 'search', 'gemma', '--engine', 'foundry-local', '--json']), err()).toBe(0)
+    const found = JSON.parse(out()) as { models: { variants: unknown[] }[] }
+    expect(found.models[0]?.variants.length).toBeGreaterThan(0)
+  })
+
   it('downloads the default variant (NPU first) and follows it to ready', async () => {
     const models = await server()
     expect(await t.run(['models', 'pull', 'gemma-4-e2b-it', '--engine', 'foundry-local'])).toBe(0)

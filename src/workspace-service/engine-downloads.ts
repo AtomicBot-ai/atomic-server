@@ -214,6 +214,13 @@ export class EngineDownloads {
       await install()
     } else await ensureArtifactEngine(this.link, engine, taskId, this.proxy, install)
   }
+  /** A chosen engine's selection names the build the core made active (a "latest" request has no version). */
+  private async rememberActive(job: EngineJob) {
+    if (!job['selection'] || (await this.selection.read()) !== job['selection']) return
+    const result = await this.link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
+    const active = result.engines?.find((entry) => entry.engine === job.engine)?.active
+    if (active) await this.selection.remember(`${job.engine}|${active.version}|${active.variant}`)
+  }
   private launch(job: EngineJob) {
     const run = this.worker
       .run('engine-builds', async () => {
@@ -232,11 +239,8 @@ export class EngineDownloads {
           )
           job.stage = 'ready'
           job.transferred = job.total
-          if (job['selection'] && (await this.selection.read()) === job['selection']) {
-            const result = await this.link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
-            const active = result.engines.find((entry) => entry.engine === job.engine)?.active
-            if (active) await this.selection.remember(`${job.engine}|${active.version}|${active.variant}`)
-          }
+          // The build is installed whatever happens next: naming the active build is a refinement.
+          await this.rememberActive(job).catch(() => undefined)
         } catch (error) {
           job.stage = 'failed'
           job['error'] = error instanceof Error ? error.message : String(error)

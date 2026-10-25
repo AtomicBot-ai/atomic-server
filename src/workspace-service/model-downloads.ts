@@ -46,7 +46,7 @@ export function modelDownloads(
         url: options.env?.['ATC_FOUNDRY_LOCAL_MODELS_URL'],
       },
       platform: options.platform ?? process.platform,
-      arch: process.arch,
+      arch: options.arch ?? process.arch,
       modelsDir: options.paths.layout.provider('foundry-local').modelsDir,
       directory: join(options.paths.atcDir, 'foundry-model-setups'),
       downloader,

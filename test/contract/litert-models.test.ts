@@ -2,7 +2,7 @@
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { atcPathsFor } from '../../src/config/index.js'
 import { FixtureHttpServer } from '../helpers/fixture-http-server.js'
@@ -12,7 +12,8 @@ import { workspaceServer } from '../helpers/workspace-server.js'
 
 const hub = new FixtureHttpServer()
 const scratch = mkdtempSync(join(tmpdir(), 'atc-litert-models-'))
-const LIST = new URL('../fixtures/litert-lm/litert-lm-models.json', import.meta.url).pathname
+// Not `.pathname`: on Windows that is `/D:/…`, which a path function turns into `D:\D:\…`.
+const LIST = fileURLToPath(new URL('../fixtures/litert-lm/litert-lm-models.json', import.meta.url))
 let base = ''
 beforeAll(async () => {
   base = await hub.start()
