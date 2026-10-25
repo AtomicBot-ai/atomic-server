@@ -37,8 +37,12 @@ export function useWorkspaceShortcuts(options: {
         event.preventDefault()
         navigation.navigate(WORKSPACE_NAVIGATION[Number(event.key) - 1].id)
       } else if (event.key === 'Escape') {
-        const target = event.target as HTMLElement | null
-        if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+        // Escape inside a field is the field's (it clears or leaves it), not the page's.
+        if (
+          event.target instanceof Element &&
+          event.target.closest('input, textarea, select, [contenteditable="true"]')
+        )
+          return
         if (page === 'settings' && !sidebarOpen && !command && !help) navigation.backFromSettings()
         setSidebarOpen(false)
         setCommand(null)
