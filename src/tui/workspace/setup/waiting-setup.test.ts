@@ -152,3 +152,21 @@ it('reads the server before choosing a connection when the first snapshot has no
   expect(t.ctx.get().finalSetup?.destination).toBe('endpoint')
   expect(t.execute).not.toHaveBeenCalledWith('setup.manual')
 })
+it('waits when the server cannot say whether the first model is ready', async () => {
+  const t = fixture()
+  t.ctx.update((s) => ({ ...s, workspace: null as never }))
+  ;(t.ctx.controller.runtime as unknown as { snapshot: () => Promise<never> }).snapshot = async () => {
+    throw new Error('offline')
+  }
+  await t.action('first-connect:endpoint')
+  expect(t.ctx.get().finalSetup?.destination).toBe('endpoint')
+})
+it('trusts the server over an older snapshot that does not list the download yet', async () => {
+  const t = fixture()
+  const pending = t.ctx.get().workspace
+  t.ctx.update((s) => ({ ...s, workspace: { setups: [], downloads: [] } as never }))
+  ;(t.ctx.controller.runtime as unknown as { snapshot: () => Promise<unknown> }).snapshot = async () =>
+    pending
+  await t.action('first-connect:endpoint')
+  expect(t.ctx.get().finalSetup?.destination).toBe('endpoint')
+})

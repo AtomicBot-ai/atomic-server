@@ -11,12 +11,15 @@ export async function firstConnectionAction(id: string, ctx: ActionContext): Pro
     id = `first-connect:${ctx.get().finalSetup!.destination}`
   }
   if (id !== 'first-connect:endpoint' && id !== 'first-connect:agent') return false
-  // Right after the terminal opens no snapshot has arrived: "no snapshot" must not read as "model ready".
-  if (!leavingWait && !ctx.get().workspace) {
-    const workspace = await ctx.controller.runtime.snapshot().catch(() => null)
-    if (workspace) ctx.update((s) => ({ ...s, workspace }))
-  }
-  if (!leavingWait && setupModelPending(ctx.get().workspace, ctx.get().model)) {
+  // Decide on the server's word, not the last poll (none at all right after the terminal opens); when the
+  // server cannot say, wait: the waiting screen lets the person go on anyway.
+  const workspace = leavingWait
+    ? null
+    : await Promise.resolve()
+        .then(() => ctx.controller.runtime.snapshot())
+        .catch(() => null)
+  if (workspace) ctx.update((s) => ({ ...s, workspace }))
+  if (!leavingWait && (!workspace || setupModelPending(workspace, ctx.get().model))) {
     ctx.update((s) => ({
       ...s,
       finalSetup: finalSetupState(id === 'first-connect:endpoint' ? 'endpoint' : 'agent'),

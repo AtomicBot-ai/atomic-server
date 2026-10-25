@@ -14,7 +14,8 @@ export function useWorkspace() {
   const active = useRef(true)
   const requestId = useRef(0)
   const appliedId = useRef(0)
-  const refresh = useCallback(async () => {
+  /** Reads the server's snapshot now; resolves with it, or null when the server could not answer. */
+  const refresh = useCallback(async (): Promise<WorkspaceSnapshot | null> => {
     const id = ++requestId.current
     try {
       const result = await workspaceApi.snapshot()
@@ -23,12 +24,14 @@ export function useWorkspace() {
         setSnapshot(result)
         setError('')
       }
+      return result
     } catch (e) {
       if (active.current && id > appliedId.current) {
         appliedId.current = id
         setError(describeError(e))
       }
       if (isUnauthorized(e)) useStatusStore.setState({ unauthorized: true, status: null })
+      return null
     } finally {
       if (active.current) setLoading(false)
     }
