@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { mlxPlan } from './mlx-plan.js'
 import type { CatalogRow } from './catalog.js'
@@ -52,7 +53,8 @@ describe('mlxPlan from the Hub', () => {
       model_id: row.id,
       engine: 'mlx',
       total_download_bytes: 1030,
-      load: { provider: 'mlx', model_id: row.id, model_path: `/data/workspace-models/mlx/${row.id}` },
+      // A folder on this machine: the platform's separators, as `path.join` gives them.
+      load: { provider: 'mlx', model_id: row.id, model_path: join('/data', 'workspace-models/mlx', row.id) },
       digest: expect.stringMatching(/^[a-f0-9]{64}$/),
     })
     expect(plan.files).toEqual([
