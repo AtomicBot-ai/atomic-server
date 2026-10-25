@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { ATC, runAtc } from '../helpers/binary.js'
+import { DRIVER, hasPython } from '../helpers/pty-driver.js'
 
 const command = [...ATC]
 const dataFolder = join(mkdtempSync(join(tmpdir(), 'atc-e2e-tui-')), 'data')
@@ -19,65 +20,6 @@ afterAll(() => {
   runAtc(['stop', '--data-folder', dataFolder])
   rmSync(join(dataFolder, '..'), { recursive: true, force: true })
 })
-
-/**
- * Run argv in a 100×30 pseudo-terminal; `steps` alternate "wait until the screen shows this" and
- * "type this". Prints a JSON line with the exit code and everything the program wrote.
- */
-const DRIVER = String.raw`
-import json, os, pty, re, select, struct, sys, time, fcntl, termios, signal
-steps = json.loads(sys.argv[1]); argv = sys.argv[2:]
-pid, fd = pty.fork()
-if pid == 0:
-    os.execvp(argv[0], argv)
-fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 30, 100, 0, 0))
-out = b''
-ansi = re.compile(rb'\x1b\[[0-9;?]*[ -/]*[@-~]')
-def pump(until=None, seconds=20.0, since=0):
-    global out
-    end = time.time() + seconds
-    while time.time() < end:
-        if until is not None and until.encode() in ansi.sub(b'', out[since:]): return True
-        r, _, _ = select.select([fd], [], [], 0.05)
-        if r:
-            try: data = os.read(fd, 65536)
-            except OSError: return False
-            if not data: return False
-            out += data
-    return until is None
-ok = True
-failed = []
-checkpoint = 0
-for step in steps:
-    if 'wait' in step:
-        seen = pump(step['wait'], since=checkpoint if step.get('fresh') else 0)
-        if not seen: failed.append(step['wait'])
-        ok = seen and ok
-    elif 'resize' in step:
-        rows, cols = step['resize']
-        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
-        os.kill(pid, signal.SIGWINCH)
-        pump(seconds=0.3)
-    else:
-        checkpoint = len(out)
-        try: os.write(fd, step['type'].encode())
-        except OSError: ok = False
-        # A pause as between two presses: Esc followed at once by a key reads as Alt+key.
-        pump(seconds=0.3)
-code = None
-end = time.time() + 15
-while time.time() < end:
-    done, status = os.waitpid(pid, os.WNOHANG)
-    if done:
-        code = os.waitstatus_to_exitcode(status); break
-    pump(seconds=0.1)
-if code is None: os.kill(pid, 9)
-print(json.dumps({'ok': ok, 'failed':failed, 'code': code, 'out': out.decode('utf8', 'replace')}))
-`
-
-function hasPython(): boolean {
-  return spawnSync('python3', ['-c', 'import pty'], { encoding: 'utf8' }).status === 0
-}
 
 // eslint-disable-next-line no-control-regex
 const strip = (s: string) => s.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '')

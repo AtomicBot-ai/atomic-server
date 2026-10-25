@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config'
 
-// Five test layers, see AGENTS.md and docs/testing.md. Unit tests live next to the code; the rest under test/.
+// Six test layers, see AGENTS.md and docs/testing.md. Unit tests live next to the code; the rest under test/.
 export default defineConfig({
   test: {
     projects: [
@@ -30,6 +30,17 @@ export default defineConfig({
           environment: 'node',
           setupFiles: ['test/setup.ts'],
           testTimeout: 120_000,
+        },
+      },
+      {
+        test: {
+          // The web admin of the built program in headless Chromium (Playwright); `npm run test:e2e:web`.
+          name: 'e2e-web',
+          include: ['test/e2e-web/**/*.test.ts'],
+          environment: 'node',
+          setupFiles: ['test/setup.ts'],
+          testTimeout: 120_000,
+          hookTimeout: 120_000,
         },
       },
       {

@@ -100,3 +100,4 @@ add a new one that says which record it supersedes.
 - **2026-10-24** — [Shade dialogs and keep short terminals usable](2026-10-24-shade-dialogs-and-fit-short-terminals.md) — consistent modal backdrops, functional60×20 status layout, and approved Beacon/Rover card artwork.
 - **2026-10-24** — [Share semantic colors between Web and the terminal](2026-10-24-share-interface-colors.md) — one palette for matching navigation, composer, action and download controls.
 - **2026-10-25** — [Gate MCP connector programs behind --allow-exec](2026-10-25-gate-connector-programs.md) — `execute` effect for connector save/import/check/call; agents need `--allow-exec`; a connector's process gets only host basics and its own env.
+- **2026-10-25** — [Test the web admin end to end with Playwright](2026-10-25-web-e2e-with-playwright.md) — `playwright` devDependency, vitest project `e2e-web` on the built program's admin; `test:e2e:tui` and `test:e2e:web` apart; no network.

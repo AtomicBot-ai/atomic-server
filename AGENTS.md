@@ -156,7 +156,7 @@ otherwise fails with `ATC_CONSENT_REQUIRED`.
 
 ## 6. Testing
 
-Six layers (`vitest.config.ts`, details in `docs/testing.md`):
+Seven layers (`vitest.config.ts`, details in `docs/testing.md`):
 
 - **unit** — `src/**/*.test.{ts,tsx}`, next to the code, pure tables and fakes; the Ink app on
   `test/helpers/fake-terminal.ts`.
@@ -168,6 +168,8 @@ Six layers (`vitest.config.ts`, details in `docs/testing.md`):
   faked machine (`npm run test:installers`).
 - **runtime-compat** — `test/runtime-compat/`: Node behaviours the daemon relies on, and Ink's raw keys and
   resize, under vitest **and** `bun test`.
+- **e2e-web** — `test/e2e-web/`: the built program's web admin in headless Chromium (Playwright);
+  `npm run test:e2e:tui` and `npm run test:e2e:web` run the terminal and the web journeys apart.
 - **ui** — `packages/admin-ui`, its own vitest (jsdom).
 
 `test/setup.ts` points `ATC_DATA_FOLDER` and `ATOMIC_CORE_DATA_FOLDER` at a fresh `mkdtemp` per worker;
