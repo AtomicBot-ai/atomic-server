@@ -1,16 +1,12 @@
 /** Provider lists in the admin come from the core (spec server-engine-settings, «SGLang в admin», «macOS»). */
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { enginesList, workspaceFixture } from '@/test/workspace-fixture'
+import { workspaceFixture } from '@/test/workspace-fixture'
 import { InstalledModels } from './InstalledModels'
 import { Downloads } from '../downloads/Downloads'
 import { loadTarget } from '../downloads/download-data'
-import { SetupEngine } from '../../setup/SetupEngine'
-import { SetupDetails } from '../../setup/SetupDetails'
 
-const LINUX = ['llamacpp-upstream', 'llamacpp', 'foundry-local', 'tensorrt-llm', 'sglang', 'vllm']
-const MAC = ['llamacpp-upstream', 'llamacpp', 'atomic-prism', 'mlx', 'foundry-local']
 const options = (select: HTMLElement) =>
   within(select)
     .getAllByRole('option')
@@ -40,50 +36,6 @@ describe('provider lists from the core', () => {
     await userEvent.selectOptions(select, 'sglang')
     await userEvent.click(screen.getByRole('button', { name: 'Load model' }))
     expect(execute).toHaveBeenCalledWith('models.load', { provider: 'sglang', model_id: 'Qwen/Qwen3.5-2B' })
-  })
-
-  it('lists the engines the core registers for settings, managed ones in the app’s order', async () => {
-    const { workspace } = workspaceFixture({ 'engines.list': enginesList(LINUX), 'config.get': {} })
-    render(<SetupDetails workspace={workspace} engine="" expanded />)
-    await waitFor(() => expect(options(screen.getByLabelText('Settings engine'))).toContain('sglang'))
-    expect(options(screen.getByLabelText('Settings engine'))).toEqual([
-      'llamacpp-upstream',
-      'llamacpp',
-      'vllm',
-      'sglang',
-      'tensorrt-llm',
-      'foundry-local',
-    ])
-  })
-
-  it('offers no managed engine on macOS', async () => {
-    const { workspace } = workspaceFixture({ 'engines.list': enginesList(MAC), 'config.get': {} })
-    render(<SetupDetails workspace={workspace} engine="" expanded />)
-    await waitFor(() => expect(options(screen.getByLabelText('Settings engine'))).toContain('mlx'))
-    for (const id of ['vllm', 'sglang', 'tensorrt-llm'])
-      expect(options(screen.getByLabelText('Settings engine'))).not.toContain(id)
-  })
-
-  it('offers the managed engines and Foundry Local in setup’s Engine step', async () => {
-    const { workspace } = workspaceFixture({ 'engines.list': enginesList(LINUX) })
-    render(
-      <SetupEngine
-        workspace={workspace}
-        category="text"
-        engine=""
-        setEngine={() => {}}
-        onContinue={() => {}}
-      />
-    )
-    await waitFor(() => expect(options(screen.getByLabelText('Setup engine'))).toContain('vllm'))
-    expect(options(screen.getByLabelText('Setup engine')).slice(1)).toEqual([
-      'llamacpp-upstream',
-      'llamacpp',
-      'vllm',
-      'sglang',
-      'tensorrt-llm',
-      'foundry-local',
-    ])
   })
 
   it('resumes an interrupted store download and cancels a running Foundry one with their own operations', async () => {

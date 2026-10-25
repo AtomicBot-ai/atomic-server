@@ -329,17 +329,6 @@
   border-color: var(--ew-teal);
   background: #1d2a27;
 }
-.intent-technical {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 24px 0;
-  font-size: 12px;
-  color: var(--ew-muted);
-}
-.setup-intent details {
-  margin-top: 18px;
-}
 .desktop-workspace .wizard {
   max-width: 820px;
   width: 100%;
@@ -355,12 +344,6 @@
   display: grid;
   place-items: center;
   padding: 24px;
-}
-.desktop-workspace .intent-technical {
-  margin: 18px 0;
-}
-.desktop-workspace .wizard-top {
-  margin-bottom: 20px;
 }
 @media (max-width: 1100px) {
   .desktop-workspace {
