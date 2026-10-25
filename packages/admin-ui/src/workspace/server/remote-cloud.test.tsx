@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { RemoteAccess } from './RemoteAccess'
-import { CloudProviders } from '../library/CloudProviders'
+import { CloudProviders } from '../library/cloud/CloudProviders'
 it('keeps public tunnel and local listener actions separate and copies usable LAN addresses', async () => {
   const { workspace, execute } = workspaceFixture({
     'remote.status': { state: 'off', canStart: true, canStop: false },

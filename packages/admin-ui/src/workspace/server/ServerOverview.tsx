@@ -4,8 +4,8 @@ import { ArrowRight, ChevronDown, CircleHelp, Network, Search } from 'lucide-rea
 import { CONNECTION_AGENTS } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
-import { AgentIcon } from './AgentIcon'
-import { AGENT_DESCRIPTIONS } from './agent-descriptions'
+import { AgentIcon } from './connection/AgentIcon'
+import { AGENT_DESCRIPTIONS } from './connection/agent-descriptions'
 import { Activity } from './Activity'
 
 export function ServerOverview({

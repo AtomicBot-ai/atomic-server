@@ -4,7 +4,7 @@ import { Network, Plus } from 'lucide-react'
 import { CONNECTION_AGENTS } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action, Copy, Panel } from '../Controls'
-import { AgentIcon } from './AgentIcon'
+import { AgentIcon } from './connection/AgentIcon'
 import { ServerKeyField } from './ServerKeyField'
 import { ServiceConnections } from './ServiceConnections'
 

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { engineName } from '@view'
 import { Action } from '../Controls'
-import { EngineSetup } from '../library/EngineSetup'
-import { FoundryLocal } from '../library/FoundryLocal'
-import { LiteRtLm } from '../library/LiteRtLm'
+import { EngineSetup } from '../library/engines/EngineSetup'
+import { FoundryLocal } from '../library/engines/FoundryLocal'
+import { LiteRtLm } from '../library/engines/LiteRtLm'
 import type { Workspace } from '../useWorkspace'
 
 /**

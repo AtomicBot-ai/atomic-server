@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Laptop, Check } from 'lucide-react'
-import { ModelMark } from '../library/ModelMark'
+import { ModelMark } from '../library/catalog/ModelMark'
 import { Action } from '../Controls'
 import { bytes, record, rows, text } from '../types'
 import type { RecordValue } from '../types'

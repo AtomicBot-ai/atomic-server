@@ -5,7 +5,7 @@ import { Action } from '../Controls'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { useDialog } from '../useDialog'
-import { modelCategory, modelId } from '../library/catalog-models'
+import { modelCategory, modelId } from '../library/catalog/catalog-models'
 import { describeError } from '@/services/admin-api'
 
 export function MediaModelPicker({

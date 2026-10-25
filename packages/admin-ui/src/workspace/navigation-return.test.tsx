@@ -8,7 +8,7 @@ import { FakeEventSource } from '@/test/fake-event-source'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import type { Workspace } from './useWorkspace'
 import { WorkspaceApp } from './WorkspaceApp'
-import { ConnectionGuide } from './server/ConnectionGuide'
+import { ConnectionGuide } from './server/connection/ConnectionGuide'
 
 let current: Workspace
 vi.mock('./useWorkspace', () => ({ useWorkspace: () => current }))

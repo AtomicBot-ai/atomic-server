@@ -4,14 +4,14 @@ import { SERVER_SECTIONS } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { Connections } from './Connections'
-import { ConnectionGuide } from './ConnectionGuide'
+import { ConnectionGuide } from './connection/ConnectionGuide'
 import { ServerConfiguration } from './ServerConfiguration'
 import { RemoteAccess } from './RemoteAccess'
 import { ServerModel } from './ServerModel'
 import { Activity } from './Activity'
 import { ServerKeys } from './ServerKeys'
 import { ServerOverview } from './ServerOverview'
-import { RuntimeSettings } from './RuntimeSettings'
+import { RuntimeSettings } from './settings/RuntimeSettings'
 
 export function Server({
   workspace,

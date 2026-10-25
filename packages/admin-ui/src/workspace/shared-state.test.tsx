@@ -8,7 +8,7 @@ import { FakeEventSource } from '@/test/fake-event-source'
 import { snapshotFixture, workspaceFixture } from '@/test/workspace-fixture'
 import { WorkspaceApp } from './WorkspaceApp'
 import { workspaceApi } from './workspace-api'
-import { CloudProviders } from './library/CloudProviders'
+import { CloudProviders } from './library/cloud/CloudProviders'
 import { ServerConfiguration } from './server/ServerConfiguration'
 
 beforeEach(() => {

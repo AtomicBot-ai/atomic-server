@@ -31,7 +31,7 @@ import {
 import type { Page } from './types'
 import type { Workspace } from './useWorkspace'
 import { ServerControlPanel } from './server/ServerControlPanel'
-import { AgentIcon } from './server/AgentIcon'
+import { AgentIcon } from './server/connection/AgentIcon'
 import { Fragment } from 'react'
 import type { Ref } from 'react'
 

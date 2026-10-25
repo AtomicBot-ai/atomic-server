@@ -4,9 +4,9 @@ import { expect, it, vi } from 'vitest'
 import { SETUP_GOALS, SERVER_SETTINGS_GROUPS } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { SetupReady } from '../setup/SetupReady'
-import { RuntimeSettings } from './RuntimeSettings'
+import { RuntimeSettings } from './settings/RuntimeSettings'
 import { ServiceConnections } from './ServiceConnections'
-import { ConnectionSteps } from './ConnectionSteps'
+import { ConnectionSteps } from './connection/ConnectionSteps'
 
 it.each(SETUP_GOALS)('finishes $label at server connections', async (goal) => {
   const open = vi.fn()

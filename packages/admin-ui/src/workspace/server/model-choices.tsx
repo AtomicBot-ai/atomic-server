@@ -1,7 +1,7 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/EngineModelFields.tsx @ 5043013; adapted: only metadata returned by the server, with the desktop engine identities.
 import { Cpu } from 'lucide-react'
 import { engineName, formatSize } from '@view'
-import { ModelMark } from '../library/ModelMark'
+import { ModelMark } from '../library/catalog/ModelMark'
 import { text } from '../types'
 import type { RecordValue } from '../types'
 import type { DetailChoice } from './DetailPicker'

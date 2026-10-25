@@ -2,7 +2,7 @@
 import { downloadHeld } from '@view'
 import { Check, Pause, Play, X } from 'lucide-react'
 import { Action } from '../Controls'
-import { jobOperations } from '../library/download-data'
+import { jobOperations } from '../library/downloads/download-data'
 import { bytes, text } from '../types'
 import type { Execute, RecordValue } from '../types'
 

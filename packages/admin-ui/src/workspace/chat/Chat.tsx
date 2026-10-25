@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { highlightDownloads } from '../library/download-attention'
+import { highlightDownloads } from '../library/downloads/download-attention'
 import { createPortal } from 'react-dom'
 import type { Workspace } from '../useWorkspace'
 import { connectorToolBindings, inferenceReadiness } from '@view'

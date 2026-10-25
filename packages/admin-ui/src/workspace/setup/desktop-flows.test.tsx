@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { SetupWizard } from './SetupWizard'
-import { ConnectionGuide } from '../server/ConnectionGuide'
+import { ConnectionGuide } from '../server/connection/ConnectionGuide'
 const model = { id: 'local-model', name: 'Local model', providers: ['llamacpp-upstream'] }
 const answers = {
   'models.installed': [model],

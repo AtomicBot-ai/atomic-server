@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadTarget } from '../library/download-data'
+import { loadTarget } from '../library/downloads/download-data'
 import { record, text } from '../types'
 import type { Workspace } from '../useWorkspace'
 import { describeError } from '@/services/admin-api'

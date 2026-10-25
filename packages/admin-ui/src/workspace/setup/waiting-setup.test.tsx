@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { SetupWizard } from './SetupWizard'
 import { WaitingSetup } from './WaitingSetup'
-import { FloatingDownloads } from '../library/FloatingDownloads'
+import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
 
 it('offers a playable final wait, local email confirmation and an exit while download continues', async () => {
   const { workspace, execute } = workspaceFixture(

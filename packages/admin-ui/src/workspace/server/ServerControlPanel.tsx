@@ -5,7 +5,7 @@ import { connectionDownload, connectionDownloadTarget, engineName, inferenceRead
 import { openAcquisition } from '../useAcquisition'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
-import { highlightDownloads } from '../library/download-attention'
+import { highlightDownloads } from '../library/downloads/download-attention'
 export function ServerControlPanel({
   workspace: w,
   selectSection,
