@@ -76,19 +76,19 @@ export async function writeDocument(
 async function lockAbandoned(lock: string): Promise<boolean> {
   const held = await readFile(lock, 'utf8').catch(() => null)
   if (held === null) return false
-  const pid = Number(held.trim())
-  if (Number.isInteger(pid) && pid > 0) {
-    try {
-      process.kill(pid, 0)
-      return false
-    } catch (error) {
-      // EPERM: the process exists but belongs to someone else; anything else: no such process.
-      return (error as NodeJS.ErrnoException).code !== 'EPERM'
-    }
-  }
-  // No pid to ask (an older atc, a damaged file): only age tells.
+  // Older than any mutation takes: abandoned whatever its pid says (the OS may have given that pid
+  // to another process since).
   const age = Date.now() - ((await stat(lock).catch(() => null))?.mtimeMs ?? Date.now())
-  return age > STALE_LOCK_MS
+  if (age > STALE_LOCK_MS) return true
+  const pid = Number(held.trim())
+  if (!Number.isInteger(pid) || pid <= 0) return false
+  try {
+    process.kill(pid, 0)
+    return false
+  } catch (error) {
+    // EPERM: the process exists but belongs to someone else; anything else: no such process.
+    return (error as NodeJS.ErrnoException).code !== 'EPERM'
+  }
 }
 const STALE_LOCK_MS = 30_000
 

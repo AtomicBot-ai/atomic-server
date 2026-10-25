@@ -137,9 +137,19 @@ export async function saveDataEdit(ctx: ActionContext): Promise<boolean> {
     let key
     try {
       key = await c.keys.create(s.editValue)
-    } finally {
-      update((v) => ({ ...v, busy: false }))
+    } catch (error) {
+      // The name comes back for another try.
+      update((v) => ({
+        ...v,
+        busy: false,
+        overlay: 'endpoint',
+        edit: 'key-name',
+        editValue: s.editValue,
+        focus: 'save-edit',
+      }))
+      throw error
     }
+    update((v) => ({ ...v, busy: false }))
     update((v) => ({ ...v, secret: key.token, overlay: 'credential', focus: 'copy-secret' }))
     const clientKeys = await c.keys.list()
     update((v) => ({ ...v, clientKeys }))

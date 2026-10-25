@@ -16,11 +16,19 @@ export function useWorkspace() {
   const appliedId = useRef(0)
   /** Reads the server's snapshot now; resolves with it, or null when the server could not answer. */
   const operationsKnown = useRef(false)
-  const readOperations = useCallback(async () => {
-    const list = await workspaceApi.operations()
-    if (!active.current) return
-    operationsKnown.current = true
-    setOperations(list)
+  const operationsRead = useRef<Promise<void> | null>(null)
+  const readOperations = useCallback(() => {
+    operationsRead.current ??= workspaceApi
+      .operations()
+      .then((list) => {
+        if (!active.current) return
+        operationsKnown.current = true
+        setOperations(list)
+      })
+      .finally(() => {
+        operationsRead.current = null
+      })
+    return operationsRead.current
   }, [])
   const refresh = useCallback(async (): Promise<WorkspaceSnapshot | null> => {
     const id = ++requestId.current

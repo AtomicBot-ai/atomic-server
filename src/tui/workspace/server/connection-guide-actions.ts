@@ -33,7 +33,7 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
     ctx.update((v) => ({
       ...v,
       connection: v.connection ? { ...v.connection, ...p } : null,
-      focus: focusFor(p.step, v.focus),
+      focus: v.connection ? focusFor(p.step, v.focus) : v.focus,
       hover: '',
     }))
   if (id === 'guide-manual') {

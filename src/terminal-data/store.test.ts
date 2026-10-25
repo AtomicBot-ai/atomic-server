@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { mkdtemp, readFile, rename, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -105,4 +105,14 @@ describe('a document lock left behind', () => {
     })
     rmSync(dir, { recursive: true, force: true })
   })
+})
+
+it('takes over a lock older than any mutation takes, whatever pid it names', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'atc-store-lock-'))
+  const path = join(dir, 'doc.json')
+  writeFileSync(`${path}.lock`, String(process.pid))
+  const old = new Date(Date.now() - 60_000)
+  utimesSync(`${path}.lock`, old, old)
+  expect(await mutateDocument(path, { n: 0 }, (v) => ({ n: v.n + 1 }), { waitMs: 150 })).toEqual({ n: 1 })
+  rmSync(dir, { recursive: true, force: true })
 })
