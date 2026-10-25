@@ -26,7 +26,7 @@
     "build:bin": "npm run embed:ui && node scripts/build-binaries.mjs --host",
     "build:bin:all": "npm run embed:ui && node scripts/build-binaries.mjs --all",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
-    "lint": "eslint . && node scripts/check-runtime-agnostic.mjs && node scripts/check-core-boundary.mjs && node scripts/gen-module-map.mjs --check && npm run lint --workspaces --if-present",
+    "lint": "eslint . && node scripts/check-runtime-agnostic.mjs && node scripts/check-core-boundary.mjs && node scripts/check-module-boundaries.mjs && node scripts/gen-module-map.mjs --check && npm run lint --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --project unit --project contract",

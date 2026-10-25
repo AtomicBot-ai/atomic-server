@@ -84,8 +84,9 @@ when this table is stale or a module's `index.ts` has no comment):
 ## 3. Code rules
 
 1. **One module = one folder with `index.ts` as the only public entry**, opened by a one-line doc comment
-   (it becomes the module's row in §2). A sibling module is imported only through its `index.ts`; eslint
-   fails `../<module>/<file>` in `src/`. Export deliberately.
+   (it becomes the module's row in §2). A sibling module is imported only through its `index.ts`;
+   `scripts/check-module-boundaries.mjs` fails a path past it, and any relative path (imports, `vi.mock`,
+   `new URL(…, import.meta.url)`, CSS) that names no file. Folders inside a module are its own. Export deliberately.
 2. **Policy is pure, I/O is separate.** Parsers, selectors, tables and plans take data and return data;
    `fs`, `child_process`, `net`, `fetch` live in a few named files. `env`, `fetch`, `exec`, `now`,
    `platform` are injected through options or `AtcIo`; never read `process.platform` inside policy code.
