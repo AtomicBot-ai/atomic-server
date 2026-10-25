@@ -12,6 +12,7 @@ import { ModelInstall } from '../library/ModelInstall'
 import { FoundryLocal } from '../library/FoundryLocal'
 import { LiteRtLm } from '../library/LiteRtLm'
 import { SetupReview } from './SetupReview'
+import { workspaceApi } from '../workspace-api'
 import { FloatingDownloads } from '../library/FloatingDownloads'
 import { WorkspaceBrand } from '../WorkspaceBrand'
 import { CloudProviders } from '../library/CloudProviders'
@@ -143,7 +144,9 @@ export function SetupWizard({
           {!waitingDestination && step === 'connect' && (
             <Destinations
               choose={async (destination) => {
-                if (setupModelPending(w.snapshot)) setWaitingDestination(destination)
+                // Before the first snapshot arrives, "no snapshot" must not read as "model ready".
+                const snapshot = w.snapshot ?? (await workspaceApi.snapshot().catch(() => null))
+                if (setupModelPending(snapshot)) setWaitingDestination(destination)
                 else await finish(destination)
               }}
             />

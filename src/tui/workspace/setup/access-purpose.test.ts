@@ -23,7 +23,10 @@ function fixture() {
     send: vi.fn(),
     cancel: vi.fn(),
     copy: vi.fn(),
-    controller: { runtime: { execute, openAdmin }, loadModel: vi.fn() } as unknown as WorkspaceController,
+    controller: {
+      runtime: { execute, openAdmin, snapshot: async () => ({ setups: [], downloads: [] }) },
+      loadModel: vi.fn(),
+    } as unknown as WorkspaceController,
   }
   return { ctx, execute, openAdmin, action: (id: string) => activate(id, ctx) }
 }

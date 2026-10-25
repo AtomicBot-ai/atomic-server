@@ -141,3 +141,14 @@ it('exposes confirming state, prevents duplicate saves, and never revives a clos
     vi.useRealTimers()
   }
 })
+it('reads the server before choosing a connection when the first snapshot has not arrived yet', async () => {
+  const t = fixture()
+  const pending = t.ctx.get().workspace
+  t.ctx.update((s) => ({ ...s, workspace: null as never }))
+  const snapshot = vi.fn(async () => pending)
+  ;(t.ctx.controller.runtime as unknown as { snapshot: typeof snapshot }).snapshot = snapshot
+  await t.action('first-connect:endpoint')
+  expect(snapshot).toHaveBeenCalledOnce()
+  expect(t.ctx.get().finalSetup?.destination).toBe('endpoint')
+  expect(t.execute).not.toHaveBeenCalledWith('setup.manual')
+})

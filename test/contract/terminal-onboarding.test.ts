@@ -214,6 +214,10 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
     expect(terminal.stdout.lastFrame()).not.toContain('Everyday use')
     await sees('Configure an endpoint')
     await click('Configure an endpoint')
+    // The model's download is interrupted, not ready: the waiting screen comes first (ADR "Gate inference and
+    // keep downloads visible"), and leaving it opens the server while the download resumes in the background.
+    await sees("I can't wait - take me to the control panel")
+    await click("I can't wait - take me to the control panel")
     await sees('Server host')
     expect(terminal.stdout.lastFrame()).toContain('Configuration')
     await waitFor(async () => link.calls.some((c) => c.path === '/server/start'))

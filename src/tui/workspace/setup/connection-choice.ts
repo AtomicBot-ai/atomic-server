@@ -11,6 +11,11 @@ export async function firstConnectionAction(id: string, ctx: ActionContext): Pro
     id = `first-connect:${ctx.get().finalSetup!.destination}`
   }
   if (id !== 'first-connect:endpoint' && id !== 'first-connect:agent') return false
+  // Right after the terminal opens no snapshot has arrived: "no snapshot" must not read as "model ready".
+  if (!leavingWait && !ctx.get().workspace) {
+    const workspace = await ctx.controller.runtime.snapshot().catch(() => null)
+    if (workspace) ctx.update((s) => ({ ...s, workspace }))
+  }
   if (!leavingWait && setupModelPending(ctx.get().workspace, ctx.get().model)) {
     ctx.update((s) => ({
       ...s,
