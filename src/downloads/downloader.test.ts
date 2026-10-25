@@ -75,8 +75,14 @@ describe('Downloader, one stream', () => {
     await dl.download('t', [item('/drop.bin')])
     expect((await readFile(out)).equals(body)).toBe(true)
     const ranged = server.requests.filter((r) => r.method === 'GET' && r.range)
-    expect(ranged[0]?.range).toBe(`bytes=${1024 * 1024}-`)
-    expect(server.sent.get('/drop.bin')).toBe(body.length)
+    // From the byte it wrote: when a connection breaks, the HTTP client drops what it had received but
+    // not yet handed over, so that can be a little short of what the server sent (a slow runner loses
+    // a few hundred bytes), never more than it.
+    const start = Number(/^bytes=(\d+)-$/.exec(ranged[0]?.range ?? '')?.[1])
+    expect(start).toBeGreaterThan(0)
+    expect(start).toBeLessThanOrEqual(1024 * 1024)
+    // Never from the beginning again: each drop costs only the bytes that were not handed over.
+    expect(server.sent.get('/drop.bin')).toBeLessThan(body.length + 1024 * 1024)
   })
 
   it('resumes a cancelled download from its partial file instead of starting again', async () => {

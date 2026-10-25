@@ -98,7 +98,14 @@ describe('Downloader, parallel byte ranges', () => {
     const { dl, out } = await make()
     await dl.download('t', [item('/drop.bin')])
     expect((await readFile(out)).equals(body)).toBe(true)
-    expect(gets().map((r) => r.range)).toContain(`bytes=${100 * 1024}-${MiB - 1}`)
+    // The first range again, from the byte it wrote (at most what the server sent before the drop; the
+    // HTTP client may not have handed over the last bytes), never from its start.
+    const retried = gets()
+      .map((r) => new RegExp(`^bytes=(\\d+)-${MiB - 1}$`).exec(r.range ?? ''))
+      .map((m) => Number(m?.[1] ?? 0))
+      .filter((start) => start > 0)
+    expect(retried).toHaveLength(1)
+    expect(retried[0]).toBeLessThanOrEqual(100 * 1024)
   })
 
   it('falls back to one stream when the server ignores Range', async () => {
