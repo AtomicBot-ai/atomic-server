@@ -10,6 +10,7 @@ import { inputFor, object, sanitized } from './validation.js'
 import { WorkspaceMetrics } from './snapshot/metrics.js'
 import { LoadStages } from './snapshot/load-stages.js'
 import { workspaceSnapshot } from './snapshot/snapshot.js'
+import { SnapshotCache } from './snapshot/snapshot-cache.js'
 import { coreOperation, NOT_CORE } from './core-operations.js'
 import { cloudOperation } from './cloud/cloud-connections.js'
 import { modelOperation } from './models/model-operations.js'
@@ -39,6 +40,7 @@ export class WorkspaceService {
   private features: WorkspaceFeatureService
   private chats: ChatJobs
   private engineDownloads: EngineDownloads
+  private readonly shared = new SnapshotCache(() => this.readCore(), { now: Date.now, maxAgeMs: 1000 })
   constructor(private options: WorkspaceServiceOptions) {
     this.features = new WorkspaceFeatureService(
       options.paths.atcDir,
@@ -69,17 +71,18 @@ export class WorkspaceService {
     this.foundry.event(name, payload)
     this.downloads.litert.accelerators.event(name, payload)
     this.engineDownloads.event(name, payload)
+    // A log line changes nothing a snapshot shows; every other event may.
+    if (name !== 'core:log') this.shared.invalidate()
   }
-  async snapshot() {
-    const result = await workspaceSnapshot(
-      this.options.link,
-      this.options.paths,
-      this.options.config,
-      this.keys,
-      this.metrics
-    )
-    // The core's own downloads are engine builds; every model transfer is this server's.
-    this.engineDownloads.sync(result.downloads)
+  /**
+   * The workspace as clients poll it. What costs core requests (`workspaceSnapshot`) is shared between
+   * them for up to a second (`SnapshotCache`); what this server keeps itself — engine jobs, its own
+   * transfers, load stages, setup records, features — is read for every answer, as before.
+   * `fresh` reads the core now: what decides an operation never rests on a shared copy.
+   */
+  async snapshot(options: { fresh?: boolean } = {}) {
+    if (options.fresh) this.shared.invalidate()
+    const result = await this.shared.get()
     result.downloads.push(...(await this.engineDownloads.list()), ...this.downloads.downloader.snapshot())
     result.loads = this.loads.list()
     result.setups.push(
@@ -92,15 +95,34 @@ export class WorkspaceService {
     result.features = await this.features.view()
     return result
   }
-  execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
-    return this.mutations.run(operation, () => this.dispatch(operation, raw))
+  private async readCore() {
+    const result = await workspaceSnapshot(
+      this.options.link,
+      this.options.paths,
+      this.options.config,
+      this.keys,
+      this.metrics
+    )
+    // The core's own downloads are engine builds; every model transfer is this server's. Synced here,
+    // on rows just read, so a shared copy never replays an older progress over a newer stage.
+    this.engineDownloads.sync(result.downloads)
+    return result
+  }
+  async execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
+    try {
+      return await this.mutations.run(operation, () => this.dispatch(operation, raw))
+    } finally {
+      // Even a failed change may have changed something; reads leave the shared snapshot alone.
+      if (WORKSPACE_OPERATIONS.find((op) => op.name === operation)?.mutates !== false)
+        this.shared.invalidate()
+    }
   }
   private async dispatch(operation: string, raw: WorkspaceInput): Promise<unknown> {
     const descriptor = WORKSPACE_OPERATIONS.find((op) => op.name === operation)
     if (!descriptor) throw new AtcError('ATC_USAGE', `Unknown operation: ${operation}. Use operations.list.`)
     const input = inputFor(descriptor, raw),
       { link, paths } = this.options
-    await requireReadiness(operation, input, () => this.snapshot())
+    await requireReadiness(operation, input, () => this.snapshot({ fresh: true }))
     const preference = await enginePreferenceOperation(link, paths.atcDir, operation, input)
     if (preference !== NOT_CORE) return preference
     const feature = await this.features.execute(operation, input)
@@ -127,7 +149,7 @@ export class WorkspaceService {
         downloads: this.downloads,
         engines: this.engineDownloads,
         options: this.options,
-        snapshot: () => this.snapshot(),
+        snapshot: () => this.snapshot({ fresh: true }),
       },
       operation,
       input
@@ -139,7 +161,7 @@ export class WorkspaceService {
         keys: this.keys,
         metrics: this.metrics,
         request: this.request,
-        snapshot: () => this.snapshot(),
+        snapshot: () => this.snapshot({ fresh: true }),
       },
       operation,
       input
