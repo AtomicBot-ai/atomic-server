@@ -1,0 +1,167 @@
+/**
+ * The GGUF setup plan, pure: from the core's verdict for the file, its Bonsai family (when the conf
+ * rules name it), the Hub's facts otherwise, the PrismML catalog and free space, what a setup
+ * downloads and installs, how many bytes that is and what blocks it. `digest` hashes what decides
+ * the work, so `models.install` runs exactly the plan that was reviewed.
+ */
+import { createHash } from 'node:crypto'
+import type {
+  BackendCatalogResponse,
+  ModelCompatibilityResponse,
+  PrismFamily,
+  PrismFamilyFile,
+} from '@atomic-chat/core/contracts'
+import type {
+  ModelSetupArtifact,
+  ModelSetupBlocker,
+  ModelSetupEngine,
+  ModelSetupPlan,
+  ModelSetupPlanRequest,
+} from '../../contract/index.js'
+
+/** The provider a file is registered for when it needs no PrismML build. */
+export const STOCK_PROVIDER = 'llamacpp-upstream'
+
+export interface GgufPlanInput {
+  request: ModelSetupPlanRequest
+  verdict: ModelCompatibilityResponse
+  family?: { family: PrismFamily; file: PrismFamilyFile } | undefined
+  /** The Hub's facts for a file no family pins; `revision` the commit they were read at. */
+  hubFile?: { size: number; sha256?: string | undefined; revision?: string | undefined }
+  /**
+   * `POST /backends/atomic-prism/catalog`, when the verdict involves PrismML; `null` when the core
+   * answered `BACKEND_BUILD_UNAVAILABLE`: no build this machine runs meets the file's requirements.
+   */
+  prism?: BackendCatalogResponse | null | undefined
+  freeBytes: number | null
+}
+
+/** `owner/<file name without .gguf>`: unique per file, and a leaf of the model tree. */
+export function defaultModelId(repo: string, file: string): string {
+  const owner = repo.split('/')[0] ?? repo
+  return `${owner}/${(file.split('/').pop() ?? file).replace(/\.gguf$/i, '')}`
+}
+
+/**
+ * The Bonsai family file the core's verdict names: the core matches by sha256, else by repository and
+ * file name (a file in a subfolder included). The family's entry gives size, hash and projectors.
+ */
+export function matchFamily(
+  families: readonly PrismFamily[],
+  verdict: Pick<ModelCompatibilityResponse, 'family'>,
+  file: string
+) {
+  const family = families.find((f) => f.id === verdict.family)
+  const name = file.split('/').pop()
+  const match = family?.files.find((f) => f.file === name)
+  return family && match ? { family, file: match } : undefined
+}
+
+/**
+ * The PrismML build to run on: the catalog's `recommended`, which the core picked for this file's
+ * `requires`/`min_build` and this machine. Whether it is on disk and its size come from the catalog.
+ */
+function recommendedBuild(catalog: BackendCatalogResponse): ModelSetupEngine | null {
+  const [version, backend] = (catalog.recommended ?? '').split('/')
+  if (!version || !backend) return null
+  const installed = catalog.installed.some((b) => b.version === version && b.backend === backend)
+  const size =
+    catalog.releases?.find((r) => r.tag === version)?.variants.find((v) => v.id === backend)?.size ?? 0
+  return {
+    provider: 'atomic-prism',
+    version,
+    backend,
+    installed,
+    download_size: installed ? 0 : size,
+  }
+}
+
+function engineOf(input: GgufPlanInput, blockers: ModelSetupBlocker[]): ModelSetupEngine | null {
+  const { verdict, prism } = input
+  if (verdict.provider !== 'atomic-prism') return null
+  if (verdict.outcome === 'compatible') {
+    const [version, backend] = (prism?.recommended_installed ?? '').split('/')
+    return version && backend
+      ? { provider: 'atomic-prism', version, backend, installed: true, download_size: 0 }
+      : null
+  }
+  if (verdict.outcome !== 'engine_required' && verdict.outcome !== 'engine_update_required') return null
+  const build = prism ? recommendedBuild(prism) : null
+  if (!build)
+    blockers.push({
+      code: 'no_engine_build',
+      message: 'No approved PrismML llama.cpp build runs this model on this computer yet.',
+    })
+  return build
+}
+
+function artifactsOf(input: GgufPlanInput) {
+  const { request, family } = input
+  if (!family) {
+    const model: ModelSetupArtifact = {
+      repo: request.repo,
+      file: request.file,
+      revision: request.revision ?? input.hubFile?.revision ?? 'main',
+      ...(input.hubFile?.sha256 ? { sha256: input.hubFile.sha256 } : {}),
+      size: input.hubFile?.size ?? 0,
+    }
+    return { model, projector: null }
+  }
+  const { repo, revision, projectors } = family.family
+  const projector = request.include_projector === false ? undefined : projectors.find((p) => p.default)
+  return {
+    // The family's own copy: a file in a subfolder of its repository keeps its path; a mirror the
+    // core matched by hash is fetched from the family, where the pinned revision describes it.
+    model: {
+      repo,
+      file: request.repo.toLowerCase() === repo.toLowerCase() ? request.file : family.file.file,
+      revision,
+      sha256: family.file.sha256,
+      size: family.file.size,
+    },
+    projector: projector
+      ? { repo, file: projector.file, revision, sha256: projector.sha256, size: projector.size }
+      : null,
+  }
+}
+
+export function planGgufSetup(input: GgufPlanInput): ModelSetupPlan {
+  const { verdict } = input
+  const blockers: ModelSetupBlocker[] = []
+  if (verdict.outcome === 'unsupported') blockers.push({ code: 'unsupported', message: verdict.reason })
+  if (verdict.outcome === 'legacy_artifact')
+    blockers.push({
+      code: 'legacy_artifact',
+      message: verdict.reason,
+      ...(verdict.replacement ? { replacement: verdict.replacement } : {}),
+    })
+  const engine = engineOf(input, blockers)
+  const { model, projector } = artifactsOf(input)
+  const total = (engine?.download_size ?? 0) + model.size + (projector?.size ?? 0)
+  if (input.freeBytes !== null && total > input.freeBytes)
+    blockers.push({
+      code: 'insufficient_disk_space',
+      message: `The setup needs ${total} bytes and ${input.freeBytes} are free.`,
+    })
+  const body = {
+    model_id: input.request.model_id ?? defaultModelId(model.repo, model.file),
+    provider: verdict.provider ?? STOCK_PROVIDER,
+    verdict,
+    engine,
+    model,
+    projector,
+    total_download_bytes: total,
+    free_bytes: input.freeBytes,
+    blockers,
+  }
+  const decides = {
+    model_id: body.model_id,
+    provider: body.provider,
+    outcome: verdict.outcome,
+    engine: engine && { version: engine.version, backend: engine.backend, installed: engine.installed },
+    model,
+    projector,
+    blockers: blockers.map((b) => b.code),
+  }
+  return { digest: createHash('sha256').update(JSON.stringify(decides)).digest('hex'), ...body }
+}

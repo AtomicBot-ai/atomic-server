@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { engineKind, installEngine, ensureArtifactEngine } from './engine-install.js'
+import { engineKind, installEngine, ensureArtifactEngine } from './engines/engine-install.js'
 import type { CoreLink } from '../core-link/index.js'
 import type { ProxyConfig } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { modelIdPath, object, segment } from './validation.js'
-import { managedEngineOperation } from './managed-engines.js'
+import { managedEngineOperation } from './engines/managed-engines.js'
 import { orderEngines } from '../workspace-view/index.js'
 export { NOT_CORE } from './not-core.js'
 export async function coreOperation(
