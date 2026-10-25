@@ -186,7 +186,8 @@ it works in the binary, an e2e test. While iterating run `npm run verify:fast`; 
 
 ## 7. Checklists
 
-**Add a command.** Spec in `src/commands/<name>.ts` (or a group file); add it to `ROOT` in
+**Add a command.** Spec in `src/commands/<group>/<name>.ts`, the folder of its help group (`server`,
+`models`, `access`, `system`); add it to `ROOT` in
 `src/commands/index.ts` in help order; if it is a stub, `notImplemented()` + a `PLANNED` line; unit test
 for any pure helper; contract test in `test/contract/commands.test.ts`; `npm run build && npm run
 docs:commands`; e2e case when it works in the binary.

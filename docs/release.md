@@ -168,7 +168,7 @@ a distro container sharing that network with the commands from `node scripts/lin
 
 ## Self-update
 
-`atc update [--version x.y.z] [--force]` (`src/update/apply.ts`, `src/commands/update.ts`):
+`atc update [--version x.y.z] [--force]` (`src/update/apply.ts`, `src/commands/system/update.ts`):
 
 1. Finds the release (`/releases/latest`, or `/releases/tags/vX.Y.Z`; `ATC_GITHUB_API` points at a mirror
    or the e2e's stand-in). Without `--version` or `--force`, an older or equal release is a no-op.
