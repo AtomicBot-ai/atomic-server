@@ -1,3 +1,4 @@
+import { pollEvery } from './poll.js'
 import { applyWorkspaceSnapshot } from './shared-state.js'
 import { advanceWaitingGame } from '../games/waiting-game.js'
 import { useEffect } from 'react'
@@ -25,29 +26,22 @@ export function useRuntimeData(
 ) {
   useEffect(() => {
     if (!ready) return
-    let live = true,
-      pending = false
     update((s) => ({ ...s, operations: [...WORKSPACE_OPERATIONS] }))
-    const poll = async () => {
-      if (pending || !controller.current) return
-      pending = true
-      try {
-        const workspace = await controller.current.runtime.snapshot()
-        if (live) update((s) => applyWorkspaceSnapshot(s, workspace, Date.now()))
-      } catch (error) {
-        // A poll that failed while the server is busy keeps the last snapshot; only a server that is
-        // gone takes it away, so downloads and models do not flicker out for a tick.
-        const gone = error instanceof AtcError && error.code === 'ATC_DAEMON_NOT_RUNNING'
-        if (live && gone) update((s) => (s.workspace ? { ...s, workspace: null } : s))
-      } finally {
-        pending = false
-      }
-    }
-    void poll()
-    const timer = setInterval(() => void poll(), 2500)
-    return () => {
-      live = false
-      clearInterval(timer)
-    }
+    return pollEvery(
+      2500,
+      async (live) => {
+        if (!controller.current) return
+        try {
+          const workspace = await controller.current.runtime.snapshot()
+          if (live()) update((s) => applyWorkspaceSnapshot(s, workspace, Date.now()))
+        } catch (error) {
+          // A poll that failed while the server is busy keeps the last snapshot; only a server that is
+          // gone takes it away, so downloads and models do not flicker out for a tick.
+          const gone = error instanceof AtcError && error.code === 'ATC_DAEMON_NOT_RUNNING'
+          if (live() && gone) update((s) => (s.workspace ? { ...s, workspace: null } : s))
+        }
+      },
+      { immediately: true }
+    )
   }, [ready, controller, update])
 }

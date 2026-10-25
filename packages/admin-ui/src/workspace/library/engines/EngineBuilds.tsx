@@ -4,7 +4,7 @@ import type { EngineUpdateCheck } from '@view'
 import { describeError } from '@/services/admin-api'
 import { Action } from '../../Controls'
 import { useConfirmation } from '../../use-confirmation'
-import { watchSharedRead } from '../../watch-shared-read'
+import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { record, rows, text } from '../../types'
 import type { Execute, RecordValue } from '../../types'
 
@@ -40,7 +40,7 @@ export function EngineBuilds({ provider, execute }: { provider: string; execute:
       watchSharedRead(
         async () => {
           const started = generation.current
-          return { result: await execute('engines.list'), started }
+          return { result: await sharedRead(execute, 'engines.list'), started }
         },
         ({ result, started }) => {
           if (checking.current || started !== generation.current) return

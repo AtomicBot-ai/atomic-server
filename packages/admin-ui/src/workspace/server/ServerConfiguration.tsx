@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/Settings.tsx @ 5043013; adapted: persistent API settings and named keyring.
-import { watchSharedRead } from '../watch-shared-read'
+import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
 import { Action, Field } from '../Controls'
@@ -28,7 +28,7 @@ export function ServerConfiguration({
   useEffect(() => {
     setError('')
     return watchSharedRead(
-      () => execute('config.get'),
+      () => sharedRead(execute, 'config.get'),
       (result) => {
         const api = record(record(record(result).values).api)
         const before = previous.current

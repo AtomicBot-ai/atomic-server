@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/EngineModelFields.tsx @ 5043013; adapted: available engines and installed models from the server.
-import { watchSharedRead } from '../watch-shared-read'
+import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { useEffect, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
@@ -28,7 +28,7 @@ export function ServerModel({ workspace: w, openModels }: { workspace: Workspace
   useEffect(
     () =>
       watchSharedRead(
-        () => execute('models.installed'),
+        () => sharedRead(execute, 'models.installed'),
         (value) => {
           setInstalled(rows(value))
           setLoading(false)

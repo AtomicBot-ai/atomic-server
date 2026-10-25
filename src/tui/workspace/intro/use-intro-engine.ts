@@ -1,3 +1,4 @@
+import { pollEvery } from '../runtime/poll.js'
 import { setupFinished } from '../../../workspace-view/index.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EngineChoice } from '../../../terminal-setup/index.js'
@@ -46,27 +47,15 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
       controller.dispose()
     }
   }, [controller, forceWelcome])
-  useEffect(() => {
-    let active = true,
-      pending = false
-    const refresh = async () => {
-      if (pending) return
-      pending = true
-      try {
+  useEffect(
+    () =>
+      // A failed read is not evidence that setup changed; pollEvery retries at the next tick.
+      pollEvery(2500, async (live) => {
         const setup = await controller.runtime.setup()
-        if (active && setupFinished(setup)) setStage('resume')
-      } catch {
-        // A failed read is not evidence that setup changed; retry at the next tick.
-      } finally {
-        pending = false
-      }
-    }
-    const timer = setInterval(() => void refresh(), 2500)
-    return () => {
-      active = false
-      clearInterval(timer)
-    }
-  }, [controller])
+        if (live() && setupFinished(setup)) setStage('resume')
+      }),
+    [controller]
+  )
   const choose = useCallback(async () => {
     if (busy.current) return
     busy.current = true

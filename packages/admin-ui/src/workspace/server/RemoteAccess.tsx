@@ -4,38 +4,26 @@ import { Action, Copy, Panel } from '../Controls'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
+import { sharedRead, watchSharedRead } from '../watch-shared-read'
 export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
   const [addresses, setAddresses] = useState<string[]>([])
   const [remote, setRemote] = useState<RecordValue>({})
   const [error, setError] = useState('')
   const lan = w.snapshot?.api.running && !['127.0.0.1', 'localhost', '::1'].includes(w.snapshot.api.host)
   const { execute } = w
-  useEffect(() => {
-    let live = true,
-      pending = false
-    const refresh = async () => {
-      if (pending) return
-      pending = true
-      try {
-        const [r, a] = await Promise.all([execute('remote.status'), execute('remote.addresses')])
-        if (live) {
+  useEffect(
+    () =>
+      watchSharedRead(
+        () => Promise.all([sharedRead(execute, 'remote.status'), sharedRead(execute, 'remote.addresses')]),
+        ([r, a]) => {
           setRemote(record(r))
           setAddresses(Array.isArray(record(a).addresses) ? (record(a).addresses as string[]) : [])
           setError('')
-        }
-      } catch (e) {
-        if (live) setError(describeError(e))
-      } finally {
-        pending = false
-      }
-    }
-    void refresh()
-    const timer = setInterval(() => void refresh(), 2500)
-    return () => {
-      live = false
-      clearInterval(timer)
-    }
-  }, [execute])
+        },
+        (e) => setError(describeError(e))
+      ),
+    [execute]
+  )
   return (
     <>
       <Panel title="Public remote access">

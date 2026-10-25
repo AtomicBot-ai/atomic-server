@@ -1,3 +1,4 @@
+import { pollEvery } from './poll.js'
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import type { WorkspaceController } from '../controller.js'
@@ -43,25 +44,12 @@ export function useWorkspaceData(
   }, [s.ready, s.firstRun, s.setup, c, latest, update])
   useEffect(() => {
     if (s.page !== 'server' || s.serverView !== 'remote') return
-    let live = true,
-      pending = false
-    const refresh = async () => {
-      if (pending || !c.current) return
-      pending = true
-      try {
-        const remote = (await c.current.runtime.read('remote.status')) as Record<string, unknown>
-        if (live) update((v) => ({ ...v, remote: { ...v.remote, ...remote } }))
-      } catch {
-        /* Existing status remains visible; Refresh retries both status and addresses. */
-      } finally {
-        pending = false
-      }
-    }
-    const timer = setInterval(() => void refresh(), 2500)
-    return () => {
-      live = false
-      clearInterval(timer)
-    }
+    // A failed read leaves the existing status visible; Refresh retries both status and addresses.
+    return pollEvery(2500, async (live) => {
+      if (!c.current) return
+      const remote = (await c.current.runtime.read('remote.status')) as Record<string, unknown>
+      if (live()) update((v) => ({ ...v, remote: { ...v.remote, ...remote } }))
+    })
   }, [s.page, s.serverView, c, update])
   const polling = useRef(false)
   const opened = useRef<number | null>(null)

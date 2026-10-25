@@ -1,3 +1,4 @@
+import { pollEvery } from '../runtime/poll.js'
 import { useEffect } from 'react'
 import type { RefObject } from 'react'
 import type { WorkspaceController } from '../controller.js'
@@ -13,22 +14,19 @@ export function useMediaJobs(
 ) {
   useEffect(() => {
     if (!ready) return
-    let live = true,
-      reading = false
-    const poll = async () => {
+    return pollEvery(1500, async (live) => {
       const state = latest.current,
         c = controller.current
-      if (!c || reading || !pendingMedia(state) || !state.media.job?.['id']) return
-      reading = true
+      if (!c || !pendingMedia(state) || !state.media.job?.['id']) return
       const id = state.media.job['id'],
         task = state.media.task
       try {
         const job = mediaJob(await c.runtime.execute(`media.${task}.job`, { id }))
-        if (live)
+        if (live())
           update((s) => (s.media.job?.['id'] === id ? { ...s, media: { ...s.media, job, error: '' } } : s))
         if (!pendingMedia({ ...state, media: { ...state.media, job } })) {
           const gallery = mediaRows(await c.runtime.execute(`media.${task}.gallery`))
-          if (live)
+          if (live())
             update((s) =>
               mediaTask(s) === task
                 ? {
@@ -43,19 +41,12 @@ export function useMediaJobs(
             )
         }
       } catch (error) {
-        if (live)
+        if (live())
           update((s) => ({
             ...s,
             media: { ...s.media, error: error instanceof Error ? error.message : String(error) },
           }))
-      } finally {
-        reading = false
       }
-    }
-    const timer = setInterval(() => void poll(), 1500)
-    return () => {
-      live = false
-      clearInterval(timer)
-    }
+    })
   }, [ready, latest, controller, update])
 }

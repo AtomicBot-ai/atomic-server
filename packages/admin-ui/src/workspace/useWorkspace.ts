@@ -4,6 +4,7 @@ import type { WorkspaceInput, WorkspaceOperation, WorkspaceSnapshot } from '@con
 import { describeError, isUnauthorized } from '@/services/admin-api'
 import { useStatusStore } from '@/stores/status-store'
 import { workspaceApi } from './workspace-api'
+import { refreshSharedReads } from './watch-shared-read'
 
 export function useWorkspace() {
   const [snapshot, setSnapshot] = useState<WorkspaceSnapshot | null>(null)
@@ -75,7 +76,11 @@ export function useWorkspace() {
       setPending((items) => [...items, operation])
       try {
         const result = await workspaceApi.execute<T>(operation, input)
-        if (WORKSPACE_OPERATIONS.find((item) => item.name === operation)?.mutates !== false) await refresh()
+        if (WORKSPACE_OPERATIONS.find((item) => item.name === operation)?.mutates !== false) {
+          await refresh()
+          // Panels that read server data see the change now, not at their next tick.
+          refreshSharedReads()
+        }
         return result
       } finally {
         if (active.current)

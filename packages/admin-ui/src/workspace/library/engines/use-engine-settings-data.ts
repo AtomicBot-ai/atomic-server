@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { changedValues } from '@view'
 import { describeError } from '@/services/admin-api'
 import type { Workspace } from '../../useWorkspace'
-import { watchSharedRead } from '../../watch-shared-read'
+import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { record, rows } from '../../types'
 import type { RecordValue } from '../../types'
 
@@ -23,7 +23,10 @@ export function useEngineSettingsData(provider: string, execute: Workspace['exec
       enabled
         ? watchSharedRead(
             () =>
-              Promise.all([execute('settings.get', { provider }), execute('settings.schema', { provider })]),
+              Promise.all([
+                sharedRead(execute, 'settings.get', { provider }),
+                sharedRead(execute, 'settings.schema', { provider }),
+              ]),
             ([settings, descriptors]) => {
               const data = record(settings),
                 next = record(data.values),

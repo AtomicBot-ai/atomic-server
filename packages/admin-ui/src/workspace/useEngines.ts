@@ -1,4 +1,4 @@
-import { watchSharedRead } from './watch-shared-read'
+import { sharedRead, watchSharedRead } from './watch-shared-read'
 import { useEffect, useState } from 'react'
 import { orderEngines } from '@view'
 import { describeError } from '@/services/admin-api'
@@ -18,7 +18,7 @@ export function useEngines(execute: Workspace['execute'], revision = 0) {
     setLoading(true)
     setError('')
     return watchSharedRead(
-      () => execute('engines.list'),
+      () => sharedRead(execute, 'engines.list'),
       (result) => {
         const all = rows(result)
         const order = orderEngines(all.map((e) => text(e.engine)))

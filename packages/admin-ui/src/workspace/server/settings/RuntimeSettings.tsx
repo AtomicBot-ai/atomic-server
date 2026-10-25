@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/Card.tsx and routes/settings/general.tsx @ 5043013; adapted: schema-backed settings, isolated section drafts and explicit saves.
-import { watchSharedRead } from '../../watch-shared-read'
+import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { useEffect, useState } from 'react'
 import { SETTINGS_SECTIONS, SERVER_SETTINGS_GROUPS } from '@contract'
 import type { Workspace } from '../../useWorkspace'
@@ -38,7 +38,7 @@ export function RuntimeSettings({
     setLoading(true)
     setError('')
     return watchSharedRead(
-      () => execute('config.get'),
+      () => sharedRead(execute, 'config.get'),
       (result) => {
         const value = record(result)
         setConfig(record(value.values))

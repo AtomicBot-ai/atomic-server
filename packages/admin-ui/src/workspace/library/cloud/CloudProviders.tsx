@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider checks and server credential storage.
-import { watchSharedRead } from '../../watch-shared-read'
+import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { useEffect, useRef, useState } from 'react'
 import { CLOUD_CATALOG } from '@view'
 import type { Workspace } from '../../useWorkspace'
@@ -39,7 +39,7 @@ export function CloudProviders({
   useEffect(
     () =>
       watchSharedRead(
-        () => execute('cloud.list'),
+        () => sharedRead(execute, 'cloud.list'),
         (v) => {
           const saved = Array.isArray(record(v).providers) ? (record(v).providers as RecordValue[]) : []
           setProviders(saved)

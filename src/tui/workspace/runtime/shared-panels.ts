@@ -1,3 +1,4 @@
+import { pollEvery } from './poll.js'
 import { withEngineBuilds } from '../library/engine-builds.js'
 import { useEffect } from 'react'
 import type { RefObject } from 'react'
@@ -14,20 +15,17 @@ export function useSharedPanels(
 ) {
   useEffect(() => {
     if (!ready) return
-    let live = true,
-      pending = false
-    const poll = async () => {
+    return pollEvery(2500, async (live) => {
       const c = controller.current,
         state = latest.current
-      if (!c || pending) return
-      pending = true
+      if (!c) return
       try {
         if (
           state.firstRun === 'cloud' ||
           (state.page === 'models' && ['cloud', 'endpoint'].includes(state.libraryView))
         ) {
           const result = record(await c.runtime.read('cloud.list'))
-          if (live && Array.isArray(result['providers']))
+          if (live() && Array.isArray(result['providers']))
             update((s) => ({
               ...s,
               cloud: { ...s.cloud, providers: result['providers'] as WorkspaceState['cloud']['providers'] },
@@ -38,7 +36,7 @@ export function useSharedPanels(
           (state.overlay === 'engine-panel' && state.enginePanel?.kind === 'build')
         ) {
           const result = await c.runtime.read('engines.list')
-          if (live)
+          if (live())
             update((s) => {
               const rows = libraryRows(result, 'engines')
               const next =
@@ -53,7 +51,7 @@ export function useSharedPanels(
         const panel = state.enginePanel
         if (panel?.mode === 'settings' && panel.form && !panel.busy) {
           const result = record(await c.runtime.read('settings.get', { provider: panel.engine }))
-          if (live)
+          if (live())
             update((s) => {
               const current = s.enginePanel
               if (
@@ -80,14 +78,7 @@ export function useSharedPanels(
         }
       } catch {
         // Keep the last status while the workspace connection retries; never clear an editor.
-      } finally {
-        pending = false
       }
-    }
-    const timer = setInterval(() => void poll(), 2500)
-    return () => {
-      live = false
-      clearInterval(timer)
-    }
+    })
   }, [ready, latest, controller, update])
 }
