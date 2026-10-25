@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { ConnectorTemplate } from '@contract'
 import { Action, Field } from '../Controls'
 import { useDialog } from '../useDialog'
+import { describeError } from '@/services/admin-api'
 export function ConnectorDialog({
   title,
   close,
@@ -77,7 +78,7 @@ export function ConnectorSecret({
               await connect(secret)
               close()
             } catch (e) {
-              setError(e instanceof Error ? e.message : String(e))
+              setError(describeError(e))
             } finally {
               setBusy(false)
             }
@@ -132,7 +133,7 @@ export function ConnectorJsonEditor({
               await save(value)
               close()
             } catch (e) {
-              setError(e instanceof Error ? e.message : String(e))
+              setError(describeError(e))
             } finally {
               setBusy(false)
             }

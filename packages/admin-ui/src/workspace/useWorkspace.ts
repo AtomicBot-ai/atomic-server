@@ -15,10 +15,19 @@ export function useWorkspace() {
   const requestId = useRef(0)
   const appliedId = useRef(0)
   /** Reads the server's snapshot now; resolves with it, or null when the server could not answer. */
+  const operationsKnown = useRef(false)
+  const readOperations = useCallback(async () => {
+    const list = await workspaceApi.operations()
+    if (!active.current) return
+    operationsKnown.current = true
+    setOperations(list)
+  }, [])
   const refresh = useCallback(async (): Promise<WorkspaceSnapshot | null> => {
     const id = ++requestId.current
     try {
       const result = await workspaceApi.snapshot()
+      // The operations are read once; a first read that failed is tried again with the next poll.
+      if (!operationsKnown.current) void readOperations().catch(() => undefined)
       if (active.current && id > appliedId.current) {
         appliedId.current = id
         setSnapshot(result)
@@ -35,14 +44,11 @@ export function useWorkspace() {
     } finally {
       if (active.current) setLoading(false)
     }
-  }, [])
+  }, [readOperations])
   useEffect(() => {
     active.current = true
     void refresh()
-    void workspaceApi
-      .operations()
-      .then(setOperations)
-      .catch((e) => setError(describeError(e)))
+    void readOperations().catch((e) => setError(describeError(e)))
     const timer = setInterval(() => {
       if (!document.hidden) void refresh()
     }, 2500)
@@ -55,7 +61,7 @@ export function useWorkspace() {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', visible)
     }
-  }, [refresh])
+  }, [refresh, readOperations])
   const execute = useCallback(
     async <T = unknown>(operation: string, input: WorkspaceInput = {}): Promise<T> => {
       setPending((items) => [...items, operation])

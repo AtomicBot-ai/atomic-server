@@ -57,7 +57,12 @@ export function useChatSession() {
   useEffect(() => {
     live.current = true
     void refresh().catch((e) => setError(describeError(e)))
-    const active = localStorage.getItem(ACTIVE)
+    let active: string | null = null
+    try {
+      active = localStorage.getItem(ACTIVE)
+    } catch {
+      /* storage blocked: nothing to recover */
+    }
     if (active && !locked.current) {
       locked.current = true
       setBusy(true)
@@ -105,7 +110,13 @@ export function useChatSession() {
     await refresh()
     return value
   }
-  const generate = async (messages: RecordValue[], request: RecordValue, provider: string, base = chat) => {
+  const generate = async (
+    messages: RecordValue[],
+    request: RecordValue,
+    provider: string,
+    base = chat,
+    onStarted?: () => void
+  ) => {
     if (locked.current) return
     locked.current = true
     setBusy(true)
@@ -124,7 +135,12 @@ export function useChatSession() {
         })
       )
       started = true
-      localStorage.setItem(ACTIVE, text(progress.id))
+      onStarted?.()
+      try {
+        localStorage.setItem(ACTIVE, text(progress.id))
+      } catch {
+        /* storage blocked: the job is still followed in memory */
+      }
       const parameters = Object.fromEntries(
         Object.entries(request).filter(([key]) => !['model', 'stream', 'stream_options'].includes(key))
       )

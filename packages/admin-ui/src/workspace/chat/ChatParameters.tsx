@@ -7,6 +7,7 @@ import type { RecordValue } from '../types'
 import { ChatCapabilities } from './ChatCapabilities'
 import type { ChatPreferences } from './chat-preferences'
 import './chat-parameters.css'
+import { describeError } from '@/services/admin-api'
 const common = [
   ['temperature', 'Temperature', 0, 2, 0.1],
   ['max_tokens', 'Maximum output tokens', 1, undefined, 1],
@@ -187,7 +188,7 @@ export function ChatParameters({
                       setName('')
                       setError('')
                     } catch (e) {
-                      setError(String(e))
+                      setError(describeError(e))
                     }
                   }}
                 >

@@ -78,9 +78,11 @@ export function ConnectionGuide({
       if (!key) throw new Error('An API key could not be prepared. Open API keys and retry.')
       setKeyId(key)
       setStatus('Starting server')
-      await execute('config.update', { values: { 'api.host': '127.0.0.1', 'api.port': Number(port) } })
+      // The network the person chose (Remote access) stays; only the port is this guide's.
+      const host = w.snapshot?.api.host || '127.0.0.1'
+      await execute('config.update', { values: { 'api.port': Number(port) } })
       await execute(w.snapshot?.api.running ? 'api.restart' : 'api.start', {
-        request: { host: '127.0.0.1', port: Number(port) },
+        request: { host, port: Number(port) },
       })
       setStatus('Testing model response')
       await execute('setup.complete', { model_id: modelId })
@@ -137,7 +139,14 @@ export function ConnectionGuide({
         <>
           <div className="form-grid">
             <Field label="Access">
-              <input readOnly value="This device only · 127.0.0.1" />
+              <input
+                readOnly
+                value={
+                  w.snapshot?.api.host && w.snapshot.api.host !== '127.0.0.1'
+                    ? `Local network · ${w.snapshot.api.host}`
+                    : 'This device only · 127.0.0.1'
+                }
+              />
             </Field>
             <Field label="Server port">
               <input

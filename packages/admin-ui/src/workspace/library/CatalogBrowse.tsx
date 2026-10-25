@@ -85,7 +85,8 @@ export function CatalogBrowse({
     return () => {
       live = false
     }
-  }, [execute, catalog, revision, workspace?.snapshot])
+    // A new snapshot object arrives every poll; only its revision says something changed.
+  }, [execute, catalog, revision, workspace?.snapshot?.captured_at])
   const idOf = modelId
   const isInstalled = (id: string) => installed.some((m) => catalogModelMatches(idOf(m), id))
   const deviceStatus = (model: RecordValue) =>

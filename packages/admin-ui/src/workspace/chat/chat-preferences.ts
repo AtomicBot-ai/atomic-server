@@ -60,7 +60,11 @@ export function useChatPreferences() {
   })
   const save = (value: ChatPreferences) => {
     const next = validPreferences(value)
-    localStorage.setItem(KEY, JSON.stringify(next))
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next))
+    } catch {
+      /* storage blocked: the preference holds for this page */
+    }
     set(next)
   }
   return { preferences, save }

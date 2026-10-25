@@ -9,6 +9,7 @@ import type { RecordValue } from '../types'
 import type { useChatSession } from './useChatSession'
 import { ChatMenu } from './ChatMenu'
 import { ChatHistorySearch } from './ChatHistorySearch'
+import { describeError } from '@/services/admin-api'
 export function ChatHistory({
   session: s,
   embedded = false,
@@ -117,7 +118,7 @@ export function ChatHistory({
                     s.setError('')
                     setImporting(chats)
                   } catch (e) {
-                    s.setError(e instanceof Error ? e.message : String(e))
+                    s.setError(describeError(e))
                   } finally {
                     setReading(false)
                   }
@@ -134,7 +135,7 @@ export function ChatHistory({
             className={`recent ${chat.id === s.chat.id ? 'active' : ''}`}
             title={text(chat.title)}
             disabled={s.busy}
-            onClick={() => void s.open(text(chat.id)).catch((e) => s.setError(String(e)))}
+            onClick={() => void s.open(text(chat.id)).catch((e) => s.setError(describeError(e)))}
           >
             {text(chat.title)}
           </button>

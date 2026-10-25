@@ -6,6 +6,7 @@ import { Action } from '../Controls'
 import type { RecordValue } from '../types'
 import { text } from '../types'
 import { workspaceApi } from '../workspace-api'
+import { describeError } from '@/services/admin-api'
 
 export function ChatHistorySearch({
   recents,
@@ -80,7 +81,7 @@ export function ChatHistorySearch({
               onClick={() =>
                 void open(text(item.id))
                   .then(close)
-                  .catch((e) => setError(String(e)))
+                  .catch((e) => setError(describeError(e)))
               }
             >
               {text(item.title)}

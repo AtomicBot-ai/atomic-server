@@ -30,6 +30,8 @@ export function useConnectorSignIn(w: Workspace, fail: (message: string) => void
         if (stopped) return
         const step = signInStep(value)
         if (step.next === 'connect') {
+          // Signed in: leaving the page now must not cancel it.
+          current.current = ''
           await execute.current('connectors.check', { id: waiting.id })
           if (!stopped) {
             current.current = ''

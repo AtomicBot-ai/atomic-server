@@ -4,6 +4,7 @@ import { Paperclip, FileText, X } from 'lucide-react'
 import { DEFAULT_ATTACHMENTS, type WorkspaceFeatures } from '@contract'
 import { workspaceApi } from '../workspace-api'
 import { attachmentImage } from './attachment-image'
+import { describeError } from '@/services/admin-api'
 export interface Attachment {
   name: string
   text?: string
@@ -54,7 +55,11 @@ export function ChatAttachments({
             for (const file of files) {
               if (file.size > settings.max_file_size_mb * 1024 * 1024)
                 throw new Error(`Attachments must be below ${settings.max_file_size_mb} MB.`)
-              if (/^image\/(png|jpeg|webp)$/.test(file.type) && vision) {
+              if (/^image\//.test(file.type)) {
+                if (!vision)
+                  throw new Error('This model cannot read images. Choose a vision model to attach one.')
+                if (!/^image\/(png|jpeg|webp)$/.test(file.type))
+                  throw new Error('Attach a PNG, JPEG or WebP image.')
                 const image = await attachmentImage(file, settings.max_image_size_px)
                 next.push({ name: file.name, image })
               } else {
@@ -70,7 +75,7 @@ export function ChatAttachments({
             setAttachments([...attachments, ...next])
             setError('')
           } catch (e) {
-            setError(String(e))
+            setError(describeError(e))
           }
         }}
       />

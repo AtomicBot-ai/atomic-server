@@ -130,7 +130,11 @@ export function Chat({
     const withSystem = system
       ? [{ role: 'system', content: system }, ...next.filter((m) => m.role !== 'system')]
       : next.filter((m) => m.role !== 'system')
-    await s.generate(withSystem, configured, service!.provider, base)
+    await s.generate(withSystem, configured, service!.provider, base, () => {
+      // Accepted: the composer is free for the next question while the answer streams.
+      setDraft('')
+      setAttachments([])
+    })
   }
   const send = async () => {
     if (!draft.trim() && !attachments.length) return
@@ -172,10 +176,8 @@ export function Chat({
             ...images.map((a) => ({ type: 'image_url', image_url: { url: a.image } })),
           ]
         : written
+      // Retained when admission fails; cleared by generate once the request is accepted.
       await generate([...messages, { role: 'user', content }])
-      // Retain input when request admission failed; accepted requests are in history.
-      setDraft('')
-      setAttachments([])
     } catch (e) {
       s.setError(e instanceof Error ? e.message : String(e))
     }
@@ -243,6 +245,7 @@ export function Chat({
         <div className="chat-scroll">
           {!messages.length && <ChatEmpty />}
           <ChatMessages
+            key={String(s.chat.id ?? s.chat.draft_key)}
             messages={messages}
             preferences={preferences}
             busy={s.busy}

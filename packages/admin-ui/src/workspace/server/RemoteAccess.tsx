@@ -3,6 +3,7 @@ import type { Workspace } from '../useWorkspace'
 import { Action, Copy, Panel } from '../Controls'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
+import { describeError } from '@/services/admin-api'
 export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
   const [addresses, setAddresses] = useState<string[]>([])
   const [remote, setRemote] = useState<RecordValue>({})
@@ -23,7 +24,7 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
           setError('')
         }
       } catch (e) {
-        if (live) setError(String(e))
+        if (live) setError(describeError(e))
       } finally {
         pending = false
       }

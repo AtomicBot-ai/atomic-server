@@ -48,7 +48,7 @@ export function EngineBuilds({ provider, execute }: { provider: string; execute:
           setEngine(source ?? {})
           setCheck((current) => (current.phase === 'available' ? engineUpdateResult(source) : current))
         },
-        (failure) => setError(String(failure))
+        (failure) => setError(describeError(failure))
       ),
     [execute, provider]
   )

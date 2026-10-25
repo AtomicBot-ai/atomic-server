@@ -4,6 +4,7 @@ import { useDialog } from '../useDialog'
 import { Action, Field } from '../Controls'
 import { CHAT_DEFAULTS, downloadJson, validPreferences } from './chat-preferences'
 import type { ChatPreferences } from './chat-preferences'
+import { describeError } from '@/services/admin-api'
 const checks = [
   ['sendOnEnter', 'Enter sends; Shift+Enter adds a line'],
   ['autoScroll', 'Follow the response while generating'],
@@ -129,7 +130,7 @@ export function ChatSettings({
                     set(validPreferences(data.preferences))
                     setError('')
                   } catch (err) {
-                    setError(String(err))
+                    setError(describeError(err))
                   }
                 }}
               />

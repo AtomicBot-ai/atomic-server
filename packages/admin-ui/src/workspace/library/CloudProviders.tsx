@@ -12,6 +12,7 @@ import './onboarding-providers.css'
 import { CloudProviderMark } from './CloudProviderMark'
 import { CustomProviderSummary } from './CustomProviderSummary'
 import { CloudProviderDialog } from './CloudProviderDialog'
+import { describeError } from '@/services/admin-api'
 export function CloudProviders({
   workspace: w,
   onboarding = false,
@@ -48,7 +49,7 @@ export function CloudProviders({
               setEditing(true)
           }
         },
-        (e) => setError(String(e))
+        (e) => setError(describeError(e))
       ),
     [execute, revision, custom]
   )
@@ -123,7 +124,7 @@ export function CloudProviders({
       } else setEditing(false)
       setRevision((v) => v + 1)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeError(e))
     } finally {
       setChecking(false)
     }

@@ -187,7 +187,7 @@ function SchemaInput({
       type={
         field.type === 'number' || field.type === 'integer'
           ? 'number'
-          : /key|token|password/.test(name)
+          : /(^|_)(api_?key|token|password|secret)$|^key$/.test(name)
             ? 'password'
             : 'text'
       }

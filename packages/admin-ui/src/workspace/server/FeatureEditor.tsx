@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Action, Field } from '../Controls'
 import { useDialog } from '../useDialog'
 import type { Workspace } from '../useWorkspace'
+import { describeError } from '@/services/admin-api'
 type Value = Record<string, unknown>
 export function FeatureEditor({
   kind,
@@ -161,7 +162,7 @@ export function FeatureEditor({
                 await workspace.execute(`${kind}.save`, { value: next })
                 close()
               } catch (error) {
-                setError(error instanceof Error ? error.message : String(error))
+                setError(describeError(error))
               } finally {
                 setPending(false)
               }

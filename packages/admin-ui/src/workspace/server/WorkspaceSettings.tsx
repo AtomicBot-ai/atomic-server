@@ -12,6 +12,7 @@ import { ConnectorsSettings } from './ConnectorsSettings'
 import { AttachmentSettings } from './AttachmentSettings'
 import { DetailPicker } from './DetailPicker'
 import './workspace-features.css'
+import { describeError } from '@/services/admin-api'
 type Value = Record<string, unknown>
 export function WorkspaceSettings({ section, workspace: w }: { section: string; workspace: Workspace }) {
   const [editor, setEditor] = useState<Value | null>(null),
@@ -29,7 +30,7 @@ export function WorkspaceSettings({ section, workspace: w }: { section: string; 
     try {
       await action()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeError(e))
     } finally {
       setBusy('')
     }

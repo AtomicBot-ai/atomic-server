@@ -12,6 +12,7 @@ import { ConnectorCard } from './ConnectorCard'
 import { ConnectorDialog, ConnectorJsonEditor, ConnectorSecret, ConnectorSignIn } from './ConnectorDialogs'
 import { useConnectorSignIn } from './useConnectorSignIn'
 import './connectors.css'
+import { describeError } from '@/services/admin-api'
 export function ConnectorsSettings({ workspace: w }: { workspace: Workspace }) {
   const [editor, setEditor] = useState<Record<string, unknown> | null>(null),
     [secret, setSecret] = useState<ConnectorTemplate | null>(null),
@@ -29,7 +30,7 @@ export function ConnectorsSettings({ workspace: w }: { workspace: Workspace }) {
     try {
       await action()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(describeError(e))
     } finally {
       setBusy('')
     }
@@ -163,7 +164,7 @@ export function ConnectorsSettings({ workspace: w }: { workspace: Workspace }) {
         <ConnectorSignIn
           waiting={signIn.waiting}
           retry={(id) => signIn.start(signIn.waiting!.id, signIn.waiting!.name, id)}
-          cancel={() => void signIn.cancel()}
+          cancel={() => void signIn.cancel().catch((e) => setError(describeError(e)))}
         />
       )}
     </>
