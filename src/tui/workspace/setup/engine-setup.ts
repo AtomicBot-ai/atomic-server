@@ -221,7 +221,7 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
       await c.setup.savePath(job)
       path({ job })
       change({ stage: 'download', startedAt: Date.now() })
-      focus('setup-cancel')
+      focus('setup-path-abandon')
       if (returnToConnection(ctx, { model: job.model, provider: job.engine, downloading: true })) return
       if (get().firstRun === 'model')
         update((s) => ({

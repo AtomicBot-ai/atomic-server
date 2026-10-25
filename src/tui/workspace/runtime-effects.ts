@@ -5,6 +5,7 @@ import type { RefObject } from 'react'
 import type { WorkspaceController } from './controller.js'
 import type { WorkspaceState } from './state.js'
 import { WORKSPACE_OPERATIONS } from '../../contract/index.js'
+import { AtcError } from '../../errors/index.js'
 export function useWaitingGame(
   s: WorkspaceState,
   update: (fn: (s: WorkspaceState) => WorkspaceState) => void
@@ -33,8 +34,11 @@ export function useRuntimeData(
       try {
         const workspace = await controller.current.runtime.snapshot()
         if (live) update((s) => applyWorkspaceSnapshot(s, workspace, Date.now()))
-      } catch {
-        if (live) update((s) => (s.workspace ? { ...s, workspace: null } : s))
+      } catch (error) {
+        // A poll that failed while the server is busy keeps the last snapshot; only a server that is
+        // gone takes it away, so downloads and models do not flicker out for a tick.
+        const gone = error instanceof AtcError && error.code === 'ATC_DAEMON_NOT_RUNNING'
+        if (live && gone) update((s) => (s.workspace ? { ...s, workspace: null } : s))
       } finally {
         pending = false
       }

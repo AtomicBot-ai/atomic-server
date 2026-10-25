@@ -14,6 +14,7 @@ import { apiAction } from './server/api-actions.js'
 import { firstRunAction } from './setup/first-run.js'
 import { connectionGuideAction } from './server/connection-guide-actions.js'
 import { navigationAction } from './navigation-actions.js'
+import { agentAction } from './agent-actions.js'
 import { goalSetupAction } from './setup/goal-setup.js'
 import { imageAction } from './chat/image-actions.js'
 import { libraryAction } from './library/library-actions.js'
@@ -23,7 +24,6 @@ export { serverEndpoint, example } from './connection.js'
 import { operationAction } from './operations/operation-actions.js'
 import { setupAction } from './setup/setup-actions.js'
 import { dataAction, persistConversation, saveDataEdit } from './data-actions.js'
-import type { AgentId } from '../../agent-launch/index.js'
 import { endpointUrl } from '../../terminal-service/index.js'
 import type { WorkspaceState, Page } from './state.js'
 import { PAGE_FOCUS } from './state.js'
@@ -55,51 +55,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   if (!s.setupComplete && (id.startsWith('page:') || ['new', 'send', 'api-toggle'].includes(id))) return
   if (await apiAction(id, ctx)) return
   if (await dataAction(id, ctx)) return
-  if (id.startsWith('agent:')) {
-    if (
-      (!s.setupComplete || s.firstRun) &&
-      !(s.connection?.step === 'done' && s.connection.agent === id.slice(6))
-    ) {
-      patch({ message: 'Finish this connection before launching the agent.' })
-      return
-    }
-    if (s.base.daemon.kind !== 'up' || !s.base.daemon.snapshot.server.running) {
-      patch({ message: 'Start the API, then open an agent.' })
-      return
-    }
-    patch({ busy: true, message: 'Finding a model for this agent...' })
-    try {
-      const models = await controller.models(serverEndpoint(s), true)
-      if (!models.length) throw new Error('Load a text model in Models before opening an agent.')
-      patch({
-        agent: id.slice(6) as AgentId,
-        agentModel: models.includes(s.model) ? s.model : models[0]!,
-        models,
-        overlay: 'agent',
-        focus: 'launch-agent',
-        message: '',
-      })
-    } finally {
-      patch({ busy: false })
-    }
-    return
-  }
-  if (id === 'agent-model') {
-    const i = s.models.indexOf(s.agentModel)
-    patch({ agentModel: s.models[(i + 1) % s.models.length] ?? '' })
-    return
-  }
-  if (id === 'launch-agent') {
-    if (!ctx.handoff) throw new Error('Agent handoff is unavailable in this terminal.')
-    patch({ busy: true, message: 'Preparing the agent...' })
-    try {
-      const launch = await controller.prepareAgent(s.agent, serverEndpoint(s), s.agentModel)
-      ctx.handoff(launch)
-    } finally {
-      patch({ busy: false })
-    }
-    return
-  }
+  if (await agentAction(id, ctx)) return
   if (id.startsWith('page:')) {
     const page = id.slice(5) as Page
     patch({
@@ -114,6 +70,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
       focus: PAGE_FOCUS[page],
       hover: '',
       message: '',
+      secret: '',
     })
     if (page === 'models') return activate('refresh-models', ctx)
     if (page === 'checks' && !s.base.doctor.results) await controller.run({ name: 'doctor' })
@@ -172,13 +129,16 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'save-edit') {
+    // Read again: a second Enter can arrive after the first one closed the editor.
+    const edit = get().edit
+    if (!edit) return
     if (await saveDataEdit(ctx)) {
-      if (s.edit === 'setup-query') await setupAction('setup-search', ctx)
+      if (edit === 'setup-query') await setupAction('setup-search', ctx)
       return
     }
-    const isEndpoint = s.edit === 'endpoint',
+    const isEndpoint = edit === 'endpoint',
       value = isEndpoint ? endpointUrl(s.editValue.trim()) : s.editValue
-    await controller.save(isEndpoint ? 'tui.endpoint' : s.edit.slice(8), value)
+    await controller.save(isEndpoint ? 'tui.endpoint' : edit.slice(8), value)
     patch({
       overlay: null,
       ...(isEndpoint ? { endpoint: value, model: '', models: [] } : {}),

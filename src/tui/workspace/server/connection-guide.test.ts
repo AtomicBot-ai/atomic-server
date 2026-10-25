@@ -1,3 +1,4 @@
+import { newSetup } from '../../../terminal-setup/index.js'
 import { applyWorkspaceSnapshot } from '../shared-state.js'
 import type { WorkspaceSnapshot } from '../../../contract/index.js'
 import { SERVER_SIDEBAR } from '../sidebar.js'
@@ -197,4 +198,26 @@ it('keeps its own configured agent command visible after publishing completion w
     overlay: 'connection-guide',
     connection: { step: 'done', command: 'atc connect codex --model local-model' },
   })
+})
+
+it('keeps the keyboard on the step’s own control: Configure after a failure, Copy once done', async () => {
+  const failed = fixture(true)
+  await activate('guide-agent:codex', failed.ctx)
+  await activate('guide-configure', failed.ctx)
+  expect(failed.ctx.get().connection?.step).toBe('review')
+  expect(failed.ctx.get().focus).toBe('guide-configure')
+  const { ctx } = fixture()
+  await activate('guide-agent:codex', ctx)
+  await activate('guide-configure', ctx)
+  expect(ctx.get().connection?.step).toBe('done')
+  expect(workspaceFrame(ctx.get(), 100, 30, 0).targets.map((t) => t.id)).toContain(ctx.get().focus)
+  expect(ctx.get().focus).toBe('guide-copy')
+})
+
+it('keeps a background first-model setup when the guide closes', async () => {
+  const { ctx } = fixture()
+  ctx.update((s) => ({ ...s, setup: { ...newSetup('server'), destination: 'server' } as never }))
+  await activate('guide-open', ctx)
+  await activate('guide-close', ctx)
+  expect(ctx.get().setup?.destination).toBe('server')
 })

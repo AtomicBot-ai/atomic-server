@@ -20,11 +20,20 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
   if (connectionPickerAction(id, ctx)) return true
   const s = ctx.get(),
     c = ctx.controller
+  // Focus follows the step: review has Configure, done has Copy, the endpoint form has Next.
+  const focusFor = (step: ConnectionDraft['step'] | undefined, current: string) =>
+    step === 'review'
+      ? 'guide-configure'
+      : step === 'done'
+        ? 'guide-copy'
+        : step === 'endpoint'
+          ? 'guide-next'
+          : current
   const patch = (p: Partial<ConnectionDraft>) =>
     ctx.update((v) => ({
       ...v,
       connection: v.connection ? { ...v.connection, ...p } : null,
-      focus: 'guide-next',
+      focus: focusFor(p.step, v.focus),
       hover: '',
     }))
   if (id === 'guide-manual') {
@@ -121,7 +130,8 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       ...v,
       firstRun: null,
       setupComplete: true,
-      setup: null,
+      // A download the person chose to run in the background keeps its progress poll and finish.
+      setup: v.setup?.destination ? v.setup : null,
       connection: null,
       overlay: null,
       page: 'server',

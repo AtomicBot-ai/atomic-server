@@ -60,7 +60,7 @@ export async function setupAction(
         engine: job.engine,
         path: { engine: job.engine, kind, rows: [], plan: null, job },
       })
-      focus('setup-cancel')
+      focus('setup-path-abandon')
       return true
     }
     if (get().setupComplete && !browse) {

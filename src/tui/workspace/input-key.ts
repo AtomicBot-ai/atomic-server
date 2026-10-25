@@ -22,3 +22,16 @@ export function inputKeys(input: string, key: Key): { input: string; key: Key }[
     ]
   return [{ input, key }]
 }
+
+/**
+ * Enter on the focused (or hovered) control. A focus the screen no longer draws (an overlay closed, a
+ * step changed) is moved to the first control, never activated: Enter must not run whatever is first.
+ */
+export function focusedTarget(
+  s: { hover: string; focus: string },
+  frame: { targets: { id: string }[] }
+): { action?: string; patch: { focus: string; hover: string } } {
+  const id = frame.targets.find((t) => t.id === (s.hover || s.focus))?.id
+  if (!id) return { patch: { focus: frame.targets[0]?.id ?? '', hover: '' } }
+  return { action: id, patch: { focus: id, hover: '' } }
+}

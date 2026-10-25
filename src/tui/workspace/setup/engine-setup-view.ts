@@ -114,7 +114,11 @@ export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: 
   const total = state?.total ?? 0,
     done = state?.done ?? 0
   const bw = Math.min(30, Math.max(10, a.width - 30)),
-    filled = total ? Math.round((bw * done) / total) : state?.stage === 'ready' ? bw : 0
+    // A transfer can pass the plan's byte count (a resumed part counted twice): the bar stays full.
+    filled = Math.max(
+      0,
+      Math.min(bw, total ? Math.round((bw * done) / total) : state?.stage === 'ready' ? bw : 0)
+    )
   text(
     c,
     a.x,

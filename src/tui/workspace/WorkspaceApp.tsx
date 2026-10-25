@@ -139,9 +139,10 @@ function WorkspaceContent(
   const downloadHighlight = useDownloadAttention(state.downloadAttention ?? 0, state.motion)
   const frame = workspaceFrame(state, columns, rows, seconds, 'fangs', downloadHighlight)
   function cancel() {
+    if (!latest.current.generating) return
     epoch.current++
     controller.current?.cancel()
-    patch({ generating: false, message: latest.current.generating ? 'Response stopped.' : '' })
+    patch({ generating: false, message: 'Response stopped.' })
   }
   function send() {
     const s = latest.current,
@@ -223,9 +224,8 @@ function WorkspaceContent(
           patch({
             generating: false,
             message: oneLine(e),
-            draft: s.draft,
-            documents: s.documents,
-            images: s.images,
+            // The sent text comes back unless the person typed something new meanwhile.
+            ...(latest.current.draft ? {} : { draft: s.draft, documents: s.documents, images: s.images }),
           })
       })
   }

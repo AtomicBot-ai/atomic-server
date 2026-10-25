@@ -132,7 +132,14 @@ export async function saveDataEdit(ctx: ActionContext): Promise<boolean> {
     return true
   }
   if (s.edit === 'key-name') {
-    const key = await c.keys.create(s.editValue)
+    // The editor closes before the key exists: a second Enter meanwhile has nothing to save.
+    update((v) => ({ ...v, edit: '', overlay: null, busy: true }))
+    let key
+    try {
+      key = await c.keys.create(s.editValue)
+    } finally {
+      update((v) => ({ ...v, busy: false }))
+    }
     update((v) => ({ ...v, secret: key.token, overlay: 'credential', focus: 'copy-secret' }))
     const clientKeys = await c.keys.list()
     update((v) => ({ ...v, clientKeys }))

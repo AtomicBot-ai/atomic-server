@@ -70,7 +70,9 @@ export function drawConnectionChoices(
     : guideChoices
   const columns = width >= 66 ? 2 : 1
   const cardWidth = columns === 2 ? Math.floor((width - 2) / 2) : width
-  const height = columns === 2 ? Math.min(10, bottom - y - 2) : Math.min(5, Math.floor((bottom - y - 2) / 2))
+  // A card needs its border and its title: below two rows the title would be drawn over.
+  const height =
+    columns === 2 ? Math.min(10, bottom - y - 2) : Math.max(2, Math.min(5, Math.floor((bottom - y - 2) / 2)))
   choices.forEach((choice, i) => {
     const left = x + (columns === 2 ? i * (cardWidth + 2) : 0)
     const top = y + (columns === 2 ? 0 : i * height)

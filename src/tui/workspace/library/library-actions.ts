@@ -33,6 +33,7 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
     })
     const [installed, models] = await Promise.all([c.installed(), c.models(s.endpoint).catch(() => s.models)])
     patch({ installed, models })
+    if (get().page !== 'models') return true
     return libraryAction('library:catalog', ctx)
   }
   if (id.startsWith('library:') || id.startsWith('category:') || id === 'library-refresh') {
@@ -91,13 +92,15 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
           ? { force: id === 'library-refresh' }
           : { category, query: s.libraryQuery, refresh: id === 'library-refresh' }
       )
-      patch({
-        libraryRows:
-          view === 'catalog'
-            ? withInstalledRows(libraryRows(result, view), get())
-            : libraryRows(result, view),
-        message: String(record(result)['error'] ?? ''),
-      })
+      // The user may have switched views while this one loaded: its rows are not that view's.
+      if (get().libraryView === view && get().libraryCategory === category)
+        patch({
+          libraryRows:
+            view === 'catalog'
+              ? withInstalledRows(libraryRows(result, view), get())
+              : libraryRows(result, view),
+          message: String(record(result)['error'] ?? ''),
+        })
     } finally {
       patch({ busy: false })
     }

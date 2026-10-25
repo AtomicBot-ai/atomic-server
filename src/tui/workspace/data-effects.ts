@@ -232,7 +232,11 @@ export function useWorkspaceData(
   }, [s.conversation?.id, s.generating, c, latest, update])
   useEffect(() => {
     if (!s.secret) return
-    const timer = setTimeout(() => update((v) => ({ ...v, secret: '', overlay: null })), 60000)
+    // Only the credential overlay goes with the secret: another one opened meanwhile stays.
+    const timer = setTimeout(
+      () => update((v) => ({ ...v, secret: '', ...(v.overlay === 'credential' ? { overlay: null } : {}) })),
+      60000
+    )
     return () => clearTimeout(timer)
   }, [s.secret, update])
 }

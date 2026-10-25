@@ -4,7 +4,7 @@ import { featureInput } from './server/feature-actions.js'
 import { enginePanelInput } from './library/engine-panel-input.js'
 import { serverShellInput } from './server/server-shell-input.js'
 import { mediaInput } from './media/media-input.js'
-import { inputKey } from './input-key.js'
+import { focusedTarget, inputKey } from './input-key.js'
 import { waitingGameInput } from './waiting-game.js'
 import { connectionGuideInput } from './server/connection-picker.js'
 import { catalogMenuItems } from './library/catalog-menu.js'
@@ -118,10 +118,7 @@ export function workspaceInput(
     if (!target) return {}
     return { patch: { focus: target.id, hover: '', message: '' }, action: target.id }
   }
-  const focused = () => {
-    const id = frame.targets.find((t) => t.id === (s.hover || s.focus))?.id ?? frame.targets[0]?.id
-    return { action: id, patch: { focus: id ?? '', hover: '' } }
-  }
+  const focused = () => focusedTarget(s, frame)
   const game = waitingGameInput(input, key, s, frame)
   if (game) return game
   const featureEdit = featureInput(input, key, s)
