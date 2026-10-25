@@ -3,25 +3,17 @@ import { embedWorkspaceDocuments } from './features/workspace-embeddings.js'
 import { requireReadiness } from './snapshot/require-readiness.js'
 import { WorkspaceFeatureService } from './features/features.js'
 import { enginePreferenceOperation } from './engines/engine-preference.js'
-import { workspaceLogs } from './workspace-logs.js'
-import { join } from 'node:path'
 import { AtcError } from '../errors/index.js'
-import { AGENTS, agentProfile, type AgentId } from '../agent-launch/index.js'
-import { ChatHistory, ClientKeys, type Conversation } from '../terminal-data/index.js'
+import { ChatHistory, ClientKeys } from '../terminal-data/index.js'
 import { WORKSPACE_OPERATIONS, type WorkspaceInput } from '../contract/index.js'
 import { inputFor, object, sanitized } from './validation.js'
 import { WorkspaceMetrics } from './snapshot/metrics.js'
 import { LoadStages } from './snapshot/load-stages.js'
-import { publicEndpoint, workspaceSnapshot } from './snapshot/snapshot.js'
-import { saveWorkspaceSetup } from './snapshot/state.js'
+import { workspaceSnapshot } from './snapshot/snapshot.js'
 import { coreOperation, NOT_CORE } from './core-operations.js'
 import { cloudOperation } from './cloud/cloud-connections.js'
 import { modelOperation } from './models/model-operations.js'
 import { WorkspaceCatalog } from './models/catalog.js'
-import { engineSettingsSchema, workspaceConfig, updateWorkspaceConfig } from './settings.js'
-import { verifyWorkload } from './snapshot/readiness.js'
-import { callPublic } from './snapshot/public-api.js'
-import { completeChat } from './chat/chat-complete.js'
 import { downloadProxy } from './models/download-proxy.js'
 import { FoundryAccelerators } from './foundry/foundry.js'
 import { foundryOperation } from './foundry/foundry-operations.js'
@@ -30,7 +22,8 @@ import { downloadOperation } from './models/download-operations.js'
 import { litertOperation } from './litert/litert-operations.js'
 import { modelDownloads } from './models/model-downloads.js'
 import { ChatJobs } from './chat/chat-jobs.js'
-import { importConversations } from './chat/history-transfer.js'
+import { serverOperation } from './server-operations.js'
+import { chatOperation } from './chat/chat-operations.js'
 import type { WorkspaceServiceOptions } from './service-options.js'
 export type { WorkspaceServiceOptions } from './service-options.js'
 export class WorkspaceService {
@@ -106,7 +99,7 @@ export class WorkspaceService {
     const descriptor = WORKSPACE_OPERATIONS.find((op) => op.name === operation)
     if (!descriptor) throw new AtcError('ATC_USAGE', `Unknown operation: ${operation}. Use operations.list.`)
     const input = inputFor(descriptor, raw),
-      { link, paths, config } = this.options
+      { link, paths } = this.options
     await requireReadiness(operation, input, () => this.snapshot())
     const preference = await enginePreferenceOperation(link, paths.atcDir, operation, input)
     if (preference !== NOT_CORE) return preference
@@ -140,137 +133,31 @@ export class WorkspaceService {
       input
     )
     if (download !== NOT_CORE) return download
-    switch (operation) {
-      case 'settings.schema':
-        return engineSettingsSchema(String(input['provider']))
-      case 'config.get':
-        return {
-          ...workspaceConfig(config),
-          command_prefix: `${(this.options.selfCommand ?? ['atc']).map(shellWord).join(' ')} --data-folder ${shellWord(paths.dataFolder)}`,
-        }
-      case 'config.update':
-        return updateWorkspaceConfig(paths, config, object(input['values']))
-      case 'operations.list':
-        return WORKSPACE_OPERATIONS
-      case 'api.start':
-      case 'api.restart': {
-        const body = {
-          host: config.api.host,
-          port: config.api.port,
-          prefix: config.api.prefix,
-          trusted_hosts: config.api.trustedHosts,
-          ...object(input['request']),
-          api_key: await this.keys.get(),
-          fallback_port: false,
-        }
-        if (operation === 'api.restart') await link.server.stop()
-        return sanitized(await link.server.start(body))
-      }
-      case 'api.inspector': {
-        const result = await link.request('PUT', '/server/inspector', { enabled: input['enabled'] })
-        this.metrics.setDetailed(input['enabled'] === true)
-        return result
-      }
-      case 'api.stop':
-        return sanitized(await link.server.stop())
-      case 'api.ping': {
-        const ping = await callPublic(link, config, this.keys, this.request, '/models')
-        return { ok: true, latency_ms: ping.latency_ms, models: ping.result }
-      }
-      case 'connection.info':
-        return {
-          ...publicEndpoint(object(await link.server.status()), config),
-          keys: await this.keys.list(),
-          agents: AGENTS,
-        }
-      case 'connection.agents':
-        return AGENTS
-      case 'connection.profile': {
-        const agent = String(input['agent']) as AgentId,
-          model = String(input['model']),
-          state = await link.server.status(),
-          base = publicEndpoint(object(state), config).endpoint,
-          key = await this.keys.get(input['key_id'] as string | undefined)
-        if (!state.running) throw new AtcError('ATC_USAGE', 'Start the API before connecting an agent.')
-        if (!key) throw new AtcError('ATC_USAGE', 'Select an existing API key.')
-        if (!(await link.models.sessions()).some((s) => s.model_id === model))
-          throw new AtcError('ATC_USAGE', 'Load the selected chat model before connecting an agent.')
-        return {
-          agent,
-          endpoint: base,
-          model,
-          profile: agentProfile(agent, base, model, key, join(paths.atcDir, 'agents', agent)),
-          launch_command: `${(this.options.selfCommand ?? ['atc']).map(shellWord).join(' ')} --data-folder ${shellWord(paths.dataFolder)} connect ${agent} --model ${shellWord(model)}${input['key_id'] ? ` --key-id ${shellWord(String(input['key_id']))}` : ''}`,
-        }
-      }
-      case 'keys.list':
-        return this.keys.list()
-      case 'keys.create':
-        return this.keys.create(String(input['name']))
-      case 'keys.reveal': {
-        const key = await this.keys.get(input['id'] as string | undefined)
-        if (!key) throw new AtcError('ATC_USAGE', 'No such API key.')
-        return { key }
-      }
-      case 'keys.revoke':
-        if (!(await this.keys.list()).some((k) => k.id === input['id']))
-          throw new AtcError('ATC_USAGE', 'No such API key.')
-        await this.keys.revoke(String(input['id']))
-        return { revoked: true }
-      case 'setup.manual':
-        return saveWorkspaceSetup(paths, 'manual')
-      case 'setup.complete': {
-        const snapshot = await this.snapshot()
-        if (
-          !snapshot.api.running ||
-          !snapshot.services.some((s) => ['ready', 'running', 'loaded'].includes(s.state))
-        )
-          throw new AtcError(
-            'ATC_USAGE',
-            'Start the API and load a model before finishing guided setup. Set up manually skips this check.'
-          )
-        const selected = snapshot.services.filter(
-          (s) =>
-            (!input['model_id'] || s.model === input['model_id']) &&
-            (!input['service_id'] || s.id === input['service_id'])
-        )
-        await verifyWorkload(link, config, this.keys, this.request, selected)
-        return saveWorkspaceSetup(paths, 'guided')
-      }
-      case 'logs.read':
-        return workspaceLogs(paths.daemonLog, Number(input['lines'] ?? 150))
-      case 'history.list':
-        return this.history.list()
-      case 'history.load':
-        return this.history.load(String(input['id']))
-      case 'history.remove':
-        await this.history.remove(String(input['id']))
-        return { removed: true }
-      case 'history.save': {
-        const chat = object(input['chat'])
-        if (!Array.isArray(chat['messages']) || typeof chat['id'] !== 'string')
-          throw new AtcError('ATC_USAGE', 'A chat needs id and messages.')
-        await this.history.save(chat as unknown as Conversation)
-        return { saved: true }
-      }
-      case 'chat.start':
-        return this.chats.start(input)
-      case 'chat.progress':
-        return this.chats.get(String(input['id']))
-      case 'chat.cancel':
-        return this.chats.cancel(String(input['id']))
-      case 'history.import':
-        return importConversations(this.history, input['conversations'])
-      case 'chat.complete':
-        return completeChat(
-          this.options,
-          this.keys,
-          this.history,
-          this.request,
-          (body) => this.features.enrich(body),
-          input
-        )
-    }
+    const server = await serverOperation(
+      {
+        options: this.options,
+        keys: this.keys,
+        metrics: this.metrics,
+        request: this.request,
+        snapshot: () => this.snapshot(),
+      },
+      operation,
+      input
+    )
+    if (server !== NOT_CORE) return server
+    const chat = await chatOperation(
+      {
+        options: this.options,
+        keys: this.keys,
+        history: this.history,
+        chats: this.chats,
+        request: this.request,
+        enrich: (body) => this.features.enrich(body),
+      },
+      operation,
+      input
+    )
+    if (chat !== NOT_CORE) return chat
     if (operation === 'media.configure')
       input['request'] = { ...object(input['request']), dataFolder: paths.dataFolder }
     const result = await coreOperation(
@@ -289,7 +176,4 @@ export class WorkspaceService {
       ? result
       : sanitized(result)
   }
-}
-function shellWord(value: string) {
-  return `'${value.replace(/'/g, "'\\''")}'`
 }

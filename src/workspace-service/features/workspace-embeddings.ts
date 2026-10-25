@@ -1,4 +1,4 @@
-import type { WorkspaceServiceOptions } from '../service.js'
+import type { WorkspaceServiceOptions } from '../service-options.js'
 import type { ClientKeys } from '../../terminal-data/index.js'
 import { callPublic } from '../snapshot/public-api.js'
 import { object } from '../validation.js'

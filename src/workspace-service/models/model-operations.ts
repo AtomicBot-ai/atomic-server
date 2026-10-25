@@ -24,7 +24,7 @@ import { registeredEngines, withProviders } from './model-providers.js'
 import { foundryStoreModels, removeFoundryModel } from '../foundry/foundry-store.js'
 import { liteRtStoreModels, removeLiteRtModel } from '../litert/litert-store.js'
 import { NOT_CORE } from '../not-core.js'
-import type { WorkspaceServiceOptions } from '../service.js'
+import type { WorkspaceServiceOptions } from '../service-options.js'
 import { importedModelId } from '../validation.js'
 
 export interface ModelOperationDeps {

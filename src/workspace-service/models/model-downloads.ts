@@ -11,7 +11,7 @@ import { ArtifactService } from './artifacts.js'
 import type { WorkspaceCatalog } from './catalog.js'
 import { downloadProxy } from './download-proxy.js'
 import { ModelSetups } from './model-setups.js'
-import type { WorkspaceServiceOptions } from '../service.js'
+import type { WorkspaceServiceOptions } from '../service-options.js'
 
 /** One downloader for every model this server fetches: GGUF setups, media, MLX, the managed store, Foundry Local and LiteRT-LM. */
 export function modelDownloads(

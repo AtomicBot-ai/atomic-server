@@ -6,7 +6,7 @@ import { AtcError, ATC_ERROR_CODES } from '../errors/index.js'
 import type { AtcErrorCode } from '../errors/index.js'
 import type { WorkspaceInput, WorkspaceSnapshot } from '../contract/index.js'
 import { WorkspaceService } from './service.js'
-import type { WorkspaceServiceOptions } from './service.js'
+import type { WorkspaceServiceOptions } from './service-options.js'
 import { object } from './validation.js'
 export interface WorkspaceClient {
   snapshot(): Promise<WorkspaceSnapshot>
