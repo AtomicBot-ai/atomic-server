@@ -1,14 +1,16 @@
 import { engineDialog } from './setup-data'
-import { FoundryModelInstall } from '../library/FoundryModelInstall'
-import { ManagedModelInstall } from '../library/ManagedModelInstall'
-import { ModelInstall } from '../library/ModelInstall'
-import { text } from '../types'
+import { FoundryModelInstall } from '../library/install/FoundryModelInstall'
+import { LiteRtModelInstall } from '../library/install/LiteRtModelInstall'
+import { ManagedModelInstall } from '../library/install/ManagedModelInstall'
+import { ModelInstall } from '../library/install/ModelInstall'
+import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import type { Workspace } from '../useWorkspace'
 
 /**
  * The review of the model chosen in setup, by the engine's format: a GGUF file (or a media model), a
- * managed engine's checkpoint (the core's verdicts, then the plan), or a Foundry Local variant.
+ * managed engine's checkpoint (the core's verdicts, then the plan), or a Foundry Local or LiteRT-LM variant.
+ * `onStarted` gets the download's id and the model id that loads once it is done (a variant's own id).
  */
 export function SetupReview({
   workspace: w,
@@ -19,6 +21,7 @@ export function SetupReview({
   onClose,
   onStarted,
   onEngine,
+  autoStart,
 }: {
   workspace: Workspace
   model: RecordValue
@@ -26,8 +29,9 @@ export function SetupReview({
   engine: string
   technical: boolean
   onClose: () => void
-  onStarted: (id: string) => void
+  onStarted: (id: string, model: string) => void | Promise<void>
   onEngine: (engine: string) => void
+  autoStart?: boolean
 }) {
   const kind = engineDialog(engine)
   if (kind === 'managed')
@@ -36,7 +40,7 @@ export function SetupReview({
         workspace={w}
         repository={text(model.id)}
         onClose={onClose}
-        onStarted={onStarted}
+        onStarted={(id) => onStarted(id, text(model.id))}
         onInstallEngine={onEngine}
       />
     )
@@ -50,8 +54,19 @@ export function SetupReview({
         onFoundry={() => onEngine('foundry-local')}
       />
     )
+  if (kind === 'litert')
+    return (
+      <LiteRtModelInstall
+        workspace={w}
+        model={model.litert as never}
+        onClose={onClose}
+        onStarted={onStarted}
+        onEngine={() => onEngine('litert-lm')}
+      />
+    )
   return (
     <ModelInstall
+      autoStart={autoStart}
       model={model}
       category={category}
       expectedEngine={engine}
@@ -60,7 +75,10 @@ export function SetupReview({
       onClose={onClose}
       onStarted={(result) => {
         const job = result && typeof result === 'object' ? (result as RecordValue) : {}
-        onStarted(text(job.id ?? job.setup_id, ''))
+        return onStarted(
+          text(job.id ?? job.setup_id, ''),
+          text(record(job.plan).model_id ?? job.model_id ?? model.id, '')
+        )
       }}
     />
   )

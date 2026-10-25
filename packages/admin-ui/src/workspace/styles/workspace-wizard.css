@@ -17,17 +17,6 @@
   position: relative;
   box-shadow: 0 30px 150px #0009;
 }
-.wizard-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 30px;
-}
-.wizard-top strong {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: #88b7aa;
-}
 .wizard-title {
   display: flex;
   gap: 25px;
@@ -104,17 +93,6 @@
   color: #719878;
   font-size: 11px;
 }
-.ready-card {
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 18px;
-  margin: 25px 0 30px;
-}
-.ready-card strong {
-  font-size: 20px;
-  color: #a3ebdf;
-}
 .rider-track {
   height: 42px;
   position: relative;
@@ -173,26 +151,6 @@
   }
 }
 
-.setup-guidance {
-  color: #b2c9c5;
-  line-height: 1.6;
-  margin: 14px 0 22px;
-}
-.setup-access,
-.setup-resume {
-  margin-top: 18px;
-  padding: 12px;
-  border: 1px solid #244a46;
-  border-radius: 8px;
-}
-.setup-access summary,
-.setup-resume summary {
-  cursor: pointer;
-  color: #b2c9c5;
-}
-.setup-access .ew-field {
-  margin-top: 12px;
-}
 .wizard :focus-visible,
 .ew-modal :focus-visible {
   outline: 2px solid #83dfcf;

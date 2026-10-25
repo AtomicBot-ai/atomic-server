@@ -54,7 +54,7 @@ it('opens progress immediately on selection and lets Cancel escape a stuck plan 
   expect(begin).not.toHaveBeenCalled()
   expect(ctx.get().setup?.stage).toBe('models')
 })
-it('recovers from a timed-out model check with Retry and installs after the review', async () => {
+it('recovers from a timed-out model check with Retry and starts the download automatically', async () => {
   vi.useFakeTimers()
   const { ctx, begin, plan } = harness(vi.fn(() => new Promise(() => {})))
   try {
@@ -65,9 +65,7 @@ it('recovers from a timed-out model check with Retry and installs after the revi
     expect(ctx.get().setup?.error).toContain('too long')
     plan.mockResolvedValueOnce(selection)
     await setupAction('setup-retry', ctx)
-    expect(ctx.get().setup).toMatchObject({ stage: 'review', preparing: false })
-    expect(begin).not.toHaveBeenCalled()
-    await setupAction('setup-install', ctx)
+    expect(ctx.get().setup).toMatchObject({ stage: 'download', preparing: false })
     expect(begin).toHaveBeenCalledOnce()
     expect(begin).toHaveBeenCalledWith('server', 'llamacpp-upstream|b1|cpu', [selection])
     expect(ctx.get().setup).toMatchObject({ preparing: false, busy: false, error: '' })
@@ -83,7 +81,7 @@ it('keeps a selected TurboQuant engine for ordinary GGUF models', async () => {
   expect(begin).toHaveBeenCalledWith('server', 'llamacpp|v1|metal', [selection])
 })
 
-it('confirms an engine into models and a model into the review before installing', async () => {
+it('chooses an engine and starts the selected model without a confirmation screen', async () => {
   const { ctx, begin } = harness()
   Object.assign(ctx.controller, {
     hub: vi.fn(async () => [{ id: 'AtomicChat/model', downloads: 1 }]),
@@ -94,10 +92,6 @@ it('confirms an engine into models and a model into the review before installing
   expect(ctx.get().setup?.stage).toBe('models')
   expect(ctx.get().focus).toBe('setup-repo:0')
   await setupAction('setup-repo:0', ctx)
-  expect(ctx.get().setup?.stage).toBe('review')
-  expect(ctx.get().focus).toBe('setup-install')
-  expect(begin).not.toHaveBeenCalled()
-  await setupAction('setup-install', ctx)
   expect(ctx.get().setup?.stage).toBe('download')
   expect(begin).toHaveBeenCalledOnce()
 })

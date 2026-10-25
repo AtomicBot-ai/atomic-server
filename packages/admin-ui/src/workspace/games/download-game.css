@@ -1,0 +1,174 @@
+/* Classic Minesweeper controls, adapted from the desktop onboarding game. */
+.download-game-shade {
+  z-index: 120;
+  padding: 12px;
+}
+.download-game-dialog {
+  width: min(100%, 354px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  background: #c0c0c0;
+  color: #111;
+  border: 3px solid;
+  border-color: #fff #707070 #707070 #fff;
+  box-shadow: 0 16px 70px #000b;
+  font:
+    13px Arial,
+    sans-serif;
+}
+.mine-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 5px 4px 9px;
+  background: linear-gradient(90deg, #102780, #4279b7);
+  color: #fff;
+}
+.download-game-dialog .mine-titlebar h2 {
+  font:
+    bold 14px Arial,
+    sans-serif;
+  margin: 0;
+  color: inherit;
+}
+.download-game-dialog button {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  border: 2px solid;
+  border-color: #fff #777 #777 #fff;
+  border-radius: 0;
+  background: #c0c0c0;
+  color: #111;
+  padding: 3px;
+}
+.download-game-dialog button:active,
+.download-game-dialog button[aria-pressed='true'] {
+  border-color: #777 #fff #fff #777;
+  background: #b0b0b0;
+}
+.download-game-dialog button:focus-visible {
+  outline: 2px solid #123e99;
+  outline-offset: -4px;
+}
+.mine-game-body {
+  padding: 12px;
+}
+.download-game-dialog p {
+  color: #222;
+  margin: 0;
+}
+.mine-download-status {
+  padding-bottom: 10px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.mine-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid;
+  border-color: #777 #fff #fff #777;
+  padding: 7px;
+  margin-bottom: 10px;
+}
+.mine-controls output {
+  padding: 0 5px;
+  background: #090909;
+  color: #ff3e39;
+  font: bold 25px monospace;
+}
+.mine-controls button {
+  width: 34px;
+  height: 34px;
+}
+.mine-grid {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 3px solid;
+  border-color: #777 #fff #fff #777;
+}
+.mine-grid [role='row'] {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+.mine-grid [role='gridcell'] {
+  aspect-ratio: 1;
+  min-width: 0;
+  font: bold 20px monospace;
+}
+.mine-grid .revealed {
+  border: 1px solid #999;
+  background: #c8c8c8;
+}
+.mine-grid [data-count='1'] {
+  color: #0000a0;
+}
+.mine-grid [data-count='2'] {
+  color: #006500;
+}
+.mine-grid [data-count='3'] {
+  color: #b00000;
+}
+.mine-grid [data-count='4'] {
+  color: #00005d;
+}
+.mine-grid .exploded {
+  background: #f54444;
+}
+.download-game-dialog .mine-result {
+  margin: 10px 0 5px;
+  font-weight: bold;
+}
+.download-game-dialog .mine-help {
+  font-size: 11px;
+  line-height: 1.45;
+}
+.download-game-dialog .mine-return {
+  margin-top: 12px;
+  padding: 7px 12px;
+  width: 100%;
+}
+
+/* The burst belongs to the board; it never flashes the surrounding setup screen. */
+.mine-explosion {
+  position: absolute;
+  z-index: 2;
+  width: 280%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    #fff7cb 0 3%,
+    #ffe353 7%,
+    #ff8b35 14%,
+    #ed4e7e 24%,
+    #9261e8 34%,
+    #48d9cf80 43%,
+    transparent 52%
+  );
+  transform: translate(-50%, -50%) scale(0);
+  animation: mine-burst 900ms ease-out forwards;
+}
+@keyframes mine-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.02);
+    opacity: 1;
+  }
+  65% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mine-explosion {
+    display: none;
+    animation: none;
+  }
+}

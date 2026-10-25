@@ -1,8 +1,8 @@
 /**
  * The admin API behind the SPA. It holds the daemon's own core link, so the control token stays
  * in this process; the browser only ever has its session cookie. Every route is explicit or on a
- * short allowlist of the control API — `/shutdown`, `/clients`, telemetry consent and cloud keys
- * are never reachable from a page.
+ * short allowlist — `/shutdown`, `/clients` and telemetry consent are never reachable from a page;
+ * a cloud key can be saved through workspace operations but never read back (`has_api_key` only).
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -217,7 +217,7 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
       }
       if (path === ADMIN_API.workspaceExecute && method === 'POST') {
         if (!deps.workspace) throw notImplemented('Workspace operations', 'a workspace-enabled server')
-        const body = (await readJson(req, 64 * 1024 * 1024)) as { operation?: unknown; input?: unknown }
+        const body = (await readJson(req, 140 * 1024 * 1024)) as { operation?: unknown; input?: unknown }
         if (typeof body?.operation !== 'string') throw new AtcError('ATC_USAGE', 'Choose an operation.')
         send(
           res,

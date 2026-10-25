@@ -1,8 +1,8 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { WorkspaceMetrics } from './metrics.js'
+import { WorkspaceMetrics } from './snapshot/metrics.js'
 import { sanitized } from './validation.js'
-import { artifactPlan, destinationOf } from './artifact-plan.js'
+import { artifactPlan, destinationOf } from './models/artifact-plan.js'
 describe('workspace policies', () => {
   it('redacts credentials without stripping token usage or model metadata', () => {
     expect(

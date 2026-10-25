@@ -1,31 +1,26 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
-import { Action, Empty, Field, JsonResult, Panel } from '../Controls'
+import { Action, Field, JsonResult, Panel } from '../Controls'
 import { AdminApiError, describeError } from '@/services/admin-api'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { MediaFields } from './MediaFields'
-import { mediaDefaults, mediaJob } from './media-data'
+import { mediaDefaults, mediaJob, mediaServiceMatches } from './media-data'
+import { MediaStudio } from './MediaStudio'
 
 export function Media({
   workspace: w,
   task,
   openCommand,
+  onCatalog,
 }: {
   workspace: Workspace
   task: string
   openCommand: (name: string) => void
+  onCatalog?: () => void
 }) {
   const [capabilities, setCapabilities] = useState<RecordValue>({})
-  const [values, setValues] = useState<RecordValue>({
-    prompt: '',
-    width: 512,
-    height: 512,
-    steps: 20,
-    cfgScale: 7,
-    batchSize: 1,
-    workflow: 'create',
-  })
+  const [values, setValues] = useState<RecordValue>(() => mediaDefaults({}, task))
   const [error, setError] = useState('')
   const [result, setResult] = useState<unknown>()
   const [job, setJob] = useState<RecordValue | null>(null)
@@ -34,7 +29,7 @@ export function Media({
   const { execute } = w
   const visual = task === 'image' || task === 'video'
   const loaded = w.snapshot?.services.find((row) =>
-    visual ? row.kind === 'image-video' : row.kind === (task === 'router' ? 'decision' : task)
+    visual ? mediaServiceMatches(row, task) : row.kind === (task === 'router' ? 'decision' : task)
   )
   const operation =
     task === 'router'
@@ -94,7 +89,9 @@ export function Media({
             const current = mediaJob(value)
             setJob(current)
             if (!['queued', 'generating', 'running', 'pending'].includes(text(current.state)))
-              void refreshGallery()
+              void refreshGallery().catch((e) => {
+                if (active) setError(describeError(e))
+              })
           }
         })
         .catch((e) => {
@@ -133,155 +130,111 @@ export function Media({
     if (task === 'video') delete data.batchSize
     return data
   }
+  const generate = async () => {
+    const value = await execute(operation, { request: request() })
+    if (!visual) {
+      setResult(value)
+      return
+    }
+    const created = record(value)
+    const id = created.jobId ?? mediaJob(value).id
+    if (!id) throw new Error('Generation did not return a job ID.')
+    const next = mediaJob(await execute(`media.${task}.job`, { id }))
+    setJob(next)
+    if (!['queued', 'generating', 'running', 'pending'].includes(text(next.state))) await refreshGallery()
+  }
+  if (visual)
+    return (
+      <MediaStudio
+        workspace={w}
+        task={task}
+        model={loaded?.model}
+        capabilities={capabilities}
+        values={values}
+        change={change}
+        advanced={advanced}
+        setAdvanced={setAdvanced}
+        error={error}
+        result={result}
+        job={job}
+        gallery={gallery}
+        pending={Boolean(pendingJob)}
+        generate={generate}
+        cancel={async () => {
+          await execute(`media.${task}.cancel`, { id: job?.id })
+          setJob(mediaJob(await execute(`media.${task}.job`, { id: job?.id })))
+        }}
+        refresh={refreshGallery}
+        reset={() => {
+          setValues((current) => ({
+            ...mediaDefaults(capabilities, task),
+            prompt: current.prompt,
+            negativePrompt: current.negativePrompt,
+            workflow: current.workflow,
+          }))
+          setAdvanced('{}')
+        }}
+        restore={(recipe) =>
+          setValues((current) => ({
+            ...current,
+            ...Object.fromEntries(
+              Object.entries(recipe).filter(([key]) =>
+                [
+                  'prompt',
+                  'negativePrompt',
+                  'width',
+                  'height',
+                  'steps',
+                  'cfgScale',
+                  'guidance',
+                  'batchSize',
+                  'seed',
+                  'frames',
+                  'fps',
+                  'workflow',
+                ].includes(key)
+              )
+            ),
+          }))
+        }
+        estimate={async () => setResult(await execute('media.video.estimate', { request: request() }))}
+        onCatalog={onCatalog ?? (() => openCommand('media.load'))}
+      />
+    )
   return (
     <div className="media-layout">
       <Panel
-        title={
-          {
-            image: 'Images',
-            video: 'Video',
-            embedding: 'Embeddings',
-            decision: 'Decisions',
-            router: 'Router',
-          }[task] || task
-        }
+        title={{ embedding: 'Embeddings', decision: 'Decisions', router: 'Router' }[task] || task}
         actions={
-          <Action
-            onClick={() =>
-              openCommand(visual ? 'media.load' : `media.${task === 'router' ? 'decision' : task}.configure`)
-            }
-          >
+          <Action onClick={() => openCommand(`media.${task === 'router' ? 'decision' : task}.configure`)}>
             Configure model
           </Action>
         }
       >
-        <p className="ew-muted">{loaded ? loaded.model : 'Load a compatible model in Engines & Models.'}</p>
+        <p className="ew-muted">{loaded ? loaded.model : 'Load a compatible model in Models.'}</p>
         {error && (
           <p role="alert" className="ew-error">
             {error}
           </p>
         )}
-        <Field
-          label={
-            task === 'embedding'
-              ? 'Input'
-              : task === 'decision'
-                ? 'State'
-                : task === 'router'
-                  ? 'Task'
-                  : 'Prompt'
-          }
-        >
-          <textarea
-            value={text(values.prompt, '')}
-            onChange={(e) => change('prompt', e.target.value)}
-            placeholder=""
-          />
+        <Field label={task === 'embedding' ? 'Input' : task === 'decision' ? 'State' : 'Task'}>
+          <textarea value={text(values.prompt, '')} onChange={(e) => change('prompt', e.target.value)} />
         </Field>
         <MediaFields task={task} capabilities={capabilities} values={values} change={change} />
         <details>
           <summary>Additional parameters</summary>
-          <textarea className="code-input" value={advanced} onChange={(e) => setAdvanced(e.target.value)} />
-          <details>
-            <summary>Model capabilities</summary>
-            <JsonResult value={capabilities} />
-          </details>
+          <textarea
+            className="code-input"
+            aria-label="Additional parameters"
+            value={advanced}
+            onChange={(e) => setAdvanced(e.target.value)}
+          />
         </details>
-        <div className="ew-actions">
-          <Action
-            primary
-            disabled={
-              Boolean(pendingJob) ||
-              !loaded ||
-              (visual && !Array.isArray(capabilities.workflows)) ||
-              !String(values.prompt ?? '').trim()
-            }
-            onClick={async () => {
-              const value = await execute(operation, { request: request() })
-              if (visual) {
-                const created = record(value)
-                const id = created.jobId ?? mediaJob(value).id
-                if (!id) throw new Error('Generation did not return a job ID.')
-                setJob(mediaJob(await execute(`media.${task}.job`, { id })))
-              } else setResult(value)
-            }}
-          >
-            {visual ? 'Generate' : task === 'embedding' ? 'Embed' : 'Run'}
-          </Action>
-          {task === 'video' && (
-            <Action
-              disabled={!loaded}
-              onClick={async () => setResult(await execute('media.video.estimate', { request: request() }))}
-            >
-              Estimate
-            </Action>
-          )}
-        </div>
-        {job && (
-          <div className="job-progress">
-            <div className="ew-actions">
-              <strong>{text(job.state)}</strong>
-              {pendingJob && (
-                <Action
-                  onClick={async () => {
-                    if (window.confirm('Cancel generation? The engine may need to restart.')) {
-                      setResult(await execute(`media.${task}.cancel`, { id: job.id }))
-                      setJob(mediaJob(await execute(`media.${task}.job`, { id: job.id })))
-                    }
-                  }}
-                >
-                  Cancel
-                </Action>
-              )}
-            </div>
-            <progress max={1} value={Number(record(job.progress).fraction || 0)} />
-            <small>
-              {text(record(job.progress).phase, '')} · {text(record(job.progress).step, '0')} /{' '}
-              {text(record(job.progress).totalSteps, '?')} steps
-              {record(job.progress).etaSeconds != null
-                ? ` · ${Math.ceil(Number(record(job.progress).etaSeconds))}s remaining`
-                : ''}
-            </small>
-            {Boolean(job.error) && <JsonResult value={job.error} />}
-          </div>
-        )}
+        <Action primary disabled={!loaded || !String(values.prompt ?? '').trim()} onClick={generate}>
+          {task === 'embedding' ? 'Embed' : 'Run'}
+        </Action>
         <JsonResult value={result} />
       </Panel>
-      {visual && (
-        <Panel title="Gallery" actions={<Action onClick={refreshGallery}>Refresh</Action>}>
-          {gallery.length ? (
-            <div className="gallery-grid">
-              {gallery.map((item, i) => (
-                <article key={text(item.id, String(i))}>
-                  {task === 'image' ? (
-                    <img
-                      src={`/api/workspace/artifacts/image/${encodeURIComponent(text(item.id))}`}
-                      alt={text(record(item.recipe).prompt, 'Generated image')}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <video
-                      src={`/api/workspace/artifacts/video/${encodeURIComponent(text(item.id))}`}
-                      controls
-                      preload="metadata"
-                    />
-                  )}
-                  <small>{text(record(item.recipe).prompt ?? item.prompt, text(item.id))}</small>
-                  <a
-                    className="ew-button"
-                    href={`/api/workspace/artifacts/${task}/${encodeURIComponent(text(item.id))}`}
-                    download
-                  >
-                    Save
-                  </a>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <Empty>No generated {task === 'image' ? 'images' : 'videos'}.</Empty>
-          )}
-        </Panel>
-      )}
     </div>
   )
 }

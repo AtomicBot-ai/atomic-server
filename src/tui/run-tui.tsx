@@ -46,6 +46,7 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
           : options.screen
   let instance: ReturnType<typeof render> | undefined,
     signalled = false,
+    showIntro = true,
     message = options.notice ?? ''
   void options.waitForShutdown(async () => {
     signalled = true
@@ -58,6 +59,7 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
     }
     instance = render(
       <WorkspaceApp
+        showIntro={showIntro}
         deps={workspaceDeps}
         root={options.root}
         {...(page ? { initialPage: page as Page } : {})}
@@ -85,6 +87,7 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
       terminal.stdout.write('\u001b[?1000l\u001b[?1003l\u001b[?1006l')
     }
     if (!handoff || signalled) break
+    showIntro = false
     try {
       await (options.launchAgent ?? runAgent)(handoff)
       message = 'Back in Server. The API is still running.'

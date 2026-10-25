@@ -1,3 +1,5 @@
+import { engineSettingOptions } from './engine-setting-options.js'
+import { buildFields } from './engine-builds.js'
 /**
  * The managed engine panel of Library → Engines (design D16), as data: the lines and buttons for one
  * engine, from the core's state (`engines.plan`) joined with the live snapshot (8.1) — the snapshot's
@@ -24,12 +26,16 @@ import {
   rebootLines,
   failureLines,
   otherOperationLine,
+  changedValues,
   planBlocked,
   reloginLines,
   removalLines,
 } from '../../../workspace-view/index.js'
+import type { EngineUpdateCheck } from '../../../workspace-view/index.js'
 import { foundryModel } from './foundry-panel-model.js'
 import type { FoundryPanelData } from './foundry-panel-model.js'
+import { liteRtModel } from './litert-panel-model.js'
+import type { LiteRtPanelData } from './litert-panel-model.js'
 
 /** The settings form of the open panel: the core's schema and values, and the person's edits. */
 export interface EngineForm {
@@ -44,14 +50,23 @@ export interface EngineForm {
 
 export interface EnginePanel {
   engine: string
-  /** A managed engine (plan, operations), Foundry Local (accelerators, variants) or an engine of builds. */
-  kind: 'managed' | 'foundry' | 'build'
+  /** A managed engine (plan, operations), Foundry Local or LiteRT-LM (accelerators, variants), or an engine of builds. */
+  kind: 'managed' | 'foundry' | 'litert' | 'build'
   /** For an engine of builds: its active build as Library lists it. */
   summary: string
   mode: 'engine' | 'settings' | 'models'
   form: EngineForm | null
+  builds?: Record<string, unknown>[]
+  buildInstalled?: boolean
+  updateCheck?: EngineUpdateCheck
+  activeChoice?: string
+  removeBuild?: number | undefined
+  editing?: string
+  choice?: string
   /** Foundry Local's accelerators, model list and reviewed plan. */
   foundry: FoundryPanelData | null
+  /** LiteRT-LM's accelerator, model list and reviewed plan. */
+  litert?: LiteRtPanelData | null
   /** Opened by guided setup: once the engine is ready it offers to go on to the models. */
   inSetup?: boolean
   /** An update the core offers, shown for consent before its reinstall removes the installed image. */
@@ -91,16 +106,29 @@ export const panelOperation = (p: EnginePanel, live: WorkspaceSnapshot | null) =
 export function panelRefreshKey(p: EnginePanel, live: WorkspaceSnapshot | null): string {
   // Foundry Local: again at every snapshot while a prepare runs; an engine of builds: never.
   if (p.kind === 'foundry') return p.foundry?.view?.preparing ? `prepare:${live?.captured_at ?? 0}` : p.seen
+  if (p.kind === 'litert') return p.litert?.view?.preparing ? `prepare:${live?.captured_at ?? 0}` : p.seen
   if (p.kind === 'build') return p.seen
   return engineRefreshKey(p.engine, live)
 }
 
-export function enginePanelModel(
+export function enginePanelModel(p: EnginePanel, live: WorkspaceSnapshot | null) {
+  const state = engineStateModel({ ...p, mode: p.mode === 'settings' ? 'engine' : p.mode }, live)
+  const settings = settingsModel(p)
+  const fields = [...(state.fields ?? []), ...buildFields(p), ...settings.fields]
+  const buttons = state.buttons.filter((b) => !['engine-settings', 'engine-builds', 'close'].includes(b.id))
+  if (p.form && Object.keys(changedValues(p.form.values, p.form.draft, p.form.descriptors)).length)
+    buttons.push({ id: 'engine-settings-save', label: 'Save changes', hint: 'Save engine settings' })
+  buttons.push({ id: 'close', label: 'Close', hint: 'Close engine settings' })
+  return { lines: state.lines, fields, buttons }
+}
+
+function engineStateModel(
   p: EnginePanel,
   live: WorkspaceSnapshot | null
 ): { lines: PanelLine[]; buttons: PanelButton[]; fields?: PanelButton[] } {
   if (p.mode === 'settings') return settingsModel(p)
   if (p.kind === 'foundry') return foundryModel(p)
+  if (p.kind === 'litert') return liteRtModel(p)
   const lines: PanelLine[] = [{ text: engineName(p.engine), tone: 'title' }]
   const buttons: PanelButton[] = []
   const say = (text: string, tone: PanelLine['tone'] = 'text') => lines.push({ text, tone })
@@ -109,14 +137,26 @@ export function enginePanelModel(
   const end = () => {
     if (p.notice) say(p.notice, 'warn')
     if (p.error) say(p.error, 'error')
-    add('engine-refresh', 'Refresh', 'Ask the core again')
+    if (p.updateCheck?.message)
+      say(p.updateCheck.message, p.updateCheck.phase === 'error' ? 'error' : 'muted')
+    const offered = p.kind === 'build' && p.buildInstalled && p.updateCheck?.phase === 'available'
+    add(
+      offered ? 'engine-install' : 'engine-refresh',
+      offered
+        ? 'Install latest build'
+        : p.updateCheck?.phase === 'checking'
+          ? 'Checking…'
+          : 'Check for updates',
+      'Check available engine builds'
+    )
     add('close', 'Close', 'The operation goes on in the server')
     return { lines, buttons }
   }
   if (p.kind === 'build') {
     say(p.summary || 'Not installed', 'muted')
-    add('engine-settings', 'Settings', 'This engine’s settings in the core')
-    add('engine-builds', 'Builds…', 'Install, activate or remove builds')
+    if (p.engine === 'sd-cpp') say('Generation settings are saved with image and video tasks.', 'muted')
+    if (p.buildInstalled === false)
+      add('engine-install', 'Install engine', 'Install the core-recommended build')
     return end()
   }
   if (!p.state) {
@@ -221,18 +261,34 @@ function settingsModel(p: EnginePanel) {
     { text: 'Changes apply from the next model load.', tone: 'muted' },
   ]
   const f = p.form
+  const changed = f ? changedValues(f.values, f.draft, f.descriptors) : {}
   if (!f) lines.push({ text: p.busy ? 'Reading the settings…' : 'No settings read yet.', tone: 'muted' })
   const fields: PanelButton[] = f
-    ? formFields(f.descriptors).map((d) => ({
-        id: `engine-setting:${d.key}`,
-        label: `${d.title}: ${fieldText(d, fieldValue(d, f.values, f.draft), f.gpus)}${d.key in f.draft ? '  •' : ''}`,
-        hint: d.description.split('. ')[0] ?? d.key,
-      }))
+    ? formFields(f.descriptors).flatMap((d) => {
+        const options = engineSettingOptions(p, d)
+        const field = {
+          id: `engine-setting:${d.key}`,
+          label: `${d.title}: ${fieldText(d, fieldValue(d, f.values, f.draft), f.gpus)}${options.length ? ' v' : ''}${d.key in changed ? '  *' : ''}`,
+          hint: d.description.split('. ')[0] ?? d.key,
+        }
+        return [
+          field,
+          ...(p.choice === d.key
+            ? options.map((option, index) => ({
+                id: `engine-option:${index}`,
+                label: `  ${option.value === fieldValue(d, f.values, f.draft) ? '(o)' : '( )'} ${option.label}`,
+                hint: option.label,
+              }))
+            : []),
+        ]
+      })
     : []
   if (p.notice) lines.push({ text: p.notice, tone: 'warn' })
   if (p.error) lines.push({ text: p.error, tone: 'error' })
   const buttons: PanelButton[] = [
-    { id: 'engine-settings-save', label: 'Save', hint: 'Save the changed settings in the core' },
+    ...(Object.keys(changed).length
+      ? [{ id: 'engine-settings-save', label: 'Save changes', hint: 'Save the changed settings in the core' }]
+      : []),
     { id: 'engine-settings-back', label: 'Back', hint: 'Return to the engine' },
     { id: 'close', label: 'Close', hint: 'Discard unsaved changes' },
   ]

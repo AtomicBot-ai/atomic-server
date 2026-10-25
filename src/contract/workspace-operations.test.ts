@@ -18,6 +18,17 @@ describe('the workspace operation registry', () => {
     }
   )
 
+  // A connector defines or runs a program on the host: an agent gets these only with `atc mcp --allow-exec`.
+  it('marks every operation that defines or runs a connector program as execute', () => {
+    const execute = WORKSPACE_OPERATIONS.filter((op) => op.effect === 'execute').map((op) => op.name)
+    expect(execute.sort()).toEqual([
+      'connectors.call',
+      'connectors.check',
+      'connectors.import',
+      'connectors.save',
+    ])
+  })
+
   it('lets only reads and revealed secrets leave state alone', () => {
     for (const op of WORKSPACE_OPERATIONS.filter((op) => !op.mutates))
       expect(['read', 'secret']).toContain(op.effect)

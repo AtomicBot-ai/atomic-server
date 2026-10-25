@@ -9,6 +9,17 @@ describe('Core media responses', () => {
     })
     expect(mediaJob({ job: null })).toEqual({})
   })
+  it.each(['image', 'video'])('uses shared %s draft defaults before model capabilities arrive', (task) => {
+    expect(mediaDefaults({}, task)).toMatchObject({
+      prompt: '',
+      workflow: 'create',
+      width: 512,
+      height: 512,
+      steps: 20,
+      cfgScale: 7,
+    })
+    if (task === 'video') expect(mediaDefaults({}, task)).not.toHaveProperty('batchSize')
+  })
   it('uses family video defaults without sending nested load-time settings', () => {
     const defaults = mediaDefaults(
       {

@@ -6,7 +6,7 @@ import { AtcError, ATC_ERROR_CODES } from '../errors/index.js'
 import type { AtcErrorCode } from '../errors/index.js'
 import type { WorkspaceInput, WorkspaceSnapshot } from '../contract/index.js'
 import { WorkspaceService } from './service.js'
-import type { WorkspaceServiceOptions } from './service.js'
+import type { WorkspaceServiceOptions } from './service-options.js'
 import { object } from './validation.js'
 export interface WorkspaceClient {
   snapshot(): Promise<WorkspaceSnapshot>
@@ -79,15 +79,18 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
       // Downloads run in the server process; this one may exit before they finish.
       if (
         [
+          'engines.enqueue',
+          'engines.retry',
           'artifacts.install',
           'artifacts.resume',
           'models.install',
           'setup.resume',
           'managed.install',
           'foundry.install',
+          'litert.install',
         ].includes(operation)
       )
-        throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading models.', {
+        throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading engines or models.', {
           hint: 'atc config set admin.autoStart true, then restart the server.',
         })
       return service.execute(operation, input)

@@ -85,6 +85,15 @@ jobs:
       - run: npm run build:bin
       - run: npm run test:e2e
       - run: npm run test:installers
+      # The web admin in headless Chromium: the binary rebuilt with the built SPA inside. Two runners cover
+      # it; the admin is the same page on every OS and Playwright ships no browser for some of the others.
+      - name: web e2e (Playwright)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-14'
+        run: |
+          npm run build:ui
+          npm run build:bin
+          npx playwright install ${{ matrix.os == 'ubuntu-latest' && '--with-deps' || '' }} chromium
+          npm run test:e2e:web
       # The real service manager of the runner: installs, crashes and removes a service. systemd on
       # Linux is the supported path; a launchd agent and a logon task depend on the runner having an
       # interactive session, so they report but do not fail the build until proven there.

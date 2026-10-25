@@ -1,8 +1,10 @@
+import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { useDialog } from '../useDialog'
 import { Action, Field } from '../Controls'
 import { CHAT_DEFAULTS, downloadJson, validPreferences } from './chat-preferences'
 import type { ChatPreferences } from './chat-preferences'
+import { describeError } from '@/services/admin-api'
 const checks = [
   ['sendOnEnter', 'Enter sends; Shift+Enter adds a line'],
   ['autoScroll', 'Follow the response while generating'],
@@ -25,7 +27,7 @@ export function ChatSettings({
     [draft, set] = useState(value),
     [section, setSection] = useState('General'),
     [error, setError] = useState('')
-  return (
+  return createPortal(
     <div className="modal-shade">
       <section
         ref={ref}
@@ -128,7 +130,7 @@ export function ChatSettings({
                     set(validPreferences(data.preferences))
                     setError('')
                   } catch (err) {
-                    setError(String(err))
+                    setError(describeError(err))
                   }
                 }}
               />
@@ -159,6 +161,7 @@ export function ChatSettings({
           <Action onClick={() => set({ ...CHAT_DEFAULTS })}>Reset draft to defaults</Action>
         </div>
       </section>
-    </div>
+    </div>,
+    document.querySelector('.desktop-workspace') ?? document.body
   )
 }

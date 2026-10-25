@@ -69,7 +69,7 @@ export function drawWelcome(
     w,
     slabHeight,
     '[1] SET UP SERVER',
-    'Choose your goal. Review and install.',
+    'Connect agents or expose a model API.',
     focus
   )
   stonePlate(
@@ -80,11 +80,11 @@ export function drawWelcome(
     w,
     slabHeight,
     '[2] SET UP MANUALLY',
-    'Open the workspace. Install later.',
+    'Open Server. Configure services later.',
     focus
   )
   const label = '[3] Set up with an agent'
-  text(c, sx, bottom, label, focus === 'agent-setup' ? COLORS.gold : COLORS.muted)
+  text(c, sx, bottom, label, focus === 'agent-setup' ? COLORS.accent : COLORS.muted)
   c.targets.push({
     id: 'agent-setup',
     x: sx,

@@ -1,3 +1,4 @@
+import { mkdtempSync, rmSync } from 'node:fs'
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -45,4 +46,14 @@ it('adds a key handed to the CLI once, and refuses one that is not a key', async
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
+})
+
+it('answers a bad name or the last key’s revocation as usage errors', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'atc-keys-usage-'))
+  const keys = new ClientKeys(dir)
+  await expect(keys.create('x'.repeat(49))).rejects.toMatchObject({ code: 'ATC_USAGE' })
+  const only = await keys.create('only')
+  await expect(keys.revoke(only.id)).rejects.toMatchObject({ code: 'ATC_USAGE' })
+  await expect(keys.ensure('short', 'n')).rejects.toMatchObject({ code: 'ATC_USAGE' })
+  rmSync(dir, { recursive: true, force: true })
 })

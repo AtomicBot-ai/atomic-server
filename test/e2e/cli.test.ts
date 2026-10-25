@@ -6,6 +6,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { CORE_VERSION } from '@atomic-chat/core'
 import { judgeWindowsAcl, readWindowsAcl } from '@atomic-chat/core/host'
 import { afterAll, describe, expect, it } from 'vitest'
 import { overlayWindowsEnv } from '../../src/host/index.js'
@@ -33,7 +34,7 @@ describe(`atc (${command.join(' ')})`, () => {
   it('reports its version and help', () => {
     const version = atc('version', '--json')
     expect(version.code).toBe(0)
-    expect(JSON.parse(version.out)).toMatchObject({ atc: expect.any(String), core: expect.any(String) })
+    expect(JSON.parse(version.out)).toMatchObject({ atc: expect.any(String), core: CORE_VERSION })
     expect(atc('--help').out).toContain('Usage: atc <command>')
     expect(atc('').code).toBe(2)
   })
@@ -48,7 +49,7 @@ describe(`atc (${command.join(' ')})`, () => {
   it('starts a daemon, serves and stops its public API, then stops the owner', async () => {
     const start = atc('start', '--admin-port', '0', '--json')
     expect(start.code, start.err).toBe(0)
-    expect(JSON.parse(start.out)).toMatchObject({ started: true, running: true })
+    expect(JSON.parse(start.out)).toMatchObject({ started: true, running: true, core_version: CORE_VERSION })
     const status = atc('status', '--json')
     expect(status.code).toBe(0)
     const body = JSON.parse(status.out) as { running: boolean; admin_url: string | null }

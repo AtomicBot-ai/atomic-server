@@ -20,7 +20,9 @@ export async function workspaceServer(
   paths: AtcPaths,
   env: Record<string, string | undefined> = {},
   /** Where `https://huggingface.co` is served instead, for the code that does not read `HF_ENDPOINT`. */
-  hub?: string
+  hub?: string,
+  /** The machine the server runs on, when the test is about another one. */
+  host: { platform?: NodeJS.Platform; arch?: string } = {}
 ): Promise<{ service: WorkspaceService; close(): Promise<void> }> {
   const request: typeof fetch = (input, init) =>
     fetch(
@@ -29,7 +31,7 @@ export async function workspaceServer(
         : input,
       init
     )
-  const service = new WorkspaceService({ link, paths, config: defaultConfig(), env, fetch: request })
+  const service = new WorkspaceService({ link, paths, config: defaultConfig(), env, fetch: request, ...host })
   const server: Server = createServer((req, res) => {
     const reply = (status: number, value: unknown) =>
       res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(value))

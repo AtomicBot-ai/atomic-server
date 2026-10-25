@@ -7,7 +7,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'models.catalog',
     'Model catalog',
     'read',
-    'Browse the curated model catalog, optionally by category and search text; refresh fetches it again.',
+    "Browse the curated model catalog, optionally by category and search text; refresh fetches it again. With litert-lm: conf's curated LiteRT-LM models only, each variant for this platform with the core's verdict.",
     {
       properties: {
         category: { type: 'string', enum: ['text', 'image', 'video', 'embedding', 'decision'] },
@@ -21,7 +21,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'models.search',
     'Search Hugging Face',
     'read',
-    "Search Hugging Face for model repositories. With a managed engine: its curated models first, then safetensors repositories narrowed by the descriptor's architectures and the largest card; an exact owner/repo is always shown. With foundry-local: conf's curated models, then Microsoft's catalog, each variant for this platform with the core's verdict.",
+    "Search Hugging Face for model repositories. With a managed engine: its curated models first, then safetensors repositories narrowed by the descriptor's architectures and the largest card; an exact owner/repo is always shown. With foundry-local: conf's curated models, then Microsoft's catalog, each variant for this platform with the core's verdict. With litert-lm: conf's curated models, then Hugging Face's (unverified) of conf's organisations, variants by file name.",
     { properties: { query: { type: 'string' }, engine: { type: 'string' } } }
   ),
   operation(
@@ -148,6 +148,20 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     properties: { setup_id: { type: 'string' } },
     required: ['setup_id'],
   }),
+  operation(
+    'downloads.remove',
+    'Remove download',
+    'configure',
+    'Stop a model download and delete its unshared files and partial download data. Installed models require installed=true and are deleted through the core; loaded models are protected.',
+    {
+      properties: {
+        id: { type: 'string' },
+        owner: { type: 'string', enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert'] },
+        installed: { type: 'boolean' },
+      },
+      required: ['id', 'owner'],
+    }
+  ),
   operation(
     'artifacts.plan',
     'Review media installation',

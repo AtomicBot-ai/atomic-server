@@ -1,4 +1,4 @@
-import { mkdtemp, stat, rm } from 'node:fs/promises'
+import { mkdtemp, stat, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { expect, it, vi } from 'vitest'
@@ -27,7 +27,10 @@ it('restores conversation context across launches, renames, and deletes just the
     expect((await reopened.load(chat.id))?.title).toBe('Renamed')
     await reopened.remove(chat.id)
     expect(await reopened.list()).toEqual([])
-    await expect(reopened.load('../../outside')).rejects.toThrow('Invalid conversation ID')
+    await expect(reopened.load('../../outside')).rejects.toMatchObject({
+      code: 'ATC_USAGE',
+      message: 'Invalid conversation ID.',
+    })
   } finally {
     await rm(folder, { recursive: true, force: true })
   }
@@ -88,6 +91,19 @@ it('preserves image content parts through a save and reopen', async () => {
     ]
     await history.save(chat)
     expect((await new ChatHistory(folder).load(chat.id))?.messages).toEqual(chat.messages)
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})
+
+it('lists the conversations it can read when one file is damaged', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-history-damaged-'))
+  try {
+    const store = new ChatHistory(folder)
+    const good = store.create('http://localhost:1337/v1', 'local', '/p')
+    await store.save(good)
+    await writeFile(join(folder, 'chats', '00000000-0000-4000-8000-000000000000.json'), '{ not json')
+    expect((await store.list()).map((c) => c.id)).toEqual([good.id])
   } finally {
     await rm(folder, { recursive: true, force: true })
   }

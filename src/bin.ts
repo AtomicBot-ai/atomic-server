@@ -10,12 +10,19 @@ const crash = (write: (text: string) => void) => (error: unknown) => {
   process.exit(1)
 }
 
-// The core starts its Foundry Local host as `atc foundry-host …` (`foundryHostCommand`). That mode is the
-// core's own entry: it runs before atc parses a command or builds its I/O, so the host's stdout carries
-// protocol lines alone.
-if (process.argv[2] === 'foundry-host') {
-  import('@atomic-chat/core/foundry-host')
-    .then(({ runFoundryHostMain }) => runFoundryHostMain(process.argv.slice(3)))
+// The core starts its Foundry Local and LiteRT-LM hosts as `atc foundry-host …` and `atc litert-host …`
+// (`foundryHostCommand`, `liteRtHostCommand`). Those modes are the core's own entries: they run before
+// atc parses a command or builds its I/O, so a host's stdout carries protocol lines alone.
+const hostMain: Record<string, () => Promise<(argv: string[]) => Promise<number>>> = {
+  'foundry-host': () => import('@atomic-chat/core/foundry-host').then((m) => m.runFoundryHostMain),
+  'litert-host': () =>
+    import('@atomic-chat/core/litert-host').then((m) => (argv) => m.runLiteRtHostMain(argv)),
+}
+const host = hostMain[process.argv[2] ?? '']
+
+if (host) {
+  host()
+    .then((run) => run(process.argv.slice(3)))
     .then(
       (code) => process.exit(code),
       crash((text) => process.stderr.write(text))

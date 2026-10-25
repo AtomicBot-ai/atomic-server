@@ -1,4 +1,9 @@
-import type { FoundryModelPlan, ManagedModelPlan, ManagedVerdict } from '../contract/index.js'
+import type {
+  FoundryModelPlan,
+  LiteRtModelPlan,
+  ManagedModelPlan,
+  ManagedVerdict,
+} from '../contract/index.js'
 import type { BackendCatalogResponse } from '@atomic-chat/core'
 import type { ModelSetup, ModelSetupPlan, ModelSetupPlanRequest } from '../contract/index.js'
 export type { BackendCatalogResponse, ModelSetup, ModelSetupPlan, ModelSetupPlanRequest }
@@ -57,6 +62,12 @@ export interface SetupView {
   /** Setup with a managed engine or Foundry Local instead of a GGUF download. */
   path: EngineSetupPath | null
   engine: string
+  /** First-run model radio selection; keyboard focus can move without changing it. */
+  firstChoice?: string
+  /** Preserve the chosen workspace destination when a background first model becomes ready. */
+  destination?: 'chat' | 'server'
+  /** Core-reported hardware summary used by first run. Memory is in MiB. */
+  device?: { name: string; memory: number }
   query: string
   repositories: HubRepository[]
   repository: string
@@ -92,12 +103,12 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
   }
 }
 
-/** A managed engine's or Foundry Local's model download that guided setup started (its request id). */
+/** A managed engine's, Foundry Local's or LiteRT-LM's model download that guided setup started (its request id). */
 export interface EngineSetupJob {
   id: string
-  kind: 'managed-model' | 'foundry-model'
+  kind: 'managed-model' | 'foundry-model' | 'litert-model'
   engine: string
-  /** The model id the engine loads: the repository, or the Foundry Local variant. */
+  /** The model id the engine loads: the repository, or the Foundry Local or LiteRT-LM variant. */
   model: string
 }
 export interface EngineSetupRow {
@@ -105,12 +116,12 @@ export interface EngineSetupRow {
   title: string
   detail: string
 }
-/** Guided setup with a managed engine or Foundry Local: its model list, the reviewed plan, the job. */
+/** Guided setup with a managed engine, Foundry Local or LiteRT-LM: its model list, the reviewed plan, the job. */
 export interface EngineSetupPath {
   engine: string
-  kind: 'managed' | 'foundry'
+  kind: 'managed' | 'foundry' | 'litert'
   rows: EngineSetupRow[]
-  plan: ManagedModelPlan | FoundryModelPlan | null
+  plan: ManagedModelPlan | FoundryModelPlan | LiteRtModelPlan | null
   /** The core's verdict of every managed engine on the reviewed checkpoint (`models.check`). */
   verdicts?: ManagedVerdict[]
   job: EngineSetupJob | null

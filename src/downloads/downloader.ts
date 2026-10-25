@@ -49,6 +49,8 @@ export interface DownloadOptions {
   resume?: boolean
   /** Absolute folders outside the data folder this call may also write into. */
   allowedRoots?: string[]
+  /** This call's requests go through it (a token scoped to one origin), over the item's own fetch. */
+  wrapFetch?: (base: typeof fetch) => typeof fetch
 }
 export interface DownloadProgress {
   taskId: string
@@ -141,7 +143,10 @@ export class Downloader {
       const problem = item.proxy ? validateProxyConfig(item.proxy) : undefined
       if (problem) throw Object.assign(new Error(`Error: ${problem}`), { code: PROXY_CONFIG_INVALID })
     }
-    const fetchOf = (item: DownloadItem) => (this.deps.fetchFor ?? policyFetchFor)(item, this.deps.fetch)
+    const fetchOf = (item: DownloadItem) => {
+      const own = (this.deps.fetchFor ?? policyFetchFor)(item, this.deps.fetch)
+      return options.wrapFetch ? options.wrapFetch(own) : own
+    }
     const sizes: number[] = []
     for (const item of items)
       sizes.push(

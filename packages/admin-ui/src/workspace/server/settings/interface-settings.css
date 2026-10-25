@@ -1,0 +1,125 @@
+/* Shared browser theme; the desktop uses the same foreground/background separation. */
+html:not(.dark) .desktop-workspace {
+  color-scheme: light;
+  --ew-bg: #fafafa;
+  --ew-panel: #fff;
+  --ew-raised: #efefef;
+  --ew-line: #d7d7da;
+  --ew-muted: #626269;
+  --ew-text: #202023;
+  --ew-teal: #277d68;
+  color: var(--ew-text);
+  background: var(--ew-bg);
+}
+html:not(.dark)
+  .desktop-workspace
+  :is(
+    .desktop-rail,
+    .desktop-sidebar,
+    .server-ready-strip,
+    .server-tool,
+    .ew-modal,
+    .hub-menu,
+    .hub-search,
+    .ew-panel,
+    .connection-guide,
+    .server-settings-panel,
+    .server-review-summary,
+    .detail-picker-list
+  ) {
+  background: var(--ew-panel);
+  color: var(--ew-text);
+  border-color: var(--ew-line);
+}
+html:not(.dark) .desktop-workspace :is(input, select, textarea, .hub-toolbar > select) {
+  background: var(--ew-bg);
+  color: var(--ew-text);
+  border-color: var(--ew-line);
+}
+html:not(.dark)
+  .desktop-workspace
+  :is(.sidebar-sections button, .sidebar-agents button, .hub-menu label, .ew-button:not(.primary)) {
+  color: var(--ew-text);
+}
+html:not(.dark)
+  .desktop-workspace
+  :is(
+    .sidebar-sections button.active,
+    .sidebar-sections button:hover,
+    .sidebar-agents button:hover,
+    .ew-button:hover:not(:disabled),
+    .hub-model-row.expanded
+  ) {
+  background: var(--ew-raised);
+}
+html:not(.dark) .desktop-workspace .ew-button.danger {
+  color: #a3302b;
+}
+html:not(.dark) .desktop-workspace .desktop-server-control {
+  background: #e3f0ec;
+}
+html:not(.dark) .desktop-workspace .server-power.is-running button {
+  color: #277d68;
+}
+html:not(.dark) .desktop-workspace .rail-brand img {
+  filter: brightness(0);
+}
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.settings-unavailable {
+  margin: 0;
+  color: var(--ew-muted);
+  line-height: 1.6;
+}
+.settings-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: var(--ew-muted);
+  text-align: center;
+}
+.skills-settings {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  min-height: 480px;
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+}
+.skills-settings > aside {
+  padding: 20px;
+  border-right: 1px solid var(--ew-line);
+}
+.skills-settings p {
+  line-height: 1.6;
+}
+.settings-general-advanced {
+  display: grid;
+  gap: 12px;
+}
+.settings-general-advanced > details > summary {
+  cursor: pointer;
+  font-weight: 500;
+}
+.settings-general-advanced > details[open] > summary {
+  margin-bottom: 20px;
+}
+.settings-card > .runtime-settings > .settings-card {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+@media (max-width: 640px) {
+  .skills-settings {
+    grid-template-columns: 1fr;
+  }
+  .skills-settings > aside {
+    border-right: 0;
+    border-bottom: 1px solid var(--ew-line);
+  }
+}

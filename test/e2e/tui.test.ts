@@ -6,67 +6,20 @@ import { readyWorkspace } from '../helpers/ready-workspace.js'
  * checked by hand there (docs/testing.md).
  */
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { ATC } from '../helpers/binary.js'
+import { ATC, runAtc } from '../helpers/binary.js'
+import { DRIVER, hasPython } from '../helpers/pty-driver.js'
 
 const command = [...ATC]
 const dataFolder = join(mkdtempSync(join(tmpdir(), 'atc-e2e-tui-')), 'data')
 
-afterAll(() => rmSync(join(dataFolder, '..'), { recursive: true, force: true }))
-
-/**
- * Run argv in a 100×30 pseudo-terminal; `steps` alternate "wait until the screen shows this" and
- * "type this". Prints a JSON line with the exit code and everything the program wrote.
- */
-const DRIVER = String.raw`
-import json, os, pty, select, struct, sys, time, fcntl, termios
-steps = json.loads(sys.argv[1]); argv = sys.argv[2:]
-pid, fd = pty.fork()
-if pid == 0:
-    os.execvp(argv[0], argv)
-fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 30, 100, 0, 0))
-out = b''
-def pump(until=None, seconds=20.0):
-    global out
-    end = time.time() + seconds
-    while time.time() < end:
-        if until is not None and until.encode() in out: return True
-        r, _, _ = select.select([fd], [], [], 0.05)
-        if r:
-            try: data = os.read(fd, 65536)
-            except OSError: return False
-            if not data: return False
-            out += data
-    return until is None
-ok = True
-failed = []
-for step in steps:
-    if 'wait' in step:
-        seen = pump(step['wait'])
-        if not seen: failed.append(step['wait'])
-        ok = seen and ok
-    else:
-        try: os.write(fd, step['type'].encode())
-        except OSError: ok = False
-        # A pause as between two presses: Esc followed at once by a key reads as Alt+key.
-        pump(seconds=0.3)
-code = None
-end = time.time() + 15
-while time.time() < end:
-    done, status = os.waitpid(pid, os.WNOHANG)
-    if done:
-        code = os.waitstatus_to_exitcode(status); break
-    pump(seconds=0.1)
-if code is None: os.kill(pid, 9)
-print(json.dumps({'ok': ok, 'failed':failed, 'code': code, 'out': out.decode('utf8', 'replace')}))
-`
-
-function hasPython(): boolean {
-  return spawnSync('python3', ['-c', 'import pty'], { encoding: 'utf8' }).status === 0
-}
+afterAll(() => {
+  runAtc(['stop', '--data-folder', dataFolder])
+  rmSync(join(dataFolder, '..'), { recursive: true, force: true })
+})
 
 // eslint-disable-next-line no-control-regex
 const strip = (s: string) => s.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, '')
@@ -87,16 +40,89 @@ describe(`atc tui (${command.join(' ')})`, () => {
   })
 
   it.skipIf(process.platform === 'win32' || !hasPython())(
+    'returns from engine choice to the intro with Escape on a fresh command entry',
+    () => {
+      const steps = [
+        { wait: 'Choose engine' },
+        { type: '\r' },
+        { wait: 'Choose your engine' },
+        { type: '\u001b' },
+        { wait: 'Choose engine', fresh: true },
+        { type: '\r' },
+        { wait: 'Choose your engine', fresh: true },
+        { type: '\u0011' },
+      ]
+      const result = spawnSync(
+        'python3',
+        [
+          '-c',
+          DRIVER,
+          JSON.stringify(steps),
+          ...command,
+          '--data-folder',
+          join(dataFolder, '..', 'first-run'),
+        ],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, TERM: 'xterm-256color', NO_COLOR: '1' },
+          timeout: 60_000,
+        }
+      )
+      expect(result.status, result.stderr).toBe(0)
+      const session = JSON.parse(result.stdout.trim().split('\n').at(-1)!) as {
+        ok: boolean
+        code: number
+        out: string
+      }
+      expect(session.ok, strip(session.out).slice(-2000)).toBe(true)
+      expect(session.code).toBe(0)
+      expect(strip(session.out)).not.toContain('Press any key')
+    }
+  )
+
+  it.skipIf(process.platform === 'win32' || !hasPython())(
     'opens on bare atc in a pseudo-terminal, switches screens, and gives the terminal back',
     () => {
       readyWorkspace(dataFolder)
+      expect(runAtc(['config', 'set', 'admin.port', '0', '--data-folder', dataFolder]).code).toBe(0)
+      const cache = join(dataFolder, 'atc', 'cache')
+      mkdirSync(cache, { recursive: true })
+      writeFileSync(
+        join(cache, 'workspace-staff-picks.json'),
+        JSON.stringify({
+          at: Date.now(),
+          data: { picks: [{ model_name: 'fixture/tui', title: 'Fixture model', format: 'gguf' }] },
+        })
+      )
       const steps = [
-        { wait: 'Choose a model below' },
+        { wait: 'Agents & tools' },
+        { resize: [24, 54] },
+        { wait: 'Agents' },
+        { resize: [36, 120] },
+        { type: '\u001b2' },
+        { wait: 'Fixture model' },
+        { type: '\u001b' },
+        { type: '\u001b[B' },
+        { type: '\u001b[B' },
+        { type: '\r' },
+        { wait: 'OpenAI' },
+        { type: '\r' },
+        { wait: 'Connect OpenAI' },
+        { type: '\r' },
+        { wait: 'Paste your provider API key' },
+        { type: '\u001b' },
+        { type: '\u001b' },
+        { type: '\u001b' },
         { type: '\u0007' },
         { type: 's' },
-        { wait: 'Copy address' },
+        { wait: 'General' },
+        { type: '\u001b4' },
+        { wait: 'How can I help you today?' },
+        { type: '\u001b1' },
         { type: '\u000b' },
-        { wait: 'Keyboard shortcuts' },
+        // Settings shows "Keyboard shortcuts" too: wait for what only the Help overlay draws.
+        { wait: 'Email support', fresh: true },
+        // Esc and Ctrl+Q may reach a busy atc as one event; it reads that as both keys.
         { type: '\u001b' },
         { type: '\u0011' },
       ]
@@ -120,10 +146,41 @@ describe(`atc tui (${command.join(' ')})`, () => {
       const screen = strip(result.out)
       expect(result.ok, result.failed.join(', ') + '\n' + screen.slice(-2000)).toBe(true)
       expect(result.code, screen.slice(-2000)).toBe(0)
-      expect(screen).toContain('ATOMIC CHAT')
+      expect(screen).toContain('ATOMIC SERVER')
       expect(result.out).toContain('\u001b[?1006l')
       expect(result.out).toContain('\u001b[?1049h')
       expect(result.out).toContain('\u001b[?1049l')
+    }
+  )
+  it.skipIf(process.platform === 'win32' || !hasPython())(
+    'quits when Esc and Ctrl+Q reach it as one write, as on a busy runner',
+    () => {
+      const folder = join(dataFolder, '..', 'glued-keys')
+      readyWorkspace(folder)
+      expect(runAtc(['config', 'set', 'admin.port', '0', '--data-folder', folder]).code).toBe(0)
+      const steps = [
+        { wait: 'Agents & tools' },
+        { type: '\u000b' },
+        { wait: 'Email support', fresh: true },
+        { type: '\u001b\u0011' },
+      ]
+      const res = spawnSync(
+        'python3',
+        ['-c', DRIVER, JSON.stringify(steps), ...command, '--data-folder', folder],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, TERM: 'xterm-256color', NO_COLOR: '1' },
+          timeout: 60_000,
+        }
+      )
+      expect(res.status, res.stderr).toBe(0)
+      const result = JSON.parse(res.stdout.trim().split('\n').at(-1) as string) as {
+        ok: boolean
+        code: number | null
+        out: string
+      }
+      expect(result.ok, strip(result.out).slice(-2000)).toBe(true)
+      expect(result.code, strip(result.out).slice(-2000)).toBe(0)
     }
   )
 })

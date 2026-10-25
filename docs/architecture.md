@@ -29,6 +29,7 @@ the code disagree, fix the page.
 | engines | per session | Children of the daemon, journalled by the core in `processes.json`; a later owner reaps orphans. |
 | `atc host-step exec` (hidden) | seconds | The privileged half of a managed-runtime step: file in, file out, no network. |
 | `atc foundry-host …` (hidden) | per Foundry Local session | The core's Foundry Local host, started by the core as `<this binary> foundry-host …`. `src/bin.ts` hands that argv to `@atomic-chat/core/foundry-host` before parsing any command, so its stdout carries the host protocol alone; the binary carries the core's FFI module. |
+| `atc litert-host …` (hidden) | per LiteRT-LM probe or session | The core's LiteRT-LM host, dispatched to `@atomic-chat/core/litert-host` before command parsing. Its native FFI loader is bundled into the executable; engine libraries are installed separately by the core. |
 
 Crashes: the daemon is the core; they fall together. Recovery is the core's model — the next command
 respawns, the new owner reaps orphans, managed operations recover from the core's store. Supervision
@@ -213,15 +214,21 @@ Not done here: auto-starting the public API and `models.autoLoad` (iteration 2).
   accepted too, for scripts and tests. `atc admin token --rotate` replaces the token.
 - **Gates** (`gates.ts`, before any handler, in the control server's style): peer address must be loopback
   (403), `Host` must be a loopback name — DNS-rebinding defence (421); a mutating request must carry
-  `X-Atc-Admin: 1` and an `Origin` equal to our own `Host` (403) — a cross-site form or fetch has neither.
-  Bodies are capped at 8 MiB. The SPA is served with `Content-Security-Policy: default-src 'self'`.
+  `X-Atc-Admin: 1`, and an `Origin` it sends must equal our own `Host` (403) — a cross-site form or fetch
+  cannot set the header, and a browser always sends `Origin` with it; a script without `Origin` still needs
+  the session or the admin token.
+  Bodies are capped at 8 MiB, `POST /api/workspace/execute` at 140 MiB (documents and images travel as
+  base64 in the operation's input). The SPA is served with `Content-Security-Policy: default-src 'self'`.
 - **Routes** (`bff.ts`): `GET /api/status`, `POST|DELETE /api/session`, `GET /api/config` (`PATCH` is
   iteration 5), `GET /api/events` (SSE), `ANY /api/core/*` → the control API with the daemon's token, but only
   on the allowlist: reads of `/health /snapshot /sessions /server /backends /hardware /environments
   /settings /telemetry /disk` and their sub-paths; writes only on the exact routes of `WRITE_ROUTES` (model
   load/unload, server start/stop, backends, hardware override, `PATCH /settings/:provider`, environment
-  operations, download cancel, disk, GGUF validation). A page can never post a host-step receipt. `/shutdown`, `/clients`, telemetry consent and
-  cloud keys are never reachable from a page. `/api/setup/*`, `/api/logs`, `/api/engines/:p/schema` answer
+  operations, download cancel, disk, GGUF validation). `POST /api/workspace/execute` runs any workspace
+  operation for the signed-in operator, the same registry `atc control` and `atc mcp` use. A page can never
+  post a host-step receipt. `/shutdown`, `/clients` and telemetry consent are never reachable from a page; a
+  cloud key can be saved (`cloud.save`, `cloud.connect`) but never read back — snapshots carry
+  `has_api_key` only. `/api/setup/*`, `/api/logs`, `/api/engines/:p/schema` answer
   501 until their iterations.
 - **Events** (`relay.ts`): one stream for the browser — the core's events plus `atc:*` — numbered `r<n>` by
   the relay; `Last-Event-ID` resumes from a 1000-entry ring, older cursors get a `resync`; `: ping` every 15 s.

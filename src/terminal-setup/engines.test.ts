@@ -98,15 +98,16 @@ it('offers the build the core names as latest, and none when the core offers non
   }
 })
 
-// Installed managed engines and Foundry Local are choices too (spec server-engine-settings); a pick
-// remembers the engine: there is no llama.cpp build to activate.
-it('adds installed managed engines and Foundry Local after llama.cpp, and selects them without activating a build', async () => {
+// Installed managed engines, Foundry Local and LiteRT-LM are choices too (spec server-engine-settings); a
+// pick remembers the engine: there is no llama.cpp build to activate.
+it('adds installed managed engines, Foundry Local and LiteRT-LM after llama.cpp, and selects them without activating a build', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'atc-engine-managed-')),
     link = fakeCoreLink()
   link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', backend: 'cpu' }] }
   link.responses['POST /engines/versions'] = {
     engines: [
       { engine: 'llamacpp-upstream', latest: null, active: null },
+      { engine: 'litert-lm', active: { version: '0.18.1', variant: 'win-x64' } },
       { engine: 'foundry-local', active: { version: 'v2.1.0', variant: 'win-x64' } },
       { engine: 'tensorrt-llm', active: { version: 'trt-1', variant: 'linux/amd64' } },
       { engine: 'sglang', active: null },
@@ -127,6 +128,7 @@ it('adds installed managed engines and Foundry Local after llama.cpp, and select
       'vllm',
       'tensorrt-llm',
       'foundry-local',
+      'litert-lm',
     ])
     expect(choices.slice(1).every((c) => c.installed)).toBe(true)
     link.calls.length = 0

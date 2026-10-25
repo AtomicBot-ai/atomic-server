@@ -16,10 +16,7 @@ export async function goalSetupAction(id: string, ctx: ActionContext): Promise<b
   ctx.update((s) => ({ ...s, overlay: null, setupGoal: goal.id, message: goal.guidance }))
   if (goal.category === 'text') {
     // Use the existing durable text setup, including its verified readiness check.
-    if (ctx.get().setupComplete) {
-      await ctx.controller.save('tui.mode', 'server')
-      await setupAction('install-models', ctx)
-    } else await setupAction('hosting', ctx)
+    await setupAction(ctx.get().setupComplete ? 'install-models' : 'hosting', ctx)
   } else {
     // The shared media catalog reviews compatibility before installing. Opening it
     // records a manual workspace entry, never a successful inference check.
@@ -45,10 +42,10 @@ export function drawGoalSetup(c: Canvas, focus: string) {
   for (let row = y; row <= bottom; row++)
     text(c, x, row, ' '.repeat(width), COLORS.text, width, COLORS.header)
   c.targets = []
-  text(c, x + 2, y + 1, 'What will you use it for?', COLORS.gold, width - 4)
+  text(c, x + 2, y + 1, 'What should this server power?', COLORS.accent, width - 4)
   SETUP_GOALS.forEach((goal, index) => {
     button(c, `goal:${goal.id}`, x + 2, y + 3 + index, goal.label, goal.guidance, focus)
   })
-  text(c, x + 2, bottom - 3, 'Review downloads before installing.', COLORS.muted, width - 4)
+  text(c, x + 2, bottom - 3, 'Review downloads. Verify the API. Connect your tools.', COLORS.muted, width - 4)
   button(c, 'close', x + 2, bottom - 1, 'Back', 'Return without changing setup', focus)
 }

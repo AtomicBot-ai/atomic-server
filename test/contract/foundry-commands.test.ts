@@ -133,10 +133,10 @@ describe('atc engines install foundry-local', () => {
       updated: true,
       active: { version: 'v2.1.0', variant: 'win-x64' },
     }
-    expect(await t.run(['engines', 'install', 'foundry-local'])).toBe(0)
-    expect(prepares()).toHaveLength(1)
-    t.link.calls.length = 0
+    // --no-accelerators first: once the first install prepared them, nothing is left to prepare.
     expect(await t.run(['engines', 'install', 'foundry-local', '--no-accelerators'])).toBe(0)
     expect(prepares()).toEqual([])
+    expect(await t.run(['engines', 'install', 'foundry-local'])).toBe(0)
+    expect(prepares()).toHaveLength(1)
   })
 })

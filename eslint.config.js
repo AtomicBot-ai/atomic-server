@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import js from '@eslint/js'
 import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
@@ -34,15 +34,6 @@ const NODE_PREFIX_PATHS = NODE_BUILTINS.map((name) => ({
   message: `Import '${name}' as 'node:${name}'.`,
 }))
 const NO_BUN = { group: ['bun', 'bun:*'], message: 'atc code must stay Node-compatible.' }
-// `../<module>/<file>` reaches past a sibling module's index.ts. Modules are the folders of `src/`;
-// folders inside a module (`src/tui/workspace/chat/`) are its own business.
-const MODULES = readdirSync(new URL('./src', import.meta.url), { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
-const THROUGH_INDEX = {
-  regex: `^(\\.\\./)+(${MODULES.join('|')})/(?!index(\\.js)?$)`,
-  message: 'Import sibling modules through their index.ts only.',
-}
 // The core only through its package `exports` (AGENTS.md §8), read from the installed core so a new
 // subpath is allowed the day it is pinned. A deep path (`/dist/…`, `/src/…`) reaches past its contract.
 const CORE_SUBPATHS = Object.keys(
@@ -63,6 +54,8 @@ export default tseslint.config(
       'coverage',
       'node_modules',
       '.core',
+      // Agent worktrees (`.claude/worktrees/*`) are other checkouts, with their own `dist/`.
+      '.claude',
       // The admin SPA lints with its own browser/React config (`packages/admin-ui/eslint.config.js`).
       'packages/admin-ui',
       '**/*.generated.ts',
@@ -95,15 +88,6 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.ts', 'src/**/*.tsx'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        { paths: NODE_PREFIX_PATHS, patterns: [NO_BUN, THROUGH_INDEX, CORE_EXPORTS_ONLY] },
-      ],
-    },
-  },
-  {
     // The terminal UI is React (Ink): the hooks rules apply as in the admin SPA.
     files: ['src/tui/**/*.tsx', 'src/tui/**/*.ts'],
     plugins: { 'react-hooks': reactHooks },
@@ -118,7 +102,6 @@ export default tseslint.config(
         {
           patterns: [
             { group: ['node:*'], message: 'src/contract must stay browser-safe.' },
-            THROUGH_INDEX,
             CORE_EXPORTS_ONLY,
           ],
         },

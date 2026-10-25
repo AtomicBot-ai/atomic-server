@@ -113,9 +113,6 @@
   display: inline-block;
   margin: 0 10px;
 }
-.chat-enhanced .chat-parameters {
-  max-height: 36vh;
-}
 .chat-enhanced fieldset {
   border: 0;
   margin: 0;
@@ -186,6 +183,19 @@
 }
 .settings-dialog {
   width: min(980px, 94vw);
+}
+.desktop-workspace .settings-dialog .ew-button {
+  box-sizing: border-box;
+  min-height: 40px;
+  min-width: 112px;
+  padding: 9px 16px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.settings-dialog .ew-actions {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .setting-groups {
   display: flex;

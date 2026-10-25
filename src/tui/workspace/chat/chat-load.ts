@@ -16,8 +16,11 @@ import type { WorkspaceState } from '../state.js'
  * switches to it only once it is ready); its elapsed time counted on from when the stage was seen.
  */
 export function currentLoad(s: WorkspaceState, now = Date.now()) {
+  if (s.loadError?.model === s.model && !s.modelLoad) return undefined
   const loads = s.workspace?.loads ?? []
-  const load = loads.find((l) => l.model_id === s.model) ?? [...loads].sort((a, b) => b.at - a.at)[0]
+  const load = s.modelLoad
+    ? loads.find((l) => l.model_id === s.modelLoad?.model && l.provider === s.modelLoad.provider)
+    : (loads.find((l) => l.model_id === s.model) ?? [...loads].sort((a, b) => b.at - a.at)[0])
   return load ? { ...load, elapsed_ms: load.elapsed_ms + Math.max(0, now - load.at) } : undefined
 }
 
@@ -27,40 +30,36 @@ export function drawLoadLine(
   x: number,
   y: number,
   width: number,
-  focus: string
+  focus: string,
+  seconds = 0
 ) {
   const load = currentLoad(s)
-  if (load) {
-    const label = `Loading ${load.model_id} on ${load.provider}: ${loadStageText(load)}`
-    text(c, x, y, label, COLORS.gold, Math.max(0, width - 16))
-    button(
-      c,
-      'cancel-load',
-      x + Math.min(label.length + 2, width - 14),
-      y,
-      'Cancel load',
-      'Stop this load',
-      focus
-    )
+  if (load || s.modelLoad) {
+    const spinner = s.motion ? '|/-\\'[Math.floor(seconds * 6) % 4] : '·'
+    const label = `${spinner} ${load ? `${load.model_id !== s.model ? `Loading ${load.model_id}: ` : ''}${loadStageText(load)}` : 'Loading model…'}`
+    text(c, x, y, label, COLORS.composerInk, Math.max(0, width - 14), COLORS.composer)
+    button(c, 'cancel-load', x + width - 13, y, 'Cancel load', 'Stop this load', focus)
   } else if (s.loadError) {
     const label = `Load failed: ${s.loadError.message}`
-    text(c, x, y, label, COLORS.red, Math.max(0, width - 13))
-    button(
-      c,
-      'load-log',
-      x + Math.min(label.length + 2, width - 11),
-      y,
-      'View log',
-      'The last attempt’s log',
-      focus
-    )
+    text(c, x, y, label, COLORS.composerError, Math.max(0, width - 17), COLORS.composer)
+    button(c, 'retry-load', x + width - 16, y, 'Retry', 'Retry loading this model', focus)
+    button(c, 'load-log', x + width - 9, y, 'View log', 'The last attempt’s log', focus)
   }
 }
 
 export async function loadAction(id: string, ctx: ActionContext): Promise<boolean> {
   const s = ctx.get()
+  if (id === 'retry-load' && s.loadError) {
+    const index = s.installed.findIndex((model) => model.id === s.loadError?.model)
+    if (index >= 0) {
+      const { selectLocalModel } = await import('./model-selection.js')
+      await selectLocalModel(`installed:${index}:${s.loadError.provider}`, ctx)
+    }
+    return true
+  }
   if (id === 'cancel-load') {
-    const load = currentLoad(s)
+    const load =
+      currentLoad(s) ?? (s.modelLoad ? { provider: s.modelLoad.provider, model_id: s.modelLoad.model } : null)
     if (load)
       await ctx.controller.runtime.execute('models.cancel', {
         provider: load.provider,

@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { mutateDocument, readDocument } from './store.js'
+import { AtcError } from '../errors/index.js'
 export interface ClientKey {
   id: string
   name: string
@@ -36,10 +37,12 @@ export class ClientKeys {
    * `atc api start --api-key` or `ATC_API_KEY` must work, and the core checks the keyring only.
    */
   async ensure(token: string, name: string): Promise<void> {
-    if (!/^\S{8,512}$/.test(token)) throw new Error('An API key is 8 to 512 characters without spaces.')
+    if (!/^\S{8,512}$/.test(token))
+      throw new AtcError('ATC_USAGE', 'An API key is 8 to 512 characters without spaces.')
     await mutateDocument<KeyDocument>(this.path, { version: 1, keys: [] }, (doc) => {
       if (doc.keys.some((k) => k.token === token)) return doc
-      if (doc.keys.length >= 100) throw new Error('Revoke an unused key before creating another.')
+      if (doc.keys.length >= 100)
+        throw new AtcError('ATC_USAGE', 'Revoke an unused key before creating another.')
       return { ...doc, keys: [...doc.keys, { id: randomUUID(), name, token, createdAt: Date.now() }] }
     })
   }
@@ -50,17 +53,20 @@ export class ClientKeys {
     }))
   }
   async create(name: string): Promise<ClientKey> {
-    if (!name.trim() || name.trim().length > 48) throw new Error('Use a name between 1 and 48 characters.')
+    if (!name.trim() || name.trim().length > 48)
+      throw new AtcError('ATC_USAGE', 'Use a name between 1 and 48 characters.')
     const key = { id: randomUUID(), name: name.trim(), token: this.token(), createdAt: Date.now() }
     await mutateDocument<KeyDocument>(this.path, { version: 1, keys: [] }, (doc) => {
-      if (doc.keys.length >= 100) throw new Error('Revoke an unused key before creating another.')
+      if (doc.keys.length >= 100)
+        throw new AtcError('ATC_USAGE', 'Revoke an unused key before creating another.')
       return { ...doc, keys: [...doc.keys, key] }
     })
     return key
   }
   async revoke(id: string): Promise<void> {
     await mutateDocument<KeyDocument>(this.path, { version: 1, keys: [] }, (doc) => {
-      if (doc.keys.length <= 1) throw new Error('Create a replacement before revoking your last key.')
+      if (doc.keys.length <= 1)
+        throw new AtcError('ATC_USAGE', 'Create a replacement before revoking your last key.')
       return { ...doc, keys: doc.keys.filter((k) => k.id !== id) }
     })
   }

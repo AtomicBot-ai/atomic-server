@@ -64,6 +64,7 @@ when this table is stale or a module's `index.ts` has no comment):
 | `src/core-link/` | Finding, starting and talking to the core: the daemon record, attach-or-spawn, `CoreLink`, events. |
 | `src/daemon/` | The daemon process: spawning it detached, and running it (core + admin + host agent). |
 | `src/doctor/` | `atc doctor`: the check table and its runner. |
+| `src/document-import/` | Bounded text extraction and portable skill archives shared by Web uploads and terminal files. |
 | `src/downloads/` | Model downloads: resumable, verified, parallel byte ranges written in place, proxies and progress. |
 | `src/errors/` | `AtcError`, its codes, exit codes and the one rendering of any failure. Depends on nothing. |
 | `src/host/` | Host services: running programs, facts about the machine and session, elevation and the host-step protocol, OS services, ports. `nodeHostServices` is the real one; tests build the same shape from fakes. |
@@ -83,8 +84,9 @@ when this table is stale or a module's `index.ts` has no comment):
 ## 3. Code rules
 
 1. **One module = one folder with `index.ts` as the only public entry**, opened by a one-line doc comment
-   (it becomes the module's row in §2). A sibling module is imported only through its `index.ts`; eslint
-   fails `../<module>/<file>` in `src/`. Export deliberately.
+   (it becomes the module's row in §2). A sibling module is imported only through its `index.ts`;
+   `scripts/check-module-boundaries.mjs` fails a path past it, and any relative path (imports, `vi.mock`,
+   `new URL(…, import.meta.url)`, CSS) that names no file. Folders inside a module are its own. Export deliberately.
 2. **Policy is pure, I/O is separate.** Parsers, selectors, tables and plans take data and return data;
    `fs`, `child_process`, `net`, `fetch` live in a few named files. `env`, `fetch`, `exec`, `now`,
    `platform` are injected through options or `AtcIo`; never read `process.platform` inside policy code.
@@ -104,7 +106,8 @@ when this table is stale or a module's `index.ts` has no comment):
 9. **Lifted admin files keep their provenance header** (`// Lifted from Atomic-Chat/web-app/src/<path> @
    <commit>; adapted: …`) and a line in `packages/admin-ui/LIFTED.md`.
 10. **Every dependency needs a reason.** Runtime deps today: `atomic-chat-core`; `ink` and `react`, for
-    `src/tui/` only. Adding one needs an explicit "ok" from the owner and an ADR.
+    `src/tui/` only; `pdfjs-dist`, `fflate` and `fast-xml-parser`, for `src/document-import/` only
+    (`2026-10-23-shared-workspace-features.md`). Adding one needs an explicit "ok" from the owner and an ADR.
 11. **Do only what was asked.** No drive-by refactors; propose them. **Never commit unless asked.**
 12. **Record non-trivial decisions** as a file in `docs/decisions/` (template `_TEMPLATE.md`) plus one
     line in `INDEX.md`, in the same session.
@@ -154,7 +157,7 @@ otherwise fails with `ATC_CONSENT_REQUIRED`.
 
 ## 6. Testing
 
-Six layers (`vitest.config.ts`, details in `docs/testing.md`):
+Seven layers (`vitest.config.ts`, details in `docs/testing.md`):
 
 - **unit** — `src/**/*.test.{ts,tsx}`, next to the code, pure tables and fakes; the Ink app on
   `test/helpers/fake-terminal.ts`.
@@ -166,6 +169,8 @@ Six layers (`vitest.config.ts`, details in `docs/testing.md`):
   faked machine (`npm run test:installers`).
 - **runtime-compat** — `test/runtime-compat/`: Node behaviours the daemon relies on, and Ink's raw keys and
   resize, under vitest **and** `bun test`.
+- **e2e-web** — `test/e2e-web/`: the built program's web admin in headless Chromium (Playwright);
+  `npm run test:e2e:tui` and `npm run test:e2e:web` run the terminal and the web journeys apart.
 - **ui** — `packages/admin-ui`, its own vitest (jsdom).
 
 `test/setup.ts` points `ATC_DATA_FOLDER` and `ATOMIC_CORE_DATA_FOLDER` at a fresh `mkdtemp` per worker;
@@ -181,7 +186,8 @@ it works in the binary, an e2e test. While iterating run `npm run verify:fast`; 
 
 ## 7. Checklists
 
-**Add a command.** Spec in `src/commands/<name>.ts` (or a group file); add it to `ROOT` in
+**Add a command.** Spec in `src/commands/<group>/<name>.ts`, the folder of its help group (`server`,
+`models`, `access`, `system`); add it to `ROOT` in
 `src/commands/index.ts` in help order; if it is a stub, `notImplemented()` + a `PLANNED` line; unit test
 for any pure helper; contract test in `test/contract/commands.test.ts`; `npm run build && npm run
 docs:commands`; e2e case when it works in the binary.

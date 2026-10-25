@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto'
 import { Downloader } from '../../src/downloads/index.js'
 import type { ModelSetup, ModelSetupPlan } from '../../src/contract/index.js'
-import { ModelSetups } from '../../src/workspace-service/model-setups.js'
+import { ModelSetups } from '../../src/workspace-service/models/model-setups.js'
 import { fakeCoreLink } from './fake-core-link.js'
 import { tmpDataFolder } from './tmp-data-folder.js'
 import { waitFor } from './wait-for.js'

@@ -6,6 +6,8 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
 import { engineFamily, engineName, orderEngines } from '../workspace-view/index.js'
 import type { BackendCatalogResponse } from './types.js'
+import type { DownloadProgress } from '@atomic-chat/core/contracts'
+import { watchEngineDownload } from './engine-progress.js'
 
 export interface EngineChoice {
   id: string
@@ -40,14 +42,14 @@ export class EngineSelection {
   }
   /**
    * Per llama.cpp engine: the builds on disk plus the one the core would install (`latest`), if any;
-   * then every other chat engine the core has installed here (a managed engine, Foundry Local).
+   * then every other chat engine the core has installed here (a managed engine, Foundry Local, LiteRT-LM).
    */
   async list(catalogs: BackendCatalogResponse[]): Promise<EngineChoice[]> {
     const link = await this.attach()
     const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
     const installed = orderEngines(
       engines
-        .filter((e) => ['managed', 'foundry'].includes(engineFamily(e.engine)) && e.active)
+        .filter((e) => ['managed', 'foundry', 'litert'].includes(engineFamily(e.engine)) && e.active)
         .map((e) => e.engine as string)
     ).map((engine) => {
       const active = engines.find((e) => e.engine === engine)!.active!
@@ -88,16 +90,27 @@ export class EngineSelection {
     return [...builds, ...installed]
   }
   /** The core installs and activates: `version_backend` in the load queue's turn, old sessions unloaded. */
-  async select(choice: EngineChoice): Promise<void> {
+  async select(
+    choice: EngineChoice,
+    onProgress?: (progress: DownloadProgress) => void,
+    signal?: AbortSignal
+  ): Promise<void> {
     // A managed engine or Foundry Local runs its one active build: choosing it only names the provider.
     if (ENGINE_KINDS[choice.provider as EngineId] !== 'llamacpp') return this.remember(choice.id)
     const link = await this.attach()
     if (choice.installed) await activateEngine(link, choice)
-    else
-      await link.request('POST', `/engines/${choice.provider}/update`, {
-        task_id: `terminal-engine-${randomUUID()}`,
-        target: { version: choice.version, variant: choice.backend },
-      })
+    else {
+      const taskId = `terminal-engine-${randomUUID()}`
+      const stop = onProgress ? watchEngineDownload(link, taskId, onProgress, signal) : () => {}
+      try {
+        await link.request('POST', `/engines/${choice.provider}/update`, {
+          task_id: taskId,
+          target: { version: choice.version, variant: choice.backend },
+        })
+      } finally {
+        stop()
+      }
+    }
     await this.remember(choice.id)
   }
 }

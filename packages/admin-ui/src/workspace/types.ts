@@ -1,6 +1,7 @@
+import { formatSize } from '@view'
 export type RecordValue = Record<string, unknown>
 export type Execute = <T = unknown>(operation: string, input?: RecordValue) => Promise<T>
-export type Page = 'playground' | 'server' | 'catalog'
+export type Page = 'playground' | 'server' | 'catalog' | 'settings'
 export function record(value: unknown): RecordValue {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as RecordValue) : {}
 }
@@ -21,12 +22,10 @@ export function rows(value: unknown): RecordValue[] {
 export function text(value: unknown, fallback = '—'): string {
   return value === undefined || value === null || value === '' ? fallback : String(value)
 }
+/** A size as the terminal UI and the CLI print it (binary units); `—` for none. */
 export function bytes(value: unknown): string {
   const n = Number(value)
-  if (!Number.isFinite(n) || n < 0) return '—'
-  if (n >= 1e9) return `${(n / 1e9).toFixed(1)} GB`
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} MB`
-  return `${Math.round(n / 1e3)} KB`
+  return Number.isFinite(n) && n >= 0 ? formatSize(n) : '—'
 }
 export function list(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []

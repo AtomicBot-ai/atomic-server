@@ -14,6 +14,16 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 /** Key N migrates a version-N document to N+1. */
 export const MIGRATIONS: Record<number, Migration> = {
   /**
+   * 4 → 5: `tui.mode` is gone. The terminal UI always opens on Server and Playground is a page of it
+   * (ADR "Adapt the desktop structure to a server-first workspace"); nothing read the value any more.
+   */
+  4: (raw) => {
+    if (!isObject(raw['tui']) || !('mode' in raw['tui'])) return { ...raw }
+    const { mode: _dropped, ...tui } = raw['tui']
+    const { tui: _old, ...rest } = raw
+    return Object.keys(tui).length > 0 ? { ...rest, tui } : rest
+  },
+  /**
    * 3 → 4: `api.requireKey` is gone. The server creates its keyring when it starts and the core checks
    * it on every request on any address, so there is no keyless API left to refuse
    * (ADR "Require a key from the keyring for every API client").

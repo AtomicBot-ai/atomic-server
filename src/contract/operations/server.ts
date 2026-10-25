@@ -125,7 +125,7 @@ export const SERVER_OPERATIONS: readonly WorkspaceOperation[] = [
     'remote.status',
     'Remote access',
     'read',
-    'Read whether remote access to the API is on and where it listens.'
+    'Read the Cloudflare tunnel state, public URL and available start/stop actions.'
   ),
   operation(
     'remote.addresses',
@@ -137,8 +137,13 @@ export const SERVER_OPERATIONS: readonly WorkspaceOperation[] = [
     'remote.start',
     'Start remote access',
     'configure',
-    'Open the API to remote clients beyond loopback.',
+    'Start a Cloudflare quick tunnel to the running API; this is separate from the LAN listen address.',
     { properties: { request: { type: 'object' } }, required: ['request'] }
   ),
-  operation('remote.stop', 'Stop remote access', 'interrupt', 'Stop remote access to the API.'),
+  operation(
+    'remote.stop',
+    'Stop remote access',
+    'interrupt',
+    'Stop the Cloudflare tunnel without changing the local API listener.'
+  ),
 ]

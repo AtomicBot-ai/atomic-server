@@ -1,6 +1,6 @@
 # Testing
 
-Six layers, five of them vitest projects in `vitest.config.ts` and one in the admin package. Every layer
+Seven layers, six of them vitest projects in `vitest.config.ts` and one in the admin package. Every layer
 runs in an isolated data folder; none reaches the network or starts a real engine. A release served from
 loopback stands in for GitHub wherever downloading is under test.
 
@@ -11,6 +11,7 @@ loopback stands in for GitHub wherever downloading is under test.
 | `unit` | `src/**/*.test.{ts,tsx}`, next to the code, and `test/scripts/**` (the scripts' pure parts) | `npm test` | Pure policy by table: flag splitting, config parsers and precedence, elevation selection, `nvidia-smi` parsing, service templates, semver, the stub registry vs the tree, the TUI's reducer and key table. Fakes for I/O. The Ink app renders on `fake-terminal.ts` in Ink's debug mode (one full frame per write). | 5 s (20 s on Windows: the first PowerShell identity probe on a cold runner) |
 | `contract` | `test/contract/**/*.test.ts` | `npm test` | `commands.test.ts`: commands against `FakeCoreLink` — what they print, what they call, how they fail. `daemon.test.ts`: `startDaemon` with a **real** `AtomicCore` in a temp folder — the lock and token the core writes, `daemon.json`, admin 401/204/200, the proxy allowlist (403), Bearer auth, SSE relay, attach + lease, the foreign-owner check, clean shutdown. | 60 s |
 | `e2e` | `test/e2e/**/*.test.ts` | `npm run test:e2e` | The built program end to end in a temp data folder: `version --json`, `--help`, exit 2 for unknown commands, exit 3 + JSON error for a stub, `start --admin-port 0` → `status` → `admin status` → second `start` is a no-op → `stop`, `completion bash`. `tui.test.ts`: without a terminal `atc tui` exits 2 and bare `atc` prints help; in a 100×30 pseudo-terminal (Python's `pty`, POSIX only) bare `atc` opens the screen, answers keys, and leaves the alternate screen on `q` with exit 0. `foundry-host.test.ts`: `atc foundry-host nope` is the core host's usage error (exit 2), and on the compiled binary `probe` on an empty folder exits 3 with the core FFI module's own message. | 120 s |
+| `e2e-web` | `test/e2e-web/**/*.test.ts` | `npm run test:e2e:web` | The built program's web admin in headless Chromium (Playwright), signed in through `atc admin open --no-open`: LiteRT-LM in Local models and Engine settings, the command dock's confirmation before a connector program runs, the first run's waiting screen for an interrupted first model (`test/helpers/interrupted-setup.ts`), and the admin API through the browser's session (a document it cannot read is a 400, a cloud key is never read back). `test/helpers/admin-browser.ts` points the Hub and conf's lists at a closed loopback port or a fixture file. | 120 s |
 | `installers` | `test/installers/**/*.test.ts` | `npm run test:installers` | `install.sh` end to end against a release served from loopback (`ATC_DOWNLOAD_BASE`), on a faked machine: shims for `uname`, `ldd`, `sysctl` on a sandboxed PATH and a fake `/proc/cpuinfo` (`ATC_CPUINFO`) — the table OS × CPU × musl × AVX2 × Rosetta → binary, a checksum mismatch and a missing sha tool installing nothing, the PATH line written once, the note when a Linux package's marker (`ATC_PACKAGE_MARKER`) says a packaged copy is shadowed. `install.ps1` on Windows with the built `atc.exe` as the asset. Spawns are asynchronous: the release is served from the test process. | 60 s |
 | `runtime-compat` | `test/runtime-compat/**/*.test.ts` | `npm run test:runtime-compat` **and** `bun test test/runtime-compat` | The Node behaviours the daemon relies on, pinned under both runtimes: a detached `unref`ed child survives the parent, gzip/base64 round trip (the embedded assets), SSE chunks arrive one by one, and Ink renders, reads raw keys, follows `resize` and restores raw mode and the screen (`ink.test.ts`, no JSX). No setup file: it must not depend on the repo's test harness. | 60 s |
 | `ui` | `packages/admin-ui` (its own vitest, jsdom) | `npm run test:ui` | Components and hooks of the SPA against a fake hub; see `docs/admin-ui.md`. | — |
@@ -65,6 +66,8 @@ npx vitest run --project contract test/contract/daemon.test.ts
 npx vitest run --project unit src/host/elevator.test.ts -t 'selects'
 npm run test:watch                         # unit + contract, watching
 npm run test:e2e                           # needs a build, see below
+npm run test:e2e:tui                       # the terminal UI journeys alone (test/e2e/tui*)
+npm run test:e2e:web                       # the web admin in Chromium: build:ui, build:bin, playwright install chromium first
 npm run test:runtime-compat && bun test test/runtime-compat
 npm run test:ui                            # the SPA
 ```
@@ -77,6 +80,15 @@ there is none it runs `node dist/bin.js`. Either way a build is required first:
 ```bash
 npm run build && npm run test:e2e          # from source, through Node
 npm run build:bin && npm run test:e2e      # the compiled binary (Bun 1.3.10)
+```
+
+The terminal UI journeys (`test/e2e/tui*.test.ts`) drive the program in a real pseudo-terminal through
+`test/helpers/pty-driver.ts`: keys, waits, resizes, and a click on a label of the current screen.
+
+The web journeys need the binary built with the SPA inside and Playwright's Chromium once per machine:
+
+```bash
+npm run build:ui && npm run build:bin && npx playwright install chromium && npm run test:e2e:web
 ```
 
 The test starts a real daemon in a temporary folder and stops it with `stop --force --kill` in `afterAll`;

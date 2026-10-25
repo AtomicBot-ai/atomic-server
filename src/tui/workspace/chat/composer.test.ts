@@ -12,14 +12,24 @@ it.each([
   [180, 56],
   [240, 70],
 ])('keeps composer controls inside the frame and independently clickable at %ix%i', (width, height) => {
-  const s = createWorkspace('chat'),
+  const s = {
+      ...createWorkspace('chat'),
+      draft: 'Hello',
+      model: 'qwen',
+      workspace: {
+        api: { running: true },
+        services: [{ id: 'q', model: 'qwen', provider: 'llamacpp-upstream', kind: 'chat', state: 'ready' }],
+        setups: [],
+        downloads: [],
+      } as never,
+    },
     frame = workspaceFrame(s, width, height, 0)
-  const controls = ['composer', 'send', 'choose-engine', 'choose-model'].map((id) =>
+  const controls = ['composer', 'send', 'attachments', 'chat-features', 'choose-model'].map((id) =>
     frame.targets.find((t) => t.id === id)!
   )
   const bottom = height - 4
   for (const t of controls) {
-    expect(t.y).toBeGreaterThan(bottom - 5)
+    expect(t.y).toBeGreaterThan(3)
     expect(t.y + t.height).toBeLessThanOrEqual(bottom - 1)
     expect(workspaceInput(`[<0;${t.x + 1};${t.y + 1}M`, {} as Key, s, frame).action).toBe(t.id)
     if (t.id !== 'composer') {
@@ -35,6 +45,21 @@ it.each([
       ).toBe(true)
     }
   }
+})
+
+it('centers a new conversation and keeps Send hidden until there is a draft', () => {
+  const state = createWorkspace('chat')
+  const empty = workspaceFrame(state, 120, 36, 0)
+  expect(empty.targets.some((target) => target.id === 'send' || target.id === 'choose-engine')).toBe(false)
+  const conversation = workspaceFrame(
+    { ...state, messages: [{ role: 'user', content: 'Hello' }] },
+    120,
+    36,
+    0
+  )
+  expect(empty.targets.find((target) => target.id === 'composer')!.y).toBeLessThan(
+    conversation.targets.find((target) => target.id === 'composer')!.y
+  )
 })
 
 it('fits a stable visual eye proportion inside two thirds of roomy bounds', () => {

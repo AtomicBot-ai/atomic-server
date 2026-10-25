@@ -50,9 +50,13 @@ Configure the client to launch the absolute path to the tested binary:
 ```
 
 This connection can inspect the server. Add `--allow-writes` to allow setup, generation and configuration.
-Add `--allow-secrets` as well to allow API key creation/reveal and agent connection profiles. Discovery
-omits disallowed tools, and calling a guessed tool name cannot bypass those restrictions. Do not log
-secret-bearing tool results.
+Add `--allow-secrets` as well to allow API key creation/reveal and agent connection profiles. Add
+`--allow-exec` as well to allow MCP connectors (`connectors.save`, `connectors.import`, `connectors.check`,
+`connectors.call`): a stdio connector is a program the server starts on its host, so these tools amount to
+running commands as the server's user. A connector's process gets the host basics (`PATH`, `HOME`, locale,
+temporary and Windows system folders, the proxy and certificate settings) and its own `env`, never the server's `HF_TOKEN`, `ATC_API_KEY` or
+other variables. Discovery omits disallowed tools, and calling a guessed tool name cannot bypass those
+restrictions. Do not log secret-bearing tool results.
 
 Tool names replace dots with underscores (`models.plan` → `models_plan`). Initialization and discovery
 do not start Core. Long operations return job IDs where Core supports them; query those operations to
@@ -87,4 +91,5 @@ to the same server profile that produced them.
 `atc admin` opens the bundled admin for the same data folder. Its login token is exchanged for a session
 cookie. It is separate from inference client API keys. Server → Connect contains the endpoint, model,
 client key and agent profile. The advanced operation console runs the same typed operations; it is not
-an arbitrary shell.
+an arbitrary shell, but a signed-in operator can save and connect a stdio MCP connector, which runs the
+program it names on the server's host.

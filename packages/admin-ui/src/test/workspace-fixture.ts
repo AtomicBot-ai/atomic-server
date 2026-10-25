@@ -56,7 +56,7 @@ export function workspaceFixture(answer: Record<string, unknown>, over: Partial<
     loading: false,
     error: '',
     pending: [],
-    refresh: vi.fn(),
+    refresh: vi.fn(async () => workspace.snapshot),
   }
   return { workspace, execute }
 }

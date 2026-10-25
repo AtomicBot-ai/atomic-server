@@ -26,7 +26,7 @@ describe('shared TUI operations', () => {
     ctx.update((s) => ({ ...s, setupComplete: false, page: 'welcome' }))
     await activate('setup-manual', ctx)
     expect(execute).toHaveBeenCalledWith('setup.manual')
-    expect(save).toHaveBeenCalledWith('tui.mode', 'server')
+    expect(save).not.toHaveBeenCalledWith('tui.mode', expect.anything())
     expect(ctx.get()).toMatchObject({ page: 'server', setupComplete: true, overlay: null })
   })
   it('executes typed console input without shell interpretation', async () => {

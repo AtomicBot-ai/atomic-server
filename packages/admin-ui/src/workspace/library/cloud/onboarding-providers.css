@@ -1,0 +1,80 @@
+/* Lifted from Atomic-Chat preview/onboarding/onboarding.css @ 5043013; adapted: inline provider validation. */
+/* Match the desktop provider catalog and inline key panel during first run. */
+.desktop-workspace .first-run .onboarding-providers .cloud-provider-grid {
+  grid-auto-rows: 82px;
+  max-height: clamp(100px, 24dvh, 240px);
+  padding: 4px;
+  overscroll-behavior: contain;
+}
+.first-run .onboarding-providers .cloud-provider-card {
+  position: relative;
+  min-width: 0;
+  gap: 8px;
+  background: #20292e;
+  border-color: #425058;
+  text-align: center;
+}
+.first-run .onboarding-providers .cloud-provider-card.selected {
+  background: #2b4441;
+  border-color: #acdbc0;
+}
+.first-run .onboarding-providers .cloud-provider-card.connected {
+  background: #232626;
+  border-color: #3d4342;
+  color: #9baba5;
+}
+.first-run .onboarding-providers .cloud-provider-card > span:nth-child(2) {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.first-run .onboarding-providers .cloud-provider-tag {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 2px 4px;
+  font-size: 9px;
+}
+.first-run .cloud-provider-inline .cloud-provider-editor {
+  margin-top: 14px;
+  padding: 18px;
+  background: #19221c;
+  border: 1px solid #45594c;
+  border-radius: 13px;
+}
+.first-run .cloud-provider-inline legend {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.first-run .cloud-key-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.first-run .cloud-key-row .ew-field {
+  flex: 1;
+  min-width: 0;
+}
+.desktop-workspace .first-run .cloud-key-row > .ew-button {
+  min-height: 42px;
+  margin-bottom: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+}
+.first-run .cloud-provider-inline .ew-actions {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+@media (max-width: 420px) {
+  .first-run .cloud-key-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.desktop-workspace .first-run .onboarding-providers:not(.has-provider-editor) .cloud-provider-grid {
+  max-height: min(50dvh, 420px);
+}

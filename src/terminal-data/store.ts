@@ -1,6 +1,7 @@
-import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { AtcError } from '../errors/index.js'
 
 /** What Windows answers for a moment when another handle has the target open (a reader or a writer). */
 const TRANSIENT_RENAME = new Set(['EPERM', 'EACCES', 'EBUSY'])
@@ -71,19 +72,60 @@ export async function writeDocument(
     await rm(temporary, { force: true })
   }
 }
-/** Serialize mutations across terminal processes; never replace a damaged document. */
-export async function mutateDocument<T>(path: string, fallback: T, change: (value: T) => T): Promise<T> {
+/** The lock's holder is gone: a pid that no longer answers, or a lock older than any mutation takes. */
+async function lockAbandoned(lock: string): Promise<boolean> {
+  const held = await readFile(lock, 'utf8').catch(() => null)
+  if (held === null) return false
+  // Older than any mutation takes: abandoned whatever its pid says (the OS may have given that pid
+  // to another process since).
+  const age = Date.now() - ((await stat(lock).catch(() => null))?.mtimeMs ?? Date.now())
+  if (age > STALE_LOCK_MS) return true
+  const pid = Number(held.trim())
+  if (!Number.isInteger(pid) || pid <= 0) return false
+  try {
+    process.kill(pid, 0)
+    return false
+  } catch (error) {
+    // EPERM: the process exists but belongs to someone else; anything else: no such process.
+    return (error as NodeJS.ErrnoException).code !== 'EPERM'
+  }
+}
+const STALE_LOCK_MS = 30_000
+
+/**
+ * Serialize mutations across terminal processes; never replace a damaged document. A lock whose holder
+ * died (killed between taking and releasing it) is taken over instead of refusing every later mutation.
+ */
+export async function mutateDocument<T>(
+  path: string,
+  fallback: T,
+  change: (value: T) => T,
+  deps: { waitMs?: number } = {}
+): Promise<T> {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 })
   const lock = `${path}.lock`
-  const deadline = Date.now() + 5000
+  const deadline = Date.now() + (deps.waitMs ?? 5000)
+  let reclaimed = false
   for (;;) {
     try {
       const fd = await open(lock, 'wx', 0o600)
-      await fd.writeFile(String(process.pid))
-      await fd.close()
+      try {
+        await fd.writeFile(String(process.pid))
+      } finally {
+        await fd.close()
+      }
       break
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || Date.now() > deadline) throw error
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+      if (!reclaimed && (await lockAbandoned(lock))) {
+        reclaimed = true
+        await rm(lock, { force: true })
+        continue
+      }
+      if (Date.now() > deadline)
+        throw new AtcError('ATC_INTERNAL', `Another atc process holds ${lock}.`, {
+          hint: 'If no other atc is running, delete that file and try again.',
+        })
       await new Promise((resolve) => setTimeout(resolve, 40))
     }
   }

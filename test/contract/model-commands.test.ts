@@ -184,3 +184,69 @@ describe('atc run --engine foundry-local where the core does not register it', (
     expect(loads(t)).toEqual([])
   })
 })
+
+describe('LiteRT-LM models', () => {
+  const VARIANT = 'gemma-4-e4b-gpu'
+  /** One downloaded variant under the data folder's LiteRT-LM root. */
+  function variant() {
+    t = testRun()
+    const dir = join(t.io.env['ATC_DATA_FOLDER'] as string, 'litert-lm', 'models', VARIANT)
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dir, 'gemma-4-E4B-it-gpu.litertlm'), Buffer.alloc(3072))
+    writeFileSync(
+      join(dir, 'model.yml'),
+      JSON.stringify({
+        model_path: `litert-lm/models/${VARIANT}/gemma-4-E4B-it-gpu.litertlm`,
+        name: 'Gemma 4 E4B (GPU)',
+        litert_lm: {
+          model_id: 'gemma-4-e4b',
+          variant_id: VARIANT,
+          backend: 'gpu',
+          tools: true,
+          vision: true,
+        },
+      })
+    )
+    // A folder without model.yml is no model: an interrupted download.
+    mkdirSync(join(dir, '..', 'gemma-4-e4b-cpu'), { recursive: true })
+    return dir
+  }
+
+  it('lists a variant with litert-lm, its backend, and its size', async () => {
+    variant()
+    expect(await t.run(['models', 'list'])).toBe(0)
+    const lines = t.io.out.join('').split('\n')
+    const line = lines.find((l) => l.startsWith(VARIANT))
+    expect(line).toContain('litert-lm (GPU)')
+    expect(line).toMatch(/\b3\.\d KiB\b/)
+    expect(lines.some((l) => l.startsWith('gemma-4-e4b-cpu'))).toBe(false)
+  })
+
+  it('removes a loaded variant: unloaded first, folder deleted, the space freed printed', async () => {
+    const dir = variant()
+    t.link.snapshotValue.sessions = [{ provider: 'litert-lm', model_id: VARIANT, port: 0 } as never]
+    expect(await t.run(['models', 'rm', VARIANT, '--yes'])).toBe(0)
+    expect(t.io.out.join('')).toMatch(/Removed gemma-4-e4b-gpu \(unloaded first\); freed \d/)
+    expect(t.link.calls.some((c) => c.path === `/models/litert-lm/${VARIANT}/unload`)).toBe(true)
+    expect(existsSync(dir)).toBe(false)
+  })
+
+  it('runs a variant on litert-lm, named or not', async () => {
+    variant()
+    t.link.responses['POST /engines/versions'] = registered('llamacpp-upstream', 'litert-lm')
+    expect(await t.run(['run', VARIANT, '--engine', 'litert-lm'])).toBe(0)
+    expect(await t.run(['run', VARIANT])).toBe(0)
+    expect(loads(t).map((c) => c.path)).toEqual([
+      `/models/litert-lm/${VARIANT}/load`,
+      `/models/litert-lm/${VARIANT}/load`,
+    ])
+  })
+
+  it('says LiteRT-LM is not available where the core does not register it, and loads nothing', async () => {
+    t = testRun()
+    t.link.responses['POST /engines/versions'] = registered('llamacpp-upstream')
+    expect(await t.run(['run', VARIANT, '--engine', 'litert-lm'])).toBe(2)
+    expect(t.io.err.join('')).toContain('LiteRT-LM is not available on this platform')
+    expect(loads(t)).toEqual([])
+  })
+})

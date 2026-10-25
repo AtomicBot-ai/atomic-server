@@ -1,6 +1,48 @@
 /** Browser-safe view selectors shared with the terminal. */
-export { downloadRows } from './downloads.js'
-export type { DownloadRow } from './downloads.js'
+export { downloadRows } from './downloads/downloads.js'
+export { localModelStatus, catalogModelMatches } from './catalog/local-model-status.js'
+export type { LocalModelIdentity, ModelDeviceStatus } from './catalog/local-model-status.js'
+export { inferenceReadiness, setupModelPending } from './setup/inference-readiness.js'
+export { OAUTH_POLL_MS, signInStep } from './connectors/connector-sign-in.js'
+export type { SignInStep } from './connectors/connector-sign-in.js'
+export {
+  matchesEngineFilter,
+  mentionsUncensored,
+  modelEngines,
+  toggleLike,
+} from './catalog/catalog-filter.js'
+export { downloadEta, downloadSpeed, formatEta, nextTransferSample } from './downloads/download-estimate.js'
+export type { TransferSample } from './downloads/download-estimate.js'
+export {
+  CATALOG_FORMAT_LABELS,
+  catalogFormatsFor,
+  engineCatalogFormat,
+  FORMAT_ENGINE,
+} from './catalog/catalog-formats.js'
+export type { CatalogFormat } from './catalog/catalog-formats.js'
+export type { InferenceReadiness } from './setup/inference-readiness.js'
+export {
+  newMineGame,
+  neighbors,
+  placeMines,
+  flagMine,
+  mineCount,
+  minesOver,
+  minesWon,
+  revealMine,
+  MINE_COUNT,
+  SIDE,
+} from './games/mines.js'
+export type { MineGame } from './games/mines.js'
+export { modelImportError } from './catalog/model-import-error.js'
+export { engineProgress } from './engines/engine-progress.js'
+export type { EngineProgress } from './engines/engine-progress.js'
+export type { DownloadRow } from './downloads/downloads.js'
+export {
+  connectionDownload,
+  connectionDownloadTarget,
+  connectionModelState,
+} from './setup/connection-model.js'
 export {
   blockerLines,
   engineView,
@@ -15,18 +57,19 @@ export {
   planLines,
   removalLines,
   verdictLine,
-} from './engines.js'
-export { rebootLines, reloginLines } from './engine-restart.js'
-export type { EngineView, EngineViewKind } from './engines.js'
+} from './engines/engines.js'
+export { rebootLines, reloginLines } from './engines/engine-restart.js'
+export type { EngineView, EngineViewKind } from './engines/engines.js'
 export {
   acceleratorLabel,
   acceleratorLines,
   foundryVerdictText,
   prepareResultLines,
   variantLabel,
-} from './foundry.js'
-export { LOAD_STAGE_LABELS, loadStageText } from './loads.js'
-export { engineFamily, engineName, orderEngines } from './engine-order.js'
+} from './engines/foundry.js'
+export { liteRtAcceleratorLines, liteRtVariantLabel, liteRtVerdictText } from './engines/litert.js'
+export { LOAD_STAGE_LABELS, loadStageText } from './engines/loads.js'
+export { engineFamily, engineName, orderEngines } from './engines/engine-order.js'
 export {
   changedValues,
   fieldText,
@@ -34,6 +77,30 @@ export {
   formFields,
   gpuLabel,
   parseSettingValue,
-} from './settings-form.js'
-export { engineApproval, engineRefreshKey, liveEngineState, updateLine } from './engine-live.js'
-export type { EngineApproval } from './engine-live.js'
+} from './engines/settings-form.js'
+export { engineApproval, engineRefreshKey, liveEngineState, updateLine } from './engines/engine-live.js'
+export type { EngineApproval } from './engines/engine-live.js'
+export {
+  downloadOwner,
+  downloadStopped,
+  downloadHeld,
+  downloadControl,
+} from './downloads/download-controls.js'
+export type { DownloadOwner } from './downloads/download-controls.js'
+
+export { setupFinished } from './setup/setup.js'
+
+export { connectorToolBindings } from './connectors/connector-tools.js'
+export {
+  MCP_CONNECTORS,
+  connectorTemplate,
+  connectorDraft,
+  connectorJson,
+  parseConnectorJson,
+} from './connectors/mcp-catalog.js'
+export { WORKSPACE_COLORS } from './colors.js'
+export { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES } from './catalog/cloud-catalog.js'
+
+export { prioritizeDownloads } from './downloads/downloads.js'
+export { engineUpdateResult } from './engines/engine-updates.js'
+export type { EngineUpdateCheck } from './engines/engine-updates.js'

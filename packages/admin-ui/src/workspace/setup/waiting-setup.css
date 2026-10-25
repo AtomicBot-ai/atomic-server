@@ -1,0 +1,91 @@
+.waiting-setup > p {
+  color: var(--ew-muted, #a5b5ac);
+  margin: 0 0 16px;
+}
+.waiting-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.inline-download-game .download-game-dialog {
+  position: static;
+  width: 100%;
+  max-width: 354px;
+  max-height: none;
+}
+.inline-download-game .mine-game-body {
+  padding: 12px;
+}
+.inline-download-game .mine-help {
+  margin-bottom: 0;
+}
+.waiting-email {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--ew-panel, #1b211e);
+}
+.waiting-side {
+  display: grid;
+  gap: 20px;
+}
+.waiting-email-controls,
+.waiting-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.waiting-email-controls .ew-button {
+  flex: 0 0 auto;
+  padding-inline: 16px;
+}
+.waiting-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.waiting-actions .primary {
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+.waiting-email input {
+  min-width: 0;
+  width: 100%;
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--ew-line, #45504b);
+  border-radius: 10px;
+  background: #303934;
+  color: inherit;
+}
+.waiting-email-status {
+  min-height: 1.2em;
+  font-size: 13px;
+  color: var(--ew-muted, #a5b5ac);
+}
+@media (max-width: 700px) {
+  .waiting-setup-grid {
+    grid-template-columns: 1fr;
+  }
+  .waiting-side {
+    grid-row: 1;
+  }
+}
+
+.waiting-email-status.invalid {
+  color: #ffb3a7;
+}
+.waiting-email input[aria-invalid='true'] {
+  border-color: #ffb3a7;
+}
+
+@media (min-width: 701px) and (max-height: 850px) {
+  .inline-download-game .download-game-dialog {
+    max-width: clamp(230px, calc(100dvh - 490px), 354px);
+  }
+  .inline-download-game .mine-grid [role='gridcell'] {
+    font-size: 16px;
+  }
+}

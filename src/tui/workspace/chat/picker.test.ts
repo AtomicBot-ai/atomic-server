@@ -3,7 +3,7 @@ import type { Key } from 'ink'
 import { workspaceFrame } from '../frame.js'
 import { workspaceInput } from '../input.js'
 import { createWorkspace } from '../state.js'
-import { COLORS } from '../draw/canvas.js'
+import { dimBackdrop } from '../draw/backdrop.js'
 
 it.each([
   [54, 24],
@@ -21,12 +21,17 @@ it.each([
       workspaceInput('', { downArrow: true } as Key, s, workspaceFrame(s, width, height, 0)).patch
     )
   const frame = workspaceFrame(s, width, height, 0)
+  const underlying = workspaceFrame({ ...s, overlay: null }, width, height, 0)
+  const editor = underlying.targets.find((target) => target.id === 'composer')!
+  dimBackdrop(underlying)
   expect(s.focus).toBe('model:25')
   expect(frame.targets.some((t) => t.id === s.focus)).toBe(true)
   const row = frame.targets.find((t) => t.id === s.focus)!
   expect(workspaceInput(`[<0;${row.x + 1};${row.y + 1}M`, {} as Key, s, frame).action).toBe('model:25')
   expect(frame.popover!.y + frame.popover!.height).toBeLessThanOrEqual(height - 10)
-  expect(frame.cells.flat().some((c) => c.background === COLORS.composerFrame && c.char === ' ')).toBe(true)
+  expect(frame.cells[editor.y]!.slice(editor.x, editor.x + editor.width)).toEqual(
+    underlying.cells[editor.y]!.slice(editor.x, editor.x + editor.width)
+  )
   expect(frame.cells.map((r) => r.map((c) => c.char).join('')).join('\n')).toContain('Keep this draft')
   expect(frame.targets.some((t) => t.id === 'send' || t.id === 'new')).toBe(false)
   expect(workspaceInput('[<0;1;1M', {} as Key, s, frame).action).toBe('close')

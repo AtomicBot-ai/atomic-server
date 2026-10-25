@@ -1,8 +1,10 @@
+import { useState } from 'react'
+import { useConfirmation } from './use-confirmation'
 import type { Workspace } from './useWorkspace'
 import { HostStepBanner } from './HostStepBanner'
 import { loadStageText } from '@view'
 import type { Page } from './types'
-import { Action } from './Controls'
+import { Action, JsonResult } from './Controls'
 import { Eye } from './Eye'
 import type { EyeState } from './Eye'
 import { text } from './types'
@@ -14,6 +16,8 @@ export function Cockpit({
   workspace: Workspace
   navigate: (page: Page) => void
 }) {
+  const { ask, confirmation, waiting } = useConfirmation()
+  const [ping, setPing] = useState<unknown>()
   const s = w.snapshot
   const state: EyeState = w.error
     ? 'disconnected'
@@ -26,6 +30,7 @@ export function Cockpit({
     value === null || value === undefined ? '—' : `${Math.round(value * 10) / 10}${unit}`
   return (
     <header className="ew-cockpit" aria-label="Server status">
+      {confirmation}
       <Eye state={state} />
       <div className="cockpit-main">
         <div className="brand-row">
@@ -88,39 +93,45 @@ export function Cockpit({
         <div className="ew-actions">
           <Action
             primary={!s?.api.running}
-            disabled={!s}
+            disabled={!s || waiting}
             onClick={() => {
-              if (
-                s?.api.running &&
-                !window.confirm(
-                  'Stop the API? Active requests will be interrupted. Loaded models remain available.'
-                )
-              )
-                return
-              return w.execute(s?.api.running ? 'api.stop' : 'api.start')
+              if (s?.api.running)
+                ask({
+                  title: 'Stop the API?',
+                  actionLabel: 'Stop API',
+                  danger: true,
+                  children: <p>Active requests will be interrupted. Loaded models remain available.</p>,
+                  onConfirm: () => w.execute('api.stop'),
+                })
+              else return w.execute('api.start')
             }}
           >
             {s?.api.running ? 'Stop API' : 'Start API'}
           </Action>
           <Action
-            disabled={!s?.api.running}
+            disabled={!s?.api.running || waiting}
             onClick={() => {
-              if (window.confirm('Restart the API? Active requests will be interrupted.'))
-                return w.execute('api.restart')
+              ask({
+                title: 'Restart the API?',
+                actionLabel: 'Restart API',
+                children: <p>Active requests will be interrupted.</p>,
+                onConfirm: () => w.execute('api.restart'),
+              })
             }}
           >
             Restart
           </Action>
           <Action
-            disabled={!s}
+            disabled={!s || waiting}
             onClick={async () => {
               const result = await w.execute('api.ping')
-              window.alert(`Server response\n${JSON.stringify(result, null, 2)}`)
+              setPing(result)
             }}
           >
             Ping
           </Action>
         </div>
+        <JsonResult value={ping} />
         <small className="core-caption">
           Core {text(s?.core.version)} · {s?.services.length ?? 0} loaded services
         </small>

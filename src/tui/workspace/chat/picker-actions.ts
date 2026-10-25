@@ -2,7 +2,8 @@ import { engineName } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { isPicker, pickerRows } from './picker.js'
-import { loadAction, readVision } from './chat-load.js'
+import { loadAction } from './chat-load.js'
+import { beginModelSelection, persistModelSelection, selectLocalModel } from './model-selection.js'
 import type { WorkspaceController } from '../controller.js'
 const reads = new WeakMap<WorkspaceController, number>()
 export async function pickerAction(id: string, ctx: ActionContext): Promise<boolean> {
@@ -60,13 +61,35 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
     }
     const engine = s.engines[Number(id.slice(12))]
     if (!engine) return true
+    const fresh = beginModelSelection(ctx)
     patch({
       pickerBusy: true,
       pickerError: '',
+      modelLoad: null,
+      loadError: null,
+      busy: false,
       message: engine.installed ? 'Switching engine…' : `Installing ${engineName(engine.provider)}…`,
     })
     try {
+      if (!engine.installed) {
+        await c.runtime.execute('engines.enqueue', {
+          engine: engine.provider,
+          target: { version: engine.version, variant: engine.backend },
+          select: true,
+        })
+        if (!fresh()) return true
+        update((v) => ({
+          ...v,
+          engine: engine.id,
+          overlay: null,
+          focus: 'composer',
+          hover: '',
+          message: 'Engine download queued.',
+        }))
+        return true
+      }
       await c.engineSelection.select(engine)
+      if (!fresh()) return true
       const local = s.installed.find((m) => m.id === s.model)
       // The model stays when the new provider lists it; llama.cpp's two take each other's models.
       const compatible =
@@ -75,14 +98,14 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
           (['llamacpp', 'llamacpp-upstream'].includes(local.provider) &&
             ['llamacpp', 'llamacpp-upstream'].includes(engine.provider)))
       patch({ engine: engine.id, ...(local && !compatible ? { model: '' } : {}) })
-      if (local && !compatible) await c.save('tui.model', '')
+      if (local && !compatible) {
+        await persistModelSelection(ctx, '', get().endpoint, fresh)
+        if (!fresh()) return true
+      }
       if (compatible) {
-        await c.loadModel(engine.provider, local.id)
-        patch({ modelVision: await readVision(c, engine.provider, local.id) })
-        const endpoint = await c.localEndpoint()
-        await c.save('tui.model', local.id)
-        await c.save('tui.endpoint', endpoint)
-        patch({ model: local.id, endpoint })
+        const index = get().installed.findIndex((model) => model.id === local.id)
+        await selectLocalModel(`installed:${index}:${engine.provider}`, ctx, fresh)
+        if (!fresh() || get().loadError) return true
       }
       update((v) => ({
         ...v,
@@ -91,9 +114,9 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
         message: `${engineName(engine.provider)} selected.${local && !compatible ? ' Choose a compatible model.' : ''}`,
       }))
     } catch (e) {
-      patch({ pickerError: e instanceof Error ? e.message : 'Engine could not be selected.' })
+      if (fresh()) patch({ pickerError: e instanceof Error ? e.message : 'Engine could not be selected.' })
     } finally {
-      patch({ pickerBusy: false })
+      if (fresh()) patch({ pickerBusy: false })
     }
     return true
   }

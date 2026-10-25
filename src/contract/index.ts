@@ -13,3 +13,8 @@ export * from './workspace-navigation.js'
 export * from './setup-goals.js'
 export * from './model-setup.js'
 export * from './managed.js'
+export * from './litert.js'
+export * from './desktop-flows.js'
+export * from './workspace-features.js'
+
+export type { ConnectorTemplate } from './mcp-catalog.js'

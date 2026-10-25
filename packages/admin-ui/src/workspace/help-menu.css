@@ -1,0 +1,53 @@
+.support-menu {
+  position: fixed;
+  z-index: 90;
+  left: 86px;
+  bottom: 20px;
+  width: min(260px, calc(100vw - 100px));
+  padding: 10px;
+  border: 1px solid var(--ew-line);
+  border-radius: 14px;
+  background: var(--ew-panel);
+  box-shadow: 0 18px 64px #0006;
+  outline: none;
+}
+.support-menu header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.support-menu h2 {
+  font-size: 14px;
+  margin: 8px;
+}
+.support-menu a,
+.support-menu > button,
+.support-menu .ew-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ew-text);
+  font-size: 13px;
+  text-decoration: none;
+  text-align: left;
+}
+.support-menu a:hover,
+.support-menu button:hover {
+  background: var(--ew-raised);
+}
+.support-menu header button {
+  background: none;
+  border: 0;
+  color: var(--ew-muted);
+  padding: 8px;
+}
+.support-menu hr {
+  border: 0;
+  border-top: 1px solid var(--ew-line);
+  margin: 8px 0;
+}

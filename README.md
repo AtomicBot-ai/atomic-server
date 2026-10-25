@@ -1,11 +1,13 @@
 # eye-cli
 
-Atomic Chat's terminal workspace: local conversations, model and engine installation, and an
-OpenAI-compatible server console. Keyboard shortcuts and mouse controls share the same interface,
-with an animated turquoise eye and layouts that adapt to the terminal window.
+Atomic Server provides a web interface and terminal UI for the same local inference server. Both
+support keyboard and mouse controls and share onboarding, downloads, models, and server status.
+The executable is named **`atc`**.
 
-Choose Personal terminal for chat or Server console for API controls and credentials. First run installs
-an engine and model before opening the workspace. The executable is still named **`atc`**.
+On a fresh profile, the intro waits at **Choose engine**. Open the engine picker and select an engine
+to start its installation. When installation finishes, the intro waits at **Press any key** before
+model selection. If an engine is already installed, unfinished onboarding starts at **Press any key**.
+Completed onboarding resumes the workspace in either interface.
 
 This repository continues the terminal work built on
 [`atomic-chat-cli`](https://github.com/AtomicBot-ai/atomic-chat-cli). Build from source with Bun and Node 22:
@@ -96,7 +98,7 @@ removes it and leaves the data folder. The repository keeps the last ten release
 [releases page](https://github.com/AtomicBot-ai/eye-cli/releases) as `.deb` and `.rpm` files.
 
 ```sh
-atc                  # on a terminal: the terminal UI — choose a workspace, install an engine and a model
+atc                  # on a terminal: the terminal UI — choose an engine, then a model
 atc service install  # keep the server running: systemd, launchd or a scheduled task; back after a crash
 atc status           # pid, versions, API endpoint, running models, admin URL   (--json for one document)
 atc api start        # the OpenAI-compatible API; every client needs a key from atc/client-keys.json
@@ -116,8 +118,8 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Server | `atc status` | The server, the API endpoint, running models, the admin URL | works (`--watch` is a stub) |
 | Server | `atc logs` | Tail of the server log; `-f` follows it | works |
 | Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on an engine (`--engine`; a managed engine shows its load stages); stop it | works |
-| Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines' and Foundry Local's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local)) |
-| Models & engines | `atc engines list\|install\|status\|rm` | Engines (llama.cpp, MLX, Foundry Local, the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs | works (see [Managed engines](#managed-engines)) |
+| Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines', Foundry Local's and LiteRT-LM's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local), [LiteRT-LM](#litert-lm)) |
+| Models & engines | `atc engines list\|install\|status\|rm\|accelerators` | Engines (llama.cpp, MLX, Foundry Local, LiteRT-LM (`litert-lm`), the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs; `engines accelerators foundry-local\|litert-lm` lists and prepares accelerators | works (see [Managed engines](#managed-engines), [LiteRT-LM](#litert-lm)) |
 | Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
 | Access | `atc chat` | Send a message to an OpenAI-compatible model | works |
@@ -213,6 +215,39 @@ once prepared, and downloads only one the core says runs (`ok`). Files come with
 Atomic Chat's list; a Microsoft catalog model is marked unverified. A download runs in the server into
 `<data>/foundry-local/models/<variant>/`, continues across an expired Azure link, and writes `model.yml`
 last. The list is cached for an hour; `ATC_FOUNDRY_LOCAL_MODELS_URL` names another one.
+
+## LiteRT-LM
+
+LiteRT-LM runs Google's `.litertlm` models on the CPU, the GPU and an Intel NPU through Google's library,
+where the core registers it (macOS 12+ on Apple Silicon, Linux x64/arm64 with glibc 2.27+, Windows x64);
+elsewhere every `litert-lm` command says the engine is not available on this platform. The build comes
+from PyPI with its sha256 checked. An NPU variant needs OpenVINO, which the core offers only on Windows
+with a Lunar Lake or Panther Lake NPU; `atc` prepares it after the install, as the app does, and nothing
+else is prepared on Linux or macOS:
+
+```bash
+atc engines install litert-lm [--no-accelerators]    # the build, then openvino where an Intel NPU wants it
+atc engines accelerators litert-lm [--refresh]       # the NPU generation and openvino, prepared or not
+atc engines accelerators litert-lm --prepare         # download openvino (about 85 MB) through atc's proxy
+atc engines status litert-lm                         # the active build
+atc models catalog --engine litert-lm                # Atomic Chat's list only
+atc models search gemma --engine litert-lm           # Atomic Chat's list, then Hugging Face's
+atc models pull gemma-4-e4b --engine litert-lm [--backend npu|gpu|cpu]
+atc models pull --cancel <request-id> --engine litert-lm
+atc run gemma-4-e4b-gpu --engine litert-lm           # a downloaded variant loads with litert-lm
+atc models rm gemma-4-e4b-gpu                        # unloaded first, then its folder is deleted
+```
+
+Without `--backend` the pull takes the NPU variant, then GPU, then CPU, among those that run here or will
+once prepared, and downloads only one the core says runs (`ok`). Atomic Chat's list pins each file to a
+commit with its size and sha256; Hugging Face models (conf's organisations, tag `litert-lm`) come after,
+marked not verified by Atomic Chat, with variants read from their file names (`-gpu`, `_intel_LNL`, …)
+and sha256 from the Hub's LFS metadata. A gated model needs `HF_TOKEN` in the server's environment and
+its terms accepted on Hugging Face; the token goes to Hugging Face's own host, never to the CDN a
+download is redirected to. A download runs in the server into `<data>/litert-lm/models/<variant>/`,
+resumes, is checked by the core, and writes `model.yml` last; a folder without it is not a model. One
+model answers one request at a time: several clients are served in turn. The list is cached for an
+hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
 ## Where data lives
 

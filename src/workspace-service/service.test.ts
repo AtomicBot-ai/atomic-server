@@ -39,6 +39,7 @@ describe('workspace operations', () => {
     const tmp = tmpDataFolder()
     cleanup.push(tmp.cleanup)
     const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = { engines: [{ engine: 'foundry-local' }] }
     const config = defaultConfig()
     config.proxy = { url: 'http://proxy.test:3128', noProxy: ['localhost'], ignoreSsl: true }
     await new WorkspaceService({ link, paths: tmp.paths, config }).execute('engines.install', {
@@ -170,13 +171,17 @@ describe('workspace operations', () => {
         ],
       },
     ]
+    link.snapshotValue.sessions = [{ provider: 'llamacpp-upstream', model_id: 'vision', port: 0 } as never]
     const result = (await service.execute('chat.complete', {
       request: { model: 'vision', messages },
     })) as Record<string, unknown>
     expect(result['usage']).toEqual({ completion_tokens: 1 })
     expect(request.mock.calls[0]?.[0]).toBe('http://127.0.0.1:1337/v1/chat/completions')
     expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer test-key' })
-    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toMatchObject({ stream: false, messages })
+    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toMatchObject({
+      stream: false,
+      messages: [{ role: 'system', content: expect.stringContaining('You are Atomic Chat') }, ...messages],
+    })
     expect(await service.execute('history.load', { id: result['conversation_id'] })).toMatchObject({
       messages: [messages[0], response.choices[0]!.message],
     })

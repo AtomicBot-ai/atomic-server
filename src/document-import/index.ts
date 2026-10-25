@@ -1,0 +1,54 @@
+/** Bounded text extraction and portable skill archives shared by Web uploads and terminal files. */
+import { officeText } from './office.js'
+import { AtcError } from '../errors/index.js'
+export { readArchive } from './archive.js'
+export { importSkillPackage, exportSkillPackage } from './skills.js'
+export const DOCUMENT_EXTENSIONS = [
+  'txt',
+  'md',
+  'csv',
+  'json',
+  'log',
+  'py',
+  'js',
+  'ts',
+  'html',
+  'css',
+  'xml',
+  'yaml',
+  'yml',
+  'pdf',
+  'docx',
+  'xlsx',
+  'pptx',
+]
+function utf8Text(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    throw new AtcError('ATC_USAGE', 'Choose a UTF-8 text document. This file is not valid UTF-8 text.')
+  }
+}
+
+export async function documentText(name: string, bytes: Uint8Array, maximumMb: number): Promise<string> {
+  if (!Number.isFinite(maximumMb) || maximumMb < 1 || maximumMb > 100)
+    throw new AtcError('ATC_USAGE', 'Choose a file size limit between 1 and 100 MB.')
+  if (bytes.length > maximumMb * 1024 * 1024)
+    throw new AtcError('ATC_USAGE', `Choose a document smaller than ${maximumMb} MB.`)
+  const extension = name.split('.').at(-1)?.toLowerCase() ?? ''
+  if (!DOCUMENT_EXTENSIONS.includes(extension))
+    throw new AtcError(
+      'ATC_USAGE',
+      'Choose PDF, DOCX, XLSX, PPTX or a text document. Convert legacy Office files first.'
+    )
+  const content =
+    extension === 'pdf'
+      ? await (await import('./pdf.js')).pdfText(bytes)
+      : ['docx', 'xlsx', 'pptx'].includes(extension)
+        ? officeText(bytes, extension)
+        : utf8Text(bytes)
+  if (content.includes('\0')) throw new AtcError('ATC_USAGE', 'This document contains binary data.')
+  if (Buffer.byteLength(content) > 16 * 1024 * 1024)
+    throw new AtcError('ATC_USAGE', 'The extracted document text exceeds 16 MB.')
+  return content
+}

@@ -152,6 +152,15 @@ export function parseInvocation(resolved: ResolvedCommand): Invocation {
       hint: helpHint(path),
     })
   }
+  // `allowNegative` reads `--no-accelerators` as `accelerators: false`; an option spelled `no-<x>` with
+  // no `<x>` of its own gets its value back under its own name.
+  for (const name of Object.keys(options)) {
+    const base = name.slice(3)
+    if (name.startsWith('no-') && !(base in options) && parsed.values[base] === false) {
+      delete parsed.values[base]
+      parsed.values[name] = true
+    }
+  }
   const specs = spec.positionals ?? []
   const required = specs.filter((p) => p.required).length
   const hasRest = specs.some((p) => p.rest)
