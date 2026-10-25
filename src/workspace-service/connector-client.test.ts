@@ -183,3 +183,16 @@ it('refuses a disabled connector and a misbehaving server as usage errors, not s
     code: 'ATC_USAGE',
   })
 })
+it('says a stdio connector’s command is missing, as a usage error', async () => {
+  await expect(
+    withConnector(
+      { ...config, type: 'stdio', command: '/nonexistent/connector-binary', args: [] },
+      fetch,
+      {},
+      async () => {}
+    )
+  ).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+    message: expect.stringContaining('/nonexistent/connector-binary'),
+  })
+})

@@ -65,7 +65,11 @@ export class WorkspaceFeatureService {
   async execute(operation: string, input: WorkspaceInput) {
     if (operation === 'features.get') return this.view()
     if (operation === 'connectors.import') {
-      const servers = object(object(input['value'])['mcpServers']),
+      const raw = object(input['value'])['mcpServers']
+      // The import replaces every connector: a document in another shape must not read as "none".
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        throw new AtcError('ATC_USAGE', 'Paste JSON with an mcpServers object, as MCP clients write it.')
+      const servers = object(raw),
         revoke: string[] = []
       await mutateDocument(this.path, this.empty(), (current) => {
         const next = Object.entries(servers).map(([id, value]) =>
@@ -227,12 +231,14 @@ export class WorkspaceFeatureService {
         return client.send('tools/call', { name: input['tool'], arguments: object(input['arguments']) })
       })
     } catch (error) {
-      this.statuses[id] = {
-        state: 'error',
-        tools: [],
-        error: error instanceof Error ? error.message : String(error),
-        checked_at: Date.now(),
-      }
+      // A tool that failed, or a wrong tool name, does not make a connected connector broken.
+      if (this.statuses[id]?.state !== 'connected')
+        this.statuses[id] = {
+          state: 'error',
+          tools: [],
+          error: error instanceof Error ? error.message : String(error),
+          checked_at: Date.now(),
+        }
       throw error
     }
   }

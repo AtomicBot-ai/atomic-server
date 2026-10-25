@@ -57,3 +57,30 @@ it('waits only for the text model chosen in onboarding and recognizes every comp
   for (const stage of ['ready', 'completed', 'succeeded', 'done'])
     expect(setupModelPending(snapshot({ setups: [job(stage)] }))).toBe(false)
 })
+it('ignores an engine download that is not the model’s own when the model is named', () => {
+  const failedEngine = {
+    taskId: 'e1',
+    kind: 'engine',
+    engine: 'mlx',
+    stage: 'failed',
+    state: 'failed',
+    transferred: 0,
+    total: 0,
+  }
+  // A model that is not downloading at all: the stale engine job says nothing about it.
+  expect(
+    inferenceReadiness(snapshot({ downloads: [failedEngine] }), { model: 'qwen', kind: 'chat' })
+  ).toMatchObject({
+    message: 'Choose and download a model to continue.',
+    acquire: 'catalog',
+  })
+  // A model whose own setup waits on that engine shows the setup's own stage (the transfer folds into it).
+  const waiting = { ...job('installing_engine'), task_ids: { engine: 'e1', model: 'q' } }
+  expect(
+    inferenceReadiness(snapshot({ setups: [waiting], downloads: [failedEngine] }), { model: 'qwen' })
+  ).toMatchObject({ message: 'The engine is downloading. Wait until it is ready.', acquire: 'downloads' })
+  // No model named (the API start): any engine download still counts.
+  expect(inferenceReadiness(snapshot({ downloads: [failedEngine] }))).toMatchObject({
+    message: 'Retry the engine download to continue.',
+  })
+})

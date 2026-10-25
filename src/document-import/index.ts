@@ -22,6 +22,14 @@ export const DOCUMENT_EXTENSIONS = [
   'xlsx',
   'pptx',
 ]
+function utf8Text(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    throw new AtcError('ATC_USAGE', 'Choose a UTF-8 text document. This file is not valid UTF-8 text.')
+  }
+}
+
 export async function documentText(name: string, bytes: Uint8Array, maximumMb: number): Promise<string> {
   if (!Number.isFinite(maximumMb) || maximumMb < 1 || maximumMb > 100)
     throw new AtcError('ATC_USAGE', 'Choose a file size limit between 1 and 100 MB.')
@@ -38,7 +46,7 @@ export async function documentText(name: string, bytes: Uint8Array, maximumMb: n
       ? await (await import('./pdf.js')).pdfText(bytes)
       : ['docx', 'xlsx', 'pptx'].includes(extension)
         ? officeText(bytes, extension)
-        : new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+        : utf8Text(bytes)
   if (content.includes('\0')) throw new AtcError('ATC_USAGE', 'This document contains binary data.')
   if (Buffer.byteLength(content) > 16 * 1024 * 1024)
     throw new AtcError('ATC_USAGE', 'The extracted document text exceeds 16 MB.')

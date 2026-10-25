@@ -3,6 +3,7 @@ import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ChatMessage } from '../terminal-service/index.js'
 import { readDocument, mutateDocument } from './store.js'
+import { AtcError } from '../errors/index.js'
 export interface Conversation {
   id: string
   title: string
@@ -57,7 +58,8 @@ export class ChatHistory {
       files
         .filter((f) => /^[\da-f-]{36}\.json$/.test(f))
         .map(async (f) => {
-          const c = await this.load(f.slice(0, -5))
+          // One damaged file must not hide every other conversation.
+          const c = await this.load(f.slice(0, -5)).catch(() => null)
           if (!c) return null
           const { messages, ...summary } = c
           return { ...summary, turns: messages.filter((m) => m.role === 'user').length }
@@ -69,7 +71,7 @@ export class ChatHistory {
     await rm(this.path(id), { force: true })
   }
   private path(id: string) {
-    if (!/^[\da-f-]{36}$/.test(id)) throw new Error('Invalid conversation ID.')
+    if (!/^[\da-f-]{36}$/.test(id)) throw new AtcError('ATC_USAGE', 'Invalid conversation ID.')
     return join(this.directory, `${id}.json`)
   }
 }

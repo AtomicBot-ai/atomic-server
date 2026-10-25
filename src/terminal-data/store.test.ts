@@ -1,8 +1,9 @@
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { mkdtemp, readFile, rename, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, expect, it } from 'vitest'
-import { readDocument, replaceFile, writeDocument } from './store.js'
+import { afterEach, describe, expect, it } from 'vitest'
+import { mutateDocument, readDocument, replaceFile, writeDocument } from './store.js'
 
 const folders: string[] = []
 afterEach(async () => {
@@ -80,3 +81,28 @@ it('keeps trying a refused rename for several seconds, not a fixed number of tim
   await writeDocument(path, { stage: 'ready' }, { rename: r.fn })
   expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ stage: 'ready' })
 }, 15_000)
+
+describe('a document lock left behind', () => {
+  it('is taken over when its holder is gone, and the mutation goes through', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'atc-store-lock-'))
+    const path = join(dir, 'doc.json')
+    // A pid that cannot be running: the largest a kernel hands out is far below this.
+    writeFileSync(`${path}.lock`, '2147483646')
+    const started = Date.now()
+    expect(await mutateDocument(path, { n: 0 }, (v) => ({ n: v.n + 1 }))).toEqual({ n: 1 })
+    expect(Date.now() - started).toBeLessThan(2000)
+    expect(existsSync(`${path}.lock`)).toBe(false)
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('still waits for a live holder, then fails with a usage error naming the lock', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'atc-store-lock-'))
+    const path = join(dir, 'doc.json')
+    writeFileSync(`${path}.lock`, String(process.pid))
+    await expect(mutateDocument(path, { n: 0 }, (v) => v, { waitMs: 150 })).rejects.toMatchObject({
+      code: 'ATC_INTERNAL',
+      message: expect.stringContaining('doc.json.lock'),
+    })
+    rmSync(dir, { recursive: true, force: true })
+  })
+})

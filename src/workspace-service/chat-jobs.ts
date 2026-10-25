@@ -35,6 +35,8 @@ export type EnrichChat = (body: Record<string, unknown>) => Promise<Record<strin
 /** Owned by the server, accessible through the same authenticated operations as the CLI. */
 export class ChatJobs {
   private jobs = new Map<string, Running>()
+  /** Conversations a start is preparing for, before their job exists: a second start waits for none. */
+  private starting = new Set<string>()
   constructor(
     private options: WorkspaceServiceOptions,
     private keys: ClientKeys,
@@ -45,8 +47,23 @@ export class ChatJobs {
   async start(input: WorkspaceInput) {
     for (const [id, job] of this.jobs)
       if (!this.active(job.view) && Date.now() - job.lastRead > 300000) this.jobs.delete(id)
-    if ([...this.jobs.values()].filter((job) => this.active(job.view)).length >= 4)
+    if ([...this.jobs.values()].filter((job) => this.active(job.view)).length + this.starting.size >= 4)
       throw new AtcError('ATC_USAGE', 'Four Playground requests are already active. Stop one first.')
+    const conversationId = typeof input['conversation_id'] === 'string' ? input['conversation_id'] : ''
+    if (
+      conversationId &&
+      (this.starting.has(conversationId) ||
+        [...this.jobs.values()].some((j) => this.active(j.view) && j.view.conversation_id === conversationId))
+    )
+      throw new AtcError('ATC_USAGE', 'This conversation already has an active request.')
+    if (conversationId) this.starting.add(conversationId)
+    try {
+      return await this.begin(input)
+    } finally {
+      this.starting.delete(conversationId)
+    }
+  }
+  private async begin(input: WorkspaceInput) {
     if (this.jobs.size >= 64) {
       const oldest = [...this.jobs].find(([, job]) => !this.active(job.view))
       if (oldest) this.jobs.delete(oldest[0])
@@ -70,11 +87,6 @@ export class ChatJobs {
     if (!status.running) throw new AtcError('ATC_USAGE', 'Start the API on the Server page, then retry.')
     const endpoint = publicEndpoint(object(status), this.options.config).endpoint
     let chat = input['conversation_id'] ? await this.history.load(String(input['conversation_id'])) : null
-    if (
-      chat &&
-      [...this.jobs.values()].some((j) => this.active(j.view) && j.view.conversation_id === chat?.id)
-    )
-      throw new AtcError('ATC_USAGE', 'This conversation already has an active request.')
     chat ??= this.history.create(endpoint, model, '')
     const previous = chat.messages as unknown as Record<string, unknown>[]
     chat.messages = (request['messages'] as Record<string, unknown>[]).map((message, index) => {
@@ -192,7 +204,17 @@ export class ChatJobs {
       chat.messages.push(view.message as unknown as Conversation['messages'][number])
       chat.interrupted = state !== 'complete'
       try {
-        await this.history.save(chat)
+        // The stored copy may have been renamed or archived meanwhile: the answer joins it. Deleted
+        // meanwhile: it stays deleted.
+        const stored = await this.history.load(chat.id).catch(() => undefined)
+        if (stored !== null)
+          await this.history.save({
+            ...(stored ?? chat),
+            messages: chat.messages,
+            model: chat.model,
+            ...(chat.request_settings ? { request_settings: chat.request_settings } : {}),
+            interrupted: chat.interrupted,
+          })
       } catch {
         view.error = 'The answer could not be saved. Export it before leaving this page.'
         state = 'failed'

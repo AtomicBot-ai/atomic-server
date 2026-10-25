@@ -41,7 +41,9 @@ export function inferenceReadiness(
     target = connectionDownloadTarget(job),
     downloads = downloadRows(snapshot.setups, snapshot.downloads),
     model = downloads.find((row) => row.id === String(job?.['id'] ?? job?.['setup_id'] ?? '')),
-    engine = downloads.find((row) => row.owner === 'download')
+    // A named model's own engine transfer is folded into its setup row above; any other engine download
+    // (a stale failed one of another engine) says nothing about this model.
+    engine = options.model ? undefined : downloads.find((row) => row.owner === 'download')
   if (model) {
     const paused = downloadPaused(model.state)
     return blocked(

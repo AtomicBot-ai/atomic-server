@@ -64,11 +64,24 @@ export class EngineDownloads {
         if (!terminal.has(job.stage)) job.stage = 'interrupted'
         this.jobs.set(job.id, job)
       }
-    })())
+    })().catch((error: unknown) => {
+      // A read that failed once (EMFILE, a backup holding the folder) is tried again next time.
+      this.loaded = undefined
+      throw error
+    }))
+  }
+  /** A finished install leaves Downloads a day later, whether or not the server restarted meanwhile. */
+  private async forgetOld() {
+    for (const job of [...this.jobs.values()])
+      if (job.stage === 'ready' && this.now() - job.updated_at > KEEP_READY_MS && !this.runs.has(job.id)) {
+        this.jobs.delete(job.id)
+        await rm(this.path(job.id), { force: true })
+      }
   }
   /** Copies of every job, so a job outlives the core's transient transfer row. */
   async list() {
     await this.load()
+    await this.forgetOld()
     return [...this.jobs.values()].map((job) => ({ ...job, state: job.stage }))
   }
   /** Progress from the core's current transfers, for events this server may have missed. */

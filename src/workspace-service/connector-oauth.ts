@@ -21,7 +21,10 @@ interface Pending {
   server: Server
   timer: ReturnType<typeof setTimeout>
   exchanging?: boolean
+  /** When the sign-in ended; a client reads its outcome for a while, then the entry goes. */
+  ended_at?: number
 }
+const ENDED_KEEP_MS = 10 * 60 * 1000
 /** Browser sign-in lives in the server; access and refresh tokens never enter a frontend snapshot. */
 export class ConnectorOAuth {
   private path: string
@@ -45,6 +48,7 @@ export class ConnectorOAuth {
       clearTimeout(item.timer)
       item.server.close()
       item.state = 'cancelled'
+      item.ended_at = Date.now()
     }
     return this.status(id)
   }
@@ -125,6 +129,9 @@ export class ConnectorOAuth {
   }
   async start(id: string, resource: string, clientId?: string) {
     this.cancel(id)
+    for (const [key, item] of this.pending)
+      if (item.state !== 'waiting' && Date.now() - (item.ended_at ?? 0) > ENDED_KEEP_MS)
+        this.pending.delete(key)
     const version = this.versions.get(id)!
     const metadata = await discoverOAuth(resource, this.request),
       state = randomBytes(32).toString('base64url'),
@@ -174,6 +181,7 @@ export class ConnectorOAuth {
         const item = this.pending.get(id)
         if (item?.state === 'waiting') {
           item.state = 'error'
+          item.ended_at = Date.now()
           item.error = 'Sign-in timed out. Try again.'
           server.close()
         }
@@ -222,11 +230,13 @@ export class ConnectorOAuth {
             }
             await this.save(id, token, version)
             pending.state = 'complete'
+            pending.ended_at = Date.now()
             res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' })
             res.end('Connected. You can return to Atomic Server.')
           } catch (error) {
             if (pending.state === 'waiting') {
               pending.state = 'error'
+              pending.ended_at = Date.now()
               pending.error = error instanceof Error ? error.message : String(error)
             }
             res.writeHead(400, { 'Content-Type': 'text/plain' })

@@ -183,3 +183,67 @@ it('revokes stored OAuth credentials when connectors are removed, replaced or ch
     logout.mockRestore()
   }
 })
+
+it('imports a client’s mcpServers JSON as it is written: a command is a stdio connector, a url an HTTP one', async () => {
+  const service = new WorkspaceFeatureService(dir)
+  const view = (await service.execute('connectors.import', {
+    value: {
+      mcpServers: {
+        files: { command: 'npx', args: ['-y', 'mcp-files'], env: { ROOT: '/tmp' } },
+        remote: { url: 'https://mcp.example.test/mcp' },
+      },
+    },
+  })) as { connectors: { id: string; type: string; command: string; url: string }[] }
+  expect(view.connectors.map((c) => [c.id, c.type])).toEqual([
+    ['files', 'stdio'],
+    ['remote', 'http'],
+  ])
+})
+
+it('refuses an import without an mcpServers object instead of removing every connector', async () => {
+  const service = new WorkspaceFeatureService(dir)
+  await service.execute('connectors.save', {
+    value: { id: 'keep', name: 'Keep', url: 'https://keep.test/mcp' },
+  })
+  for (const value of [{ servers: {} }, { mcpServers: [] }, { mcpServers: 'x' }, {}])
+    await expect(service.execute('connectors.import', { value })).rejects.toMatchObject({ code: 'ATC_USAGE' })
+  expect((await service.view()).connectors.map((c) => c.id)).toEqual(['keep'])
+})
+
+it('keeps a connector connected when one tool call fails, and saves only the attachment fields it knows', async () => {
+  const request = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as { id?: number; method: string; params?: { name?: string } }
+    if (body.method === 'notifications/initialized') return new Response(null, { status: 202 })
+    if (body.method === 'tools/call')
+      return Response.json({ jsonrpc: '2.0', id: body.id, error: { code: -32000, message: 'Tool blew up' } })
+    return Response.json({
+      jsonrpc: '2.0',
+      id: body.id,
+      result:
+        body.method === 'initialize'
+          ? { protocolVersion: '2025-06-18' }
+          : { tools: [{ name: 'echo', inputSchema: { type: 'object' } }] },
+    })
+  }) as unknown as typeof fetch
+  const service = new WorkspaceFeatureService(dir, request)
+  await service.execute('connectors.save', {
+    value: { id: 'echo', name: 'Echo', url: 'http://127.0.0.1:1234/mcp' },
+  })
+  await expect(
+    service.execute('connectors.call', { id: 'echo', tool: 'echo', arguments: {} })
+  ).rejects.toThrow('Tool blew up')
+  expect((await service.view()).connector_status['echo']).toMatchObject({
+    state: 'connected',
+    tools: [{ name: 'echo' }],
+  })
+  await expect(
+    service.execute('connectors.call', { id: 'echo', tool: 'missing', arguments: {} })
+  ).rejects.toThrow('available')
+  expect((await service.view()).connector_status['echo']?.state).toBe('connected')
+  const view = (await service.execute('attachments.update', {
+    value: { enabled: true, max_file_size_mb: 5, planted: 'x'.repeat(100), nested: { deep: true } },
+  })) as { attachments: Record<string, unknown> }
+  expect(view.attachments).not.toHaveProperty('planted')
+  expect(view.attachments).not.toHaveProperty('nested')
+  expect(view.attachments['max_file_size_mb']).toBe(5)
+})

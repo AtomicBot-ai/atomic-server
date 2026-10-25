@@ -73,7 +73,13 @@ export function importSkill(content: string): AgentSkill {
 }
 export function connectorValue(raw: unknown, id: string, prior?: ConnectorConfig): ConnectorConfig {
   const v = object(raw),
-    type = v['type'] === 'stdio' ? 'stdio' : v['type'] === 'sse' ? 'sse' : 'http'
+    // A client's mcpServers JSON names no type: a command is a stdio connector, a url an HTTP one.
+    type =
+      v['type'] === 'stdio' || (v['type'] === undefined && v['command'] && !v['url'])
+        ? 'stdio'
+        : v['type'] === 'sse'
+          ? 'sse'
+          : 'http'
   const url = string(v['url'] ?? '', 'URL', 2000),
     command = string(v['command'] ?? '', 'Command', 2000)
   if (type !== 'stdio') {
@@ -114,7 +120,16 @@ export function connectorValue(raw: unknown, id: string, prior?: ConnectorConfig
   }
 }
 export function attachmentValue(raw: unknown, prior = DEFAULT_ATTACHMENTS): AttachmentSettings {
-  const v = { ...prior, ...object(raw) }
+  // Only the fields the settings know: anything else a client sends would be stored and served forever.
+  const given = object(raw)
+  const v = {
+    ...prior,
+    ...Object.fromEntries(
+      Object.keys(DEFAULT_ATTACHMENTS)
+        .filter((k) => k in given)
+        .map((k) => [k, given[k]])
+    ),
+  }
   const limits: Record<string, [number, number]> = {
     max_file_size_mb: [1, 100],
     retrieval_limit: [1, 30],

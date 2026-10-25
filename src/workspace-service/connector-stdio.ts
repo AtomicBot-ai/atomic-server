@@ -94,7 +94,17 @@ export function connectorStdio(config: ConnectorConfig, env: NodeJS.ProcessEnv) 
     terminate.unref()
     kill.unref()
   }
-  child.on('error', fail)
+  // A command that does not start (not found, not executable) is the connector's configuration to fix.
+  child.on('error', (error: NodeJS.ErrnoException) =>
+    fail(
+      new AtcError(
+        'ATC_USAGE',
+        error.code === 'ENOENT'
+          ? `Connector command not found: ${config.command}. Check the command and the server's PATH.`
+          : `Connector command ${config.command} did not start: ${error.message}`
+      )
+    )
+  )
   child.stdin.on('error', fail)
   child.on('exit', (code) => {
     clearTimeout(terminate)

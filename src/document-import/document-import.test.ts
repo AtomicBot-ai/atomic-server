@@ -89,3 +89,8 @@ it('refuses an unsafe or oversized archive as a usage error', () => {
     expect.objectContaining({ code: 'ATC_USAGE' })
   )
 })
+it('refuses a text document that is not UTF-8 as a usage error', async () => {
+  await expect(documentText('notes.txt', new Uint8Array([0xff, 0xfe, 0x41]), 10)).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+  })
+})

@@ -222,3 +222,14 @@ it('keeps an installed engine ready when refreshing its selection afterwards fai
   await vi.waitFor(async () => expect((await queue.list())[0]?.stage).not.toMatch(/queued|connecting/))
   expect((await queue.list()).find((j) => j.id === job.id)).toMatchObject({ stage: 'ready' })
 })
+it('forgets a finished install a day later while the server keeps running', async () => {
+  const { tmp, link } = fixture()
+  let now = 10 * 24 * 60 * 60 * 1000
+  link.responses['POST /engines/llamacpp-upstream/update'] = {}
+  const queue = new EngineDownloads(tmp.paths.atcDir, link, null, () => now)
+  const job = await queue.enqueue('llamacpp-upstream')
+  await vi.waitFor(async () => expect((await queue.list())[0]?.stage).toBe('ready'))
+  now += 25 * 60 * 60 * 1000
+  expect((await queue.list()).map((j) => j.id)).not.toContain(job.id)
+  expect(existsSync(join(tmp.paths.atcDir, 'engine-downloads', `${job.id}.json`))).toBe(false)
+})

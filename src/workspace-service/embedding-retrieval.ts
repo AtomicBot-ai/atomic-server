@@ -1,5 +1,6 @@
 import type { AttachmentSettings } from '../contract/index.js'
 import { prepareDocument } from './attachment-processing.js'
+import { AtcError } from '../errors/index.js'
 export type EmbedDocuments = (input: string[], model: string) => Promise<number[][]>
 /** Exact cosine search over document chunks; the core's public embeddings API owns inference. */
 export async function prepareAttachment(
@@ -19,24 +20,27 @@ export async function prepareAttachment(
       : settings.parse_mode
   if (mode === 'inline' || mode === 'retrieval')
     return prepareDocument({ ...settings, parse_mode: mode }, name, content, query)
-  if (!embed) throw new Error('Start an embedding model before using document retrieval.')
+  if (!embed) throw new AtcError('ATC_USAGE', 'Start an embedding model before using document retrieval.')
   const chunks: string[] = []
   for (let at = 0; at < content.length; at += settings.chunk_size_chars - settings.overlap_chars)
     chunks.push(content.slice(at, at + settings.chunk_size_chars))
   if (chunks.length > 10000)
-    throw new Error('This document produces too many chunks. Increase the chunk size or split the document.')
+    throw new AtcError(
+      'ATC_USAGE',
+      'This document produces too many chunks. Increase the chunk size or split the document.'
+    )
   const vectors: number[][] = []
   for (let index = 0; index < chunks.length; index += 32)
     vectors.push(...(await embed(chunks.slice(index, index + 32), settings.embedding_model)))
   const [question] = await embed([query || name], settings.embedding_model)
   if (!question?.length || vectors.length !== chunks.length)
-    throw new Error('Embedding model returned an incomplete result.')
+    throw new AtcError('ATC_INTERNAL', 'Embedding model returned an incomplete result.')
   const magnitude = (v: number[]) => Math.sqrt(v.reduce((sum, n) => sum + n * n, 0))
   const norm = magnitude(question)
   const matches = vectors
     .map((vector, index) => {
       if (vector.length !== question.length || vector.some((n) => !Number.isFinite(n)))
-        throw new Error('Embedding model returned invalid vectors.')
+        throw new AtcError('ATC_INTERNAL', 'Embedding model returned invalid vectors.')
       const denominator = norm * magnitude(vector)
       return {
         index,
