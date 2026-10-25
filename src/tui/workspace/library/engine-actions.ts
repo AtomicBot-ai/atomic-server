@@ -14,8 +14,7 @@ import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import type { WorkspaceState } from '../state.js'
 import { buildAction, readBuilds } from './engine-builds.js'
 import { settingsAction, readEngineForm } from './engine-settings.js'
-import { foundryAction, refreshFoundry } from './foundry-actions.js'
-import { liteRtAction, refreshLiteRt } from './litert-actions.js'
+import { refreshVariantEngine, variantEngineAction } from './variant-engine-actions.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ManagedInstallResult, ServerLaunch } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
@@ -54,8 +53,7 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
   const { get, update, controller: c } = ctx
   if (await settingsAction(id, ctx)) return true
   if (await buildAction(id, ctx)) return true
-  if (await foundryAction(id, ctx)) return true
-  if (await liteRtAction(id, ctx)) return true
+  if (await variantEngineAction(id, ctx)) return true
   if (id.startsWith('engine-open:')) {
     const engine = id.slice('engine-open:'.length)
     const managed = isManagedEngine(engine)
@@ -191,8 +189,8 @@ function panel(ctx: PanelContext, engine: string, part: Partial<EnginePanel>) {
 /** Read the core's state for the open panel again, noting which live operation it was read for. */
 async function refresh(ctx: PanelContext): Promise<void> {
   const p = ctx.get().enginePanel
-  if (p?.kind === 'foundry') return refreshFoundry(ctx, panelRefreshKey(p, ctx.get().workspace))
-  if (p?.kind === 'litert') return refreshLiteRt(ctx, panelRefreshKey(p, ctx.get().workspace))
+  if (p?.kind === 'foundry' || p?.kind === 'litert')
+    return refreshVariantEngine(ctx, panelRefreshKey(p, ctx.get().workspace))
   if (!p || p.kind !== 'managed') return
   panel(ctx, p.engine, { busy: true, seen: panelRefreshKey(p, ctx.get().workspace) })
   try {
