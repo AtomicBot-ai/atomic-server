@@ -37,6 +37,9 @@ it('shows engine progress and a retry only for failed jobs without model pause o
   expect(screen.queryByRole('button', { name: /Remove download|Delete model/ })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   await waitFor(() => expect(fixture.execute).toHaveBeenCalledWith('engines.retry', { id: 'failed' }))
+  expect(screen.queryByRole('button', { name: 'Dismiss Atomic Prism' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss llama.cpp' }))
+  await waitFor(() => expect(fixture.execute).toHaveBeenCalledWith('engines.dismiss', { id: 'failed' }))
 })
 it('marks only actual installed engine builds as installed', () => {
   render(

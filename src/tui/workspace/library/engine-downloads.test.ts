@@ -41,6 +41,11 @@ it('names engine download details and retries failed engine jobs without unsuppo
   expect(view.targets.some((t) => /pause|remove/.test(t.id))).toBe(false)
   await downloadAction('download-do:retry', ctx)
   expect(execute).toHaveBeenCalledWith('engines.retry', { id: 'engine' })
+  await downloadAction('download-row:0', ctx)
+  drawDownloadDetail(view, state, state.focus)
+  expect(view.targets.map((t) => t.id)).toContain('download-do:dismiss')
+  await downloadAction('download-do:dismiss', ctx)
+  expect(execute).toHaveBeenCalledWith('engines.dismiss', { id: 'engine' })
 })
 it('uses installed status only when core reports an active or installed build', () => {
   expect(

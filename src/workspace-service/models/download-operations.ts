@@ -25,6 +25,8 @@ export function downloadOperation(
       return engines.enqueue(String(input['engine']), input)
     case 'engines.retry':
       return engines.retry(String(input['id']))
+    case 'engines.dismiss':
+      return engines.dismiss(String(input['id']))
     case 'models.plan':
     case 'models.install':
     case 'setup.status':

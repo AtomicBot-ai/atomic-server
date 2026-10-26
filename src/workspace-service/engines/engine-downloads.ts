@@ -27,7 +27,7 @@ interface EngineJob extends Record<string, unknown> {
   updated_at: number
 }
 const terminal = new Set(['ready', 'failed', 'interrupted'])
-/** A finished install stays in Downloads for a day; failed and interrupted ones stay until retried. */
+/** A finished install stays in Downloads for a day; failed and interrupted ones stay until retried or dismissed. */
 const KEEP_READY_MS = 24 * 60 * 60 * 1000
 export class EngineDownloads {
   private jobs = new Map<string, EngineJob>()
@@ -186,6 +186,19 @@ export class EngineDownloads {
       await writeDocument(this.path(id), job)
       this.launch(job)
       return { ...job }
+    })
+  }
+  /** Forgets a finished job's record; the core's build files are not touched. */
+  async dismiss(id: string) {
+    return this.admission.run('queue', async () => {
+      await this.load()
+      const job = this.jobs.get(id)
+      if (!job) throw new AtcError('ATC_USAGE', 'No such engine download.')
+      if (this.runs.has(id) || !terminal.has(job.stage))
+        throw new AtcError('ATC_USAGE', `${job.name} is still installing.`)
+      this.jobs.delete(id)
+      await rm(this.path(id), { force: true })
+      return { id, dismissed: true }
     })
   }
   /** A model or second client waits on the existing install instead of launching a duplicate. */
