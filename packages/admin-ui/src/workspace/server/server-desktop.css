@@ -267,3 +267,21 @@
 .connection-guide .wizard-bottom > .action-wrap:last-child:not(:first-child) {
   margin-left: auto;
 }
+.remote-access-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.remote-access-body > p {
+  margin: 0;
+}
+.remote-access-body > .connect-address {
+  align-self: stretch;
+}
+.remote-access-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}

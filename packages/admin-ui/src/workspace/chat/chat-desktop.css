@@ -3,8 +3,7 @@
   max-width: none;
 }
 .chat-enhanced .chat-scroll,
-.chat-enhanced .composer,
-.chat-enhanced .conversation-tabs {
+.chat-enhanced .composer {
   width: min(100%, 840px);
   align-self: center;
 }
