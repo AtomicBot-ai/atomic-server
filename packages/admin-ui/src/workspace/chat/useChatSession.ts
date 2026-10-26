@@ -12,12 +12,9 @@ export function useChatSession() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [recents, setRecents] = useState<RecordValue[]>([])
-  const [tabs, setTabs] = useState<RecordValue[]>([])
   const live = useRef(true),
     locked = useRef(false)
   const refresh = useCallback(async () => setRecents(rows(await workspaceApi.execute('history.list'))), [])
-  const remember = (value: RecordValue) =>
-    setTabs((items) => [...items.filter((x) => x.id !== value.id), value].slice(-8))
   const open = async (id: string) => {
     if (locked.current) return
     const result = record(await workspaceApi.execute('history.load', { id }))
@@ -25,7 +22,6 @@ export function useChatSession() {
     setChat(result)
     setJob({})
     setError('')
-    remember(result)
   }
   const watch = async (initial: RecordValue, conversation: RecordValue) => {
     let current = initial
@@ -42,10 +38,7 @@ export function useChatSession() {
         if (current.error) setError(text(current.error))
         const saved = record(await workspaceApi.execute('history.load', { id: current.conversation_id }))
         // Keep the visible reply if the disk save failed.
-        if (saved.id && !current.error) {
-          setChat(saved)
-          remember(saved)
-        }
+        if (saved.id && !current.error) setChat(saved)
         await refresh()
         return
       }
@@ -106,7 +99,6 @@ export function useChatSession() {
       }
     await workspaceApi.execute('history.save', { chat: value })
     setChat(value)
-    remember(value)
     await refresh()
     return value
   }
@@ -181,8 +173,6 @@ export function useChatSession() {
     error,
     setError,
     recents,
-    tabs,
-    setTabs,
     open,
     save,
     generate,

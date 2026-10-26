@@ -18,34 +18,6 @@
 .chat-enhanced .recents .ew-field {
   margin-top: 15px;
 }
-.conversation-tabs {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  flex-shrink: 0;
-  padding-bottom: 8px;
-}
-.conversation-tabs > div {
-  display: flex;
-  min-width: 110px;
-  max-width: 280px;
-  flex-shrink: 0;
-}
-.conversation-tabs button {
-  border: 1px solid #35433d;
-  color: #b9d6c9;
-  background: #182522;
-  padding: 6px;
-  font-size: 11px;
-}
-.conversation-tabs button:first-child {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.conversation-tabs .active {
-  border-color: #8ce4d8;
-}
 .chat-enhanced .chat-empty {
   color: #8da198;
   text-align: center;

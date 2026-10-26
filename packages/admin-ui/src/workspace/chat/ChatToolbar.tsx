@@ -25,7 +25,6 @@ export function ChatToolbar({
   return (
     <>
       <div className="chat-toolbar">
-        {Boolean(s.chat.id) && <span className="chat-conversation-title">{text(s.chat.title)}</span>}
         {!preferences.sidebar && !embeddedHistory && (
           <Action disabled={s.busy} onClick={s.fresh}>
             New chat
@@ -67,28 +66,6 @@ export function ChatToolbar({
           onClose={() => setRenaming(false)}
           onSave={(title) => s.save({ ...s.chat, title })}
         />
-      )}
-      {s.tabs.length > 0 && (
-        <nav className="conversation-tabs" aria-label="Open conversations">
-          {s.tabs.map((tab) => (
-            <div key={text(tab.id)}>
-              <button
-                className={tab.id === s.chat.id ? 'active' : ''}
-                disabled={s.busy}
-                onClick={() => void s.open(text(tab.id)).catch((e) => s.setError(String(e)))}
-              >
-                {text(tab.title)}
-              </button>
-              <button
-                aria-label={`Close tab ${text(tab.title)}`}
-                disabled={s.busy}
-                onClick={() => s.setTabs(s.tabs.filter((t) => t.id !== tab.id))}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </nav>
       )}
     </>
   )

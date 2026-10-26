@@ -6,13 +6,6 @@
   min-height: 44px;
   padding: 0 0 8px;
 }
-.chat-conversation-title {
-  color: var(--ew-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-}
 .chat-enhanced .chat-toolbar-trailing {
   gap: 4px;
 }
