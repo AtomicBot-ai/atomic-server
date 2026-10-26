@@ -62,6 +62,10 @@ afterAll(async () => {
   rmSync(root, { recursive: true, force: true })
 })
 
+/** What a run printed, for a failed assertion: the exit code alone does not say why. */
+const said = (r: { code: number | null; out: string; err: string }) =>
+  `exit ${r.code}\nstdout: ${r.out.trim() || '(empty)'}\nstderr: ${r.err.trim() || '(empty)'}`
+
 /** Asynchronous: the release is served from this process, so a blocking spawn would wait forever. */
 function run(args: string[]): Promise<{ code: number | null; out: string; err: string }> {
   return new Promise((resolve) => {
@@ -82,7 +86,7 @@ describe.runIf(enabled)('atc update on the built binary', () => {
     const before = (JSON.parse(start.out) as { instance_id: string }).instance_id
     const inode = statSync(installed).ino
     const update = await run(['update', '--version', ATC_VERSION, '--json', '--data-folder', dataFolder])
-    expect(update.code, update.err).toBe(0)
+    expect(update.code, said(update)).toBe(0)
     expect(JSON.parse(update.out)).toMatchObject({ updated: true, to: ATC_VERSION, restarted: 'server' })
     // POSIX renames over the old inode; Windows moved the running file aside first.
     if (process.platform !== 'win32') expect(statSync(installed).ino).not.toBe(inode)
@@ -99,8 +103,8 @@ describe.runIf(enabled)('atc update on the built binary', () => {
     try {
       const inode = statSync(installed).ino
       const update = await run(['update', '--version', ATC_VERSION, '--json', '--data-folder', dataFolder])
-      expect(update.code).toBe(1)
-      expect(update.err).toContain('ATC_CHECKSUM_MISMATCH')
+      expect(update.code, said(update)).toBe(1)
+      expect(update.err, said(update)).toContain('ATC_CHECKSUM_MISMATCH')
       expect(statSync(installed).ino).toBe(inode)
       expect((await run(['--version'])).out.trim()).toBe(ATC_VERSION)
     } finally {

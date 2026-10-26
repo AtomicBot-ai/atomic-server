@@ -2,7 +2,7 @@
 /** The process entry: real I/O, the real daemon spawner, and an exit code. Nothing else lives here. */
 import { selfCommand } from '@atomic-chat/core/host'
 import { spawnDaemon } from './daemon/index.js'
-import { nodeIo } from './io.js'
+import { exitAfterFlush, holdOpen, nodeIo } from './io.js'
 import { runCli } from './main.js'
 
 const crash = (write: (text: string) => void) => (error: unknown) => {
@@ -29,12 +29,11 @@ if (host) {
     )
 } else {
   const io = nodeIo()
-  runCli(process.argv.slice(2), io, {
-    spawnDaemon: (paths, log, args) => spawnDaemon({ paths, selfCommand: selfCommand(), log, args }),
-  })
+  holdOpen(
+    runCli(process.argv.slice(2), io, {
+      spawnDaemon: (paths, log, args) => spawnDaemon({ paths, selfCommand: selfCommand(), log, args }),
+    })
+  )
     // A pipe may still hold part of the output: the Bun binary's exit drops it (a `--json` cut at 64 KiB).
-    .then(async (code) => {
-      await io.flush?.()
-      process.exit(code)
-    }, crash(io.stderr))
+    .then((code) => exitAfterFlush(code, io.flush, process), crash(io.stderr))
 }

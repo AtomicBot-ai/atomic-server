@@ -57,31 +57,90 @@ export interface AtcIo {
   catchFatal?: (reporter: ErrorSink & { flush(timeoutMs?: number): Promise<void> }) => void
 }
 
+/** The part of a stream a writer uses. */
+export interface PipeStream {
+  write(chunk: string, done: (error?: Error | null) => void): boolean
+}
+
+/**
+ * Writes to a pipe, and `flush` resolves once the pipe has taken every write: the Bun binary's
+ * `process.exit` drops what a pipe could not take at once (a `--json` document cut at 64 KiB). It counts
+ * each write's own callback rather than waiting for a 'drain' event, which a write that came back false
+ * is not certain to see; a write the pipe refused for good (EPIPE) counts as done.
+ */
+export function pipeWriter(stream: PipeStream) {
+  let pending = 0
+  const idle: Array<() => void> = []
+  return {
+    write: (text: string) => {
+      const done = () => {
+        pending--
+        if (!pending) idle.splice(0).forEach((resolve) => resolve())
+      }
+      pending++
+      try {
+        stream.write(text, done)
+      } catch (error) {
+        // A write that threw never calls back: it must not hold the exit.
+        done()
+        throw error
+      }
+    },
+    flush: () => (pending ? new Promise<void>((resolve) => idle.push(resolve)) : Promise.resolve()),
+  }
+}
+
+/**
+ * Keep the process alive until `work` settles. The Bun binary on Windows can let a pending operation stop
+ * holding the event loop (oven-sh/bun#39787: "exits 0 mid-await with no output"), and a process whose
+ * loop empties ends with 0: `atc update` reported a SHA256SUMS mismatch as exit 0 with no output on
+ * windows-2022. A timer that never fires is a handle the loop always has, so a command either finishes
+ * with its own code or, at worst, hangs where a test can see it.
+ */
+export async function holdOpen<T>(
+  work: Promise<T>,
+  timers: { setInterval(fn: () => void, ms: number): unknown; clearInterval(id: never): void } = {
+    setInterval,
+    clearInterval,
+  }
+): Promise<T> {
+  const hold = timers.setInterval(() => {}, 2 ** 31 - 1)
+  try {
+    return await work
+  } finally {
+    timers.clearInterval(hold as never)
+  }
+}
+
+/**
+ * The end of a command: its exit code first, then the output, then the exit. With the code set before
+ * waiting, a flush that never ends cannot turn a failure into 0 — when nothing is left to run the
+ * process ends with `process.exitCode`, and without it, with 0 (a checksum mismatch that `atc update`
+ * reported with exit 0 on windows-2022).
+ */
+export async function exitAfterFlush(
+  code: number,
+  flush: (() => Promise<void>) | undefined,
+  proc: { exitCode?: number | string | null | undefined; exit(code: number): unknown }
+) {
+  proc.exitCode = code
+  await flush?.()
+  proc.exit(code)
+}
+
 export function nodeIo(): AtcIo {
   const interactive = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY)
-  // A write a pipe could not take at once: the Bun binary's `process.exit` drops it unless 'drain' came.
-  const waiting = new Map<NodeJS.WriteStream, Promise<void>>()
-  const write = (stream: NodeJS.WriteStream) => (text: string) => {
-    if (stream.write(text) || waiting.has(stream)) return
-    waiting.set(
-      stream,
-      new Promise<void>((resolve) =>
-        stream.once('drain', () => {
-          waiting.delete(stream)
-          resolve()
-        })
-      )
-    )
-  }
+  const out = pipeWriter(process.stdout),
+    err = pipeWriter(process.stderr)
   return {
     ...(interactive
       ? { terminal: { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr } }
       : {}),
     inputLines: () => createInterface({ input: process.stdin, crlfDelay: Infinity }),
-    stdout: write(process.stdout),
-    stderr: write(process.stderr),
+    stdout: out.write,
+    stderr: err.write,
     flush: async () => {
-      while (waiting.size) await Promise.all(waiting.values())
+      await Promise.all([out.flush(), err.flush()])
     },
     env: process.env,
     cwd: process.cwd(),
