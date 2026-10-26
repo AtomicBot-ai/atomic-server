@@ -146,6 +146,10 @@
   margin: -5px 0 25px;
   overflow-wrap: anywhere;
 }
+/* Not a subtitle: the note after an engine's builds and setup keeps its distance from the button above. */
+.ew-modal > .ew-muted.engine-settings-note {
+  margin: 16px 0 12px;
+}
 .plan-facts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
