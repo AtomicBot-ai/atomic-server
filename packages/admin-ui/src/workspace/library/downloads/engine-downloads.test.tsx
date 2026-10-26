@@ -47,9 +47,6 @@ it('marks only actual installed engine builds as installed', () => {
         { engine: 'llamacpp' },
       ]}
       loading={false}
-      execute={vi.fn()}
-      onManaged={vi.fn()}
-      onFoundry={vi.fn()}
       onSettings={vi.fn()}
     />
   )

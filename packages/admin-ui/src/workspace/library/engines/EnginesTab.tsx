@@ -1,7 +1,7 @@
 import { engineName } from '@view'
 import { Action, Empty, Panel } from '../../Controls'
 import { record, text } from '../../types'
-import type { Execute, RecordValue } from '../../types'
+import type { RecordValue } from '../../types'
 
 /** Open an engine once; its settings, builds and updates share one dialog. */
 export function EnginesTab({
@@ -11,9 +11,6 @@ export function EnginesTab({
 }: {
   engines: RecordValue[]
   loading: boolean
-  execute: Execute
-  onManaged: (engine: string) => void
-  onFoundry: () => void
   onSettings: (engine: string) => void
 }) {
   return (

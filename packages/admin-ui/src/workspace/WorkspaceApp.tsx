@@ -64,6 +64,7 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const [connectionGuide, setConnectionGuide] = useState(false)
   const [prepared, setPrepared] = useState<string[]>([])
   const [command, setCommand] = useState<string | null>(null)
+  const [catalogFor, setCatalogFor] = useState<{ engine: string; opened: number } | null>(null)
   const [wizard, setWizard] = useState(false)
   const [setupDismissed, setSetupDismissed] = useState(false)
   const [help, setHelp] = useState(false)
@@ -97,8 +98,10 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const section = page === 'server' ? serverSection : page === 'catalog' ? catalogSection : settingsSection
   const selectSection =
     page === 'server' ? setServerSection : page === 'catalog' ? setCatalogSection : setSettingsSection
-  const models = (section = 'catalog') => {
+  const models = (section = 'catalog', engine?: string) => {
     setCatalogSection(section)
+    // A new key opens the catalog afresh, so it takes the engine's format and filter every time.
+    setCatalogFor(engine ? { engine, opened: Date.now() } : null)
     setPage('catalog')
   }
   const settings = () => {
@@ -188,11 +191,13 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
               prepared={prepared}
               onPrepared={(id) => setPrepared((items) => [...new Set([...items, id])])}
               openSettings={settings}
-              openModels={() => models()}
+              openModels={(engine) => models('catalog', engine)}
             />
           )}
           {page === 'catalog' && (
             <Catalog
+              key={catalogFor?.opened ?? 'catalog'}
+              {...(catalogFor ? { engine: catalogFor.engine } : {})}
               workspace={workspace}
               openCommand={setCommand}
               section={catalogSection}

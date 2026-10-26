@@ -42,7 +42,10 @@ export function CatalogBrowse({
   managedRepository,
   onStarted,
   onEngine,
+  engine,
 }: {
+  /** The engine filter it opens with (Server → Browse models). */
+  engine?: string
   managedRepository?: string
   onStarted?: () => void
   onEngine?: (engine: string) => void
@@ -62,7 +65,9 @@ export function CatalogBrowse({
   importFile: () => void
   onNoGguf?: (repository: string) => void
 }) {
-  const [textFilters, setFilters] = useState(initialCatalogFilters)
+  const [textFilters, setFilters] = useState(() =>
+    engine ? { ...initialCatalogFilters, engine } : initialCatalogFilters
+  )
   const filters = category === 'text' ? textFilters : initialCatalogFilters
   const [sort, setSort] = useState('recommended')
   const [expanded, setExpanded] = useState('')
