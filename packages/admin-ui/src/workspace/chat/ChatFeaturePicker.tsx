@@ -1,5 +1,6 @@
 import { Bot, Blocks, Sparkles, Puzzle } from 'lucide-react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { WorkspaceFeatures } from '@contract'
 import { useDialog } from '../useDialog'
 import { DetailPicker } from '../server/DetailPicker'
@@ -56,7 +57,8 @@ function FeatureDialog({
       ...value,
       [field]: value[field].includes(id) ? value[field].filter((v) => v !== id) : [...value[field], id],
     })
-  return (
+  // The button sits in the composer, whose dark ink would otherwise colour this dark dialog's text.
+  return createPortal(
     <div className="modal-shade">
       <section
         ref={dialog}
@@ -129,6 +131,7 @@ function FeatureDialog({
           Done
         </button>
       </section>
-    </div>
+    </div>,
+    document.querySelector('.desktop-workspace') ?? document.body
   )
 }
