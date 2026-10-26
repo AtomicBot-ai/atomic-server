@@ -1,5 +1,6 @@
 import { serverSelection } from './server-status.js'
 import { engineName, modelProvider } from '../../../terminal-setup/index.js'
+import { engineChoiceDetail } from '../chat/picker.js'
 import { button, COLORS, text } from '../draw/canvas.js'
 import { fieldControl, toggleControl, saveActions } from '../draw/controls.js'
 import { panel } from '../draw/cards.js'
@@ -159,7 +160,7 @@ export function serverChoices(s: WorkspaceState) {
     return s.engines.map((e) => ({
       id: e.id,
       label: engineName(e.provider),
-      detail: `${e.version} / ${e.backend} · ${e.installed ? 'Installed' : 'Install on save'}`,
+      detail: engineChoiceDetail(e, 'Install on save'),
     }))
   const engine = s.engines.find((e) => e.id === serverSelection(s).engine)
   return s.installed

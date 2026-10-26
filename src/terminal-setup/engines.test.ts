@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
-import { EngineSelection, engineName, modelProvider } from './engines.js'
+import { EngineSelection, engineName, modelProvider, setsUpInPanel } from './engines.js'
 import type { BackendCatalogResponse } from './types.js'
 
 it('lists installed/recommended builds, installs on demand and persists only successful selections', async () => {
@@ -98,9 +98,9 @@ it('offers the build the core names as latest, and none when the core offers non
   }
 })
 
-// Installed managed engines, Foundry Local and LiteRT-LM are choices too (spec server-engine-settings); a
-// pick remembers the engine: there is no llama.cpp build to activate.
-it('adds installed managed engines, Foundry Local and LiteRT-LM after llama.cpp, and selects them without activating a build', async () => {
+// Managed engines, Foundry Local and LiteRT-LM are choices too (spec server-engine-settings); a pick of an
+// installed one remembers the engine: there is no llama.cpp build to activate.
+it('adds managed engines, Foundry Local and LiteRT-LM after llama.cpp, and selects an installed one without activating a build', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'atc-engine-managed-')),
     link = fakeCoreLink()
   link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', backend: 'cpu' }] }
@@ -123,18 +123,57 @@ it('adds installed managed engines, Foundry Local and LiteRT-LM after llama.cpp,
         available: [],
       } as unknown as BackendCatalogResponse,
     ])
-    expect(choices.map((c) => c.provider)).toEqual([
-      'llamacpp-upstream',
-      'vllm',
-      'tensorrt-llm',
-      'foundry-local',
-      'litert-lm',
+    expect(choices.map((c) => [c.provider, c.installed])).toEqual([
+      ['llamacpp-upstream', true],
+      ['vllm', true],
+      ['sglang', false],
+      ['tensorrt-llm', true],
+      ['foundry-local', true],
+      ['litert-lm', true],
     ])
-    expect(choices.slice(1).every((c) => c.installed)).toBe(true)
     link.calls.length = 0
     await selection.select(choices[1]!)
     expect(link.calls).toEqual([])
     expect(await selection.read()).toBe(choices[1]!.id)
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+// A clean machine offered no LiteRT-LM or Foundry Local in the engine pickers: only installed ones were
+// listed. They install in their own panel (install, then prepare accelerators), never on save.
+it('lists every chat engine the core registers, the uninstalled ones to be set up in their panel', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'atc-engine-setup-')),
+    link = fakeCoreLink()
+  link.responses['GET /backends/llamacpp-upstream'] = { backends: [] }
+  link.responses['POST /engines/versions'] = {
+    engines: [
+      { engine: 'llamacpp-upstream', latest: { version: 'b2', variant: 'vulkan' }, active: null },
+      { engine: 'foundry-local', latest: { version: 'v2.1.0', variant: 'linux-x64' }, active: null },
+      { engine: 'litert-lm', latest: null, active: null },
+      { engine: 'sd-cpp', latest: null, active: null },
+    ],
+  }
+  try {
+    const choices = await new EngineSelection(directory, async () => link).list([
+      {
+        provider: 'llamacpp-upstream',
+        recommended: null,
+        available: [],
+      } as unknown as BackendCatalogResponse,
+    ])
+    expect(choices).toEqual([
+      expect.objectContaining({ provider: 'llamacpp-upstream', version: 'b2', installed: false }),
+      {
+        id: 'foundry-local',
+        provider: 'foundry-local',
+        version: 'v2.1.0',
+        backend: 'linux-x64',
+        installed: false,
+      },
+      { id: 'litert-lm', provider: 'litert-lm', version: '', backend: '', installed: false },
+    ])
+    expect(choices.map(setsUpInPanel)).toEqual([false, true, true])
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

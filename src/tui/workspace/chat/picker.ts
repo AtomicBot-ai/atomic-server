@@ -1,4 +1,5 @@
-import { engineName } from '../../../terminal-setup/index.js'
+import { engineName, setsUpInPanel } from '../../../terminal-setup/index.js'
+import type { EngineChoice } from '../../../terminal-setup/index.js'
 import { COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { COMPOSER_HEIGHT } from './composer.js'
@@ -6,6 +7,15 @@ import { fill } from '../draw/fortress.js'
 import { workspaceLayout } from '../draw/layout.js'
 import type { WorkspaceState } from '../state.js'
 const LLAMA = ['llamacpp-upstream', 'llamacpp']
+/**
+ * An engine choice as both pickers describe it: a build, or an engine that installs in its own panel
+ * (a managed engine, Foundry Local, LiteRT-LM) when it is not installed yet. `uninstalled` names what
+ * happens to a llama.cpp build that is not on disk.
+ */
+export function engineChoiceDetail(e: EngineChoice, uninstalled: string) {
+  if (setsUpInPanel(e)) return 'Not installed · Set up in its panel'
+  return `${e.version} / ${e.backend} · ${e.installed ? 'Installed' : uninstalled}`
+}
 export const isPicker = (overlay: WorkspaceState['overlay']) =>
   overlay === 'engine-picker' || overlay === 'model-picker'
 export interface PickerRow {
@@ -20,7 +30,7 @@ export function pickerRows(s: WorkspaceState): PickerRow[] {
       ...s.engines.map((e, i) => ({
         id: `pick-engine:${i}`,
         title: engineName(e.provider),
-        detail: `${e.version} / ${e.backend} · ${e.installed ? 'Installed' : 'Install & use'}`,
+        detail: engineChoiceDetail(e, 'Install & use'),
         current: e.id === s.engine,
       })),
       { id: 'picker-refresh', title: 'Refresh engines', detail: 'Check compatible builds' },

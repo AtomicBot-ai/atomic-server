@@ -1,4 +1,5 @@
-import { engineName } from '../../../terminal-setup/index.js'
+import { engineName, setsUpInPanel } from '../../../terminal-setup/index.js'
+import { engineAction } from '../library/engine-actions.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { isPicker, pickerRows } from './picker.js'
@@ -61,6 +62,11 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
     }
     const engine = s.engines[Number(id.slice(12))]
     if (!engine) return true
+    // Foundry Local, LiteRT-LM or a managed engine not installed yet: its panel installs it.
+    if (setsUpInPanel(engine)) {
+      update((v) => ({ ...v, overlay: null, pickerError: '' }))
+      return engineAction(`engine-open:${engine.provider}`, ctx)
+    }
     const fresh = beginModelSelection(ctx)
     patch({
       pickerBusy: true,
