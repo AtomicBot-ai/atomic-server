@@ -25,12 +25,22 @@
   background: #ffffff08;
   overflow: hidden;
 }
-.hub-search input {
+/* Above the workspace's rule for every input (a frame, a background), which has the same specificity
+   as `.hub-search input` and comes later in the built CSS: the input lives inside the pill's frame. */
+.eye-workspace .hub-search input {
   border: 0;
   background: none;
   min-width: 0;
   width: 100%;
   box-shadow: none;
+}
+/* Focus is the pill's: the input's own ring sat inside it, clipped to two brackets around the text. */
+.eye-workspace .hub-search input:focus-visible {
+  outline: none;
+}
+.eye-workspace .hub-search:focus-within {
+  outline: 2px solid var(--ew-teal);
+  outline-offset: 2px;
 }
 .hub-search button {
   background: none;
