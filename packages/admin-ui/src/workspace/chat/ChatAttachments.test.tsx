@@ -47,3 +47,14 @@ it('shows an actionable warning for disabled document ingestion and keeps existi
   await userEvent.click(screen.getByRole('button', { name: 'Remove earlier.txt' }))
   expect(setAttachments).toHaveBeenCalledWith([])
 })
+it('never shows the file chooser itself, even while a reply streams and it is disabled', () => {
+  // `.desktop-workspace input:disabled` outranks the rule that hid it, and "Browse… No files selected"
+  // spread over the composer while Continue answer ran.
+  const { rerender } = render(
+    <ChatAttachments attachments={[]} setAttachments={vi.fn()} disabled={false} vision={false} />
+  )
+  expect(screen.getByLabelText('Choose attachments')).not.toBeVisible()
+  rerender(<ChatAttachments attachments={[]} setAttachments={vi.fn()} disabled vision={false} />)
+  expect(screen.getByLabelText('Choose attachments')).not.toBeVisible()
+  expect(screen.getByRole('button', { name: 'Attach files' })).toBeDisabled()
+})

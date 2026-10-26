@@ -145,14 +145,6 @@
 .chat-attach-button:hover {
   background: var(--ew-hover);
 }
-.chat-file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
 .chat-attachment-chips {
   display: flex;
   flex-wrap: wrap;

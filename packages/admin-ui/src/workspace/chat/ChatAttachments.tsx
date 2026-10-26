@@ -40,6 +40,7 @@ export function ChatAttachments({
         aria-label="Choose attachments"
         className="chat-file-input"
         type="file"
+        hidden
         multiple
         disabled={disabled}
         accept={`${vision ? 'image/png,image/jpeg,image/webp,' : ''}.txt,.md,.csv,.json,.log,.py,.js,.ts,.html,.css,.xml,.yaml,.yml,.pdf,.docx,.xlsx,.pptx`}
