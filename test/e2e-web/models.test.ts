@@ -80,3 +80,23 @@ it('asks before the command dock runs a connector program on the server’s host
   await confirm.getByRole('button', { name: 'Cancel' }).click()
   expect(await confirm.count()).toBe(0)
 })
+
+it('keeps the engine settings note below what comes before it, not pulled up onto a button', async () => {
+  // `.ew-modal > .ew-muted` pulls a dialog's subtitle up under its heading (-5px); the note after an
+  // engine's builds and setup is no subtitle, and it climbed onto SGLang's "Agree and install".
+  const page = s.page
+  await page.getByRole('button', { name: 'Inference engines' }).click()
+  const card = page.getByRole('heading', { name: 'llama.cpp', level: 2, exact: true }).locator('xpath=..')
+  await card.getByRole('button', { name: 'Engine settings' }).click()
+  const dialog = page.getByRole('dialog', { name: 'llamacpp-upstream settings' })
+  const note = dialog.getByText('Settings apply on the next model load.')
+  const gap = await note.evaluate((p) => {
+    type Box = { getBoundingClientRect(): { top: number; bottom: number } }
+    const before = (p as unknown as { previousElementSibling: Box | null }).previousElementSibling
+    return before
+      ? (p as unknown as Box).getBoundingClientRect().top - before.getBoundingClientRect().bottom
+      : null
+  })
+  expect(gap).toBeGreaterThanOrEqual(8)
+  await dialog.getByRole('button', { name: 'Close' }).first().click()
+})

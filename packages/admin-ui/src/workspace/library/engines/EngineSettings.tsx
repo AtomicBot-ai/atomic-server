@@ -108,7 +108,7 @@ export function EngineSettings({
         )}
         {provider === 'foundry-local' && <FoundryLocal workspace={w} onClose={onClose} embedded />}
         {provider === 'litert-lm' && <LiteRtLm workspace={w} onClose={onClose} embedded />}
-        <p className="ew-muted">
+        <p className="ew-muted engine-settings-note">
           {provider === 'sd-cpp'
             ? 'Generation settings are saved with image and video tasks.'
             : 'Settings apply on the next model load.'}
