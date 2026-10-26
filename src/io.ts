@@ -91,6 +91,28 @@ export function pipeWriter(stream: PipeStream) {
 }
 
 /**
+ * Keep the process alive until `work` settles. The Bun binary on Windows can let a pending operation stop
+ * holding the event loop (oven-sh/bun#39787: "exits 0 mid-await with no output"), and a process whose
+ * loop empties ends with 0: `atc update` reported a SHA256SUMS mismatch as exit 0 with no output on
+ * windows-2022. A timer that never fires is a handle the loop always has, so a command either finishes
+ * with its own code or, at worst, hangs where a test can see it.
+ */
+export async function holdOpen<T>(
+  work: Promise<T>,
+  timers: { setInterval(fn: () => void, ms: number): unknown; clearInterval(id: never): void } = {
+    setInterval,
+    clearInterval,
+  }
+): Promise<T> {
+  const hold = timers.setInterval(() => {}, 2 ** 31 - 1)
+  try {
+    return await work
+  } finally {
+    timers.clearInterval(hold as never)
+  }
+}
+
+/**
  * The end of a command: its exit code first, then the output, then the exit. With the code set before
  * waiting, a flush that never ends cannot turn a failure into 0 — when nothing is left to run the
  * process ends with `process.exitCode`, and without it, with 0 (a checksum mismatch that `atc update`
