@@ -12,7 +12,14 @@ import { describeError } from '@/services/admin-api'
 
 const providers = (model: RecordValue) =>
   Array.isArray(model.providers) ? model.providers.map(String) : [text(model.provider, '')].filter(Boolean)
-export function ServerModel({ workspace: w, openModels }: { workspace: Workspace; openModels: () => void }) {
+export function ServerModel({
+  workspace: w,
+  openModels,
+}: {
+  workspace: Workspace
+  /** Models, filtered to the engine chosen here. */
+  openModels: (engine?: string) => void
+}) {
   const [installed, setInstalled] = useState<RecordValue[]>([])
   const [engine, setEngine] = useState('')
   const [model, setModel] = useState('')
@@ -92,7 +99,7 @@ export function ServerModel({ workspace: w, openModels }: { workspace: Workspace
               />
             </div>
             <div className="ew-actions">
-              <Action primary={!compatible.length} onClick={openModels}>
+              <Action primary={!compatible.length} onClick={() => openModels(selectedEngine || undefined)}>
                 Browse models
               </Action>
               {loaded && <span className="server-state-tag">Loaded</span>}

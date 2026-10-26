@@ -11,10 +11,8 @@ import { describeError } from '@/services/admin-api'
 import { ModelInstall } from '../install/ModelInstall'
 import { Downloads } from '../downloads/Downloads'
 import { EngineSettings } from '../engines/EngineSettings'
-import { EngineSetup } from '../engines/EngineSetup'
 import { EnginesTab } from '../engines/EnginesTab'
-import { FoundryLocal } from '../engines/FoundryLocal'
-import { FORMAT_ENGINE } from '@view'
+import { FORMAT_ENGINE, engineCatalogFormat } from '@view'
 import { catalogCards, catalogFormats } from './catalog-data'
 import type { CatalogFormat } from './catalog-data'
 import { useEngines } from '../../useEngines'
@@ -26,11 +24,14 @@ export function Catalog({
   openCommand,
   section,
   onSection,
+  engine,
 }: {
   workspace: Workspace
   openCommand: (name: string) => void
   section?: string
   onSection?: (section: string) => void
+  /** Opened from Server → Browse models: the engine's format and filter, as the Filters menu sets them. */
+  engine?: string
 }) {
   const [localTab, setLocalTab] = useState('catalog')
   const tab = section ?? localTab
@@ -44,14 +45,12 @@ export function Catalog({
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<RecordValue | null>(null)
   const [settingsProvider, setSettingsProvider] = useState('')
-  const [managed, setManaged] = useState('')
-  const [foundry, setFoundry] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importNotice, setImportNotice] = useState('')
   const [importRevision, setImportRevision] = useState(0)
-  const [format, setFormat] = useState<CatalogFormat>('gguf')
+  const [format, setFormat] = useState<CatalogFormat>(() => (engine ? engineCatalogFormat(engine) : 'gguf'))
   const [managedRepo, setManagedRepo] = useState('')
-  const [managedEngine, setManagedEngine] = useState('')
+  const [managedEngine, setManagedEngine] = useState(engine ?? '')
   const { engines: registered } = useEngines(w.execute)
   const managedEngines = registered.filter((e) => e.kind === 'managed').map((e) => text(e.engine))
   const engineForModels = managedEngines.includes(managedEngine) ? managedEngine : (managedEngines[0] ?? '')
@@ -203,6 +202,7 @@ export function Catalog({
           <Downloads workspace={w} compact showTitle={false} />
           <CatalogBrowse
             key={importRevision}
+            engine={engine}
             workspace={w}
             managedRepository={managedRepo}
             onStarted={() => {
@@ -256,18 +256,9 @@ export function Catalog({
         />
       )}
       {tab === 'engines' && (
-        <EnginesTab
-          engines={engines}
-          loading={loading}
-          execute={execute}
-          onManaged={setManaged}
-          onFoundry={() => setFoundry(true)}
-          onSettings={setSettingsProvider}
-        />
+        <EnginesTab engines={engines} loading={loading} onSettings={setSettingsProvider} />
       )}
       {tab === 'downloads' && <Downloads workspace={w} showTitle={false} />}
-      {foundry && <FoundryLocal workspace={w} onClose={() => setFoundry(false)} />}
-      {managed && <EngineSetup workspace={w} engine={managed} onClose={() => setManaged('')} />}
       {settingsProvider && (
         <EngineSettings provider={settingsProvider} workspace={w} onClose={() => setSettingsProvider('')} />
       )}

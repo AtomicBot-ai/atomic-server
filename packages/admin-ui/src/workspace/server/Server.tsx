@@ -34,7 +34,7 @@ export function Server({
   section?: string
   onSection?: (section: string) => void
   openSettings?: () => void
-  openModels?: () => void
+  openModels?: (engine?: string) => void
   initialAgent?: string
   showGuide?: boolean
   closeGuide?: () => void
