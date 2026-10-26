@@ -83,9 +83,18 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
         </small>
         <div className="ew-actions">
           {job.kind === 'engine' && failed && (
-            <Action primary onClick={() => w.execute('engines.retry', { id })}>
-              Retry
-            </Action>
+            <>
+              <Action primary onClick={() => w.execute('engines.retry', { id })}>
+                Retry
+              </Action>
+              <Action
+                title={`Dismiss ${name}`}
+                ariaLabel={`Dismiss ${name}`}
+                onClick={() => w.execute('engines.dismiss', { id })}
+              >
+                ×
+              </Action>
+            </>
           )}
           {job.owner === 'download' ? null : (
             <>

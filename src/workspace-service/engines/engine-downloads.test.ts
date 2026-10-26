@@ -107,6 +107,25 @@ it('retries failures without reporting ready early or leaking stored request met
   second.resolve()
   await vi.waitFor(async () => expect((await queue.list())[0]?.stage).toBe('ready'))
 })
+it('dismisses a finished job for good, never one still running', async () => {
+  const { tmp, link, queue } = fixture(),
+    transfer = held()
+  link.responses['POST /engines/atomic-prism/update'] = new Error(
+    'libcudart.so.13: cannot open shared object file'
+  )
+  const failed = await queue.enqueue('atomic-prism')
+  await vi.waitFor(async () => expect((await queue.list())[0]?.stage).toBe('failed'))
+  link.responses['POST /engines/llamacpp-upstream/update'] = () => transfer.promise
+  const running = await queue.enqueue('llamacpp-upstream')
+  await expect(queue.dismiss(running.id)).rejects.toThrow('still installing')
+  await expect(queue.dismiss('nope')).rejects.toThrow('No such engine download')
+  await queue.dismiss(failed.id)
+  expect((await queue.list()).map((job) => job.id)).toEqual([running.id])
+  expect((await new EngineDownloads(tmp.paths.atcDir, link).list()).map((job) => job.id)).not.toContain(
+    failed.id
+  )
+  transfer.resolve()
+})
 it('marks abandoned server jobs interrupted; a new server never claims they are still downloading', async () => {
   const { tmp, link, queue } = fixture(),
     transfer = held()

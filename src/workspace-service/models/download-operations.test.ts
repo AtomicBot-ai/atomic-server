@@ -5,7 +5,11 @@ import { NOT_CORE } from '../not-core.js'
 function parts() {
   const setups = { operation: vi.fn(async () => 'setup') }
   const artifacts = { list: vi.fn(async () => ['artifact']), cancel: vi.fn(async () => 'cancelled') }
-  const engines = { enqueue: vi.fn(async () => 'queued'), retry: vi.fn(async () => 'retried') }
+  const engines = {
+    enqueue: vi.fn(async () => 'queued'),
+    retry: vi.fn(async () => 'retried'),
+    dismiss: vi.fn(async () => 'dismissed'),
+  }
   return {
     setups,
     artifacts,
@@ -18,6 +22,7 @@ describe('download operations', () => {
   it.each([
     ['engines.enqueue', { engine: 'llamacpp' }, 'queued'],
     ['engines.retry', { id: 'e1' }, 'retried'],
+    ['engines.dismiss', { id: 'e1' }, 'dismissed'],
     ['setup.resume', { setup_id: 's1' }, 'setup'],
     ['artifacts.list', {}, ['artifact']],
     ['artifacts.cancel', { id: 'a1' }, 'cancelled'],

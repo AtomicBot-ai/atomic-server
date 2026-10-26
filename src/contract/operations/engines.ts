@@ -67,6 +67,13 @@ export const ENGINE_OPERATIONS: readonly WorkspaceOperation[] = [
     { properties: { id: { type: 'string' } }, required: ['id'] }
   ),
   operation(
+    'engines.dismiss',
+    'Dismiss engine download',
+    'configure',
+    'Remove a finished, failed or interrupted engine build from Downloads. Installed builds and files are untouched.',
+    { properties: { id: { type: 'string' } }, required: ['id'] }
+  ),
+  operation(
     'engines.activate',
     'Activate engine build',
     'configure',

@@ -140,8 +140,8 @@ export async function downloadAction(id: string, ctx: ActionContext) {
       }))
       return true
     }
-    if (action === 'retry' && job['kind'] === 'engine') {
-      await ctx.controller.runtime.execute('engines.retry', { id: job.id })
+    if ((action === 'retry' || action === 'dismiss') && job['kind'] === 'engine') {
+      await ctx.controller.runtime.execute(`engines.${action}`, { id: job.id })
       const workspace = await ctx.controller.runtime.snapshot()
       ctx.update((v) => ({
         ...v,
@@ -234,8 +234,10 @@ export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) 
     )
       .slice(0, 2)
       .forEach((line, i) => text(c, x + 2, y + 7 + i, line, COLORS.statusError, width - 4))
-  if (job['kind'] === 'engine' && downloadStopped(job.state))
+  if (job['kind'] === 'engine' && downloadStopped(job.state)) {
     button(c, 'download-do:retry', x + 2, y + 9, 'Retry download', 'Retry this engine installation', focus)
+    button(c, 'download-do:dismiss', x + 23, y + 9, 'X Dismiss', 'Remove it from Downloads', focus)
+  }
   if (downloadOwner(job)) {
     const paused = downloadStopped(job.state)
     if (!chosen.installed)
