@@ -10,7 +10,7 @@ do not edit by hand.
 | @ai-sdk/provider | 2.0.5 | Apache-2.0 |
 | @ai-sdk/provider-utils | 3.0.39 | Apache-2.0 |
 | @alcalzone/ansi-tokenize | 0.3.1 | MIT |
-| @atomic-chat/core | 0.19.0 | MIT |
+| @atomic-chat/core | 0.19.1 | MIT |
 | @fastify/busboy | 2.1.1 | MIT |
 | @isaacs/fs-minipass | 4.0.1 | ISC |
 | @nodable/entities | 3.1.0 | MIT |
@@ -244,7 +244,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-## @atomic-chat/core 0.19.0
+## @atomic-chat/core 0.19.1
 
 License: MIT
 
