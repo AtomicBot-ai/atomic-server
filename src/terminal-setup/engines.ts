@@ -17,6 +17,10 @@ export interface EngineChoice {
   installed: boolean
 }
 export { engineName }
+/** A managed engine, Foundry Local or LiteRT-LM not installed yet: its panel installs it, a picker cannot. */
+export function setsUpInPanel(choice: EngineChoice): boolean {
+  return !choice.installed && ENGINE_KINDS[choice.provider as EngineId] !== 'llamacpp'
+}
 export function modelProvider(engine: string, provider: string): string {
   const selected = engine.split('|')[0]
   return ['llamacpp-upstream', 'llamacpp'].includes(provider) &&
@@ -42,23 +46,25 @@ export class EngineSelection {
   }
   /**
    * Per llama.cpp engine: the builds on disk plus the one the core would install (`latest`), if any;
-   * then every other chat engine the core has installed here (a managed engine, Foundry Local, LiteRT-LM).
+   * then every other chat engine the core registers here (a managed engine, Foundry Local, LiteRT-LM),
+   * installed or not, in the app's order: one not installed yet is set up in its own panel.
    */
   async list(catalogs: BackendCatalogResponse[]): Promise<EngineChoice[]> {
     const link = await this.attach()
     const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
-    const installed = orderEngines(
+    const panels = orderEngines(
       engines
-        .filter((e) => ['managed', 'foundry', 'litert'].includes(engineFamily(e.engine)) && e.active)
+        .filter((e) => ['managed', 'foundry', 'litert'].includes(engineFamily(e.engine)))
         .map((e) => e.engine as string)
     ).map((engine) => {
-      const active = engines.find((e) => e.engine === engine)!.active!
+      const row = engines.find((e) => e.engine === engine)!
+      const build = row.active ?? row.latest
       return {
         id: engine,
         provider: engine,
-        version: active.version,
-        backend: active.variant,
-        installed: true,
+        version: build?.version ?? '',
+        backend: build?.variant ?? '',
+        installed: Boolean(row.active),
       }
     })
     const builds = (
@@ -87,7 +93,7 @@ export class EngineSelection {
         })
       )
     ).flat()
-    return [...builds, ...installed]
+    return [...builds, ...panels]
   }
   /** The core installs and activates: `version_backend` in the load queue's turn, old sessions unloaded. */
   async select(

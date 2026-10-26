@@ -4,6 +4,8 @@ import { CONNECTION_AGENTS } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
 import { connectionGuideAction } from './connection-guide-actions.js'
 import { serverChoices } from './server-settings.js'
+import { setsUpInPanel } from '../../../terminal-setup/index.js'
+import { engineAction } from '../library/engine-actions.js'
 import { serverAgents } from './server-overview.js'
 export async function serverShellAction(id: string, ctx: ActionContext): Promise<boolean> {
   const s = ctx.get(),
@@ -111,6 +113,12 @@ export async function serverShellAction(id: string, ctx: ActionContext): Promise
     if (s.pickerBusy) return true
     const choice = serverChoices(s)[Number(id.slice(14))]
     if (!choice) return true
+    const panelEngine = s.serverChoice === 'engine' ? s.engines.find((e) => e.id === choice.id) : undefined
+    // Foundry Local, LiteRT-LM or a managed engine not installed yet: its panel installs it, saving cannot.
+    if (panelEngine && setsUpInPanel(panelEngine)) {
+      ctx.update((v) => ({ ...v, overlay: null, serverChoice: null }))
+      return engineAction(`engine-open:${panelEngine.provider}`, ctx)
+    }
     ctx.update((v) => {
       if (v.serverChoice === 'host')
         return {
