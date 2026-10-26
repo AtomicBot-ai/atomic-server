@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
@@ -129,6 +129,11 @@ it('shares queued progress with both frontend snapshots and gates inference unti
   const { tmp, link } = fixture(),
     transfer = held()
   link.responses['POST /engines/atomic-prism/update'] = () => transfer.promise
+  // A slow machine: the job is ready in memory well before it names the active build and writes its
+  // record, which is when CI's ARM runner removed the data folder under it (ENOTEMPTY).
+  const versions = link.responses['POST /engines/versions']
+  link.responses['POST /engines/versions'] = () =>
+    new Promise((done) => setTimeout(() => done(versions), 200))
   const service = new WorkspaceService({ link, paths: tmp.paths, config: defaultConfig() })
   const job = (await service.execute('engines.enqueue', { engine: 'atomic-prism', select: true })) as {
     id: string
@@ -143,6 +148,9 @@ it('shares queued progress with both frontend snapshots and gates inference unti
   await expect(service.execute('api.start')).rejects.toThrow('engine is downloading')
   transfer.resolve()
   await vi.waitFor(async () => expect(downloadRows([], (await service.snapshot()).downloads)).toEqual([]))
+  // Gone from the snapshot means done on disk too: the record says so already, and nothing is left to write.
+  const record = join(tmp.paths.atcDir, 'engine-downloads', `${job.id}.json`)
+  expect(JSON.parse(readFileSync(record, 'utf8'))).toMatchObject({ stage: 'ready' })
 })
 
 it('waits for the selected queued version, not an older build of the same engine', async () => {

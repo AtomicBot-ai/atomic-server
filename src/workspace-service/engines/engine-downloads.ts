@@ -240,6 +240,7 @@ export class EngineDownloads {
         job.stage = 'connecting'
         job['started_at'] = this.now()
         await writeDocument(this.path(job.id), job)
+        let outcome: Partial<EngineJob>
         try {
           await installEngine(
             this.link,
@@ -250,16 +251,17 @@ export class EngineDownloads {
             },
             this.proxy
           )
-          job.stage = 'ready'
-          job.transferred = job.total
           // The build is installed whatever happens next: naming the active build is a refinement.
           await this.rememberActive(job).catch(() => undefined)
+          outcome = { stage: 'ready', transferred: job.total }
         } catch (error) {
-          job.stage = 'failed'
-          job['error'] = error instanceof Error ? error.message : String(error)
+          outcome = { stage: 'failed', error: error instanceof Error ? error.message : String(error) }
         }
-        job.updated_at = this.now()
-        await writeDocument(this.path(job.id), job)
+        // The record first, then what snapshots show: a job seen as finished is finished on disk, with
+        // nothing left to write (a reader that saw it done removed the folder while its record was written).
+        const finished = { ...job, ...outcome, updated_at: this.now() }
+        await writeDocument(this.path(job.id), finished)
+        Object.assign(job, finished)
       })
       .catch(() => {
         job.stage = 'interrupted'
