@@ -7,7 +7,7 @@ declare const __ATC_GIT_SHA__: string | undefined
 declare const __ATC_BUILD_DATE__: string | undefined
 declare const __ATC_TARGET__: string | undefined
 
-export const ATC_VERSION = '0.2.0'
+export const ATC_VERSION = '0.2.1'
 
 export const ATC_GIT_SHA: string | undefined =
   typeof __ATC_GIT_SHA__ === 'string' && __ATC_GIT_SHA__ !== '' ? __ATC_GIT_SHA__ : undefined
