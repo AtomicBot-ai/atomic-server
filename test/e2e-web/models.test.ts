@@ -17,6 +17,33 @@ beforeAll(async () => {
 })
 afterAll(() => s?.close())
 
+/** The page's view of an element; this file is typed for Node, so the DOM is described here, not imported. */
+type Computed = { borderTopWidth: string; backgroundColor: string; outlineStyle: string }
+type InPage = { getComputedStyle(element: unknown): Computed }
+
+it('draws the catalog search as one field: the input inside the pill has no frame of its own', async () => {
+  // The workspace's rule for every input (a border, a background, rounded corners) has the search reset's
+  // specificity; whichever comes later in the built CSS won, and the input drew a second frame.
+  const search = s.page.getByLabel('Search for models')
+  const look = await search.evaluate((input) => {
+    const style = (globalThis as unknown as InPage).getComputedStyle(input)
+    return { border: style.borderTopWidth, background: style.backgroundColor }
+  })
+  expect(look).toEqual({ border: '0px', background: 'rgba(0, 0, 0, 0)' })
+  // Focused, the whole pill shows the focus ring, not the input inside it (clipped to two brackets).
+  await search.focus()
+  const focused = await search.evaluate((input) => {
+    const page = globalThis as unknown as InPage
+    const pill = (input as unknown as { closest(selector: string): unknown }).closest('form')
+    return {
+      input: page.getComputedStyle(input).outlineStyle,
+      pill: page.getComputedStyle(pill).outlineStyle,
+    }
+  })
+  expect(focused).toEqual({ input: 'none', pill: 'solid' })
+  await search.blur()
+})
+
 it('lists LiteRT-LM families with their variants inline and opens the engine’s own dialog', async () => {
   const page = s.page
   await page.getByRole('button', { name: 'Filters' }).click()
