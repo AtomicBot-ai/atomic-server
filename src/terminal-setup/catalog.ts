@@ -59,6 +59,7 @@ export async function installedModels(layout: DataLayout) {
     id: e.id,
     provider: typeof e.yml['atomic_runtime'] === 'object' ? 'atomic-prism' : 'llamacpp-upstream',
     name: String(e.yml.name ?? e.id),
+    ...(typeof e.yml['repository'] === 'string' ? { repository: e.yml['repository'] } : {}),
   }))
 }
 

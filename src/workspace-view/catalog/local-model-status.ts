@@ -42,10 +42,24 @@ export function localModelStatus(
 }
 
 /** A catalog family can own a filename, quantized variant or a recorded repository download. */
-export function catalogModelMatches(candidate: string, family: string, setups: unknown[] = []): boolean {
+/** `-Q4_K_M`, `-UD-Q4_K_XL`, `-IQ4_XS`, `-F16`, `-BF16`: a file's quantization, as Hub files are named. */
+const QUANT_SUFFIX = /^(?:\/[^/]*)?-(?:UD-)?(?:I?Q\d[\w.]*|B?F16|F32)$/i
+
+export function catalogModelMatches(
+  candidate: string,
+  family: string,
+  setups: unknown[] = [],
+  /** The catalog row the installed model was downloaded from, when the registry records it. */
+  repository?: string
+): boolean {
   if (!candidate || !family) return false
   if (candidate === family || candidate.startsWith(family + '/') || candidate.startsWith(family + ':'))
     return true
+  if (repository === family) return true
+  // A GGUF download made before the registry recorded its repository is `owner/<file without .gguf>`:
+  // the row `owner/name-GGUF` names it when what follows `name` is a quantization, not another model.
+  const base = /^([^/]+\/.+)-gguf$/i.exec(family)?.[1]
+  if (base && candidate.startsWith(base) && QUANT_SUFFIX.test(candidate.slice(base.length))) return true
   const object = (value: unknown): Record<string, unknown> =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
   return setups.some((value) => {

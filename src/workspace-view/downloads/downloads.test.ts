@@ -196,3 +196,19 @@ it('prioritizes live progress without losing paused or failed jobs', async () =>
   expect(prioritizeDownloads(rows).map((row) => row.id)).toEqual(['active', 'queued', 'paused', 'failed'])
   expect(rows.map((row) => row.id)).toEqual(['failed', 'paused', 'queued', 'active'])
 })
+
+it('shows an interrupted setup by the bytes its record says are on disk, plus the finished engine', () => {
+  const job = {
+    setup_id: 'b8',
+    stage: 'interrupted',
+    stopped_at: 'downloading_model',
+    transferred: 2_300_000,
+    plan: { model_id: 'LiquidAI/LFM2-1.2B-Q4_K_M', total_download_bytes: 700_000_000, engine: null },
+    task_ids: { model: 't1' },
+  }
+  expect(downloadRows([job], [])[0]).toMatchObject({
+    state: 'interrupted',
+    transferred: 2_300_000,
+    total: 700_000_000,
+  })
+})

@@ -25,7 +25,10 @@ describe('ModelSetups', () => {
     })
     const dir = join(f.tmp.paths.layout.root, 'llamacpp/models/owner/model.Q4_K_M')
     expect((await readFile(join(dir, 'model.Q4_K_M.gguf'))).equals(weights)).toBe(true)
-    expect(await readFile(join(dir, 'model.yml'), 'utf8')).toContain('model_sha256')
+    const yml = await readFile(join(dir, 'model.yml'), 'utf8')
+    expect(yml).toContain('model_sha256')
+    // The catalog row it came from, so the Hub and onboarding recognise the download by more than its id.
+    expect(yml).toMatch(/^repository: /m)
     expect(f.link.calls).toContainEqual(
       expect.objectContaining({
         path: '/models/compatibility',
@@ -99,9 +102,11 @@ describe('ModelSetups', () => {
     )
     f.hub.hold = false
     const restarted = f.make()
+    // The bytes already on disk, so the Downloads list does not read 0 B after the restart.
     expect((await restarted.list())[0]).toMatchObject({
       stage: 'interrupted',
       stopped_at: 'downloading_model',
+      transferred: weights.length / 2,
     })
     await restarted.resume(started.setup_id)
     expect(await settle(restarted, started.setup_id)).toMatchObject({ stage: 'ready' })

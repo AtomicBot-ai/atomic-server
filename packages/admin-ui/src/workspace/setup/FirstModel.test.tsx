@@ -45,3 +45,27 @@ it('does not offer a LiteRT-LM family again when one of its variants is installe
   expect(screen.queryByRole('button', { name: /^Gemma 4 E4B\b(?! \(CPU\))/ })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /Gemma 4 E4B \(CPU\)/ })).toHaveTextContent('Downloaded')
 })
+
+it('does not recommend a catalog model again when its download is installed under its file name', async () => {
+  const { workspace } = workspaceFixture({
+    'engines.selected': { engine: 'llamacpp-upstream' },
+    'models.installed': [
+      {
+        id: 'LiquidAI/LFM2-1.2B-Q4_K_M',
+        name: 'LFM2-1.2B-Q4_K_M',
+        provider: 'llamacpp-upstream',
+        repository: 'LiquidAI/LFM2-1.2B-GGUF',
+      },
+    ],
+    'models.catalog': {
+      rows: [
+        { id: 'LiquidAI/LFM2-1.2B-GGUF', name: 'LFM2 1.2B', category: 'text', source: { format: 'gguf' } },
+        { id: 'AtomicChat/Other-GGUF', name: 'Other', category: 'text', source: { format: 'gguf' } },
+      ],
+    },
+  })
+  render(<FirstModel workspace={workspace} select={vi.fn()} />)
+  expect(await screen.findByRole('button', { name: /^Other/ })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /LFM2-1.2B-Q4_K_M/ })).toHaveTextContent('Downloaded')
+  expect(screen.queryByRole('button', { name: /^LFM2 1\.2B/ })).not.toBeInTheDocument()
+})

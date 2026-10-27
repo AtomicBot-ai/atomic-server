@@ -27,7 +27,7 @@ export function modelInstalled(s: WorkspaceState, id: string) {
   return (
     s.installed.some(
       (model) =>
-        catalogModelMatches(model.id, id, s.workspace?.setups) ||
+        catalogModelMatches(model.id, id, s.workspace?.setups, model.repository) ||
         jobs.some((job) => record(job['plan'])['model_id'] === model.id)
     ) ||
     jobs.some(
@@ -61,7 +61,9 @@ export function catalogDeviceStatus(s: WorkspaceState, model: LibraryRow) {
         provider === s.catalogFilters.engine ||
         (s.catalogFilters.engine === 'llamacpp' && provider === 'llamacpp-upstream')
     )
-  const files = s.installed.filter((file) => catalogModelMatches(file.id, model.id, s.workspace?.setups))
+  const files = s.installed.filter((file) =>
+    catalogModelMatches(file.id, model.id, s.workspace?.setups, file.repository)
+  )
   const jobs = (s.workspace?.setups ?? []).map(record).filter((job) => matches(job, model.id))
   const candidates = [
     ...files.map((file) => ({

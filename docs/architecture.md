@@ -18,7 +18,7 @@ the code disagree, fix the page.
  │                              /api/core/* proxy (the control-token stays here); SSE relay /api/events
  ├─ host agent                  hardware probe → PUT /hardware/override; HostStepExecutor
  │                              (pending_host_step → request file → helper → receipt)
- └─ run files                   <data>/atc/run/daemon.json, <data>/atc/logs/daemon.log, graceful shutdown
+ └─ run files                   <data>/atc/run/daemon.json, <data>/atc/run/admin-sessions.json, <data>/atc/logs/daemon.log, graceful shutdown
  privileged helper = the same binary: `atc host-step exec <request.json>` under root / sudo / pkexec / UAC
 ```
 

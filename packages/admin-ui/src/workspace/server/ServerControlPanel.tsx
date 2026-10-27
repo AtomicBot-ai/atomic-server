@@ -1,7 +1,7 @@
 // Lifted from Atomic-Chat/web-app/src/containers/ServerControlPanel.tsx @ 807b4d9; adapted: live API operations and model sessions.
 import { useEffect, useState } from 'react'
 import { Box, Cable, Cpu, Play, Square, LoaderCircle } from 'lucide-react'
-import { connectionDownload, connectionDownloadTarget, engineName, inferenceReadiness } from '@view'
+import { engineName, inferenceReadiness, serverPanelSelection } from '@view'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { highlightDownloads } from '../library/downloads/download-attention'
@@ -33,12 +33,7 @@ export function ServerControlPanel({
   const transition = w.pending.find((name) => ['api.start', 'api.stop', 'api.restart'].includes(name))
   const transitionLabel =
     transition === 'api.stop' ? 'Stopping…' : transition === 'api.restart' ? 'Restarting…' : 'Starting…'
-  const service = w.snapshot?.services.find(
-    (item) => item.kind === 'chat' && ['ready', 'loaded', 'running'].includes(item.state)
-  )
-  const target = connectionDownloadTarget(connectionDownload(w.snapshot?.setups ?? []))
-  const engine = service?.provider || preferredEngine || target.provider
-  const model = service?.model || target.model
+  const { engine, model } = serverPanelSelection(w.snapshot, preferredEngine)
   const readiness = inferenceReadiness(w.snapshot)
   return (
     <section className="desktop-server-control" aria-label="Server control panel">

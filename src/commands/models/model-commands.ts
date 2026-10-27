@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
-import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
+import type { EngineId } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { operation, workspace } from '../server/control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
@@ -11,6 +11,8 @@ import { modelLogs, runModel } from './managed-run.js'
 import { foundryListing, pullFoundryModel } from './foundry-commands.js'
 import { litertListing, pullLiteRtModel } from './litert-commands.js'
 import { listingRoute, localListing } from './engine-listing.js'
+import { chooseLoadEngine, installedEngines } from '../../workspace-view/index.js'
+import type { EngineListing } from '../../workspace-view/index.js'
 import { pullMlxModel } from './mlx-commands.js'
 import { isNoGguf } from '../../terminal-setup/index.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
@@ -21,16 +23,24 @@ async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   return configured
 }
 /**
- * The engine a load goes to: the one named, else `engines.default` once the host is known to register
- * it, so a default this machine lacks (vLLM on macOS) is said here rather than by a failed load.
+ * The engine a load goes to: the one named; else `engines.default` when installed, else an installed
+ * engine of its family (said on stderr), else the default once the host is known to register it, so a
+ * default this machine lacks (vLLM on macOS) is said here, naming the installed engines, not by a failed load.
  */
 async function loadProvider(ctx: CommandContext, value: unknown, service: WorkspaceClient): Promise<string> {
   const chosen = await provider(ctx, value)
-  if (typeof value === 'string' || !(chosen in ENGINE_KINDS)) return chosen
-  const { engines } = (await service.execute('engines.list')) as EngineVersionsResponse
-  if (engines.some((e) => e.engine === chosen)) return chosen
+  if (typeof value === 'string') return chosen
+  const { engines } = (await service.execute('engines.list')) as { engines: EngineListing[] }
+  const choice = chooseLoadEngine(chosen, engines)
+  if (choice.instead) {
+    ctx.log.info(`${chosen} is not installed; loading on ${choice.engine}`)
+    return choice.engine
+  }
+  if (!(chosen in ENGINE_KINDS) || engines.some((e) => e.engine === chosen)) return chosen
+  const installed = installedEngines(engines)
+  const named = installed.length ? installed : engines.map((e) => e.engine)
   throw new AtcError('ATC_USAGE', `The default engine ${chosen} is not available on this machine.`, {
-    hint: `Name one with --engine (${engines.map((e) => e.engine).join(', ')}), or change engines.default.`,
+    hint: `Name one with --engine (${named.join(', ')}), or change engines.default.`,
   })
 }
 /** `catalog` and `search`: each engine's own list, the managed descriptor, or the catalog narrowed. */

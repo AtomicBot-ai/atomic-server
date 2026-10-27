@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/ModelSelection.tsx @ 807b4d9; adapted: live server catalog.
+import { catalogModelMatches } from '@view'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Laptop, Check } from 'lucide-react'
@@ -72,9 +73,13 @@ export function FirstModel({
               !rows(local).some((l) => {
                 const id = text(l.id ?? l.model_id, '')
                 const repo = text(m.id ?? m.model_id, '')
-                // A Foundry Local or LiteRT-LM family is installed as one of its variants.
+                // A Foundry Local or LiteRT-LM family is installed as one of its variants; a GGUF
+                // download under its file name is its catalog row (the registry names the repository).
                 const variants = rows(record(m.litert ?? m.foundry).variants).map((v) => text(v.id, ''))
-                return id === repo || id.startsWith(repo + '/') || variants.includes(id)
+                return (
+                  catalogModelMatches(id, repo, undefined, text(l.repository, '') || undefined) ||
+                  variants.includes(id)
+                )
               })
           )
         )

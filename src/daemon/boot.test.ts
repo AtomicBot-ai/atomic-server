@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { defaultConfig } from '../config/index.js'
 import { createLogger } from '../output/index.js'
 import type { LogEntry } from '../output/index.js'
-import { bootLoader, bootPlan, bootProvider, runBoot } from './boot.js'
+import { bootLoader, bootPlan, runBoot } from './boot.js'
 
 describe('bootPlan', () => {
   it.each([
@@ -18,25 +18,6 @@ describe('bootPlan', () => {
     if ('api' in over) config.api.autoStart = over.api.autoStart
     if ('models' in over) config.models.autoLoad = over.models.autoLoad
     expect(bootPlan(config)).toEqual(expected)
-  })
-})
-
-describe('bootProvider', () => {
-  it.each([
-    [
-      'the default engine when the model lists it',
-      { providers: ['llamacpp', 'llamacpp-upstream'] },
-      'llamacpp-upstream',
-    ],
-    ['the first listed engine otherwise', { providers: ['atomic-prism', 'llamacpp'] }, 'atomic-prism'],
-    [
-      'the store for Foundry Local and LiteRT-LM variants',
-      { store: 'litert-lm', providers: [] },
-      'litert-lm',
-    ],
-    ['the default engine when nothing is listed', {}, 'llamacpp-upstream'],
-  ])('%s', (_name, row, expected) => {
-    expect(bootProvider(row, 'llamacpp-upstream')).toBe(expected)
   })
 })
 
@@ -96,11 +77,23 @@ describe('bootLoader', () => {
     const calls: Array<[string, Record<string, unknown>]> = []
     const execute = async (op: string, input: Record<string, unknown>) => {
       calls.push([op, input])
-      return op === 'models.installed' ? [{ id: 'qwen3-8b', providers: ['llamacpp'] }] : {}
+      if (op === 'models.installed') return [{ id: 'qwen3-8b', providers: ['llamacpp-upstream', 'llamacpp'] }]
+      if (op === 'engines.list')
+        return {
+          engines: [
+            { engine: 'llamacpp-upstream', kind: 'llamacpp', builds: [], active: null },
+            { engine: 'llamacpp', kind: 'llamacpp', builds: [{ version: 'b1', variant: 'v' }], active: null },
+          ],
+        }
+      return {}
     }
     const load = bootLoader(execute, 'llamacpp-upstream')
     await load('qwen3-8b')
-    expect(calls[1]).toEqual(['models.load', { provider: 'llamacpp', model_id: 'qwen3-8b' }])
+    // The default is not installed; the TurboQuant build is: no download at boot.
+    expect(calls.find(([op]) => op === 'models.load')).toEqual([
+      'models.load',
+      { provider: 'llamacpp', model_id: 'qwen3-8b' },
+    ])
     await expect(load('missing')).rejects.toThrow('missing is not installed')
   })
 })

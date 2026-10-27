@@ -252,3 +252,30 @@ it('updates catalog badges from qualified local sessions and exposes the status 
   ).toBe('Loaded')
   await act(async () => {})
 })
+
+// A catalog download registered under its file name is that catalog row, not a second model.
+it('shows a catalog download as that row, downloaded, instead of listing it twice', async () => {
+  const { workspace } = workspaceFixture({
+    'models.installed': [
+      {
+        id: 'LiquidAI/LFM2-1.2B-Q4_K_M',
+        name: 'LFM2-1.2B-Q4_K_M',
+        provider: 'llamacpp-upstream',
+        providers: ['llamacpp-upstream'],
+        repository: 'LiquidAI/LFM2-1.2B-GGUF',
+      },
+    ],
+  })
+  render(
+    <Browse
+      workspace={workspace}
+      catalog={[
+        { id: 'LiquidAI/LFM2-1.2B-GGUF', name: 'LFM2 1.2B', category: 'text', source: { format: 'gguf' } },
+      ]}
+    />
+  )
+  const row = await screen.findByRole('button', { name: 'LFM2 1.2B' })
+  expect(row).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'LFM2-1.2B-Q4_K_M' })).not.toBeInTheDocument()
+  await waitFor(() => expect(screen.getAllByText('Downloaded').length).toBeGreaterThan(0))
+})

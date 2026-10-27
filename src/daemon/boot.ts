@@ -6,6 +6,8 @@
 
 import type { AtcConfig } from '../config/index.js'
 import type { Logger } from '../output/index.js'
+import { chooseLoadEngine } from '../workspace-view/index.js'
+import type { EngineListing } from '../workspace-view/index.js'
 
 export interface BootPlan {
   startApi: boolean
@@ -29,23 +31,26 @@ export function bootPlan(config: AtcConfig): BootPlan {
   return { startApi: config.api.autoStart, models }
 }
 
-/** The engine a boot load goes to: like `atc run` without `--engine`, the default when it runs the model. */
-export function bootProvider(row: InstalledRow, fallback: string): string {
+/** The engine a boot load goes to: like `atc run` without `--engine`, by the installed engines. */
+export function bootProvider(row: InstalledRow, fallback: string, engines: readonly EngineListing[]): string {
   if (row.store === 'foundry-local' || row.store === 'litert-lm') return row.store
-  const providers = row.providers ?? []
-  return providers.includes(fallback) ? fallback : (providers[0] ?? fallback)
+  return chooseLoadEngine(fallback, engines, row.providers ?? []).engine
 }
 
-/** `loadModel` over the workspace: the installed row names the engine, like `atc run` without `--engine`. */
+/** `loadModel` over the workspace: the installed row and `engines.list` name the engine. */
 export function bootLoader(
   execute: (operation: string, input: Record<string, unknown>) => Promise<unknown>,
   defaultEngine: string
 ): BootDeps['loadModel'] {
   return async (model) => {
-    const rows = (await execute('models.installed', {})) as Array<InstalledRow & { id: string }>
+    const [rows, list] = await Promise.all([
+      execute('models.installed', {}) as Promise<Array<InstalledRow & { id: string }>>,
+      execute('engines.list', {}) as Promise<{ engines?: EngineListing[] }>,
+    ])
     const row = rows.find((r) => r.id === model)
     if (!row) throw new Error(`${model} is not installed`)
-    await execute('models.load', { provider: bootProvider(row, defaultEngine), model_id: model })
+    const provider = bootProvider(row, defaultEngine, list.engines ?? [])
+    await execute('models.load', { provider, model_id: model })
   }
 }
 

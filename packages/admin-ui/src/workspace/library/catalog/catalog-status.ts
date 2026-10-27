@@ -11,8 +11,16 @@ export function catalogStatus(
   engine = ''
 ) {
   const id = modelId(model)
-  const matches = (candidate: string) => catalogModelMatches(candidate, id, snapshot?.setups)
-  const files = installed.filter((row) => modelCategory(row) === category && matches(modelId(row)))
+  const matches = (candidate: string, repository?: unknown) =>
+    catalogModelMatches(
+      candidate,
+      id,
+      snapshot?.setups,
+      typeof repository === 'string' ? repository : undefined
+    )
+  const files = installed.filter(
+    (row) => modelCategory(row) === category && matches(modelId(row), row.repository)
+  )
   const kind = category === 'text' ? 'chat' : ['image', 'video'].includes(category) ? 'image-video' : category
   if (!['chat', 'image-video', 'embedding', 'decision'].includes(kind)) return ''
   const declared = modelProviders(model)

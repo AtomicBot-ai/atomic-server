@@ -101,7 +101,14 @@ export interface WorkspaceState extends WorkspaceReturnState {
   clientKeys: ClientKeyView[]
   secret: string
   /** `providers`: every provider the core says lists the model; `provider` the first. */
-  installed: { id: string; provider: string; name: string; providers?: string[]; store?: string }[]
+  installed: {
+    id: string
+    provider: string
+    name: string
+    providers?: string[]
+    store?: string
+    repository?: string
+  }[]
   modelsUpdated: number
   modelsError: string
   engine: string

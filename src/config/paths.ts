@@ -22,6 +22,8 @@ export interface AtcPaths {
   runDir: string
   daemonRecord: string
   adminToken: string
+  /** The web admin's sessions, so a restart keeps browsers signed in. */
+  adminSessions: string
   hostStepsDir: string
   hostStepsJournal: string
   logsDir: string
@@ -49,6 +51,7 @@ export function atcPathsFor(dataFolder: string, platform: NodeJS.Platform = proc
     runDir,
     daemonRecord: join(runDir, 'daemon.json'),
     adminToken: join(runDir, 'admin-token'),
+    adminSessions: join(runDir, 'admin-sessions.json'),
     hostStepsDir: join(runDir, 'host-steps'),
     hostStepsJournal: join(runDir, 'host-steps', 'journal.json'),
     logsDir,

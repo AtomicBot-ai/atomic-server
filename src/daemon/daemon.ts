@@ -216,7 +216,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         port: options.admin.port ?? options.config.values.admin.port,
         link,
         relay,
-        sessions: new SessionStore(),
+        sessions: new SessionStore(undefined, undefined, paths.adminSessions),
         adminToken: () => ensureAdminToken(paths.adminToken),
         status,
         config: configView,

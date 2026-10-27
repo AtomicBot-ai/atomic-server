@@ -52,8 +52,9 @@ export function CatalogToolbar({
       className="hub-toolbar"
       ref={ref}
       onKeyDown={onKeyDown}
+      // A label click reports its blur with no related target (focus moves to the input): not a leave.
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) closeMenu()
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) closeMenu()
       }}
     >
       <CatalogCategory
@@ -100,7 +101,7 @@ export function CatalogToolbar({
         <div
           className="hub-menu-anchor"
           onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) closeMenu()
+            if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) closeMenu()
           }}
         >
           <button
@@ -187,7 +188,7 @@ export function CatalogToolbar({
         <div
           className="hub-menu-anchor"
           onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) closeMenu()
+            if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) closeMenu()
           }}
         >
           <button
