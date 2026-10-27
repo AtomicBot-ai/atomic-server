@@ -23,8 +23,13 @@ function tryBind(host: string, port: number): Promise<'free' | 'busy' | 'unknown
 }
 
 export async function probePort(host: string, port: number): Promise<'free' | 'busy'> {
-  const results = await Promise.all(shadowHosts(host).map((candidate) => tryBind(candidate, port)))
-  // A shadow that cannot exist here (no IPv6) says nothing; an address this machine lacks is the
-  // core's bind error to report, not another program's port.
-  return results.includes('busy') ? 'busy' : 'free'
+  // One address at a time: on Linux a dual-stack `::` bind covers IPv4 too, so two of these probes
+  // run together would see each other as the other program.
+  for (const candidate of shadowHosts(host)) {
+    const result = await tryBind(candidate, port)
+    // A shadow that cannot exist here (no IPv6) says nothing; an address this machine lacks is the
+    // core's bind error to report, not another program's port.
+    if (result === 'busy') return 'busy'
+  }
+  return 'free'
 }
