@@ -2,7 +2,8 @@
  * `atc run` without --engine on a machine where `engines.default` is not installed: the installed build
  * of the same family, never a download; and the --engine hint names installed engines only.
  */
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { testRun } from '../helpers/test-context.js'
 import type { TestRun } from '../helpers/test-context.js'
 
@@ -66,5 +67,23 @@ describe('the engine a load goes to', () => {
     const err = t.io.err.join('')
     expect(err).toMatch(/--engine \(llamacpp\)/)
     expect(err).not.toContain('atomic-prism')
+  })
+
+  it('prints no log tail for a model that has none', async () => {
+    t = testRun()
+    t.link.responses['POST /engines/versions'] = {
+      engines: [{ engine: 'llamacpp-upstream', builds: [], active: null }],
+    }
+    vi.spyOn(t.link.models, 'load').mockRejectedValue(
+      new AtomicCoreError(
+        'MODEL_NOT_FOUND',
+        "Model 'nope' is not installed. Run `atomic-chat-cli models list` to see available models."
+      )
+    )
+    t.link.responses['GET /backends/llamacpp-upstream'] = { backends: [{ version: 'b1', backend: 'cpu' }] }
+    expect(await t.run(['run', 'nope'])).toBe(1)
+    const err = t.io.err.join('')
+    expect(err).not.toContain('Last lines of')
+    expect(err).toContain('Run `atc models list`')
   })
 })

@@ -6,16 +6,17 @@ import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { operation, workspace } from '../server/control.js'
+import { humanLines } from '../server/human-output.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
-import { foundryListing, pullFoundryModel } from './foundry-commands.js'
-import { litertListing, pullLiteRtModel } from './litert-commands.js'
-import { listingRoute, localListing } from './engine-listing.js'
+import { pullFoundryModel } from './foundry-commands.js'
+import { pullLiteRtModel } from './litert-commands.js'
+import { engineListing } from './engine-listing.js'
 import { chooseLoadEngine, installedEngines } from '../../workspace-view/index.js'
 import type { EngineListing } from '../../workspace-view/index.js'
 import { pullMlxModel } from './mlx-commands.js'
 import { isNoGguf } from '../../terminal-setup/index.js'
-import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
+import { checkModelCommand, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
 async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   if (typeof value === 'string') return value
@@ -43,28 +44,9 @@ async function loadProvider(ctx: CommandContext, value: unknown, service: Worksp
     hint: `Name one with --engine (${named.join(', ')}), or change engines.default.`,
   })
 }
-/** `catalog` and `search`: each engine's own list, the managed descriptor, or the catalog narrowed. */
-function listing(
-  ctx: CommandContext,
-  op: 'models.catalog' | 'models.search',
-  engine: unknown,
-  query: string,
-  category?: unknown
-) {
-  const named = typeof engine === 'string' ? engine : undefined
-  switch (listingRoute(named)) {
-    case 'litert':
-      return litertListing(ctx, op, query)
-    case 'foundry':
-      return foundryListing(ctx, query)
-    case 'managed':
-      return managedListing(ctx, op, { engine: named, ...(query ? { query } : {}) })
-    case 'local':
-      return localListing(ctx, named!, query)
-    default:
-      if (op === 'models.search' && !query) throw new AtcError('ATC_USAGE', 'Name what to search for.')
-      return operation(ctx, op, op === 'models.search' ? { query } : { category })
-  }
+/** A reviewed plan as `atc models pull --dry-run` shows it (JSON stays for `--json`). */
+function printPlan(ctx: CommandContext, plan: unknown) {
+  for (const line of humanLines('models.plan', plan) ?? [JSON.stringify(plan, null, 2)]) ctx.out.line(line)
 }
 /** The operation that cancels a download of `--engine`'s own kind. */
 const CANCEL: Record<string, string> = {
@@ -131,7 +113,8 @@ export const modelsCommand = defineCommand({
         },
         ...engineOption,
       },
-      run: (inv, ctx) => listing(ctx, 'models.catalog', inv.values['engine'], '', inv.values['category']),
+      run: (inv, ctx) =>
+        engineListing(ctx, 'models.catalog', inv.values['engine'], '', inv.values['category']),
     }),
     defineCommand({
       name: 'search',
@@ -143,7 +126,7 @@ export const modelsCommand = defineCommand({
         },
       ],
       options: engineOption,
-      run: (inv, ctx) => listing(ctx, 'models.search', inv.values['engine'], inv.positionals[0] ?? ''),
+      run: (inv, ctx) => engineListing(ctx, 'models.search', inv.values['engine'], inv.positionals[0] ?? ''),
     }),
     checkModelCommand,
     defineCommand({
@@ -257,7 +240,12 @@ export const modelsCommand = defineCommand({
               plan_digest: plan.digest,
               request_id: inv.values['request-id'] ?? randomUUID(),
             })
-        ctx.out.result(result, () => ctx.out.line(JSON.stringify(result, null, 2)))
+        ctx.out.result(result, () => {
+          if (inv.values['dry-run']) return printPlan(ctx, plan)
+          const job = result as { setup_id?: string; stage?: string; plan?: { model_id?: string } }
+          ctx.out.line(`${job.plan?.model_id ?? repo}: ${job.stage ?? 'queued'} — ${job.setup_id ?? ''}`)
+          ctx.out.note('follow it with `atc status`; `atc run <model>` once it is ready')
+        })
         return 0
       },
     }),

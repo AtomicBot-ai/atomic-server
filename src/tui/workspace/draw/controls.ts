@@ -75,7 +75,8 @@ export function scrollTrack(
       c,
       x,
       y + row,
-      row >= top && row < top + thumb ? '#' : '|',
+      // Box-drawing glyphs: the track shares a column with a frame or divider, which stays whole.
+      row >= top && row < top + thumb ? '┃' : '│',
       row >= top && row < top + thumb ? COLORS.muted : COLORS.line,
       1
     )

@@ -120,10 +120,10 @@ runs it in place (containers). `atc logs [-f]` shows the server's own log, rotat
 | Models & engines | `atc run <model>` / `atc unload <model>` | Start a downloaded model on an engine (`--engine`; a managed engine shows its load stages); stop it | works |
 | Models & engines | `atc models catalog\|search\|check\|files\|pull\|list\|rm\|import\|info\|logs` | The catalog, the model files, and with `--engine` the managed engines', Foundry Local's and LiteRT-LM's models | works (see [Models for managed engines](#models-for-managed-engines), [Foundry Local](#foundry-local), [LiteRT-LM](#litert-lm)) |
 | Models & engines | `atc engines list\|install\|status\|rm\|accelerators` | Engines (llama.cpp, MLX, Foundry Local, LiteRT-LM (`litert-lm`), the managed TensorRT-LLM, vLLM and SGLang) and their builds; installing one prepares what it needs; `engines accelerators foundry-local\|litert-lm` lists and prepares accelerators | works (see [Managed engines](#managed-engines), [LiteRT-LM](#litert-lm)) |
-| Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | stub (iteration 4) |
+| Models & engines | `atc hardware show\|refresh` | What the core sees of the GPU and CPU | works |
 | Access | `atc api start\|stop\|status` | The OpenAI-compatible API on the running server; clients need a key from the keyring | works |
 | Access | `atc chat` | Send a message to an OpenAI-compatible model | works |
-| Access | `atc api key show\|set\|rotate\|clear` | The keyring from the command line (the terminal UI manages it today; `--api-key` adds one) | stub (iteration 3) |
+| Access | `atc api key list\|show\|create\|revoke\|rotate` | The keyring from the command line: named client keys, masked unless revealed | works |
 | Access | `atc admin [open\|status\|token]` | Sign-in link, where the admin listens, token rotation | works |
 | Access | `atc tui` | The terminal UI, explicitly (what bare `atc` opens on a terminal) | works |
 | System | `atc config get\|set\|unset\|list\|path` | `atc` settings, and engine settings of the running server's core | works |
@@ -253,7 +253,7 @@ hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
 ```
 <data> = <system data>/atomic-chat-cli/data      --data-folder or ATC_DATA_FOLDER override it
-<data>/atomic-core/           the core: instance.lock, control-token (0600), settings.json, processes.json, logs/
+<data>/atomic-core/           the core: instance.lock, control-token (0600), settings.json, processes.json, telemetry.json, model-claims/
 <data>/llamacpp/models/       GGUF models, one folder with model.yml each (both llama.cpp providers)
 <data>/<provider>/backends/   engine builds the core installs
 <data>/atc/                   what only atc owns (owner-only ACL on Windows)
@@ -262,9 +262,11 @@ hour; `ATC_LITERT_LM_MODELS_URL` names another one.
   setup.json, chats/          0600: the terminal UI's setup and conversations
   run/daemon.json             pid, instance_id, state (starting|ready), atc/core versions, control_url, admin_url, started_at
   run/admin-token             0600: the admin login token
+  run/admin-sessions.json     0600: the web admin's sessions, so a restart keeps browsers signed in
   run/host-steps/             0700: <step_id>.request.json (0600), <step_id>.result.json, journal.json
   logs/daemon.log             the server's own log, rotated by size (log.maxSizeMb, log.maxFiles)
   logs/daemon.out.log         the server process's output from its last start (crashes before the logger)
+  logs/engines.log            every line the engines print, by provider and model; `atc models logs` reads it
   cache/                      catalog and recommendation caches
 ```
 

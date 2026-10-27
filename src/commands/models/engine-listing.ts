@@ -10,7 +10,10 @@ import type { EngineId } from '@atomic-chat/core/contracts'
 import { AtcError } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { matchesEngineFilter, modelEngines } from '../../workspace-view/index.js'
-import { printOperation, workspace } from '../server/control.js'
+import { operation, printOperation, workspace } from '../server/control.js'
+import { litertListing } from './litert-commands.js'
+import { foundryListing } from './foundry-commands.js'
+import { managedListing } from './managed-model-commands.js'
 
 export type ListingRoute = 'all' | 'litert' | 'foundry' | 'managed' | 'local'
 
@@ -56,4 +59,28 @@ export async function localListing(ctx: CommandContext, engine: string, query = 
   const catalog = (await service.execute('models.catalog', { category: 'text' })) as { rows: CatalogRow[] }
   const rows = localRows(catalog.rows, engine, query)
   return printOperation(ctx, 'models.catalog', { ...catalog, rows, engine })
+}
+
+/** `atc models catalog|search`: each engine's own list, the managed descriptor, or the catalog narrowed. */
+export function engineListing(
+  ctx: CommandContext,
+  op: 'models.catalog' | 'models.search',
+  engine: unknown,
+  query: string,
+  category?: unknown
+) {
+  const named = typeof engine === 'string' ? engine : undefined
+  switch (listingRoute(named)) {
+    case 'litert':
+      return litertListing(ctx, op, query)
+    case 'foundry':
+      return foundryListing(ctx, query)
+    case 'managed':
+      return managedListing(ctx, op, { engine: named, ...(query ? { query } : {}) })
+    case 'local':
+      return localListing(ctx, named!, query)
+    default:
+      if (op === 'models.search' && !query) throw new AtcError('ATC_USAGE', 'Name what to search for.')
+      return operation(ctx, op, op === 'models.search' ? { query } : { category })
+  }
 }

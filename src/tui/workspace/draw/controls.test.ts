@@ -38,12 +38,15 @@ it('distinguishes selected navigation from primary actions and focused switches'
   expect(c.cells[7]![4]!.color).toBe(COLORS.muted)
   expect(hit(c, 44, 5)?.id).toBe('enabled')
 })
-it('shows the visible window in a bounded scroll track', () => {
+// The track sits in a frame's own column (a sidebar divider, a card edge): box-drawing glyphs keep
+// that line whole, where `|` and `#` read as a frame drawn only partly.
+it('shows the visible window in a bounded scroll track, with box-drawing glyphs', () => {
   const c = canvas(54, 24)
   scrollTrack(c, 50, 4, 6, 0, 2, 10)
-  expect(c.cells[4]![50]!.char).toBe('#')
+  expect(c.cells[4]![50]!.char).toBe('┃')
+  expect(c.cells[8]![50]!.char).toBe('│')
   scrollTrack(c, 50, 4, 6, 8, 2, 10)
-  expect(c.cells[9]![50]!.char).toBe('#')
+  expect(c.cells[9]![50]!.char).toBe('┃')
   expect(c.cells[10]![50]!.char).toBe(' ')
 })
 

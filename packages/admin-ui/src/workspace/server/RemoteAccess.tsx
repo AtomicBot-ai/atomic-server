@@ -72,7 +72,7 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
       <Panel title="Local network">
         <div className="remote-access-body">
           <p>Let devices on the same network connect with an API key.</p>
-          <p role="status">{lan ? 'Connected' : 'Stopped'}</p>
+          <p role="status">{localNetworkStatus(w.snapshot?.api)}</p>
           <div className="remote-access-actions">
             <Action
               primary
@@ -102,4 +102,13 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
       </Panel>
     </>
   )
+}
+
+/** The API's address is what "local network" means: loopback keeps other devices out; down is Stopped. */
+function localNetworkStatus(api: { running: boolean; host: string; port: number } | undefined): string {
+  if (!api?.running) return 'Stopped: the API is not running'
+  const address = `${api.host}:${api.port}`
+  return ['127.0.0.1', 'localhost', '::1'].includes(api.host)
+    ? `Local only (${address}): other devices cannot reach it`
+    : `Listening on ${address} for devices on this network`
 }

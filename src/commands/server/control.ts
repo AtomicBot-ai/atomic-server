@@ -1,3 +1,4 @@
+import { humanLines } from './human-output.js'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { parseControlInput } from '../../agent-control/index.js'
@@ -40,9 +41,12 @@ export async function operation(
 /** An operation's result as `atc control call` prints it: the JSON envelope, or the result as text. */
 export function printOperation(ctx: CommandContext, name: string, result: unknown): number {
   const envelope = { schema_version: 1, operation: name, status: 'ok', result: result ?? null }
-  ctx.out.result(envelope, () =>
-    ctx.out.line(typeof result === 'string' ? result : JSON.stringify(result, null, 2))
-  )
+  ctx.out.result(envelope, () => {
+    if (typeof result === 'string') return ctx.out.line(result)
+    const lines = humanLines(name, result)
+    if (lines) for (const line of lines) ctx.out.line(line)
+    else ctx.out.line(JSON.stringify(result, null, 2))
+  })
   return 0
 }
 export const controlCommand = defineCommand({
