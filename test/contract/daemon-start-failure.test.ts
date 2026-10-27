@@ -24,7 +24,7 @@ describe('a server that fails while starting', () => {
       startDaemon({
         paths,
         io: recordingIo(),
-        config: resolveConfig({ env: {} }),
+        config: resolveConfig({ env: { ATC_API_AUTO_START: 'false' } }),
         host: fakeHost(),
         log: createLogger(() => {}, { level: 'silent' }),
         controlPort: 0,
@@ -43,7 +43,7 @@ describe("a server that cannot start reports it to atc's project", () => {
     runDaemon({
       paths,
       io: recordingIo(),
-      config: resolveConfig({ env: {} }),
+      config: resolveConfig({ env: { ATC_API_AUTO_START: 'false' } }),
       host: fakeHost(),
       log: createLogger(() => {}, { level: 'silent' }),
       controlPort: 0,

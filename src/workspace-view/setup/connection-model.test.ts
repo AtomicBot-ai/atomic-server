@@ -1,5 +1,10 @@
-import { expect, it } from 'vitest'
-import { connectionDownload, connectionDownloadTarget, connectionModelState } from './connection-model.js'
+import { describe, expect, it } from 'vitest'
+import {
+  connectionDownload,
+  connectionDownloadTarget,
+  connectionModelState,
+  serverPanelSelection,
+} from './connection-model.js'
 
 const plan = { model_id: 'new-model', provider: 'llamacpp-upstream', total_download_bytes: 1000 }
 const job = { id: 'job', stage: 'downloading_model', plan }
@@ -153,4 +158,34 @@ it('waits for the chosen engine even when its model file is already downloaded',
   expect(
     connectionModelState('qwen', local, [], [{ ...pending[0], stage: 'ready' }], 'atomic-prism')
   ).toMatchObject({ ready: true, waiting: false })
+})
+
+// The Server panel names an engine and a model with nothing loaded: the preferred engine and the last
+// download, the same in the web admin and the terminal UI.
+describe('serverPanelSelection', () => {
+  const job = {
+    setup_id: 's1',
+    stage: 'ready',
+    updated_at: 2,
+    plan: { model_id: 'LiquidAI/LFM2-1.2B-Q4_K_M', provider: 'llamacpp-upstream' },
+  }
+  it('is the running chat service first', () => {
+    expect(
+      serverPanelSelection(
+        { services: [{ kind: 'chat', provider: 'mlx', model: 'm', state: 'ready' }], setups: [job] },
+        'llamacpp'
+      )
+    ).toEqual({ engine: 'mlx', model: 'm' })
+  })
+  it('falls back to the preferred engine and the last download, then to the download engine', () => {
+    expect(serverPanelSelection({ services: [], setups: [job] }, 'llamacpp')).toEqual({
+      engine: 'llamacpp',
+      model: 'LiquidAI/LFM2-1.2B-Q4_K_M',
+    })
+    expect(serverPanelSelection({ services: [], setups: [job] }, '')).toEqual({
+      engine: 'llamacpp-upstream',
+      model: 'LiquidAI/LFM2-1.2B-Q4_K_M',
+    })
+    expect(serverPanelSelection({ services: [], setups: [] }, '')).toEqual({ engine: '', model: '' })
+  })
 })

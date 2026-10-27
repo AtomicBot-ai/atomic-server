@@ -42,6 +42,7 @@ export {
   connectionDownload,
   connectionDownloadTarget,
   connectionModelState,
+  serverPanelSelection,
 } from './setup/connection-model.js'
 export {
   blockerLines,
@@ -104,3 +105,5 @@ export { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES } from './catalog/cloud-catalog.j
 export { prioritizeDownloads } from './downloads/downloads.js'
 export { engineUpdateResult } from './engines/engine-updates.js'
 export type { EngineUpdateCheck } from './engines/engine-updates.js'
+export { chooseLoadEngine, installedEngines } from './engines/load-engine.js'
+export type { EngineListing } from './engines/load-engine.js'

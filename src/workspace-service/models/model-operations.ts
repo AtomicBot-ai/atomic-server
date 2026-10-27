@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { basename, isAbsolute, join, resolve } from 'node:path'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { ModelRegistry } from '@atomic-chat/core/models'
 import type { WorkspaceInput } from '../../contract/index.js'
 import { AtcError } from '../../errors/index.js'
@@ -25,7 +26,11 @@ import { foundryStoreModels, removeFoundryModel } from '../foundry/foundry-store
 import { liteRtStoreModels, removeLiteRtModel } from '../litert/litert-store.js'
 import { NOT_CORE } from '../not-core.js'
 import type { WorkspaceServiceOptions } from '../service-options.js'
-import { importedModelId } from '../validation.js'
+import { importedModelId, modelIdPath, segment } from '../validation.js'
+import { engineLogTail } from '../workspace-logs.js'
+
+/** Lines of an engine's output `models.logs` returns for a model without a container. */
+const ENGINE_LOG_LINES = 200
 
 export interface ModelOperationDeps {
   options: WorkspaceServiceOptions
@@ -58,6 +63,16 @@ export async function modelOperation(
 ): Promise<unknown> {
   const { link, paths } = d.options
   switch (operation) {
+    case 'models.logs': {
+      // A container keeps its own log in the core; every other engine's output is in atc's engines log.
+      const provider = segment(input['provider']),
+        model = String(input['model_id'])
+      return link.request('GET', `/models/${provider}/${modelIdPath(model)}/logs`).catch((e: unknown) => {
+        if (e instanceof AtomicCoreError && e.code === 'INVALID_ARGUMENT')
+          return engineLogTail(paths.engineLog, provider, model, ENGINE_LOG_LINES)
+        throw e
+      })
+    }
     case 'managed.plan':
       return d.managed.plan({
         repository: String(input['repository']),

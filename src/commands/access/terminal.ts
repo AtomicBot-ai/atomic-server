@@ -32,7 +32,10 @@ export const apiStart: CommandRun = async (inv, ctx) => {
     await keys
       .ensure(key, 'CLI key')
       .catch((e: Error) => Promise.reject(new AtcError('ATC_USAGE', e.message)))
-  await startApi(link, config, key || (await keys.get()))
+  await startApi(link, config, key || (await keys.get()), {
+    probePort: ctx.host.probePort,
+    status: await link.server.status(),
+  })
   const status = await link.server.status()
   ctx.out.result({ ...status, keys_file: keys.path }, () => {
     ctx.out.kv([

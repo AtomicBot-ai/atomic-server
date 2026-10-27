@@ -183,6 +183,9 @@ async function modelYml(paths: AtcPaths, plan: ModelSetupPlan, files: { model: s
     model_path: files.model,
     ...(files.projector ? { mmproj_path: files.projector } : {}),
     name: (plan.model.file.split('/').pop() ?? plan.model.file).replace(/\.gguf$/i, ''),
+    // The catalog row it came from: the Hub and onboarding recognise the download by it, not by its id.
+    repository: plan.model.repo,
+    repository_file: plan.model.file,
     size_bytes: modelSize + projectorSize,
     ...(plan.model.sha256 ? { model_sha256: plan.model.sha256 } : {}),
     model_size_bytes: modelSize,

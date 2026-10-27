@@ -18,7 +18,7 @@ the code disagree, fix the page.
  │                              /api/core/* proxy (the control-token stays here); SSE relay /api/events
  ├─ host agent                  hardware probe → PUT /hardware/override; HostStepExecutor
  │                              (pending_host_step → request file → helper → receipt)
- └─ run files                   <data>/atc/run/daemon.json, <data>/atc/logs/daemon.log, graceful shutdown
+ └─ run files                   <data>/atc/run/daemon.json, <data>/atc/run/admin-sessions.json, <data>/atc/logs/daemon.log, graceful shutdown
  privileged helper = the same binary: `atc host-step exec <request.json>` under root / sudo / pkexec / UAC
 ```
 
@@ -73,6 +73,7 @@ rest.
 <data>/atc/run/host-steps/        <step_id>.request.json, <step_id>.result.json, journal.json
 <data>/atc/logs/daemon.log        the server's own log, timestamped lines, rotated by size (log.maxSizeMb, log.maxFiles → .1, .2 …)
 <data>/atc/logs/daemon.out.log    the server process's stdout and stderr from its last start (crash output before the logger is up)
+<data>/atc/logs/engines.log       every line the engines print (llama.cpp, MLX, sd.cpp), by provider and model; rotated like daemon.log; `atc models logs` reads it
 <data>/atc/logs/service.log       the same for a launchd service
 <data>/atc/cache/                 catalog and recommendation caches (iteration 3)
 ```

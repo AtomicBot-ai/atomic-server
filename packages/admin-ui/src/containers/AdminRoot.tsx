@@ -29,6 +29,24 @@ export function AdminRoot() {
     }
   }, [hub])
 
+  // A login link opened in this tab later (the sign-in screen is up, `atc admin` printed a new link)
+  // only changes the hash: trade that token too, then ask for status again.
+  useEffect(() => {
+    const onHash = () => {
+      const token = hub.session().consumeHashToken()
+      if (!token) return
+      void hub
+        .session()
+        .login(token)
+        .then(
+          () => useStatusStore.getState().refresh(),
+          () => setBoot('refused')
+        )
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [hub])
+
   if (boot === null && !status) return <Splash />
   if (unauthorized && !status) return <SignIn refused={boot === 'refused'} />
   return <WorkspaceApp />

@@ -8,21 +8,17 @@ export async function requireReadiness(
   input: WorkspaceInput,
   snapshot: () => Promise<WorkspaceSnapshot>
 ) {
-  if (!['api.start', 'api.restart', 'chat.start', 'chat.complete'].includes(operation)) return
-  const chat = operation.startsWith('chat.'),
-    request = object(input['request'])
-  if (chat && (typeof request['model'] !== 'string' || !request['model'].trim()))
+  // Only chat: the API serves without a model (`atc api start`, `api.autoStart`), so a Start with
+  // nothing loaded is the UIs' hint to give, not an error.
+  if (!['chat.start', 'chat.complete'].includes(operation)) return
+  const request = object(input['request'])
+  if (typeof request['model'] !== 'string' || !request['model'].trim())
     throw new AtcError('ATC_USAGE', 'Choose a model to continue.')
-  const readiness = inferenceReadiness(
-    await snapshot(),
-    chat
-      ? {
-          model: String(request['model'] ?? ''),
-          ...(typeof input['provider'] === 'string' ? { provider: input['provider'] } : {}),
-          kind: 'chat',
-          requireApi: true,
-        }
-      : {}
-  )
+  const readiness = inferenceReadiness(await snapshot(), {
+    model: request['model'],
+    ...(typeof input['provider'] === 'string' ? { provider: input['provider'] } : {}),
+    kind: 'chat',
+    requireApi: true,
+  })
   if (!readiness.ready) throw new AtcError('ATC_USAGE', readiness.message)
 }

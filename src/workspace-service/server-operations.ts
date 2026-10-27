@@ -15,6 +15,7 @@ import { callPublic } from './snapshot/public-api.js'
 import { engineSettingsSchema, workspaceConfig, updateWorkspaceConfig } from './settings.js'
 import { workspaceLogs } from './workspace-logs.js'
 import { NOT_CORE } from './not-core.js'
+import { startApi } from '../terminal-service/index.js'
 
 export interface ServerParts {
   options: WorkspaceServiceOptions
@@ -44,17 +45,14 @@ export async function serverOperation(
       return WORKSPACE_OPERATIONS
     case 'api.start':
     case 'api.restart': {
-      const body = {
-        host: config.api.host,
-        port: config.api.port,
-        prefix: config.api.prefix,
-        trusted_hosts: config.api.trustedHosts,
-        ...object(input['request']),
-        api_key: await keys.get(),
-        fallback_port: false,
-      }
       if (operation === 'api.restart') await link.server.stop()
-      return sanitized(await link.server.start(body))
+      const status = operation === 'api.start' ? (await readSnapshot()).api : undefined
+      const started = await startApi(link, config, await keys.get(), {
+        request: object(input['request']),
+        ...(options.probePort ? { probePort: options.probePort } : {}),
+        ...(status ? { status } : {}),
+      })
+      return sanitized(started)
     }
     case 'api.inspector': {
       const result = await link.request('PUT', '/server/inspector', { enabled: input['enabled'] })

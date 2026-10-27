@@ -1,3 +1,4 @@
+import { useChatDraft } from './chat-draft'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { highlightDownloads } from '../library/downloads/download-attention'
 import { createPortal } from 'react-dom'
@@ -24,6 +25,8 @@ import { ChatEmpty } from './ChatEmpty'
 import './chat-sidebar.css'
 import './chat-desktop.css'
 import './chat-composition.css'
+const NO_FEATURES: ChatFeatureSelection = { assistant: '', skills: [], connectors: [] }
+
 export function Chat({
   workspace: w,
   onCatalog,
@@ -39,17 +42,14 @@ export function Chat({
 }) {
   const s = useChatSession(),
     { preferences, save } = useChatPreferences()
-  const [draft, setDraft] = useState(''),
-    [system, setSystem] = useState(preferences.system)
-  const [parameters, setParameters] = useState(preferences.parameters),
-    [selected, setSelected] = useState('')
-  const [settings, setSettings] = useState(false),
+  // The draft lives outside this component (`useChatDraft`): Open server leaves the Playground.
+  const [draft, setDraft, restoreDraft] = useChatDraft(s.chat),
+    [system, setSystem] = useState(preferences.system),
+    [parameters, setParameters] = useState(preferences.parameters),
+    [selected, setSelected] = useState(''),
+    [settings, setSettings] = useState(false),
     [attachments, setAttachments] = useState<Attachment[]>([])
-  const [features, setFeatures] = useState<ChatFeatureSelection>({
-    assistant: '',
-    skills: [],
-    connectors: [],
-  })
+  const [features, setFeatures] = useState<ChatFeatureSelection>(NO_FEATURES)
   const bindings = connectorToolBindings(w.snapshot?.features, features.connectors)
   const [capabilities, setCapabilities] = useState<RecordValue>({})
   const [admission, setAdmission] = useState({ attempted: false, modelRequest: 0 })
@@ -97,16 +97,15 @@ export function Chat({
     setParameters(
       s.chat.id ? JSON.stringify(record(s.chat.request_settings), null, 2) : preferences.parameters
     )
-    const storedFeatures = record(s.chat.request_settings)
+    const saved = record(s.chat.request_settings),
+      list = (v: unknown) => (Array.isArray(v) ? v.map(String) : [])
     setFeatures({
-      assistant: text(storedFeatures.atomic_assistant, ''),
-      skills: Array.isArray(storedFeatures.atomic_skills) ? storedFeatures.atomic_skills.map(String) : [],
-      connectors: Array.isArray(storedFeatures.atomic_connectors)
-        ? storedFeatures.atomic_connectors.map(String)
-        : [],
+      assistant: text(saved.atomic_assistant, ''),
+      skills: list(saved.atomic_skills),
+      connectors: list(saved.atomic_connectors),
     })
     setAttachments([])
-    setDraft('')
+    restoreDraft()
     if (s.chat.model) {
       const match = models.find((m) => m.model === s.chat.model)
       setSelected(match?.id ?? 'unavailable')

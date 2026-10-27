@@ -101,10 +101,12 @@ it.each(['web', 'terminal'] as const)(
   }
 )
 
-it('refuses inference without a ready model while the shared management server stays available', async () => {
-  await expect(terminal.execute('api.start')).rejects.toThrow('Choose and download a model')
+// The API serves without a model (`atc api start`, `api.autoStart`); only chat needs one.
+it('refuses chat without a ready model while the shared management server stays available', async () => {
+  await expect(terminal.execute('chat.start', { request: { model: 'qwen' } })).rejects.toThrow(
+    'Choose and download a model'
+  )
   const snapshot = await web.snapshot()
-  expect(snapshot.api.running).toBe(false)
   expect(snapshot.core.instance_id).toBeTruthy()
 })
 

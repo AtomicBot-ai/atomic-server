@@ -70,3 +70,23 @@ it.each([
 ])('matches installed %s to catalog family %s: %s', (id, family, expected) => {
   expect(catalogModelMatches(id, family)).toBe(expected)
 })
+
+// A catalog download is registered under its file name (`LiquidAI/LFM2-1.2B-Q4_K_M` for the
+// `LiquidAI/LFM2-1.2B-GGUF` row): the row's repository on the installed model, or the GGUF naming
+// rule for models downloaded before it was recorded, ties them back together without the setup record.
+it.each([
+  ['LiquidAI/LFM2-1.2B-Q4_K_M', 'LiquidAI/LFM2-1.2B-GGUF', 'LiquidAI/LFM2-1.2B-GGUF', true],
+  ['LiquidAI/LFM2-1.2B-Q4_K_M', 'LiquidAI/LFM2-1.2B-GGUF', undefined, true],
+  ['AtomicChat/Qwen3.8-27B-UD-Q4_K_XL', 'AtomicChat/Qwen3.8-27B-GGUF', undefined, true],
+  ['LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M', 'LiquidAI/LFM2-1.2B-GGUF', undefined, false],
+  ['LiquidAI/LFM2-1.2B-Q4_K_M', 'LiquidAI/LFM2-1.2B-gguf', undefined, true],
+  ['imported/Qwen3-0.6B-Q8_0-3bdffbe2', 'AtomicChat/Qwen3-0.6B-GGUF', 'LiquidAI/other', false],
+  // Only an owner/repo row names a Hub download; a bare id ending in -gguf is not one.
+  ['local-mlx', 'local-gguf', undefined, false],
+  // Another model of the same family is not this row's download.
+  ['owner/name-Instruct-Q4_K_M', 'owner/name-GGUF', undefined, false],
+  ['owner/name-Q8_0', 'owner/name-GGUF', undefined, true],
+  ['owner/name-IQ4_XS', 'owner/name-GGUF', undefined, true],
+])('ties %s to the catalog row %s (repository %s): %s', (id, family, repository, expected) => {
+  expect(catalogModelMatches(id, family, [], repository)).toBe(expected)
+})

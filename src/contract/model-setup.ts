@@ -87,6 +87,8 @@ export interface ModelSetup {
   task_ids: { engine?: string; model: string; projector?: string }
   /** Where a failed, cancelled or interrupted setup stopped. */
   stopped_at?: ModelSetupStage
+  /** An interrupted setup: the bytes of the stopped stage's file already on disk (the resume keeps them). */
+  transferred?: number
   /**
    * This setup registered the model (it was not registered before): a refusal or a failed check takes
    * the registration back, also after a restart.

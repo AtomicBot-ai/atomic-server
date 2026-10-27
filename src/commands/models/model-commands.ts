@@ -3,13 +3,17 @@ import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
-import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
+import type { EngineId } from '@atomic-chat/core/contracts'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { operation, workspace } from '../server/control.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
 import { foundryListing, pullFoundryModel } from './foundry-commands.js'
 import { litertListing, pullLiteRtModel } from './litert-commands.js'
+import { listingRoute, localListing } from './engine-listing.js'
+import { chooseLoadEngine, installedEngines } from '../../workspace-view/index.js'
+import type { EngineListing } from '../../workspace-view/index.js'
+import { pullMlxModel } from './mlx-commands.js'
 import { isNoGguf } from '../../terminal-setup/index.js'
 import { checkModelCommand, managedListing, noGgufHint, pullManagedModel } from './managed-model-commands.js'
 
@@ -19,20 +23,55 @@ async function provider(ctx: CommandContext, value: unknown): Promise<string> {
   return configured
 }
 /**
- * The engine a load goes to: the one named, else `engines.default` once the host is known to register
- * it, so a default this machine lacks (vLLM on macOS) is said here rather than by a failed load.
+ * The engine a load goes to: the one named; else `engines.default` when installed, else an installed
+ * engine of its family (said on stderr), else the default once the host is known to register it, so a
+ * default this machine lacks (vLLM on macOS) is said here, naming the installed engines, not by a failed load.
  */
 async function loadProvider(ctx: CommandContext, value: unknown, service: WorkspaceClient): Promise<string> {
   const chosen = await provider(ctx, value)
-  if (typeof value === 'string' || !(chosen in ENGINE_KINDS)) return chosen
-  const { engines } = (await service.execute('engines.list')) as EngineVersionsResponse
-  if (engines.some((e) => e.engine === chosen)) return chosen
+  if (typeof value === 'string') return chosen
+  const { engines } = (await service.execute('engines.list')) as { engines: EngineListing[] }
+  const choice = chooseLoadEngine(chosen, engines)
+  if (choice.instead) {
+    ctx.log.info(`${chosen} is not installed; loading on ${choice.engine}`)
+    return choice.engine
+  }
+  if (!(chosen in ENGINE_KINDS) || engines.some((e) => e.engine === chosen)) return chosen
+  const installed = installedEngines(engines)
+  const named = installed.length ? installed : engines.map((e) => e.engine)
   throw new AtcError('ATC_USAGE', `The default engine ${chosen} is not available on this machine.`, {
-    hint: `Name one with --engine (${engines.map((e) => e.engine).join(', ')}), or change engines.default.`,
+    hint: `Name one with --engine (${named.join(', ')}), or change engines.default.`,
   })
 }
+/** `catalog` and `search`: each engine's own list, the managed descriptor, or the catalog narrowed. */
+function listing(
+  ctx: CommandContext,
+  op: 'models.catalog' | 'models.search',
+  engine: unknown,
+  query: string,
+  category?: unknown
+) {
+  const named = typeof engine === 'string' ? engine : undefined
+  switch (listingRoute(named)) {
+    case 'litert':
+      return litertListing(ctx, op, query)
+    case 'foundry':
+      return foundryListing(ctx, query)
+    case 'managed':
+      return managedListing(ctx, op, { engine: named, ...(query ? { query } : {}) })
+    case 'local':
+      return localListing(ctx, named!, query)
+    default:
+      if (op === 'models.search' && !query) throw new AtcError('ATC_USAGE', 'Name what to search for.')
+      return operation(ctx, op, op === 'models.search' ? { query } : { category })
+  }
+}
 /** The operation that cancels a download of `--engine`'s own kind. */
-const CANCEL: Record<string, string> = { 'foundry-local': 'foundry.cancel', 'litert-lm': 'litert.cancel' }
+const CANCEL: Record<string, string> = {
+  'foundry-local': 'foundry.cancel',
+  'litert-lm': 'litert.cancel',
+  'mlx': 'artifacts.cancel',
+}
 const engineOption = {
   engine: { type: 'string' as const, description: 'Engine provider ID', placeholder: 'provider' },
 }
@@ -92,12 +131,7 @@ export const modelsCommand = defineCommand({
         },
         ...engineOption,
       },
-      run: (inv, ctx) =>
-        inv.values['engine'] === 'litert-lm'
-          ? litertListing(ctx, 'models.catalog')
-          : typeof inv.values['engine'] === 'string'
-            ? managedListing(ctx, 'models.catalog', { engine: inv.values['engine'] })
-            : operation(ctx, 'models.catalog', { category: inv.values['category'] }),
+      run: (inv, ctx) => listing(ctx, 'models.catalog', inv.values['engine'], '', inv.values['category']),
     }),
     defineCommand({
       name: 'search',
@@ -109,19 +143,7 @@ export const modelsCommand = defineCommand({
         },
       ],
       options: engineOption,
-      run: (inv, ctx) =>
-        inv.values['engine'] === 'foundry-local'
-          ? foundryListing(ctx, inv.positionals[0] ?? '')
-          : inv.values['engine'] === 'litert-lm'
-            ? litertListing(ctx, 'models.search', inv.positionals[0] ?? '')
-            : !inv.positionals[0]
-              ? Promise.reject(new AtcError('ATC_USAGE', 'Name what to search for.'))
-              : typeof inv.values['engine'] === 'string'
-                ? managedListing(ctx, 'models.search', {
-                    engine: inv.values['engine'],
-                    query: inv.positionals[0],
-                  })
-                : operation(ctx, 'models.search', { query: inv.positionals[0] }),
+      run: (inv, ctx) => listing(ctx, 'models.search', inv.values['engine'], inv.positionals[0] ?? ''),
     }),
     checkModelCommand,
     defineCommand({
@@ -143,14 +165,15 @@ export const modelsCommand = defineCommand({
     }),
     defineCommand({
       name: 'pull',
-      summary: 'Plan and start a durable download: GGUF, or with --engine a managed checkpoint',
+      summary: 'Plan and start a durable download: GGUF, or with --engine an MLX or managed checkpoint',
       positionals: [
         { name: 'model', description: 'owner/repo[:file.gguf], or owner/repo[@revision] with --engine' },
       ],
       options: {
         'engine': {
           type: 'string',
-          description: 'A managed engine: download the safetensors checkpoint into its shared store',
+          description:
+            'mlx: a catalog checkpoint; a managed engine: the safetensors checkpoint into its shared store',
           placeholder: 'engine',
         },
         'detach': { type: 'boolean', description: 'Start a managed download without following it' },
@@ -184,6 +207,7 @@ export const modelsCommand = defineCommand({
         if (inv.values['engine'] === 'foundry-local')
           return pullFoundryModel(ctx, inv.positionals[0], inv.values)
         if (inv.values['engine'] === 'litert-lm') return pullLiteRtModel(ctx, inv.positionals[0], inv.values)
+        if (inv.values['engine'] === 'mlx') return pullMlxModel(ctx, inv.positionals[0], inv.values)
         if (
           typeof inv.values['engine'] === 'string' &&
           ENGINE_KINDS[inv.values['engine'] as EngineId] === 'managed'

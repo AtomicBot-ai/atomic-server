@@ -260,3 +260,30 @@ describe('workspace operations', () => {
     ])
   })
 })
+
+describe('models.logs', () => {
+  it('answers from the engines log for an engine that keeps no log in the core', async () => {
+    const { service, link, paths } = context()
+    const model = 'imported/Qwen3-0.6B-Q8_0-3bdffbe2'
+    link.responses[`GET /models/llamacpp-upstream/${model}/logs`] = new AtomicCoreError(
+      'INVALID_ARGUMENT',
+      'The provider "llamacpp-upstream" runs no container, so it keeps no model logs.'
+    )
+    mkdirSync(paths.logsDir, { recursive: true })
+    writeFileSync(
+      paths.engineLog,
+      `2026-10-27T14:45:04.949Z [info] llamacpp-upstream/${model}: [stderr] model loaded\n` +
+        `2026-10-27T14:45:04.950Z [info] mlx/other: [stdout] ready\n` +
+        `2026-10-27T14:45:04.951Z [info] llamacpp-upstream/${model}: [stderr] listening on http://127.0.0.1:3824\n`
+    )
+    expect(await service.execute('models.logs', { provider: 'llamacpp-upstream', model_id: model })).toBe(
+      '[stderr] model loaded\n[stderr] listening on http://127.0.0.1:3824'
+    )
+    // A container's log is still the core's.
+    link.responses['GET /models/vllm/Qwen%2FQwen3.5-2B/logs'] = 'container log'
+    link.responses['GET /models/vllm/Qwen/Qwen3.5-2B/logs'] = 'container log'
+    expect(await service.execute('models.logs', { provider: 'vllm', model_id: 'Qwen/Qwen3.5-2B' })).toBe(
+      'container log'
+    )
+  })
+})

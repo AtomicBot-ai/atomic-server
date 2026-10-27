@@ -1,20 +1,17 @@
 // Lifted from Atomic-Chat/web-app/src/containers/ServerControlPanel.tsx @ 807b4d9; adapted: live API operations and model sessions.
 import { useEffect, useState } from 'react'
 import { Box, Cable, Cpu, Play, Square, LoaderCircle } from 'lucide-react'
-import { connectionDownload, connectionDownloadTarget, engineName, inferenceReadiness } from '@view'
-import { openAcquisition } from '../useAcquisition'
+import { engineName, inferenceReadiness, serverPanelSelection } from '@view'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { highlightDownloads } from '../library/downloads/download-attention'
 export function ServerControlPanel({
   workspace: w,
   selectSection,
-  openSetup,
   prepared = [],
 }: {
   workspace: Workspace
   selectSection: (id: string) => void
-  openSetup: () => void
   prepared?: string[]
 }) {
   const execute = w.execute
@@ -36,12 +33,7 @@ export function ServerControlPanel({
   const transition = w.pending.find((name) => ['api.start', 'api.stop', 'api.restart'].includes(name))
   const transitionLabel =
     transition === 'api.stop' ? 'Stopping…' : transition === 'api.restart' ? 'Restarting…' : 'Starting…'
-  const service = w.snapshot?.services.find(
-    (item) => item.kind === 'chat' && ['ready', 'loaded', 'running'].includes(item.state)
-  )
-  const target = connectionDownloadTarget(connectionDownload(w.snapshot?.setups ?? []))
-  const engine = service?.provider || preferredEngine || target.provider
-  const model = service?.model || target.model
+  const { engine, model } = serverPanelSelection(w.snapshot, preferredEngine)
   const readiness = inferenceReadiness(w.snapshot)
   return (
     <section className="desktop-server-control" aria-label="Server control panel">
@@ -52,12 +44,9 @@ export function ServerControlPanel({
           title={!running && !readiness.ready ? readiness.message : undefined}
           ariaLabel={transition ? transitionLabel : running ? 'Stop server' : 'Start server'}
           onClick={async () => {
-            if (!running && !readiness.ready) {
-              setShowReadiness(true)
-              if (readiness.waiting) return highlightDownloads()
-              return readiness.acquire ? openAcquisition(readiness.acquire) : openSetup()
-            }
-            setShowReadiness(false)
+            // The API serves without a model: what is still missing is said, not a reason to refuse.
+            setShowReadiness(!running)
+            if (!running && readiness.waiting) highlightDownloads()
             await w.execute(running ? 'api.stop' : 'api.start')
           }}
         >
@@ -78,7 +67,7 @@ export function ServerControlPanel({
           </span>
         </Action>
       </div>
-      {showReadiness && !running && !readiness.ready && (
+      {showReadiness && !readiness.ready && (
         <small className="server-readiness" role="status">
           {readiness.message}
         </small>

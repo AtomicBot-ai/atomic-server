@@ -139,14 +139,6 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
         connectAgent={connect}
         prepared={prepared}
         openHelp={() => setHelp(true)}
-        openSetup={() => {
-          navigation.rememberConnection()
-          setSidebarOpen(false)
-          setAgent(undefined)
-          setConnectionGuide(true)
-          setServerSection('overview')
-          setPage('server')
-        }}
       />
       <div className="desktop-main">
         <header className="desktop-topbar">

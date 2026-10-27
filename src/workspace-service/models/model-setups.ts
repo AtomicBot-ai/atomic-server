@@ -18,7 +18,9 @@ import { AtcError } from '../../errors/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
 import { planFor, planRequest } from './gguf-facts.js'
 import type { GgufFactsDeps } from './gguf-facts.js'
-import { runSetup, SetupCancelled, setupTaskIds } from './model-setup-run.js'
+import { runSetup, SetupCancelled, setupFilePaths, setupTaskIds } from './model-setup-run.js'
+import { bytesOnDisk } from '../../downloads/index.js'
+import { hfResolveUrl } from '@atomic-chat/core/models'
 import type { SetupRunDeps } from './model-setup-run.js'
 import { SerialWork } from '../serial.js'
 
@@ -75,16 +77,33 @@ export class ModelSetups {
         .filter((n) => n.endsWith('.json'))
         .map((n) => readDocument<ModelSetup | null>(join(this.dir, n), null))
     )
-    return records
-      .filter((r): r is ModelSetup => !!r?.plan)
-      .map((r) => this.view(r))
-      .sort((a, b) => a.created_at - b.created_at)
+    const views = await Promise.all(
+      records.filter((r): r is ModelSetup => !!r?.plan).map((r) => this.view(r))
+    )
+    return views.sort((a, b) => a.created_at - b.created_at)
   }
 
-  private view(record: ModelSetup): ModelSetup {
+  private async view(record: ModelSetup): Promise<ModelSetup> {
     if (FINAL.includes(record.stage) || record.stage === 'interrupted' || this.runs.has(record.setup_id))
       return record
-    return { ...record, stage: 'interrupted', stopped_at: record.stage }
+    const stopped: ModelSetup = { ...record, stage: 'interrupted', stopped_at: record.stage }
+    // The stopped stage's file may be half there: say how much, since no transfer reports it now.
+    const artifact =
+      record.stage === 'downloading_model'
+        ? record.plan.model
+        : record.stage === 'downloading_projector'
+          ? record.plan.projector
+          : null
+    if (!artifact) return stopped
+    const files = setupFilePaths(this.deps.paths, record.plan)
+    const rel = record.stage === 'downloading_model' ? files.model : files.projector
+    if (!rel) return stopped
+    const transferred = await bytesOnDisk(
+      join(this.deps.paths.layout.root, rel),
+      hfResolveUrl(artifact.repo, artifact.file, artifact.revision),
+      artifact.size
+    ).catch(() => 0)
+    return { ...stopped, transferred }
   }
 
   async get(id: string): Promise<ModelSetup> {

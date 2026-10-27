@@ -9,3 +9,6 @@ import { join } from 'node:path'
 const folder = mkdtempSync(join(tmpdir(), 'atc-test-'))
 process.env['ATC_DATA_FOLDER'] = join(folder, 'data')
 process.env['ATOMIC_CORE_DATA_FOLDER'] = join(folder, 'app-data')
+// A server starts its API by default (`api.autoStart`): a test's server must not take 1337 from
+// the machine, or from another worker's. Tests that need the API start it themselves.
+process.env['ATC_API_AUTO_START'] ??= 'false'

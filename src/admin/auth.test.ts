@@ -25,3 +25,31 @@ describe('cookies', () => {
     expect(sessionCookie('abc', { secure: true })).toContain('; Secure')
   })
 })
+
+describe('SessionStore with a file', () => {
+  it('keeps sessions across a restart, expires them by their last use, and empties the file on revoke', async () => {
+    const { mkdtempSync, readFileSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const dir = mkdtempSync(join(tmpdir(), 'atc-sessions-'))
+    try {
+      const file = join(dir, 'run', 'admin-sessions.json')
+      let t = 1000
+      const first = new SessionStore(() => t, 100, file)
+      const id = first.create()
+      // A new store over the same file (the daemon after a restart) knows the session.
+      const second = new SessionStore(() => t, 100, file)
+      expect(second.validate(id)).toBe(true)
+      t = 1150
+      expect(new SessionStore(() => t, 100, file).validate(id)).toBe(false)
+      t = 1000
+      const third = new SessionStore(() => t, 100, file)
+      third.create()
+      third.revokeAll()
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ sessions: {} })
+      expect(new SessionStore(() => t, 100, file).size).toBe(0)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})

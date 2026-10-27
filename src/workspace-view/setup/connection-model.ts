@@ -108,3 +108,20 @@ export function connectionModelState(
     waiting: Boolean(pendingEngine || (model && job && !local && !/removed|deleted/.test(state))),
   }
 }
+
+/**
+ * What the Server panel names as engine and model: the running chat service, else the preferred
+ * engine (`engines.selected`, or the terminal's saved choice) and the last text download; the same rule
+ * in the web admin and the terminal UI, so both show one answer for one server.
+ */
+export function serverPanelSelection(
+  snapshot: { services?: readonly unknown[]; setups?: readonly unknown[] } | null | undefined,
+  preferredEngine = ''
+): { engine: string; model: string } {
+  const service = (snapshot?.services ?? [])
+    .map(record)
+    .find((s) => s['kind'] === 'chat' && ['ready', 'loaded', 'running'].includes(String(s['state'])))
+  if (service) return { engine: String(service['provider'] ?? ''), model: String(service['model'] ?? '') }
+  const target = connectionDownloadTarget(connectionDownload(snapshot?.setups ?? []))
+  return { engine: preferredEngine || target.provider, model: target.model }
+}

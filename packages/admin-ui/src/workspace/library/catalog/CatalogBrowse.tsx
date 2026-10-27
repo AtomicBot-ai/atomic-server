@@ -93,13 +93,17 @@ export function CatalogBrowse({
     // A new snapshot object arrives every poll; only its revision says something changed.
   }, [execute, catalog, revision, workspace?.snapshot?.captured_at])
   const idOf = modelId
-  const isInstalled = (id: string) => installed.some((m) => catalogModelMatches(idOf(m), id))
+  const repoOf = (m: RecordValue) => (typeof m.repository === 'string' ? m.repository : undefined)
+  const isInstalled = (id: string) =>
+    installed.some((m) => catalogModelMatches(idOf(m), id, undefined, repoOf(m)))
   const deviceStatus = (model: RecordValue) =>
     catalogStatus(workspace?.snapshot, model, installed, category, filters.engine)
   const available = [
     ...catalog,
     ...installed.filter(
-      (m) => !catalog.some((c) => catalogModelMatches(idOf(m), idOf(c))) && modelCategory(m) === category
+      (m) =>
+        !catalog.some((c) => catalogModelMatches(idOf(m), idOf(c), undefined, repoOf(m))) &&
+        modelCategory(m) === category
     ),
   ]
   const visible = available
@@ -134,7 +138,7 @@ export function CatalogBrowse({
         <InstalledModels
           compact
           workspace={workspace}
-          installed={installed.filter((m) => catalogModelMatches(idOf(m), idOf(model)))}
+          installed={installed.filter((m) => catalogModelMatches(idOf(m), idOf(model), undefined, repoOf(m)))}
           loading={false}
           browse={() => {}}
           openCommand={importFile}
