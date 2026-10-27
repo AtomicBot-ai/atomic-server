@@ -16,6 +16,7 @@ describe('resolveAtcPaths', () => {
     expect(paths.dataFolder).toBe('/home/u/.local/share/atomic-chat-cli/data')
     expect(paths.configFile).toBe('/home/u/.local/share/atomic-chat-cli/data/atc/config.json')
     expect(paths.daemonRecord).toBe('/home/u/.local/share/atomic-chat-cli/data/atc/run/daemon.json')
+    expect(paths.engineLog).toBe('/home/u/.local/share/atomic-chat-cli/data/atc/logs/engines.log')
     // The core's layout joins with the host's separator; only its shape is asserted here.
     expect(paths.layout.core.instanceLock).toMatch(/atomic-core[\\/]instance\.lock$/)
   })

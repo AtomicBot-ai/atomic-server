@@ -12,26 +12,16 @@ export async function apiAction(id: string, ctx: ActionContext): Promise<boolean
       patch({ overlay: 'stop', edit: '', focus: 'close' })
       return true
     }
+    // The API serves without a model: what is still missing is said with the start, not instead of it.
     const readiness = inferenceReadiness(s.workspace)
-    if (!readiness.ready) {
-      patch({
-        message: readiness.message,
-        ...(readiness.waiting ? { downloadAttention: (s.downloadAttention ?? 0) + 1 } : {}),
-        ...(!readiness.waiting && readiness.acquire
-          ? {
-              page: 'models',
-              libraryView: readiness.acquire === 'downloads' ? 'downloads' : 'catalog',
-              focus: 'library-refresh',
-              overlay: null,
-            }
-          : {}),
-      })
-      return true
-    }
-    patch({ busy: true, message: 'Starting the API...' })
+    patch({
+      busy: true,
+      message: 'Starting the API...',
+      ...(readiness.waiting ? { downloadAttention: (s.downloadAttention ?? 0) + 1 } : {}),
+    })
     try {
       await controller.api(true)
-      patch({ message: 'API started.' })
+      patch({ message: readiness.ready ? 'API started.' : `API started. ${readiness.message}` })
     } finally {
       patch({ busy: false })
     }

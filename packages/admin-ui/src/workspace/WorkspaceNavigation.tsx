@@ -61,7 +61,6 @@ export function WorkspaceNavigation({
   selectTask,
   connectAgent,
   openHelp,
-  openSetup,
   prepared = [],
   historyContainerRef,
 }: {
@@ -74,7 +73,6 @@ export function WorkspaceNavigation({
   selectTask: (task: string) => void
   connectAgent: (id: string) => void
   openHelp: () => void
-  openSetup: () => void
   prepared?: string[]
   historyContainerRef?: Ref<HTMLDivElement>
 }) {
@@ -160,12 +158,7 @@ export function WorkspaceNavigation({
           )}
         </header>
         {page === 'server' ? (
-          <ServerControlPanel
-            workspace={workspace}
-            selectSection={selectSection}
-            openSetup={openSetup}
-            prepared={prepared}
-          />
+          <ServerControlPanel workspace={workspace} selectSection={selectSection} prepared={prepared} />
         ) : null}
         <nav
           className="sidebar-sections"

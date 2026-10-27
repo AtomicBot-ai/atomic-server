@@ -29,6 +29,8 @@ export interface AtcPaths {
   daemonLog: string
   /** The server process's stdout and stderr from its last start (crash output before the logger is up). */
   daemonOutLog: string
+  /** Every line the engines print (llama.cpp, MLX, sd.cpp), by provider and model; rotated like the server log. */
+  engineLog: string
   cacheDir: string
 }
 
@@ -52,6 +54,7 @@ export function atcPathsFor(dataFolder: string, platform: NodeJS.Platform = proc
     logsDir,
     daemonLog: join(logsDir, 'daemon.log'),
     daemonOutLog: join(logsDir, 'daemon.out.log'),
+    engineLog: join(logsDir, 'engines.log'),
     cacheDir: join(atcDir, 'cache'),
   }
 }

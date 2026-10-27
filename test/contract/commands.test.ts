@@ -73,6 +73,20 @@ describe('telemetry', () => {
     expect(t.link.calls).toEqual([])
   })
 
+  it('points at the log when the API the config asked for did not come up', async () => {
+    t = testRun({ running: false })
+    expect(await t.run(['start'])).toBe(0)
+    expect(t.io.err.join('')).toContain('the API did not start (api.autoStart): see `atc logs`')
+    t.io.err.length = 0
+    // Already running: `atc api stop` may have been deliberate.
+    expect(await t.run(['start'])).toBe(0)
+    expect(t.io.err.join('')).not.toContain('did not start')
+    t.cleanup()
+    t = testRun({ running: false, io: { env: { ATC_API_AUTO_START: 'false' } } })
+    expect(await t.run(['start'])).toBe(0)
+    expect(t.io.err.join('')).not.toContain('did not start')
+  })
+
   it('says once, after the first start, that reports go out and how to stop them', async () => {
     t = testRun({ running: false })
     expect(await t.run(['start'])).toBe(0)

@@ -164,10 +164,14 @@ export async function startServer(
   return { started: true, ...(await describe(ctx, link)) }
 }
 
-function printStarted(ctx: CommandContext, s: { started: boolean } & DaemonDescription): void {
+type Started = { started: boolean } & DaemonDescription
+function printStarted(ctx: CommandContext, s: Started, apiAutoStart: boolean): void {
   if (!s.started) ctx.out.note('the server is already running')
   else ctx.out.success('server started')
   printStatus(ctx, s)
+  // The server only logs a listener it could not take (a busy port, no key): say where to look.
+  if (s.started && apiAutoStart && !s.api.running)
+    ctx.out.note('the API did not start (api.autoStart): see `atc logs`')
   if (s.started) ctx.out.note('it keeps running after this command; `atc stop` ends it')
 }
 
@@ -201,7 +205,8 @@ export const startCommand = defineCommand({
     if (inv.values['admin'] === false) args.push('--no-admin')
     if (typeof inv.values['admin-port'] === 'string') args.push('--admin-port', inv.values['admin-port'])
     const s = await startServer(ctx, args)
-    ctx.out.result(s, () => printStarted(ctx, s))
+    const apiAutoStart = (await ctx.config()).values.api.autoStart
+    ctx.out.result(s, () => printStarted(ctx, s, apiAutoStart))
     if (s.started) await noticeTelemetry(ctx)
     return 0
   },
@@ -230,9 +235,10 @@ export const restartCommand = defineCommand({
   run: async (inv, ctx) => {
     const stop = await stopServer(ctx, stopFlags(inv.values))
     const s = await startServer(ctx, [])
+    const apiAutoStart = (await ctx.config()).values.api.autoStart
     ctx.out.result({ ...s, stopped: stop.stopped }, () => {
       if (stop.stopped) ctx.out.success('server stopped')
-      printStarted(ctx, s)
+      printStarted(ctx, s, apiAutoStart)
     })
     return 0
   },

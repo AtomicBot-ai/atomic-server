@@ -15,6 +15,7 @@ import { unavailableHere } from '../../workspace-service/index.js'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { loadStageText } from '../../workspace-view/index.js'
 import { attachWorkspace } from '../server/control.js'
+import { loadMlxArtifact } from './mlx-commands.js'
 
 const SUBSCRIBE_WAIT_MS = 3000
 const LAST_STAGE_WAIT_MS = 300
@@ -104,7 +105,11 @@ export async function runModel(
       void service.execute('models.cancel', { provider, model_id: model }).catch(() => {})
     }) ?? (() => {})
   try {
-    const result = await service.execute('models.load', input)
+    // A downloaded MLX checkpoint never loaded before is registered by its own load.
+    const result =
+      provider === 'mlx' && (await loadMlxArtifact(service, model))
+        ? null
+        : await service.execute('models.load', input)
     if (interrupted) return 130
     // The last stage may still be on its way; a native load has none to wait for.
     await Promise.race([ready, new Promise((r) => setTimeout(r, LAST_STAGE_WAIT_MS))])

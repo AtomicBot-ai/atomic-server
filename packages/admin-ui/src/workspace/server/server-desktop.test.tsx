@@ -96,27 +96,21 @@ it('keeps a failed request on its connection details and allows retry', async ()
   expect(execute.mock.calls.filter(([name]) => name === 'setup.complete')).toHaveLength(2)
 })
 
-it('opens the model catalog for an empty server and starts the API when a model is loaded', async () => {
-  const open = vi.fn(),
-    select = vi.fn(),
+it('starts the API on an empty server, saying a model is still to choose, and again once one is loaded', async () => {
+  const select = vi.fn(),
     dispatch = vi.spyOn(window, 'dispatchEvent')
   const { workspace, execute } = workspaceFixture({})
   workspace.snapshot!.api.running = false
-  const { rerender } = render(
-    <ServerControlPanel workspace={workspace} openSetup={open} selectSection={select} />
-  )
+  const { rerender } = render(<ServerControlPanel workspace={workspace} selectSection={select} />)
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Start server' }))
   expect(screen.getByRole('status')).toHaveTextContent('Choose and download a model to continue.')
-  expect(dispatch).toHaveBeenCalledWith(
-    expect.objectContaining({ type: 'atomic:acquire', detail: 'catalog' })
-  )
+  expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'atomic:acquire' }))
   dispatch.mockRestore()
-  expect(open).not.toHaveBeenCalled()
-  expect(execute).not.toHaveBeenCalledWith('api.start')
+  expect(execute).toHaveBeenCalledWith('api.start')
   expect(execute).toHaveBeenCalledWith('engines.selected')
   workspace.snapshot!.services = services
-  rerender(<ServerControlPanel workspace={workspace} openSetup={open} selectSection={select} />)
+  rerender(<ServerControlPanel workspace={workspace} selectSection={select} />)
   await userEvent.click(screen.getByRole('button', { name: 'Start server' }))
   expect(execute).toHaveBeenCalledWith('api.start')
   await userEvent.click(screen.getByRole('button', { name: /Engine/ }))
@@ -243,7 +237,7 @@ it('keeps the selected engine and model visible in the sidebar during their down
       ],
     }
   )
-  render(<ServerControlPanel workspace={workspace} openSetup={vi.fn()} selectSection={vi.fn()} />)
+  render(<ServerControlPanel workspace={workspace} selectSection={vi.fn()} />)
   expect(screen.getByRole('button', { name: /Engine/ })).toHaveTextContent('llama.cpp')
   expect(screen.getByRole('button', { name: /Model/ })).toHaveTextContent('Qwen-4B')
 })

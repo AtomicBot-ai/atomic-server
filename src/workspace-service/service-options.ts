@@ -13,4 +13,6 @@ export interface WorkspaceServiceOptions {
   env?: NodeJS.ProcessEnv
   /** atc's own error reports: failed model downloads go there. */
   errors?: ErrorSink
+  /** Is a port free on every address that can shadow it? `api.start` refuses a busy one. */
+  probePort?: (host: string, port: number) => Promise<'free' | 'busy'>
 }

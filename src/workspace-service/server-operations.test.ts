@@ -85,3 +85,31 @@ describe('server operations', () => {
     expect(await serverOperation(parts().parts, 'history.list', {})).toBe(NOT_CORE)
   })
 })
+
+describe('api.start on a port another program holds', () => {
+  it('refuses before asking the core, naming the port', async () => {
+    const { link, parts: p } = parts()
+    ;(p as { options: Record<string, unknown> }).options['probePort'] = async () => 'busy'
+    await expect(serverOperation(p, 'api.start', {})).rejects.toMatchObject({
+      code: 'ATC_PORT_BUSY',
+      message: expect.stringContaining('1337'),
+    })
+    expect(link.calls.find((c) => c.path === '/server/start')).toBeUndefined()
+  })
+
+  it('starts when the probe says free, and probes only after stopping its own listener on restart', async () => {
+    const { link, parts: p } = parts()
+    const order: string[] = []
+    ;(p as { options: Record<string, unknown> }).options['probePort'] = async () => {
+      order.push('probe')
+      return 'free'
+    }
+    vi.spyOn(link.server, 'stop').mockImplementation(async () => {
+      order.push('stop')
+      return { running: false } as never
+    })
+    await serverOperation(p, 'api.restart', {})
+    expect(order).toEqual(['stop', 'probe'])
+    expect(link.calls.find((c) => c.path === '/server/start')).toBeDefined()
+  })
+})

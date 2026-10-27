@@ -12,18 +12,21 @@ import { telemetryConsent } from '../telemetry/index.js'
 import type { AtcErrorReporter } from '../telemetry/index.js'
 import { AtomicCore } from '@atomic-chat/core'
 import { patientCoreClient } from '../core-link/index.js'
-import { ADMIN_BUILD_ID, AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
-import type { AdminConfigView, AdminStatus } from '../contract/index.js'
+import { AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
-import { FIELDS, getAt } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
 import { HostStepExecutor, HostStepJournal, readServerLaunch, restrictToOwner } from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
-import { ATC_BUILD_DATE, ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
+import { ATC_VERSION, CORE_VERSION } from '../version.js'
 import { coreEnv } from './core-env.js'
+import { adminConfigView, adminStatus } from './admin-views.js'
+import { engineOutputSink } from './engine-log.js'
+import { CrashPolicy, watchSessions } from './session-watch.js'
+import { bootLoader, bootPlan, runBoot } from './boot.js'
+import { startApi } from '../terminal-service/index.js'
 
 export interface DaemonOptions {
   paths: AtcPaths
@@ -50,10 +53,14 @@ export interface RunningDaemon {
   record: DaemonRecord
   hostSteps: HostStepExecutor
   stopped: Promise<void>
+  /** `api.autoStart` and `models.autoLoad`, done after the ready record; never rejects. */
+  boot: Promise<void>
   shutdown(): Promise<void>
 }
 
 const PENDING_POLL_MS = 2_000
+/** A model that died is loaded again, at most this often; past it the log says to run it by hand. */
+const CRASH_RESTARTS = { maxRestarts: 3, windowMs: 10 * 60_000 }
 
 export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon> {
   const { paths, io, log, host } = options
@@ -90,6 +97,11 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     // TF_BUILD=True on Linux: Foundry Local's 1DS upload crashes its host there (ADR 2026-10-21).
     env: coreEnv(io.env, host.facts.platform),
     logger: (level, message) => coreLog[level](message),
+    // Every engine line, by provider and model: what a crash said, for `atc models logs`.
+    backendOutput: engineOutputSink(paths.engineLog, {
+      maxSizeBytes: options.config.values.log.maxSizeMb * 1024 * 1024,
+      maxFiles: options.config.values.log.maxFiles,
+    }),
     telemetry: {
       host: 'atc',
       hostVersion: ATC_VERSION,
@@ -139,6 +151,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       selfCommand: host.selfCommand,
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
       env: io.env,
+      probePort: host.probePort,
       ...(options.errors ? { errors: options.errors } : {}),
     })
     // A failed move leaves media where it was: its records still name those paths, so it still loads.
@@ -161,9 +174,15 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       log: log.child('host-step'),
       newId: () => crypto.randomUUID(),
     })
+    const sessions = watchSessions({
+      reload: (provider, model) => workspace.execute('models.load', { provider, model_id: model }),
+      log,
+      policy: new CrashPolicy(CRASH_RESTARTS),
+    })
     const offEvents = core.events.onAny((record) => {
       relay.publish(record.name, sanitizeWorkspaceData(record.payload))
       workspace.event(String(record.name), record.payload)
+      void sessions.handle(String(record.name), record.payload)
       if (String(record.name) === 'environment:operation') {
         void hostSteps
           .handle(record.payload as unknown as EnvironmentOperationView)
@@ -179,47 +198,16 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     undo.push(() => clearInterval(pendingTimer), offEvents)
 
     let admin: AdminServer | undefined
-    const status = async (): Promise<AdminStatus> => {
-      const snapshot = await link.snapshot()
-      return {
-        atc: {
-          version: ATC_VERSION,
-          git_sha: ATC_GIT_SHA ?? null,
-          build_date: ATC_BUILD_DATE ?? null,
-          admin_ui: ADMIN_BUILD_ID,
-        },
-        core: {
-          version: snapshot.version,
-          instance_id: snapshot.instance_id,
-          pid: snapshot.pid,
-          protocol: snapshot.protocol,
-          uptime_ms: now() - startedAt,
-        },
-        daemon: { pid: process.pid, started_at: startedAt, data_folder: paths.dataFolder },
-        launch: startingRecord.launch ?? 'terminal',
-        admin: { host: admin?.host ?? '', port: admin?.port ?? 0, url: admin?.url ?? '' },
-        api: snapshot.server,
-        sessions: snapshot.sessions,
-        pending_host_steps: (await hostSteps.pending()).map((e) => ({
-          step_id: e.step_id,
-          operation_id: e.operation_id,
-          instructions: e.instructions ?? '',
-          updated_at: e.updated_at,
-        })),
-      }
-    }
-    const configView = async (): Promise<AdminConfigView> => ({
-      values: options.config.values,
-      fields: FIELDS.map((f) => ({
-        path: f.path,
-        type: f.type,
-        description: f.description,
-        default: f.default,
-        ...(f.values ? { values: f.values } : {}),
-        source: options.config.sources[f.path] ?? 'default',
-        ...(getAt(options.config.values, f.path) === undefined ? {} : {}),
-      })),
+    const status = adminStatus({
+      link,
+      hostSteps,
+      paths,
+      record: startingRecord,
+      admin: () => admin,
+      startedAt,
+      now,
     })
+    const configView = adminConfigView(options.config)
     if (options.admin.enabled) {
       await ensureAdminToken(paths.adminToken)
       undo.push(() => admin?.close())
@@ -238,6 +226,16 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       })
     }
 
+    // The API before the ready record: `atc start` returns on the record and shows the API's state.
+    // The models after it: a slow load must not hold `atc start` up.
+    const config = options.config.values
+    const plan = bootPlan(config)
+    const bootDeps = {
+      startApi: () => startApi(link, config, keys.current()?.[0] ?? '', { probePort: host.probePort }),
+      loadModel: bootLoader((op, input) => workspace.execute(op, input), config.engines.default),
+      log,
+    }
+    await runBoot({ ...plan, models: [] }, bootDeps)
     const record: DaemonRecord = {
       ...startingRecord,
       state: 'ready',
@@ -249,10 +247,12 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     }
     await writeDaemonRecord(paths.daemonRecord, record)
     log.info(`daemon ready: core ${CORE_VERSION} pid ${process.pid}, data ${paths.dataFolder}`)
+    const boot = runBoot({ startApi: false, models: plan.models }, bootDeps)
 
     let cleanupOnce: Promise<void> | undefined
     const cleanup = () =>
       (cleanupOnce ??= (async () => {
+        sessions.stop()
         clearInterval(pendingTimer)
         offEvents()
         await admin?.close()
@@ -267,7 +267,9 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       record,
       hostSteps,
       stopped,
+      boot,
       shutdown: async () => {
+        sessions.stop()
         await core.shutdown()
         await cleanup()
       },

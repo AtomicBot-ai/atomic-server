@@ -37,3 +37,34 @@ describe('shared API operations', () => {
     })
   })
 })
+
+describe('startApi and a port another program holds', () => {
+  it('refuses before the core binds, naming the port', async () => {
+    const link = fakeCoreLink()
+    await expect(
+      startApi(link, defaultConfig(), 'k', { probePort: async () => 'busy' })
+    ).rejects.toMatchObject({ code: 'ATC_PORT_BUSY', message: expect.stringContaining('1337') })
+    expect(link.calls.find((c) => c.path === '/server/start')).toBeUndefined()
+  })
+
+  it('does not probe the listener the API already holds', async () => {
+    const link = fakeCoreLink()
+    let probed = false
+    await startApi(link, defaultConfig(), 'k', {
+      probePort: async () => ((probed = true), 'busy'),
+      status: { running: true, host: '127.0.0.1', port: 1337 },
+    })
+    expect(probed).toBe(false)
+    expect(link.calls.find((c) => c.path === '/server/start')).toBeDefined()
+  })
+
+  it('probes the overriding listener, not the configured one', async () => {
+    const link = fakeCoreLink()
+    const seen: string[] = []
+    await startApi(link, defaultConfig(), 'k', {
+      request: { host: '0.0.0.0', port: 9000 },
+      probePort: async (host, port) => (seen.push(`${host}:${port}`), 'free'),
+    })
+    expect(seen).toEqual(['0.0.0.0:9000'])
+  })
+})

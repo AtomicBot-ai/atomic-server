@@ -32,3 +32,18 @@ it('reports a log it cannot read for another reason', async () => {
   dirs.push(dir)
   await expect(workspaceLogs(dir, 5)).rejects.toMatchObject({ code: 'EISDIR' })
 })
+
+it('returns one model’s engine output from the engines log, newest last, without the log prefix', async () => {
+  const { engineLogTail } = await import('./workspace-logs.js')
+  const path = log(
+    [
+      '2026-10-27T14:00:00.000Z [info] llamacpp-upstream/qwen3-8b: [stderr] one',
+      '2026-10-27T14:00:01.000Z [info] mlx/m: [stdout] other model',
+      '2026-10-27T14:00:02.000Z [info] llamacpp-upstream/qwen3-8b: [stderr] two',
+      '2026-10-27T14:00:03.000Z [info] llamacpp-upstream/qwen3-8b: [stdout] three',
+    ].join('\n')
+  )
+  expect(await engineLogTail(path, 'llamacpp-upstream', 'qwen3-8b', 2)).toBe('[stderr] two\n[stdout] three')
+  expect(await engineLogTail(path, 'llamacpp-upstream', 'none', 2)).toBe('')
+  expect(await engineLogTail(join(path, '..', 'missing.log'), 'mlx', 'm', 2)).toBe('')
+})

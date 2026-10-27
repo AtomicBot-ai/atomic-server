@@ -2,19 +2,16 @@
 import { useEffect, useState } from 'react'
 import { Box, Cable, Cpu, Play, Square, LoaderCircle } from 'lucide-react'
 import { connectionDownload, connectionDownloadTarget, engineName, inferenceReadiness } from '@view'
-import { openAcquisition } from '../useAcquisition'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { highlightDownloads } from '../library/downloads/download-attention'
 export function ServerControlPanel({
   workspace: w,
   selectSection,
-  openSetup,
   prepared = [],
 }: {
   workspace: Workspace
   selectSection: (id: string) => void
-  openSetup: () => void
   prepared?: string[]
 }) {
   const execute = w.execute
@@ -52,12 +49,9 @@ export function ServerControlPanel({
           title={!running && !readiness.ready ? readiness.message : undefined}
           ariaLabel={transition ? transitionLabel : running ? 'Stop server' : 'Start server'}
           onClick={async () => {
-            if (!running && !readiness.ready) {
-              setShowReadiness(true)
-              if (readiness.waiting) return highlightDownloads()
-              return readiness.acquire ? openAcquisition(readiness.acquire) : openSetup()
-            }
-            setShowReadiness(false)
+            // The API serves without a model: what is still missing is said, not a reason to refuse.
+            setShowReadiness(!running)
+            if (!running && readiness.waiting) highlightDownloads()
             await w.execute(running ? 'api.stop' : 'api.start')
           }}
         >
@@ -78,7 +72,7 @@ export function ServerControlPanel({
           </span>
         </Action>
       </div>
-      {showReadiness && !running && !readiness.ready && (
+      {showReadiness && !readiness.ready && (
         <small className="server-readiness" role="status">
           {readiness.message}
         </small>

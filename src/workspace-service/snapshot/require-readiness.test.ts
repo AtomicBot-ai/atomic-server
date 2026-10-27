@@ -11,22 +11,27 @@ const state = (running: boolean, ready = false) =>
       ? [{ id: 'q', kind: 'chat', model: 'qwen', provider: 'llamacpp-upstream', state: 'ready', details: {} }]
       : [],
   }) as unknown as WorkspaceSnapshot
-it.each(['api.start', 'api.restart', 'chat.start', 'chat.complete'])(
-  'rejects %s before a model is ready',
-  async (operation) => {
-    await expect(
-      requireReadiness(operation, { request: { model: 'qwen' } }, async () => state(true))
-    ).rejects.toThrow('Choose and download')
-  }
-)
-it('does not interfere with daemon management, stop, downloads or cancellation', async () => {
+it.each(['chat.start', 'chat.complete'])('rejects %s before a model is ready', async (operation) => {
+  await expect(
+    requireReadiness(operation, { request: { model: 'qwen' } }, async () => state(true))
+  ).rejects.toThrow('Choose and download')
+})
+// The API serves without a model (`atc api start`, `api.autoStart`): a Start with nothing loaded is not an error.
+it('does not interfere with the API, daemon management, stop, downloads or cancellation', async () => {
   const snapshot = vi.fn()
-  for (const operation of ['api.stop', 'setup.resume', 'chat.cancel', 'engines.install', 'models.load'])
+  for (const operation of [
+    'api.start',
+    'api.restart',
+    'api.stop',
+    'setup.resume',
+    'chat.cancel',
+    'engines.install',
+    'models.load',
+  ])
     await requireReadiness(operation, {}, snapshot)
   expect(snapshot).not.toHaveBeenCalled()
 })
-it('admits Start with a loaded session, but requires the API before chat and matches requested model', async () => {
-  await expect(requireReadiness('api.start', {}, async () => state(false, true))).resolves.toBeUndefined()
+it('requires the API before chat and matches the requested model', async () => {
   await expect(
     requireReadiness('chat.start', { request: { model: 'qwen' } }, async () => state(false, true))
   ).rejects.toThrow('Start the server')
