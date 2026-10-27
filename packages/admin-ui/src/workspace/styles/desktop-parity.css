@@ -220,6 +220,37 @@
   }
 }
 
+/* A phone: the rail is icons only, and the sidebar is a drawer over the content, not a column beside it. */
+@media (max-width: 480px) {
+  .desktop-workspace {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .desktop-rail {
+    gap: 8px;
+    padding: 10px 4px;
+  }
+  .desktop-rail .rail-item {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .desktop-rail .rail-item span {
+    display: none;
+  }
+  .desktop-sidebar {
+    left: 48px;
+    width: min(280px, calc(100vw - 64px));
+  }
+  .sidebar-scrim {
+    left: 48px;
+  }
+  .desktop-main .workspace-content {
+    padding: 8px 8px 20px;
+  }
+}
+
 /* Server content keeps the same 16px inset and 1200px reading width as the desktop. */
 .desktop-main .workspace-content:has(> .server-page),
 .desktop-main .workspace-content:has(> .settings-page) {

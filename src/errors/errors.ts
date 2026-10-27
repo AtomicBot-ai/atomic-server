@@ -71,12 +71,18 @@ export function errorBody(error: unknown): ErrorBody {
   if (error instanceof AtomicCoreError) {
     return {
       code: error.code,
-      message: error.message,
-      ...(error.details !== undefined ? { details: error.details } : {}),
+      message: atcCommands(error.message),
+      ...(error.details !== undefined ? { details: atcCommands(error.details) } : {}),
     }
   }
   if (error instanceof Error) return { code: 'ATC_INTERNAL', message: error.message }
   return { code: 'ATC_INTERNAL', message: String(error) }
+}
+
+/** The core names its own command in a hint (`atomic-chat-cli models list`); here the command is `atc`. */
+export function atcCommands(text: string): string {
+  // Only a command (`atomic-chat-cli <word>`): the default data folder is named after that CLI too.
+  return text.replace(/atomic-chat-cli serve\b/g, 'atc run').replace(/atomic-chat-cli(?= [a-z])/g, 'atc')
 }
 
 export function exitCodeFor(error: unknown): number {

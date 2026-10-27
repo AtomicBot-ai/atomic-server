@@ -124,7 +124,7 @@ export async function runModel(
     }
     const tail = await service
       .execute('models.logs', { provider, model_id: model })
-      .then((log) => (typeof log === 'string' ? log.trimEnd().split('\n').slice(-20) : []))
+      .then((log) => (typeof log === 'string' ? log.trimEnd().split('\n').filter(Boolean).slice(-20) : []))
       .catch(() => [] as string[])
     if (tail.length)
       ctx.io.stderr(`Last lines of ${provider}'s log for ${model}:\n${tail.map((l) => `  ${l}\n`).join('')}`)

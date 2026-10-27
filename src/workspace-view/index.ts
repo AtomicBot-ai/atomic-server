@@ -59,6 +59,7 @@ export {
   removalLines,
   verdictLine,
 } from './engines/engines.js'
+export { appleSiliconGpu } from './engines/hardware.js'
 export { rebootLines, reloginLines } from './engines/engine-restart.js'
 export type { EngineView, EngineViewKind } from './engines/engines.js'
 export {

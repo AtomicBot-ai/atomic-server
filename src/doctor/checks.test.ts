@@ -65,6 +65,20 @@ describe('gpu check', () => {
       { status: 'ok', message: 'Radeon RX 7900 (AMD); RTX 4090 (NVIDIA, driver 581.42)' },
     ],
     ['no GPU', info([]), { status: 'ok', message: 'the core lists no GPU' }],
+    // Apple silicon has no GPU entry: its GPU shares the memory, and Metal is what llama.cpp uses.
+    [
+      'Apple silicon by its CPU and memory',
+      {
+        ...info([]),
+        info: {
+          gpus: [],
+          os_type: 'macos',
+          cpu: { name: 'Apple M4 Max', arch: 'arm64' },
+          total_memory: 49152,
+        } as never,
+      },
+      { status: 'ok', message: 'Apple M4 Max GPU (Metal), 48 GB unified memory' },
+    ],
     [
       'what the probe could not read',
       info([], ['vulkaninfo not found']),
