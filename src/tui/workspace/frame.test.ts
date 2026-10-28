@@ -4,7 +4,8 @@ import { canvas, button, hit, text, textWidth, cleanText, wrap, art, rule, graph
 import { workspaceFrame } from './frame.js'
 import { workspaceLayout } from './draw/layout.js'
 import { createWorkspace } from './state.js'
-import type { Page } from './state.js'
+import type { Page, WorkspaceState } from './state.js'
+import type { WorkspaceSnapshot } from '../../contract/index.js'
 const pages: Page[] = [
   'welcome',
   'history',
@@ -125,4 +126,56 @@ it('makes onboarding actions clickable and highlights the focused action', () =>
   const hovered = workspaceFrame({ ...createWorkspace('welcome'), hover: 'first-skip' }, 120, 36, 0)
   const skip = hovered.targets.find((t) => t.id === 'first-skip')!
   expect(hovered.cells[skip.y]![skip.x]!.background).not.toBe(normal.cells[skip.y]![skip.x]!.background)
+})
+describe('the status line says when a newer atc is out', () => {
+  const snapshot = (): WorkspaceSnapshot => ({
+    version: 1,
+    captured_at: 1,
+    core: { version: '0.19.0', instance_id: 'i', uptime_ms: 1 },
+    api: {
+      running: true,
+      endpoint: 'http://127.0.0.1:1337/v1',
+      host: '127.0.0.1',
+      port: 1337,
+      prefix: '/v1',
+      raw: {},
+    },
+    eye: 'ready',
+    services: [],
+    downloads: [],
+    setups: [],
+    setup: null,
+    keys: [],
+    metrics: {
+      window_ms: 1,
+      requests: 0,
+      errors: 0,
+      active: null,
+      mean_latency_ms: null,
+      mean_ttft_ms: null,
+      tokens_per_second: null,
+      since: 1,
+    },
+    requests: [],
+    errors: [],
+    engines: [],
+    host_steps: [],
+    loads: [],
+    atc: {
+      version: '0.2.4',
+      checked_at: 1,
+      update: { version: '0.3.0', url: 'https://example.test/v0.3.0', command: 'atc update' },
+    },
+  })
+  const statusLine = (s: WorkspaceState) =>
+    workspaceFrame(s, 120, 36, 0)
+      .cells[34]!.map((cell) => cell.char)
+      .join('')
+  it('shows the notice while nothing else is being said', () => {
+    const s = { ...createWorkspace('server'), setupComplete: true, workspace: snapshot() }
+    expect(statusLine(s)).toContain('atc 0.3.0 is out (you run 0.2.4): run `atc update`')
+    expect(statusLine({ ...s, message: 'Saved.' })).toContain('Saved.')
+    expect(statusLine({ ...s, message: 'Saved.' })).not.toContain('0.3.0')
+    expect(statusLine({ ...s, workspace: null })).not.toContain('0.3.0')
+  })
 })

@@ -108,3 +108,5 @@ export { engineUpdateResult } from './engines/engine-updates.js'
 export type { EngineUpdateCheck } from './engines/engine-updates.js'
 export { chooseLoadEngine, installedEngines } from './engines/load-engine.js'
 export type { EngineListing } from './engines/load-engine.js'
+
+export { updateNotice } from './update/update-notice.js'

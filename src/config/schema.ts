@@ -169,7 +169,8 @@ export const FIELDS: readonly FieldSpec[] = [
     path: 'update.checkOnStart',
     type: 'boolean',
     default: true,
-    description: 'Check for a new atc on start',
+    description:
+      'Look for a newer atc release on start and once a day; the terminal UI and the web admin say when one is out',
   },
   {
     path: 'telemetry.enabled',

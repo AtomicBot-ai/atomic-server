@@ -189,6 +189,14 @@ a distro container sharing that network with the commands from `node scripts/lin
    (refused while other clients are attached, unless `--force`; the note says `atc restart --force`).
 
 Any failure before step 6 leaves the installed binary as it was and removes the download.
+
+The server looks for a release itself (`src/update/release-watch.ts`, started by the daemon after its
+ready record when `update.checkOnStart` is on): 15 s after start and then once a day, through the
+server's own `fetch` and `ATC_GITHUB_API`. What it knows is the workspace snapshot's `atc` — the running
+version, when it last looked, and the newer release with what installs it (`atc update`, the package
+manager's command, or nothing for a source tree). The terminal UI shows it in the status line while
+nothing else is being said; the web admin as a notice bottom right (top right in the chat), dismissed per release. A look that
+fails changes nothing and is logged at `debug`; no test lets one happen (`test/setup.ts` turns the check off).
 `test/e2e/update.test.ts` runs the whole path on the built binary against a release served from loopback.
 
 ## Signing and notarisation

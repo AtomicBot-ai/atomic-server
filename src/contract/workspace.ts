@@ -93,6 +93,23 @@ export interface WorkspaceSnapshot {
   host_steps: WorkspaceHostStep[]
   /** The last stage of each load in progress (`session:load-progress`); gone at `ready` or on failure. */
   loads: WorkspaceLoad[]
+  /** The server's own atc and the newer release it has seen; absent when no server answers. */
+  atc?: WorkspaceAtc
+}
+/** What the server knows about atc releases (`update.checkOnStart`: once on start, then daily). */
+export interface WorkspaceAtc {
+  version: string
+  /** When the last look at releases succeeded, ms since the epoch; null before the first. */
+  checked_at: number | null
+  /** The newer release, or null while the installed atc is the latest it knows. */
+  update: WorkspaceUpdate | null
+}
+export interface WorkspaceUpdate {
+  version: string
+  /** The release page. */
+  url: string
+  /** What installs it: `atc update`, the package manager's command, or null for a source tree. */
+  command: string | null
 }
 export interface WorkspaceEngine {
   engine: string

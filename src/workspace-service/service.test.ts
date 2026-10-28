@@ -23,6 +23,15 @@ function context(request?: typeof fetch) {
 afterEach(() => {
   cleanup.splice(0).forEach((fn) => fn())
 })
+describe('the snapshot carries what the server knows about atc releases', () => {
+  it('reports the release view the daemon hands it, and nothing without one', async () => {
+    const { link, paths, config } = context()
+    const atc = { version: '0.2.4', checked_at: 1, update: null }
+    const served = new WorkspaceService({ link, paths, config, atc: () => atc })
+    expect((await served.snapshot()).atc).toEqual(atc)
+    expect((await new WorkspaceService({ link, paths, config }).snapshot()).atc).toBeUndefined()
+  })
+})
 describe('workspace operations', () => {
   it('validates required input and refuses unregistered routes before touching Core', async () => {
     const { service, link } = context()
