@@ -1,6 +1,6 @@
 {
   "name": "@atomicbot-ai/atc",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "atc — the Atomic Chat server CLI: install an inference engine, pull a model, serve it over an OpenAI-compatible API, and manage it from a local web admin.",
   "license": "Apache-2.0",
   "repository": {
