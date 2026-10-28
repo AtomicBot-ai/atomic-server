@@ -1,5 +1,5 @@
 import { sameEndpoint } from '../../../terminal-service/index.js'
-import { inferenceReadiness } from '../../../workspace-view/index.js'
+import { inferenceReadiness, setupModelPending } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
 
 /** Remote endpoints have their own readiness; the shared snapshot describes this server only. */
@@ -25,6 +25,10 @@ export function chatReadiness(s: WorkspaceState) {
     return !remote && !readiness.ready
       ? readiness
       : { ready: false, waiting: false, message: 'Choose a model to continue.', acquire: 'catalog' as const }
+  // A model this server is still downloading is not sent anywhere: the terminal's endpoint can differ
+  // from the API address in the snapshot (a port set only in the server's environment, or changed
+  // after the terminal opened) and still be this server.
+  if (remote && s.workspace && setupModelPending(s.workspace, s.model)) return readiness
   return remote ? null : readiness
 }
 export function readinessPatch(s: WorkspaceState): Partial<WorkspaceState> | null {

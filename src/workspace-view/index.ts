@@ -86,6 +86,7 @@ export {
   downloadOwner,
   downloadStopped,
   downloadHeld,
+  downloadStateLabel,
   downloadControl,
 } from './downloads/download-controls.js'
 export type { DownloadOwner } from './downloads/download-controls.js'

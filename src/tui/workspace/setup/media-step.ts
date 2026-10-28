@@ -10,6 +10,7 @@ import type { WorkspaceState } from '../state.js'
 import { computeRowWindow } from '../../row-window.js'
 import {
   downloadEta,
+  downloadStateLabel,
   downloadStopped,
   downloadRows,
   formatEta,
@@ -181,7 +182,7 @@ export function drawSetupMedia(
       if (transfer && height >= 8) {
         const speed = s.transferSamples[transfer.id]?.speed ?? 0
         const eta = downloadEta(transfer, speed) ?? 0
-        const status = transfer['completed'] ? 'Downloaded' : transfer.state.replaceAll('_', ' ')
+        const status = downloadStateLabel(transfer.state, Boolean(transfer['completed']))
         const remaining =
           active && !downloadStopped(transfer.state)
             ? eta

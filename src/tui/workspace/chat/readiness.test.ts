@@ -123,3 +123,23 @@ it.each(['pending', 'failed'] as const)(
     expect(chatReadiness(result)).toMatchObject({ ready: false, waiting: status === 'pending' })
   }
 )
+
+// E2E B03: the terminal's endpoint can differ from the server's API address (a port set only in the
+// server's environment, or changed after the terminal opened); a model this server is still
+// downloading must not be sent either way.
+it.each(['http://127.0.0.1:1338/v1', 'https://provider.example/v1'])(
+  'keeps a model this server is still downloading from being sent to %s',
+  (url) => {
+    const s = ready('llamacpp-upstream')
+    s.endpoint = url
+    s.workspace.services = []
+    s.workspace.api.running = false
+    s.workspace.setups = [
+      { id: 'download', stage: 'downloading', plan: { model_id: s.model, total_download_bytes: 100 } },
+    ]
+    expect(readinessPatch(s)).toEqual({
+      message: 'The model is downloading. Wait until it is ready.',
+      downloadAttention: 1,
+    })
+  }
+)

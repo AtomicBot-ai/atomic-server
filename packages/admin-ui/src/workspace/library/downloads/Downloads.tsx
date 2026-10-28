@@ -1,4 +1,4 @@
-import { downloadEta, downloadHeld, downloadOwner, formatEta } from '@view'
+import { downloadEta, downloadOwner, downloadStateLabel, formatEta } from '@view'
 import { useDownloadEstimate } from './useDownloadEstimate'
 import { DeleteConfirmation } from '../DeleteConfirmation'
 import { useState } from 'react'
@@ -72,7 +72,7 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
     <article className="download-row">
       <div className="download-heading">
         <strong>{name}</strong>
-        <span>{completed ? 'Downloaded' : downloadHeld(state) ? 'Paused' : state.replaceAll('_', ' ')}</span>
+        <span>{downloadStateLabel(state, completed)}</span>
       </div>
       <progress aria-label="Download progress" value={percent} max={100} />
       <div className="download-detail">

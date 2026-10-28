@@ -1,5 +1,11 @@
 import { expect, it } from 'vitest'
-import { downloadControl, downloadOwner, downloadStopped, downloadRows } from '../index.js'
+import {
+  downloadControl,
+  downloadOwner,
+  downloadStateLabel,
+  downloadStopped,
+  downloadRows,
+} from '../index.js'
 it.each([
   ['setup', {}, 'setup.resume', { setup_id: 'job' }],
   ['artifacts', { plan: { category: 'image' } }, 'artifacts.resume', { id: 'job' }],
@@ -32,4 +38,15 @@ it('does not pretend a core-owned engine transfer has model download controls', 
   const row = downloadRows([], [{ taskId: 'engine', transferred: 1, total: 5 }])[0]!
   expect(downloadOwner(row)).toBeNull()
   expect(downloadControl(row, 'pause')).toBeNull()
+})
+
+// E2E B02: a paused transfer was "cancelled" on the shared card and "Paused" in the list.
+it.each([
+  ['cancelled', false, 'Paused'],
+  ['paused', false, 'Paused'],
+  ['downloading_model', false, 'downloading model'],
+  ['failed', false, 'failed'],
+  ['cancelled', true, 'Downloaded'],
+])('labels a %s download (completed %s) as %s', (state, completed, label) => {
+  expect(downloadStateLabel(state, completed)).toBe(label)
 })

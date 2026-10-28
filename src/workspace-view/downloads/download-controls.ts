@@ -15,6 +15,11 @@ export function downloadOwner(job: Record<string, unknown>): DownloadOwner | nul
 export const downloadStopped = (state: string) => /paused|cancelled|failed|interrupted/.test(state)
 /** Paused by a person (Pause or cancel), as opposed to failed or interrupted. */
 export const downloadHeld = (state: string) => /paused|cancelled/.test(state)
+/** What every client calls a download's state: one held by a person is Paused, never "cancelled". */
+export function downloadStateLabel(state: string, completed = false): string {
+  if (completed) return 'Downloaded'
+  return downloadHeld(state) ? 'Paused' : state.replaceAll('_', ' ')
+}
 export function downloadControl(job: DownloadRow, action: 'pause' | 'resume') {
   const owner = downloadOwner(job)
   if (!owner) return null
