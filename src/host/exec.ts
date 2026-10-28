@@ -89,7 +89,8 @@ export function findOnPath(
   return undefined
 }
 
-function fileIsExecutable(path: string): boolean {
+/** Whether `path` is a file this process may run. */
+export function fileIsExecutable(path: string): boolean {
   try {
     accessSync(path, constants.X_OK)
     return true

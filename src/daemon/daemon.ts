@@ -28,6 +28,7 @@ import { CrashPolicy, watchSessions } from './session-watch.js'
 import { bootLoader, bootPlan, runBoot } from './boot.js'
 import { startApi } from '../terminal-service/index.js'
 import { serverReleaseWatch } from './release-check.js'
+import { serverCloudflared } from './cloudflared.js'
 import type { ReleaseWatch } from '../update/index.js'
 
 export interface DaemonOptions {
@@ -88,6 +89,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   // Before the core: with no keyring the public server would check no key at all.
   await keys.initialize(io.env['ATC_API_KEY'] ?? '')
   const consent = telemetryConsent(options.telemetry, options.config)
+  const tunnel = await serverCloudflared({ io, host, log })
   const core = await (options.createCore ?? AtomicCore.create.bind(AtomicCore))({
     // The keyring, read on every public request: one of its keys is required, a revoked one is refused
     // at once (`[]` refuses everyone). The core's own `server.api_key` does not apply.
@@ -97,6 +99,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     ownerScope: 'cli',
     dataFolder: paths.dataFolder,
     controlPort: options.controlPort,
+    ...(tunnel.path ? { cloudflaredPath: tunnel.path } : {}),
     ...(options.controlHost ? { controlHost: options.controlHost } : {}),
     // TF_BUILD=True on Linux: Foundry Local's 1DS upload crashes its host there (ADR 2026-10-21).
     env: coreEnv(io.env, host.facts.platform),
@@ -154,6 +157,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       config: options.config.values,
       fetch: io.fetch,
       atc: () => releases.view(),
+      remoteSetup: tunnel.setup,
       platform: host.facts.platform,
       selfCommand: host.selfCommand,
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.

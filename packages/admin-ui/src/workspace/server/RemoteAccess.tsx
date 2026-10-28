@@ -5,12 +5,17 @@ import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
+import { remoteSetupView } from '@view'
+import { RemoteSetup } from './RemoteSetup'
 export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
   const [addresses, setAddresses] = useState<string[]>([])
   const [remote, setRemote] = useState<RecordValue>({})
   const [error, setError] = useState('')
   const lan = w.snapshot?.api.running && !['127.0.0.1', 'localhost', '::1'].includes(w.snapshot.api.host)
   const { execute } = w
+  // While the server has no cloudflared, its install steps replace Start and the raw code; a program
+  // that is there and would not start keeps Start, which tries it again.
+  const setup = remoteSetupView(remote)
   useEffect(
     () =>
       watchSharedRead(
@@ -29,31 +34,34 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
       <Panel title="Public remote access">
         <div className="remote-access-body">
           <p>Reach this server over HTTPS through a Cloudflare tunnel.</p>
-          <p role="status">{text(remote.state, 'Checking status…')}</p>
+          <p role="status">{setup?.status ?? text(remote.state, 'Checking status…')}</p>
           {error && <p role="alert">{error}</p>}
-          {Boolean(remote.error) && <p role="alert">{text(remote.error).replaceAll('_', ' ')}</p>}
+          {setup && <RemoteSetup setup={setup} />}
+          {Boolean(remote.error) && !setup && <p role="alert">{text(remote.error).replaceAll('_', ' ')}</p>}
           <div className="remote-access-actions">
             {remote.blockReason === 'server_stopped' && (
               <Action onClick={() => execute('api.start')}>Start API</Action>
             )}
-            <Action
-              primary
-              disabled={!remote.canStart && !remote.canStop}
-              onClick={async () => {
-                if (!remote.canStop && !w.snapshot?.keys.length)
-                  await execute('keys.create', { name: 'Remote clients' })
-                setRemote(
-                  record(
-                    await execute(
-                      remote.canStop ? 'remote.stop' : 'remote.start',
-                      remote.canStop ? {} : { request: {} }
+            {!(setup && !setup.found) && (
+              <Action
+                primary
+                disabled={!remote.canStart && !remote.canStop}
+                onClick={async () => {
+                  if (!remote.canStop && !w.snapshot?.keys.length)
+                    await execute('keys.create', { name: 'Remote clients' })
+                  setRemote(
+                    record(
+                      await execute(
+                        remote.canStop ? 'remote.stop' : 'remote.start',
+                        remote.canStop ? {} : { request: {} }
+                      )
                     )
                   )
-                )
-              }}
-            >
-              {remote.canStop ? 'Stop remote access' : 'Start remote access'}
-            </Action>
+                }}
+              >
+                {remote.canStop ? 'Stop remote access' : 'Start remote access'}
+              </Action>
+            )}
           </div>
           {remote.state === 'online' && Boolean(remote.url) && (
             <div className="connect-address">

@@ -12,6 +12,7 @@ import { LoadStages } from './snapshot/load-stages.js'
 import { workspaceSnapshot } from './snapshot/snapshot.js'
 import { SnapshotCache } from './snapshot/snapshot-cache.js'
 import { coreOperation, NOT_CORE } from './core-operations.js'
+import { withRemoteSetup } from './remote-setup.js'
 import { cloudOperation } from './cloud/cloud-connections.js'
 import { modelOperation } from './models/model-operations.js'
 import { WorkspaceCatalog } from './models/catalog.js'
@@ -197,6 +198,6 @@ export class WorkspaceService {
     // Inference results are content, not session credentials. Keep token statistics and user JSON intact.
     return operation.endsWith('.run') || operation.includes('.job') || operation.endsWith('.create')
       ? result
-      : sanitized(result)
+      : withRemoteSetup(operation, sanitized(result), this.options.remoteSetup)
   }
 }

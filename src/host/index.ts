@@ -21,6 +21,7 @@ import { createServiceManager } from './service-plans.js'
 import type { ServiceFiles } from './service-plans.js'
 
 export * from './acl.js'
+export * from './cloudflared.js'
 export * from './exec.js'
 export * from './facts.js'
 export * from './ports.js'

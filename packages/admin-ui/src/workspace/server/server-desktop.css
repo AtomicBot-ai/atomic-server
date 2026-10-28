@@ -279,6 +279,20 @@
 .remote-access-body > .connect-address {
   align-self: stretch;
 }
+.remote-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: stretch;
+}
+.remote-setup p {
+  margin: 0;
+}
+.remote-setup pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .remote-access-actions {
   display: flex;
   flex-wrap: wrap;

@@ -110,3 +110,5 @@ export { chooseLoadEngine, installedEngines } from './engines/load-engine.js'
 export type { EngineListing } from './engines/load-engine.js'
 
 export { updateNotice } from './update/update-notice.js'
+export { remoteSetupView } from './remote/remote-setup.js'
+export type { RemoteSetupView } from './remote/remote-setup.js'

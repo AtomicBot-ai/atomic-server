@@ -293,6 +293,7 @@ contract types are the core's (`src/host/managed-types.ts` re-exports them).
 | Models | `model.yml`, registry, GGUF metadata, sessions, load/unload; HF catalog helpers; compatibility verdicts and Bonsai families. It downloads no model files (0.17.0). | Downloads every model itself (`src/downloads/`) and runs GGUF setups in the server's workspace (`<atc>/model-setups/`): plan, PrismML build through the core, download, `model.yml`, verdict by `model_id`. |
 | Public API | The `/v1` server, its settings (`server.api_key`, `enable_on_startup`). | Where and how to expose it: `api.*` config, `atc api` (iteration 2). |
 | Environments | The managed-runtime state machine, store, image pulls, WSL import, recovery. | Consent UI and the privileged step (above). |
+| Remote access | The Cloudflare quick tunnel: runs `cloudflared`, proves the URL, trusts its host. | Finds `cloudflared` at start and passes its path; while there is none, `remote.status` says how to install it (ADR 2026-10-28). |
 | Settings | Engine parameters (`GET/PATCH /settings/:provider`), telemetry consent. | `atc`'s own `config.json`; `config set telemetry.enabled` also reaches a running core (`PUT /telemetry`). |
 | Ownership | The lock, the token, attach semantics, client leases, shutdown. | `daemon.json` to tell an `atc` daemon from the core's CLI daemon; spawn with a log file. |
 

@@ -1,9 +1,16 @@
 import type { ActionContext } from '../actions.js'
 import { record } from '../library/library-model.js'
+import { remoteSetupView } from '../../../workspace-view/index.js'
 export async function remoteAction(id: string, ctx: ActionContext): Promise<boolean> {
-  if (!['remote-refresh', 'remote-toggle', 'lan-toggle', 'remote-copy'].includes(id)) return false
+  if (!['remote-refresh', 'remote-toggle', 'lan-toggle', 'remote-copy', 'remote-setup-copy'].includes(id))
+    return false
   const s = ctx.get(),
     c = ctx.controller
+  if (id === 'remote-setup-copy') {
+    const setup = remoteSetupView(s.remote)
+    if (setup) ctx.copy([...setup.commands, ...(setup.restart ? [setup.restart] : [])].join('\n'))
+    return true
+  }
   if (id === 'remote-copy') {
     if (typeof s.remote['url'] === 'string') ctx.copy(`${s.remote['url']}${s.workspace?.api.prefix ?? '/v1'}`)
     return true
