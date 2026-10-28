@@ -27,7 +27,7 @@ beforeAll(async () => {
   daemon = await startDaemon({
     paths,
     io: recordingIo(),
-    config: resolveConfig({ env: { ATC_API_AUTO_START: 'false' } }),
+    config: resolveConfig({ env: { ATC_API_AUTO_START: 'false', ATC_UPDATE_CHECK_ON_START: 'false' } }),
     host: fakeHost(),
     log,
     controlPort: 0,

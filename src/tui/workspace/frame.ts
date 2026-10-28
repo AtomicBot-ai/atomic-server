@@ -8,6 +8,7 @@ import { brandStatus } from './draw/brand-mark.js'
 import { shellLayout } from './navigation/shell-layout.js'
 import { drawServerChoice } from './server/server-settings.js'
 import { messageText } from '../../terminal-service/index.js'
+import { updateNotice } from '../../workspace-view/index.js'
 import { drawFirstRun } from './setup/first-run.js'
 import { drawRail, drawSidebar, serverRunning } from './navigation/sidebar.js'
 import { drawFooter } from './navigation/footer.js'
@@ -138,15 +139,10 @@ export function workspaceFrame(
   else if (s.overlay === 'server-choice') drawServerChoice(c, s, focus)
   else if (isPicker(s.overlay)) drawPicker(c, s, focus)
   else if (s.overlay) drawOverlay(c, s, focus, seconds)
-  if (!s.overlay && (s.message || s.base.busy))
-    text(
-      c,
-      l.inset,
-      height - 2,
-      s.message || s.base.busy!,
-      s.message ? COLORS.accent : COLORS.muted,
-      width - l.inset * 2
-    )
+  // The status line: what just happened, else what is in progress, else that a newer atc is out.
+  const status = s.message || s.base.busy || updateNotice(s.workspace?.atc)
+  if (!s.overlay && status)
+    text(c, l.inset, height - 2, status, s.message ? COLORS.accent : COLORS.muted, width - l.inset * 2)
   drawFooter(c, s, focus)
   // Never register invisible controls on an unusually narrow viewport.
   c.targets = c.targets.filter((t) => t.width > 0 && t.y >= 0 && t.y < height && t.x < width)

@@ -93,6 +93,7 @@ export class WorkspaceService {
       ...(await this.downloads.litert.models.list())
     )
     result.features = await this.features.view()
+    if (this.options.atc) result.atc = this.options.atc()
     return result
   }
   private async readCore() {

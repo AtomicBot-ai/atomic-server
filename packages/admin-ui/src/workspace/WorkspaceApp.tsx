@@ -5,6 +5,7 @@ import { EngineIntro } from './intro/EngineIntro'
 import { WorkspaceBrand } from './WorkspaceBrand'
 import { workspaceTheme } from './workspace-theme'
 import { useWorkspace } from './useWorkspace'
+import { UpdateToast } from './UpdateToast'
 import { Server } from './server/Server'
 import { Settings } from './server/settings/Settings'
 import { Catalog } from './library/catalog/Catalog'
@@ -153,6 +154,7 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
           <WorkspaceBrand />
           {!openWizard && !connectionGuide && <FloatingDownloads workspace={workspace} />}
         </header>
+        <UpdateToast workspace={workspace} top={page === 'playground' && task === 'chat'} />
         {workspace.error && (
           <div className="ew-error connection-error" role="alert">
             <span>{workspace.error}</span>

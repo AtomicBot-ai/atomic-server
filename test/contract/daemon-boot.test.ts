@@ -22,7 +22,7 @@ async function boot(env: Record<string, string>) {
   const daemon = await startDaemon({
     paths,
     io: recordingIo(),
-    config: resolveConfig({ env: { ATC_API_PORT: '0', ...env } }),
+    config: resolveConfig({ env: { ATC_API_PORT: '0', ATC_UPDATE_CHECK_ON_START: 'false', ...env } }),
     host: fakeHost(),
     log: createLogger((e) => lines.push(e), { level: 'debug' }),
     controlPort: 0,

@@ -27,6 +27,8 @@ import { engineOutputSink } from './engine-log.js'
 import { CrashPolicy, watchSessions } from './session-watch.js'
 import { bootLoader, bootPlan, runBoot } from './boot.js'
 import { startApi } from '../terminal-service/index.js'
+import { serverReleaseWatch } from './release-check.js'
+import type { ReleaseWatch } from '../update/index.js'
 
 export interface DaemonOptions {
   paths: AtcPaths
@@ -52,6 +54,8 @@ export interface RunningDaemon {
   relay: RelayHub
   record: DaemonRecord
   hostSteps: HostStepExecutor
+  /** Its look at atc releases; `check()` runs one now (the tests do, instead of waiting a day). */
+  releases: ReleaseWatch
   stopped: Promise<void>
   /** `api.autoStart` and `models.autoLoad`, done after the ready record; never rejects. */
   boot: Promise<void>
@@ -142,11 +146,14 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       log: (m) => log.debug(m),
     })
 
+    const releases = await serverReleaseWatch({ io, host, log })
+    undo.push(() => releases.stop())
     const workspace = new WorkspaceService({
       link,
       paths,
       config: options.config.values,
       fetch: io.fetch,
+      atc: () => releases.view(),
       platform: host.facts.platform,
       selfCommand: host.selfCommand,
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
@@ -247,12 +254,15 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     }
     await writeDaemonRecord(paths.daemonRecord, record)
     log.info(`daemon ready: core ${CORE_VERSION} pid ${process.pid}, data ${paths.dataFolder}`)
+    // After the ready record: a slow GitHub answers nobody who waits on `atc start`.
+    if (config.update.checkOnStart) releases.start()
     const boot = runBoot({ startApi: false, models: plan.models }, bootDeps)
 
     let cleanupOnce: Promise<void> | undefined
     const cleanup = () =>
       (cleanupOnce ??= (async () => {
         sessions.stop()
+        releases.stop()
         clearInterval(pendingTimer)
         offEvents()
         await admin?.close()
@@ -266,6 +276,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       relay,
       record,
       hostSteps,
+      releases,
       stopped,
       boot,
       shutdown: async () => {

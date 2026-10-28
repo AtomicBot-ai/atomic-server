@@ -1,0 +1,64 @@
+.update-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px 12px 14px 16px;
+  border-radius: 15px;
+  border: 1px solid var(--ew-line, #45504b);
+  background: var(--ew-panel, #1b211e);
+  color: var(--ew-text, inherit);
+  box-shadow: 0 8px 24px #0005;
+}
+/* The chat composer owns the bottom of its page (and its middle while empty): the notice goes top right. */
+.update-toast-top {
+  top: 72px;
+  bottom: auto;
+}
+.update-toast-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.update-toast-body small {
+  color: var(--ew-muted, #8a9590);
+}
+.update-toast-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.update-toast-command code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--ew-raised, #242b27);
+  font-size: 12px;
+}
+.update-toast-body a {
+  color: var(--ew-teal, #7fd1c0);
+  font-size: 13px;
+}
+.update-toast-close {
+  align-self: start;
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ew-muted, #8a9590);
+  cursor: pointer;
+}
+.update-toast-close:hover {
+  color: var(--ew-text, inherit);
+  background: var(--ew-raised, #242b27);
+}

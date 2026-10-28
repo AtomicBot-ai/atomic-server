@@ -36,7 +36,7 @@ locally with Docker).
 
 ## Isolation
 
-`test/setup.ts` (unit, contract, e2e) sets, once per worker, `ATC_DATA_FOLDER` and
+`test/setup.ts` (unit, contract, e2e) sets, once per worker, `ATC_UPDATE_CHECK_ON_START=false` (no look at GitHub from a server a test starts; a contract test drives `daemon.releases.check()` against a faked `fetch`), `ATC_DATA_FOLDER` and
 `ATOMIC_CORE_DATA_FOLDER` to subfolders of a fresh `mkdtemp`. Both `atc` and the core resolve their data
 folder from these, so a test can never touch `~/.local/share/atomic-chat-cli` or the desktop app's folder.
 `test/helpers/tmp-data-folder.ts` gives one folder per test on top of that.

@@ -20,7 +20,10 @@ let daemon: RunningDaemon
 let web: WorkspaceClient
 let terminal: WorkspaceClient
 beforeAll(async () => {
-  const config = resolveConfig({ env: {}, fileText: JSON.stringify({ api: { port: 0 } }) })
+  const config = resolveConfig({
+    env: { ATC_UPDATE_CHECK_ON_START: 'false' },
+    fileText: JSON.stringify({ api: { port: 0 } }),
+  })
   daemon = await startDaemon({
     paths: tmp.paths,
     config,

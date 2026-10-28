@@ -137,6 +137,10 @@ comes from the workspace snapshot the SPA polls (`engines`, `host_steps`, `loads
 - **Setup wizard** offers every registered chat engine; a managed engine or Foundry Local not installed
   yet is installed inside the wizard, then its own models are listed and the download is verified with
   that engine.
+- **Update notice.** `UpdateToast.tsx`, bottom right on every page (top right in the chat, whose composer
+  owns the bottom), says a newer atc is out (the
+  snapshot's `atc`, from the server's own daily look at releases): the versions, the command that installs
+  it with Copy, the release page; Dismiss keeps it away for that release (`localStorage`).
 - **Banner and loads.** `HostStepBanner.tsx` shows the privileged step the server waits on, with its
   command, in the Cockpit and on the Server page. A managed engine's load shows its stage and time on
   the installed model's row and in the Cockpit, with Cancel loading, and after a failure the error and
