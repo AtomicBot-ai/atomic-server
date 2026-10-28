@@ -18,26 +18,7 @@ it('reports a denied notification request without showing Allowed', async () => 
   expect(granted).not.toHaveBeenCalledWith(true)
   await userEvent.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(screen.getAllByRole('button', { name: 'Allow', exact: true })).toHaveLength(2)
-})
-it('closes microphone tracks immediately after a successful permission request', async () => {
-  const stop = vi.fn()
-  const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop }] })
-  const previous = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
-  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia } })
-  try {
-    const granted = vi.fn()
-    render(<Permissions onGranted={granted} />)
-    await userEvent.click(screen.getAllByRole('button', { name: 'Allow', exact: true })[1])
-    await userEvent.click(screen.getByRole('button', { name: 'Allow access' }))
-    expect(await screen.findByRole('button', { name: 'Allowed' })).toBeInTheDocument()
-    expect(getUserMedia).toHaveBeenCalledWith({ audio: true })
-    expect(stop).toHaveBeenCalledOnce()
-    expect(granted).toHaveBeenCalledWith(true)
-  } finally {
-    if (previous) Object.defineProperty(navigator, 'mediaDevices', previous)
-    else Reflect.deleteProperty(navigator, 'mediaDevices')
-  }
+  expect(screen.getAllByRole('button', { name: 'Allow', exact: true })).toHaveLength(1)
 })
 it('keeps a failed destination handoff on its current screen with a retryable error', async () => {
   const choose = vi.fn().mockRejectedValueOnce(new Error('Server unavailable')).mockResolvedValue(undefined)
@@ -47,4 +28,11 @@ it('keeps a failed destination handoff on its current screen with a retryable er
   await userEvent.click(screen.getByRole('button', { name: /Configure an endpoint/ }))
   expect(choose).toHaveBeenCalledTimes(2)
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+// The web admin has no voice input: it asks for nothing it will not use.
+it('asks for notifications only', () => {
+  render(<Permissions onGranted={vi.fn()} />)
+  expect(screen.getByText('Notifications')).toBeInTheDocument()
+  expect(screen.queryByText('Microphone')).not.toBeInTheDocument()
 })

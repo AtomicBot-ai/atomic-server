@@ -5,7 +5,7 @@ export type FirstRunStep = (typeof FIRST_RUN_STEPS)[number]
 export const FIRST_RUN_TITLES: Record<FirstRunStep, string> = {
   model: 'Choose your first model',
   permissions: 'Permissions',
-  cloud: 'Cloud providers',
+  cloud: 'Remote providers',
   media: 'Image and video models',
   connect: 'How will you use Atomic Server?',
 }

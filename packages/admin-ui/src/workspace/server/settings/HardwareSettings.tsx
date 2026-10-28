@@ -5,6 +5,7 @@ import { Action } from '../../Controls'
 import { record, rows, text } from '../../types'
 import type { RecordValue } from '../../types'
 import { describeError } from '@/services/admin-api'
+import { appleSiliconGpu } from '@view'
 
 const memory = (value: unknown) =>
   typeof value === 'number' && value > 0 ? `${(value / 1024).toFixed(1)} GiB` : 'Not reported'
@@ -67,6 +68,12 @@ export function HardwareSettings({ workspace: { execute } }: { workspace: Worksp
         ]}
       />
       <Facts title="Memory" facts={[['Total', memory(info.total_memory)]]} />
+      {!rows(info.gpus).length && appleSiliconGpu(info) && (
+        <Facts
+          title={appleSiliconGpu(info)!.split(', ')[0]!}
+          facts={[['Memory', appleSiliconGpu(info)!.split(', ')[1] ?? 'shared with the CPU']]}
+        />
+      )}
       {rows(info.gpus).map((gpu, index) => (
         <Facts
           key={text(gpu.uuid, String(index))}

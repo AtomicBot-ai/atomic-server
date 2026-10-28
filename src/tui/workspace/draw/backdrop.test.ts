@@ -6,7 +6,7 @@ import { dimBackdrop } from './backdrop.js'
 
 it('preserves page characters and geometry while dimming text and bright surfaces', () => {
   const c = canvas(30, 2)
-  text(c, 0, 0, 'Start server', COLORS.ground, 30, COLORS.accent, true)
+  text(c, 0, 0, 'Start API', COLORS.ground, 30, COLORS.accent, true)
   text(c, 0, 1, 'Model ready', COLORS.text)
   const before = c.cells.map((row) => row.map((cell) => cell.char).join(''))
   dimBackdrop(c)

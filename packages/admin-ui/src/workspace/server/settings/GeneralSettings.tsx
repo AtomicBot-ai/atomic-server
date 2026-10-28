@@ -1,6 +1,7 @@
 // Lifted from atomic-chat-ui/web-app/src/routes/settings/general.tsx @ 807b4d9; adapted: supported server settings grouped under General.
 import { SERVER_SETTINGS_GROUPS } from '@contract'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { record, rows } from '../../types'
 import type { Workspace } from '../../useWorkspace'
 import { Action, JsonResult } from '../../Controls'
 import { RuntimeSettings } from './RuntimeSettings'
@@ -16,6 +17,20 @@ export function GeneralSettings({
   openEngines: () => void
 }) {
   const [opened, setOpened] = useState<string[]>([])
+  // Containers are the managed engines' runtime: a host whose core registers none (macOS) has no such setting.
+  const [managed, setManaged] = useState(false)
+  const { execute } = workspace
+  useEffect(() => {
+    let live = true
+    void execute('engines.list')
+      .then((v) => {
+        if (live) setManaged(rows(record(v).engines).some((e) => e.kind === 'managed'))
+      })
+      .catch(() => undefined)
+    return () => {
+      live = false
+    }
+  }, [execute])
   return (
     <>
       <section className="settings-card">
@@ -27,7 +42,7 @@ export function GeneralSettings({
       </section>
       <RuntimeSettings workspace={workspace} section="admin" />
       <div className="settings-general-advanced">
-        {SERVER_SETTINGS_GROUPS.map((group) => (
+        {SERVER_SETTINGS_GROUPS.filter((group) => group.id !== 'managed' || managed).map((group) => (
           <details
             className="settings-card"
             key={group.id}

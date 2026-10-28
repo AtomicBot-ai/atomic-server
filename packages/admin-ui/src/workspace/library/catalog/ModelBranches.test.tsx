@@ -201,7 +201,7 @@ describe('the admin catalog and installed models', () => {
       'models.check': { repository: REPO, verdicts: [] },
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Local models' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
     await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
     await userEvent.click(await screen.findByRole('radio', { name: 'Safetensors' }))
     await userEvent.keyboard('{Escape}')
@@ -220,7 +220,7 @@ describe('the admin catalog and installed models', () => {
       'artifacts.list': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Local models' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
     await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
     await userEvent.click(await screen.findByRole('radio', { name: 'Safetensors' }))
     await userEvent.click(screen.getByRole('combobox', { name: 'Model category' }))
@@ -242,7 +242,7 @@ describe('the admin catalog and installed models', () => {
       'artifacts.list': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Local models' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Catalog' }))
     await userEvent.click(await screen.findByText(REPO, { selector: 'strong' }))
     await waitFor(() => expect(execute).toHaveBeenCalledWith('models.check', { repository: REPO }))
     expect(screen.queryByText(/No GGUF/)).toBeNull()

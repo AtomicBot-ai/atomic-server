@@ -1,9 +1,9 @@
 /** Navigation names and order shared by the terminal and browser workspaces. */
 export const WORKSPACE_NAVIGATION = [
   { id: 'server', label: 'Server' },
+  { id: 'playground', label: 'Playground' },
   { id: 'catalog', label: 'Models' },
   { id: 'settings', label: 'Settings' },
-  { id: 'playground', label: 'Playground' },
 ] as const
 
 export const SERVER_SECTIONS = [
@@ -13,7 +13,7 @@ export const SERVER_SECTIONS = [
   { id: 'model', label: 'Engine & model' },
   { id: 'configuration', label: 'Configuration' },
   { id: 'remote', label: 'Remote access' },
-  { id: 'proxy', label: 'HTTPS proxy' },
+  { id: 'proxy', label: 'Download proxy' },
   { id: 'keys', label: 'API keys' },
 ] as const
 
@@ -22,7 +22,7 @@ export const SERVER_NAVIGATION = [
   { id: 'overview', label: 'Overview' },
   { id: 'configuration', label: 'Configuration' },
   { id: 'remote', label: 'Remote access' },
-  { id: 'proxy', label: 'HTTPS proxy' },
+  { id: 'proxy', label: 'Download proxy' },
 ] as const
 
 export const SETTINGS_SECTIONS = [
@@ -54,8 +54,8 @@ export const SERVER_SETTINGS_GROUPS = [
 
 export const LIBRARY_SECTIONS = [
   { id: 'downloads', label: 'Downloads' },
-  { id: 'catalog', label: 'Local models' },
-  { id: 'cloud', label: 'Cloud providers' },
+  { id: 'catalog', label: 'Catalog' },
+  { id: 'cloud', label: 'Remote providers' },
   { id: 'endpoint', label: 'Custom Endpoint' },
   { id: 'engines', label: 'Inference engines' },
 ] as const

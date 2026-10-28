@@ -22,7 +22,7 @@ export function drawLibrary(
 ) {
   if (s.libraryView === 'endpoint') return drawCustomProviders(c, s, x, y, width, focus)
   if (s.libraryView === 'cloud') {
-    text(c, x, y, 'Cloud providers', COLORS.text, width, undefined, true)
+    text(c, x, y, 'Remote providers', COLORS.text, width, undefined, true)
     return drawCloudList(c, s, x, y + 2, width, bottom - 1, focus)
   }
   if (s.libraryView === 'catalog') return drawCatalogBrowser(c, s, x, y, width, bottom, focus)

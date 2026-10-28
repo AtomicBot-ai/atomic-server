@@ -159,7 +159,7 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
     await sees('Notifications')
     await click('Skip')
     expect(terminal.stdout.lastFrame()).not.toContain('Continue without permissions?')
-    await sees('Cloud providers')
+    await sees('Remote providers')
   }
   try {
     await sees('Choose engine')

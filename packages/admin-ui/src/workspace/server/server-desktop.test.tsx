@@ -103,7 +103,7 @@ it('starts the API on an empty server, saying a model is still to choose, and ag
   workspace.snapshot!.api.running = false
   const { rerender } = render(<ServerControlPanel workspace={workspace} selectSection={select} />)
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: 'Start server' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Start API' }))
   expect(screen.getByRole('status')).toHaveTextContent('Choose and download a model to continue.')
   expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'atomic:acquire' }))
   dispatch.mockRestore()
@@ -111,7 +111,7 @@ it('starts the API on an empty server, saying a model is still to choose, and ag
   expect(execute).toHaveBeenCalledWith('engines.selected')
   workspace.snapshot!.services = services
   rerender(<ServerControlPanel workspace={workspace} selectSection={select} />)
-  await userEvent.click(screen.getByRole('button', { name: 'Start server' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Start API' }))
   expect(execute).toHaveBeenCalledWith('api.start')
   await userEvent.click(screen.getByRole('button', { name: /Engine/ }))
   expect(select).toHaveBeenLastCalledWith('model')
@@ -241,7 +241,7 @@ it('keeps the selected engine and model visible in the sidebar during their down
   expect(screen.getByRole('button', { name: /Engine/ })).toHaveTextContent('llama.cpp')
   expect(screen.getByRole('button', { name: /Model/ })).toHaveTextContent('Qwen-4B')
 })
-it('opens HTTPS proxy inside the Server context with the existing saved proxy settings', async () => {
+it('opens Download proxy inside the Server context with the existing saved proxy settings', async () => {
   const { workspace } = workspaceFixture({
     'config.get': {
       values: { proxy: { url: 'http://localhost:8080' } },
@@ -249,6 +249,6 @@ it('opens HTTPS proxy inside the Server context with the existing saved proxy se
     },
   })
   render(<Server workspace={workspace} section="proxy" openCommand={vi.fn()} openSetup={vi.fn()} />)
-  expect(screen.getByRole('heading', { name: 'HTTPS proxy' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Download proxy' })).toBeInTheDocument()
   expect(await screen.findByLabelText('Proxy address')).toHaveValue('http://localhost:8080')
 })

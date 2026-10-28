@@ -32,8 +32,8 @@ export function drawSidebarControl(
       ? 'Stopping…'
       : 'Starting…'
     : running
-      ? 'Stop server'
-      : 'Start server'
+      ? 'Stop API'
+      : 'Start API'
   const label = `${icon} ${state}`
   text(c, x + 1 + Math.floor((20 - label.length) / 2), y + 2, label, color, 20, background, true)
   if (!changing)

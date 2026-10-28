@@ -59,7 +59,7 @@ it('changes models inside onboarding without losing the selected agent or visiti
   expect(screen.getByRole('heading', { name: 'Connect Codex CLI' })).toBeInTheDocument()
   await waitFor(() => expect(screen.getByLabelText('Model')).toHaveValue('new-model'))
   expect(screen.queryByRole('dialog', { name: 'Choose a model for this connection' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('heading', { name: 'Cloud providers' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Remote providers' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Configure & start' }))
   expect(await screen.findByRole('heading', { name: 'Codex CLI connection is ready' })).toBeInTheDocument()
   expect(execute).toHaveBeenCalledWith('connection.profile', {

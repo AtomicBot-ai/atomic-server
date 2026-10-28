@@ -20,7 +20,7 @@ it('shows the waiting screen for an interrupted first model, then opens the serv
   await page.getByRole('heading', { name: 'Permissions' }).waitFor()
   await page.getByRole('button', { name: 'Skip', exact: true }).click()
   await page.getByRole('button', { name: 'Continue without permissions' }).click()
-  await page.getByRole('heading', { name: 'Cloud providers' }).waitFor()
+  await page.getByRole('heading', { name: 'Remote providers' }).waitFor()
   await page.getByRole('button', { name: 'Skip', exact: true }).click()
   await page.getByRole('heading', { name: 'Image and video models' }).waitFor()
   await page.getByRole('button', { name: 'Skip', exact: true }).click()

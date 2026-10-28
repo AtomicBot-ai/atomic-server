@@ -53,11 +53,11 @@ it('starts the API from the Start button with no model loaded', async () => {
     expect(own.atc('control', 'call', 'setup.manual', '--json').code).toBe(0)
     await own.page.reload()
     await own.page.getByRole('button', { name: 'Server', exact: true }).click()
-    await own.page.getByRole('button', { name: 'Start server' }).click()
+    await own.page.getByRole('button', { name: 'Start API' }).click()
     const running = () =>
       (JSON.parse(own.atc('status', '--json').out) as { api: { running: boolean } }).api.running
     await expect.poll(running, { timeout: 20_000 }).toBe(true)
-    await expect.poll(() => own.page.getByRole('button', { name: 'Stop server' }).count()).toBe(1)
+    await expect.poll(() => own.page.getByRole('button', { name: 'Stop API' }).count()).toBe(1)
   } finally {
     await own.close()
   }

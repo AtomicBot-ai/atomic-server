@@ -34,7 +34,7 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
           {Boolean(remote.error) && <p role="alert">{text(remote.error).replaceAll('_', ' ')}</p>}
           <div className="remote-access-actions">
             {remote.blockReason === 'server_stopped' && (
-              <Action onClick={() => execute('api.start')}>Start server</Action>
+              <Action onClick={() => execute('api.start')}>Start API</Action>
             )}
             <Action
               primary

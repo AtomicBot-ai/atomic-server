@@ -1,6 +1,6 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 807b4d9; adapted: actual browser permissions.
 import { useEffect, useState } from 'react'
-import { Bell, Mic, Check, ShieldCheck } from 'lucide-react'
+import { Bell, Check, ShieldCheck } from 'lucide-react'
 import { Action } from '../Controls'
 import { useDialog } from '../useDialog'
 import { describeError } from '@/services/admin-api'
@@ -13,13 +13,6 @@ const permissions = [
     reason: 'Know when a model is ready or a long task finishes.',
     detail: 'Allow this browser to show download and task notifications.',
   },
-  {
-    id: 'microphone',
-    title: 'Microphone',
-    Icon: Mic,
-    reason: 'Speak your prompts and use voice conversations.',
-    detail: 'Microphone access is used only when you start recording. Text chat works without it.',
-  },
 ] as const
 export function Permissions({ onGranted }: { onGranted: (granted: boolean) => void }) {
   const [allowed, setAllowed] = useState<Record<string, boolean>>({})
@@ -29,12 +22,6 @@ export function Permissions({ onGranted }: { onGranted: (granted: boolean) => vo
     const check = async () => {
       const values: Record<string, boolean> = {
         notifications: typeof Notification !== 'undefined' && Notification.permission === 'granted',
-      }
-      try {
-        values.microphone =
-          (await navigator.permissions.query({ name: 'microphone' as PermissionName })).state === 'granted'
-      } catch {
-        /* Browser does not expose permission queries. */
       }
       if (live) {
         setAllowed(values)
@@ -108,11 +95,6 @@ function PermissionDialog({
           throw new Error(
             'Notifications were not allowed. Change the site permission in your browser to retry.'
           )
-      } else {
-        if (!navigator.mediaDevices?.getUserMedia)
-          throw new Error('Microphone access is unavailable in this browser.')
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        stream.getTracks().forEach((track) => track.stop())
       }
       granted()
     } catch (e) {

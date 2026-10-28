@@ -57,7 +57,7 @@ it('keeps the desktop controls while going directly from media to server destina
   expect(screen.getByRole('heading', { name: 'Permissions' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  expect(screen.getByRole('heading', { name: 'Cloud providers' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Remote providers' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
   expect(screen.queryByRole('button', { name: /Everyday use/ })).not.toBeInTheDocument()
