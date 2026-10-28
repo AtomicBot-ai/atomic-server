@@ -176,6 +176,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   endpointFollowsServer: boolean
   model: string
   models: string[]
+  /** The reply of a turn another client is running in the open chat, as it streams (`useOtherTurn`). */
+  otherTurn: { id: string; message: ChatMessage } | null
   images: ChatImage[]
   messages: ChatMessage[]
   generating: boolean
@@ -269,6 +271,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     endpointFollowsServer: true,
     model: '',
     models: [],
+    otherTurn: null,
     messages: [],
     images: [],
     generating: false,

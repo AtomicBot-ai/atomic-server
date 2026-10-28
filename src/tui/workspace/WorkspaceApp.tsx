@@ -3,6 +3,7 @@ import { failedTurn } from './chat/failed-turn.js'
 import { useDownloadAttention } from './downloads/use-download-attention.js'
 import { chatFeatureRequest } from './chat/features.js'
 import { useSharedPanels } from './runtime/shared-panels.js'
+import { useOtherTurn } from './runtime/other-turn.js'
 import { useMediaJobs } from './media/media-effects.js'
 import { IntroScreen } from './intro/IntroScreen.js'
 import { messageText } from '../../terminal-service/index.js'
@@ -135,6 +136,7 @@ function WorkspaceContent(
   }, [state.mouse, write])
   useWorkspaceData(state, latest, controller, update)
   useSharedPanels(state.ready, latest, controller, update)
+  useOtherTurn(state, latest, controller, update)
   useMediaJobs(state.ready, latest, controller, update)
   useRuntimeData(state.ready, controller, update)
   useWaitingGame(state, update)

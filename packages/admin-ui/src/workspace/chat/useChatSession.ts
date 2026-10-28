@@ -2,16 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { workspaceApi } from '../workspace-api'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
+import type { WorkspaceChat } from '@contract'
 import { describeError } from '@/services/admin-api'
 import { conversationPrint, savedConversationChange } from '@view'
 import { watchSharedRead } from '../watch-shared-read'
 
 const ACTIVE = 'atomic:playground:active:v1'
 const running = (state: unknown) => ['preparing', 'generating', 'stopping'].includes(String(state))
-export function useChatSession() {
+/** `others`: the server's running Playground requests (the snapshot's `chats`), one may be in the open chat. */
+export function useChatSession(others: WorkspaceChat[] = []) {
   const [chat, setChat] = useState<RecordValue>({ messages: [] })
   const [job, setJob] = useState<RecordValue>({})
   const [busy, setBusy] = useState(false)
+  // A turn of this page's own holds it on its chat; another client's turn only shows (`busy`).
+  const [holding, setHolding] = useState(false)
   const [error, setError] = useState('')
   const [recents, setRecents] = useState<RecordValue[]>([])
   const live = useRef(true),
@@ -19,11 +23,14 @@ export function useChatSession() {
     // Each conversation as this page last saved or loaded it, and a count of its saves: a read that
     // started before a save is older than what the page shows.
     synced = useRef(new Map<string, string>()),
-    saves = useRef(0)
+    saves = useRef(0),
+    // Another client's request this page shows; opening another chat stops showing it.
+    followed = useRef('')
   const mark = (value: RecordValue) => synced.current.set(text(value.id), conversationPrint(value))
   const refresh = useCallback(async () => setRecents(rows(await workspaceApi.execute('history.list'))), [])
   const open = async (id: string) => {
     if (locked.current) return
+    followed.current = ''
     const result = record(await workspaceApi.execute('history.load', { id }))
     if (!result.id) throw new Error('This conversation is no longer available.')
     mark(result)
@@ -31,9 +38,9 @@ export function useChatSession() {
     setJob({})
     setError('')
   }
-  const watch = async (initial: RecordValue, conversation: RecordValue) => {
+  const watch = async (initial: RecordValue, conversation: RecordValue, stillShown = () => true) => {
     let current = initial
-    while (live.current) {
+    while (live.current && stillShown()) {
       setJob(current)
       const shown = {
         ...conversation,
@@ -46,6 +53,7 @@ export function useChatSession() {
         localStorage.removeItem(ACTIVE)
         if (current.error) setError(text(current.error))
         const saved = record(await workspaceApi.execute('history.load', { id: current.conversation_id }))
+        if (!stillShown()) return
         // Keep the visible reply if the disk save failed; it is what later changes are compared with.
         if (saved.id && !current.error) {
           mark(saved)
@@ -59,6 +67,37 @@ export function useChatSession() {
       current = record(await workspaceApi.execute('chat.progress', { id: current.id }))
     }
   }
+  /** Show a running request until it ends: this page's own after a reload, or another client's. */
+  const follow = (id: string, mine = true) => {
+    // This page's own request holds the page; another client's is only shown while its chat is open.
+    if (mine) {
+      locked.current = true
+      setHolding(true)
+    } else followed.current = id
+    const shown = () => mine || followed.current === id
+    setBusy(true)
+    void (async () => {
+      const progress = record(await workspaceApi.execute('chat.progress', { id }))
+      const saved = record(await workspaceApi.execute('history.load', { id: progress.conversation_id }))
+      // While active, saved history contains the submitted request; final history includes its answer.
+      const base = {
+        ...saved,
+        messages: running(progress.state) ? rows(saved.messages) : rows(saved.messages).slice(0, -1),
+      }
+      await watch(progress, base, shown)
+    })()
+      .catch((e) => {
+        if (mine) localStorage.removeItem(ACTIVE)
+        if (shown()) setError(describeError(e))
+      })
+      .finally(() => {
+        if (mine) {
+          locked.current = false
+          setHolding(false)
+        } else if (followed.current === id) followed.current = ''
+        if (live.current && !locked.current && !followed.current) setBusy(false)
+      })
+  }
   useEffect(() => {
     live.current = true
     let active: string | null = null
@@ -67,28 +106,7 @@ export function useChatSession() {
     } catch {
       /* storage blocked: nothing to recover */
     }
-    if (active && !locked.current) {
-      locked.current = true
-      setBusy(true)
-      void (async () => {
-        const progress = record(await workspaceApi.execute('chat.progress', { id: active }))
-        const saved = record(await workspaceApi.execute('history.load', { id: progress.conversation_id }))
-        // While active, saved history contains the submitted request; final history includes its answer.
-        const base = {
-          ...saved,
-          messages: running(progress.state) ? rows(saved.messages) : rows(saved.messages).slice(0, -1),
-        }
-        await watch(progress, base)
-      })()
-        .catch((e) => {
-          localStorage.removeItem(ACTIVE)
-          setError(describeError(e))
-        })
-        .finally(() => {
-          locked.current = false
-          if (live.current) setBusy(false)
-        })
-    }
+    if (active && !locked.current) follow(active)
     return () => {
       live.current = false
     }
@@ -112,6 +130,12 @@ export function useChatSession() {
     )
   }, [])
   const openId = typeof chat.id === 'string' ? chat.id : ''
+  // A request another client (the terminal, another tab) runs in the chat open here.
+  const other = others.find((c) => c.conversation_id === openId)?.id ?? ''
+  useEffect(() => {
+    if (other && !locked.current && job.id !== other && followed.current !== other) follow(other, false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [other])
   useEffect(() => {
     if (!openId || busy) return
     let at = saves.current
@@ -167,6 +191,7 @@ export function useChatSession() {
   ) => {
     if (locked.current) return
     locked.current = true
+    setHolding(true)
     setBusy(true)
     setError('')
     setJob({ state: 'preparing' })
@@ -201,6 +226,7 @@ export function useChatSession() {
       }
     } finally {
       locked.current = false
+      setHolding(false)
       if (live.current) setBusy(false)
     }
   }
@@ -211,6 +237,7 @@ export function useChatSession() {
   }
   const fresh = () => {
     if (!locked.current) {
+      followed.current = ''
       setChat({ messages: [], draft_key: crypto.randomUUID() })
       setJob({})
       setError('')
@@ -218,6 +245,7 @@ export function useChatSession() {
   }
   const startSkill = useCallback((name: string) => {
     if (locked.current) return
+    followed.current = ''
     setChat({ messages: [], draft_key: crypto.randomUUID(), request_settings: { atomic_skills: [name] } })
     setJob({})
     setError('')
@@ -226,6 +254,7 @@ export function useChatSession() {
     chat,
     job,
     busy,
+    holding,
     error,
     setError,
     recents,

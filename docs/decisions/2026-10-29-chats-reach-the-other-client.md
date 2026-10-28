@@ -18,10 +18,16 @@ title: "Saved chats reach the other client within one poll, and its unsaved repl
   chat on screen differs from that print too, because then this client has a change it has not saved yet
   (a reply that just finished). A copy gone after one was saved is a deletion: the chat empties and the
   draft stays. Neither the draft, cursor, focus nor scroll changes. `ChatHistory.list` keeps each file's
-  summary by its modification stamp, so a list reads only the files that changed.
+  summary by its modification stamp, so a list reads only the files that changed. A request the server
+  runs (`chat.start`, the Web's turns and the terminal's local ones) is listed in the workspace snapshot
+  (`chats`: job id and conversation); a client showing that conversation follows its reply with
+  `chat.progress` and takes the saved reply when it ends. A page following another client's turn can
+  still open other chats; only its own turn holds it. A terminal turn to a remote endpoint is not a
+  server job: the terminal saves its partial reply every 750 ms, which the Web takes as above.
 - **Consequences:** A turn, a rename, a new chat or a deletion in one client shows in the other within
-  about 2.5 s. A reply that the other client is still generating appears when it is saved (at the end of
-  the turn); following it live is a separate step. Two clients editing the same chat at once still end up
+  about 2.5 s; a reply being generated starts streaming in the other client within one snapshot and
+  then follows at the job's pace. Stop in a client that follows another's turn stops that turn for both:
+  the request belongs to the server, not to the client that started it. Two clients editing the same chat at once still end up
   with the copy saved last. On a file system with coarse timestamps, two writes of the same size within
   one tick look unchanged to the list until the next write.
 - **Alternatives:** A history revision in the workspace snapshot: the terminal writes files without the
