@@ -88,7 +88,7 @@ export function drawCloud(c: Canvas, s: WorkspaceState, focus: string, seconds =
     top + 1,
     s.cloud.editing
       ? `Connect ${choices.find((p) => p.id === s.cloud.provider)?.name || 'custom provider'}`
-      : 'Cloud providers',
+      : 'Remote providers',
     COLORS.accent,
     width - 2
   )

@@ -86,7 +86,7 @@ export function CatalogTable({
         {sort && <button onClick={() => setSort(null)}>Reset sorting</button>}
       </div>
       <div className="hub-table-frame">
-        <table className="hub-table" aria-label="Local models">
+        <table className="hub-table" aria-label="Catalog">
           <thead>
             <tr>
               {columns.map((column) => (

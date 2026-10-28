@@ -13,7 +13,7 @@ it('explains a pending download when Start is clicked, starts the API, and redir
   window.addEventListener('atomic:acquire', acquire)
   try {
     const view = render(<ServerControlPanel workspace={workspace} selectSection={vi.fn()} />)
-    const start = screen.getByRole('button', { name: 'Start server' })
+    const start = screen.getByRole('button', { name: 'Start API' })
     expect(start).toBeEnabled()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     await userEvent.click(start)

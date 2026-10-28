@@ -21,7 +21,7 @@ export function drawServerSettings(
     c,
     x,
     y,
-    modelPage ? 'Engine & model' : proxyPage ? 'HTTPS proxy' : 'Configuration',
+    modelPage ? 'Engine & model' : proxyPage ? 'Download proxy' : 'Configuration',
     COLORS.text,
     width,
     undefined,

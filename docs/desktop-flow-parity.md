@@ -16,14 +16,14 @@ Reference: the owner-selected `atomic-chat-ui` redesign at **5043013**, inspecte
 | Server overview | Searchable Agents & tools grid, Configure actions, endpoint shortcut, collapsible activity | Searchable agent cards, keyboard/mouse scrolling, endpoint shortcut, activity/log controls |
 | Server side navigation | Primary rail, server start/stop, engine/model selectors, Connections, server sections, agents | Primary rail and contextual sidebar; section menu on compact terminals; engine/model selectors and separate connection view |
 | Server configuration | Model/engine settings and explicit Save/Discard; address/port/key controls | Same settings operations, staged selection dropdowns and explicit Save/Discard; fields remain selectable at compact sizes |
-| Models Hub navigation | Downloads; Local models, Cloud providers, Custom Endpoint, Inference engines | Same sections. Local models is the default. Custom Endpoint opens its editable provider/URL form directly |
+| Models Hub navigation | Downloads; Local models, Cloud providers, Custom Endpoint, Inference engines | The same sections, named Catalog and Remote providers here (the catalog is not local, and llama.cpp servers are not cloud). Catalog is the default. Custom Endpoint opens its editable provider/URL form directly |
 | `containers/hub/HubSearchToolbar.tsx` and `HubFilters.tsx` | Category dropdown, search, separate Filters/Sort menus, Import | Same top toolbar, keyboard-accessible menus, engine/format radios, liked/installed/uncensored filters |
 | Catalog engine/format behavior | Selecting an engine selects its format; selecting a format clears the engine; Clear filters preserves format/sort | Same behavior; category changes clear hidden text-only filters |
 | `containers/hub/LocalModelTable.tsx` | Responsive metadata table with expandable model details and version/download controls | Responsive ASCII rows and sortable metadata columns; inline expanded version picker and direct Download; download controls stay in the expanded family |
 | Table metadata | Available catalog metadata, installed state, unknown fields left empty | Model, Parameters, Format, Context, Capabilities, Download size, This device, Engines as space allows. Missing metadata is `—`; This device means downloaded, not a guessed memory-fit verdict |
 | `containers/hub/MediaHub.tsx` | Category/search/import toolbar and inline media family controls | Same toolbar composition; bordered family rows with developer details, Installed/Available sections, expandable quant choices and load/delete actions |
 | Foundry Local catalog | Model families with variant selection and accelerator preparation | Inline family/variant selection; required accelerator preparation returns to the same catalog; compatible variants download directly |
-| Installed models | Direct deletion with confirmation | Direct deletion with confirmation. Imported files absent from the remote catalog remain listed in Local models |
+| Installed models | Direct deletion with confirmation | Direct deletion with confirmation. Imported files absent from the remote catalog remain listed in the Catalog |
 | Settings and Playground | Settings sections use supported server configuration; Playground remains secondary | Dedicated settings cards, switches and enum dropdowns with staged Save/Discard; Hardware loads System/Processor/Graphics facts. Playground remains a secondary rail destination |
 
 ## Server-specific behavior
@@ -53,7 +53,7 @@ These are capability or terminal adaptations, not claims of exact desktop featur
 | Coding assistant user | Choose engine/model → optional provider/media → agent → configure | Downloads continue; model changes return to the same agent; retry remains in the connection guide |
 | App developer | Choose engine/model → endpoint → port → configure → copy URL/key | Invalid ports stay editable; inference failure never reports ready |
 | Media user | Add image/video models to the queue → endpoint or manual setup | Pause/resume/remove are available on each download; completed models can be deleted with confirmation |
-| Experienced operator | Skip setup → server settings and Local models | Manual setup is recorded without claiming that inference was verified |
+| Experienced operator | Skip setup → server settings and the Catalog | Manual setup is recorded without claiming that inference was verified |
 | Returning user | Saved workspace directly | Interrupted transfers retain their durable server records and partial bytes |
 
 Focused terminal journeys cover category menus, filtering/sorting, version selection and direct download, Foundry accelerator preparation and blocked-plan handling, local import, provider checking, optional media queue/removal, preserved connection selection, installed-model access, and click targets at 54×24, 80×24, 120×36 and 160×50. The mounted terminal contract test installs a fixture engine with visible progress, starts a fixture model download, restarts the server and resumes the partial download before verifying the endpoint.

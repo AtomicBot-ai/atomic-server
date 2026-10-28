@@ -1,11 +1,11 @@
 // Lifted from Atomic-Chat/web-app/src/components/left-sidebar/index.tsx @ 807b4d9; adapted: shared server workspace and chat history.
+import { downloadRows } from '@view'
 import {
   Blocks,
   RadioTower,
   Settings,
   FlaskConical,
   LifeBuoy,
-  ExternalLink,
   ChevronRight,
   Download,
   Cloud,
@@ -85,54 +85,38 @@ export function WorkspaceNavigation({
           ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
           : PLAYGROUND_TASKS
   const title = WORKSPACE_NAVIGATION.find((item) => item.id === page)?.label
+  // What the Downloads page still shows: a finished transfer in the snapshot is not a pending download.
+  const pending = downloadRows(workspace.snapshot?.setups ?? [], workspace.snapshot?.downloads ?? []).length
   return (
     <>
       <nav className="desktop-rail" aria-label="Main">
-        {[...WORKSPACE_NAVIGATION]
-          .filter((item) => item.id !== 'settings')
-          .sort(
-            (a, b) =>
-              ['server', 'playground', 'catalog'].indexOf(a.id) -
-              ['server', 'playground', 'catalog'].indexOf(b.id)
+        {WORKSPACE_NAVIGATION.filter((item) => item.id !== 'settings').map((item) => {
+          const index = WORKSPACE_NAVIGATION.findIndex((v) => v.id === item.id)
+          const Icon = icons[item.id]
+          return (
+            <button
+              key={item.id}
+              className={`rail-item ${page === item.id ? 'active' : ''}`}
+              aria-label={item.label}
+              aria-current={page === item.id ? 'page' : undefined}
+              title={`${item.label} · Alt+${index + 1}`}
+              onClick={() => navigate(item.id)}
+            >
+              <Icon size={20} strokeWidth={1.6} />
+              <span>{item.label}</span>
+            </button>
           )
-          .map((item) => {
-            const index = WORKSPACE_NAVIGATION.findIndex((v) => v.id === item.id)
-            const Icon = icons[item.id]
-            return (
-              <button
-                key={item.id}
-                className={`rail-item ${page === item.id ? 'active' : ''}`}
-                aria-label={item.label}
-                aria-current={page === item.id ? 'page' : undefined}
-                title={`${item.label} · Alt+${index + 1}`}
-                onClick={() => navigate(item.id)}
-              >
-                <Icon size={20} strokeWidth={1.6} />
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
+        })}
         <div className="rail-bottom">
           <button className="rail-item" aria-label="Help" title="Help · F1" onClick={openHelp}>
             <LifeBuoy size={20} />
             <span>Help</span>
           </button>
-          <a
-            className="rail-item"
-            aria-label="Web"
-            title="Open Web in a new tab"
-            href={window.location.href}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <ExternalLink size={20} />
-            <span>Web</span>
-          </a>
           <button
             className={`rail-item ${page === 'settings' ? 'active' : ''}`}
             aria-label="Settings"
             aria-current={page === 'settings' ? 'page' : undefined}
-            title="Settings · Alt+3"
+            title={`Settings · Alt+${WORKSPACE_NAVIGATION.findIndex((v) => v.id === 'settings') + 1}`}
             onClick={() => navigate('settings')}
           >
             <Settings size={20} strokeWidth={1.6} />
@@ -195,9 +179,7 @@ export function WorkspaceNavigation({
                   return Icon ? <Icon size={16} aria-hidden="true" /> : null
                 })()}
                 <span>{page === 'playground' && item.id === 'chat' ? 'New chat' : item.label}</span>
-                {item.id === 'downloads' && Boolean(workspace.snapshot?.downloads.length) && (
-                  <small>{workspace.snapshot?.downloads.length}</small>
-                )}
+                {item.id === 'downloads' && pending > 0 && <small>{pending}</small>}
               </button>
             </Fragment>
           ))}

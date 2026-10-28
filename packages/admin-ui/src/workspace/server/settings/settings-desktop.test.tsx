@@ -98,4 +98,23 @@ it('retries hardware lookup and shows real facts with the core memory units', as
   await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(await screen.findByText('Apple Silicon')).toBeInTheDocument()
   expect(screen.getByText('16.0 GiB')).toBeInTheDocument()
+  // Apple silicon has no GPU entry in the core's facts: its GPU is named, as the doctor names it.
+  expect(screen.getByRole('heading', { name: 'Apple Silicon GPU (Metal)' })).toBeInTheDocument()
+  expect(screen.getByText('16 GB unified memory')).toBeInTheDocument()
+})
+
+it('offers the Containers group only where the core registers a managed engine', async () => {
+  const { GeneralSettings } = await import('./GeneralSettings')
+  const without = workspaceFixture({
+    'engines.list': { engines: [{ engine: 'llamacpp-upstream', kind: 'llamacpp' }] },
+  })
+  const view = render(
+    <GeneralSettings workspace={without.workspace} openCommand={vi.fn()} openEngines={vi.fn()} />
+  )
+  await screen.findByText('Startup models')
+  expect(screen.queryByText('Containers')).not.toBeInTheDocument()
+  view.unmount()
+  const withManaged = workspaceFixture({ 'engines.list': { engines: [{ engine: 'vllm', kind: 'managed' }] } })
+  render(<GeneralSettings workspace={withManaged.workspace} openCommand={vi.fn()} openEngines={vi.fn()} />)
+  expect(await screen.findByText('Containers')).toBeInTheDocument()
 })

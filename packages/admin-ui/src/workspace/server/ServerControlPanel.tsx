@@ -42,7 +42,7 @@ export function ServerControlPanel({
           primary={!running}
           disabled={Boolean(transition)}
           title={!running && !readiness.ready ? readiness.message : undefined}
-          ariaLabel={transition ? transitionLabel : running ? 'Stop server' : 'Start server'}
+          ariaLabel={transition ? transitionLabel : running ? 'Stop API' : 'Start API'}
           onClick={async () => {
             // The API serves without a model: what is still missing is said, not a reason to refuse.
             setShowReadiness(!running)
@@ -63,7 +63,7 @@ export function ServerControlPanel({
             ) : (
               <Play size={14} />
             )}
-            {transition ? transitionLabel : running ? 'Stop' : 'Start'}
+            {transition ? transitionLabel : running ? 'Stop API' : 'Start API'}
           </span>
         </Action>
       </div>

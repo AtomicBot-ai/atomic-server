@@ -113,7 +113,7 @@ describe('shared workspace structure', () => {
     expect(nav.getAllByRole('button').map((button) => button.textContent)).toEqual(
       LIBRARY_SECTIONS.map((item) => item.label)
     )
-    expect(nav.getByRole('button', { name: 'Local models' })).toHaveAttribute('aria-current', 'page')
+    expect(nav.getByRole('button', { name: 'Catalog' })).toHaveAttribute('aria-current', 'page')
     await waitFor(() => expect(current.execute).toHaveBeenCalledWith('models.catalog', { category: 'text' }))
   })
 

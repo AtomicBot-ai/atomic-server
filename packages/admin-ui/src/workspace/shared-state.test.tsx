@@ -60,14 +60,14 @@ it('updates start/stop status from the other client without resetting the curren
   render(<WorkspaceApp />)
   const search = await screen.findByRole('textbox', { name: 'Search agents' })
   fireEvent.change(search, { target: { value: 'Claude' } })
-  expect(screen.getByRole('button', { name: 'Start server' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Start API' })).toBeInTheDocument()
   snapshot = { ...snapshot, api: { ...snapshot.api, running: true } }
   fireEvent(document, new Event('visibilitychange'))
-  expect(await screen.findByRole('button', { name: 'Stop server' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Stop API' })).toBeInTheDocument()
   expect(search).toHaveValue('Claude')
   snapshot = { ...snapshot, api: { ...snapshot.api, running: false } }
   fireEvent(document, new Event('visibilitychange'))
-  expect(await screen.findByRole('button', { name: 'Start server' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Start API' })).toBeInTheDocument()
   expect(search).toHaveValue('Claude')
 })
 
