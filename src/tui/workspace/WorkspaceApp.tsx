@@ -174,7 +174,7 @@ function WorkspaceContent(
       id = ++epoch.current
     patch({
       conversation: s.conversation ?? {
-        ...c.history.create(s.endpoint, s.model, process.cwd()),
+        ...c.history.create(chosenEndpoint(s) ?? '', s.model, process.cwd()),
         title: s.draft.trim().replace(/\s+/g, ' ').slice(0, 70),
       },
       messages: [...messages, { role: 'assistant', content: '' }],
