@@ -83,7 +83,8 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
   const d = s.connection
   if (!d) return false
   if (id === 'save-edit' && s.edit === 'guide-port') {
-    patch({ port: s.editValue })
+    // Kept as typed, so a wrong port is corrected rather than retyped; the step says what is wrong.
+    patch({ port: s.editValue.trim(), error: guidePortError(s.editValue) })
     ctx.update((v) => ({ ...v, overlay: 'connection-guide', edit: '' }))
     return true
   }
@@ -104,8 +105,10 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
   } else if (id.startsWith('guide-select:')) {
     patch({ agent: id.slice(13), path: 'agent', step: 'review' })
     ctx.update((v) => ({ ...v, focus: 'guide-model' }))
-  } else if (id === 'guide-next') patch({ step: 'review' })
-  else if (id === 'guide-back') {
+  } else if (id === 'guide-next') {
+    const error = guidePortError(d.port)
+    patch(error ? { error } : { step: 'review', error: '' })
+  } else if (id === 'guide-back') {
     patch({ step: d.step === 'review' ? d.path : 'choose', error: '' })
     ctx.update((v) => ({
       ...v,
@@ -156,8 +159,8 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       patch({ error: selected.status })
       return true
     }
-    if (!selected.provider || !/^\d+$/.test(d.port) || Number(d.port) < 1 || Number(d.port) > 65535) {
-      patch({ error: 'Choose a downloaded model and a port from 1 to 65535.' })
+    if (!selected.provider || guidePortError(d.port)) {
+      patch({ error: selected.provider ? guidePortError(d.port) : 'Choose a downloaded model.' })
       return true
     }
     patch({ step: 'preparing', error: '', status: 'Loading model' })
@@ -195,3 +198,11 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
   return true
 }
 export const connectionAgentName = (id: string) => CONNECTION_AGENTS.find((a) => a.id === id)?.label ?? id
+
+/** The endpoint's port: a whole number from 1 to 65535 (the guide names a URL, so not 0). */
+export function guidePortError(value: string): string {
+  const port = value.trim()
+  return /^\d+$/.test(port) && Number(port) >= 1 && Number(port) <= 65535
+    ? ''
+    : 'Enter a port from 1 to 65535.'
+}

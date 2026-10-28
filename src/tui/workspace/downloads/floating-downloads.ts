@@ -3,6 +3,7 @@ import {
   downloadOwner,
   downloadStopped,
   downloadSpeed,
+  downloadStateLabel,
   formatEta,
 } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
@@ -30,7 +31,7 @@ export function drawFloatingDownloads(
     paused = downloadStopped(row.state),
     owner = downloadOwner(row),
     eta = downloadEta(row, downloadSpeed(row, s.transferSamples[row.id]?.speed ?? 0)),
-    status = row.state.replaceAll('_', ' '),
+    status = downloadStateLabel(row.state),
     remaining = paused ? '' : eta !== undefined && eta >= 0 ? `~${formatEta(eta)}` : 'Estimating…'
   const targetId = row['pending'] ? 'first-downloads' : 'download-status'
   panel(c, x, y, width, height, highlight || focus === targetId)

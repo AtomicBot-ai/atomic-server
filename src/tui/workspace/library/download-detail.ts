@@ -2,6 +2,7 @@ import {
   downloadRows,
   downloadOwner,
   downloadStopped,
+  downloadStateLabel,
   downloadControl,
 } from '../../../workspace-view/index.js'
 import { workspaceDownloadRows } from '../downloads/download-layout.js'
@@ -214,18 +215,7 @@ export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) 
   }
   if (!job) return
   text(c, x + 2, y + 2, chosen.name, COLORS.accent, width - 4)
-  text(
-    c,
-    x + 2,
-    y + 4,
-    chosen.installed
-      ? 'Downloaded'
-      : /cancelled|paused/.test(job.state)
-        ? 'Paused'
-        : job.state.replaceAll('_', ' '),
-    COLORS.text,
-    width - 4
-  )
+  text(c, x + 2, y + 4, downloadStateLabel(job.state, chosen.installed), COLORS.text, width - 4)
   text(c, x + 2, y + 6, `${bytes(job.transferred)} / ${bytes(job.total)}`, COLORS.muted, width - 4)
   if (job['error'])
     wrap(

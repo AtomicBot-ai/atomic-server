@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { defaultConfig } from '../../config/index.js'
@@ -14,7 +14,7 @@ const input = {
   api_key: 'secret-fixture',
   models: ['one'],
 }
-function fixture(response: Response | Error) {
+function fixture(response: Response | Error | ((url: string, init: RequestInit) => Response)) {
   const tmp = tmpDataFolder()
   cleanup.push(tmp.cleanup)
   const link = fakeCoreLink()
@@ -30,9 +30,9 @@ function fixture(response: Response | Error) {
     providers = [saved]
     return saved
   }
-  const request = vi.fn(async () => {
+  const request = vi.fn(async (url: string, init: RequestInit) => {
     if (response instanceof Error) throw response
-    return response
+    return typeof response === 'function' ? response(url, init) : response
   })
   const service = new WorkspaceService({
     link,
@@ -106,4 +106,39 @@ it('does not connect a provider with an empty model list', async () => {
     'no available models'
   )
   expect(link.calls.some((call) => call.method === 'PUT')).toBe(false)
+})
+
+// OpenRouter's model list is public: it answers 200 to any key, so it proves nothing about one (E2E B01).
+describe('a provider whose model list needs no key', () => {
+  const publicList = (chat: number) => (url: string) =>
+    url.endsWith('/models')
+      ? Response.json({ data: [{ id: 'one' }] })
+      : Response.json({ error: { message: 'secret-fixture' } }, { status: chat })
+
+  it.each([401, 403])('rejects a key the chat endpoint refuses (%i), and saves nothing', async (status) => {
+    const { link, request, service } = fixture(publicList(status))
+    await expect(service.execute('cloud.connect', input)).rejects.toThrow('rejected this API key')
+    expect(link.calls.some((call) => call.method === 'PUT')).toBe(false)
+    expect(request).toHaveBeenCalledWith(
+      'https://provider.example/v1/chat/completions',
+      expect.objectContaining({
+        method: 'POST',
+        body: '{}',
+        headers: expect.objectContaining({ Authorization: 'Bearer secret-fixture' }),
+      })
+    )
+  })
+
+  it('connects when the chat endpoint takes the key and only finds the request empty', async () => {
+    const { service } = fixture(publicList(400))
+    expect(await service.execute('cloud.connect', input)).toMatchObject({ connected: true })
+  })
+
+  it('asks nothing more of a keyless endpoint', async () => {
+    const { request, service } = fixture(publicList(401))
+    expect(await service.execute('cloud.connect', { ...input, api_key: '' })).toMatchObject({
+      connected: true,
+    })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
 })

@@ -109,5 +109,33 @@ async function checkConnection(request: typeof fetch, url: string, key: string, 
   const missing = models.filter((model) => !available.has(model))
   if (missing.length)
     throw new AtcError('ATC_USAGE', `Model not available from this provider: ${missing.join(', ')}.`)
+  if (key) await checkKey(request, url, key)
   return models.length ? models : [...available]
+}
+
+/**
+ * A model list proves nothing about a key where it is public (OpenRouter answers 200 to any key). The
+ * chat endpoint always checks the key first: an empty request costs nothing, and only 401/403 is a
+ * refusal (a valid key gets 400 for the missing model and messages).
+ */
+async function checkKey(request: typeof fetch, url: string, key: string) {
+  let response: Response
+  try {
+    response = await request(`${url}/chat/completions`, {
+      method: 'POST',
+      redirect: 'error',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: '{}',
+      signal: AbortSignal.timeout(12000),
+    })
+  } catch {
+    throw new AtcError('ATC_USAGE', 'Could not reach the provider. Check its base URL and try again.')
+  }
+  await response.body?.cancel().catch(() => undefined)
+  if (response.status === 401 || response.status === 403)
+    throw new AtcError('ATC_USAGE', 'The provider rejected this API key. Check the key and try again.')
 }

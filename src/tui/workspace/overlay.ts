@@ -225,7 +225,9 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
                 : titles[s.edit]
                   ? s.edit === 'key-name'
                     ? 'For example: Atomic Agent, work laptop, or test app'
-                    : 'Type a name or search term'
+                    : s.edit === 'guide-port'
+                      ? 'A whole number from 1 to 65535'
+                      : 'Type a name or search term'
                   : s.edit.startsWith('setting:')
                     ? (s.base.config.rows.find((r) => r.path === s.edit.slice(8))?.description ?? '')
                     : 'OpenAI-compatible base URL, including /v1',

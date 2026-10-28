@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { downloadStopped, downloadRows, formatEta, prioritizeDownloads } from '@view'
+import { downloadStateLabel, downloadStopped, downloadRows, formatEta, prioritizeDownloads } from '@view'
 import type { Workspace } from '../../useWorkspace'
 import { Downloads } from './Downloads'
 import { useDialog } from '../../useDialog'
@@ -34,7 +34,7 @@ export function FloatingDownloads({
         >
           <button onClick={() => setOpen(true)} aria-label="View downloads">
             <strong>{text(plan.name ?? first.model_id ?? first.name ?? first.id)}</strong>
-            <span>{first.state.replaceAll('_', ' ')}</span>
+            <span>{downloadStateLabel(first.state)}</span>
             {rows.length > 1 && <span className="download-count">+{rows.length - 1} more</span>}
             <progress aria-label="Download progress" value={percent} max={100} />
             <DownloadEta row={first} />

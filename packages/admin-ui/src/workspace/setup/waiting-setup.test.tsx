@@ -45,7 +45,7 @@ it('keeps paused download status truthful and exposes existing controls in a dis
     { setups: [{ id: 'job', stage: 'paused', plan: { model_id: 'Qwen', total_download_bytes: 100 } }] }
   )
   render(<FloatingDownloads workspace={workspace} />)
-  expect(screen.getByText('paused')).toBeInTheDocument()
+  expect(screen.getByText('Paused')).toBeInTheDocument()
   expect(screen.getByText('Open Downloads to resume')).toBeInTheDocument()
   expect(screen.queryByText(/remaining/)).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'View downloads' }))

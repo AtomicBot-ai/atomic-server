@@ -1,4 +1,5 @@
 import { readinessPatch } from './chat/readiness.js'
+import { failedTurn } from './chat/failed-turn.js'
 import { useDownloadAttention } from './downloads/use-download-attention.js'
 import { chatFeatureRequest } from './chat/features.js'
 import { useSharedPanels } from './runtime/shared-panels.js'
@@ -220,13 +221,7 @@ function WorkspaceContent(
           }))
       })
       .catch((e) => {
-        if (epoch.current === id)
-          patch({
-            generating: false,
-            message: oneLine(e),
-            // The sent text comes back unless the person typed something new meanwhile.
-            ...(latest.current.draft ? {} : { draft: s.draft, documents: s.documents, images: s.images }),
-          })
+        if (epoch.current === id) patch(failedTurn(latest.current, s, oneLine(e)))
       })
   }
   const context = () => ({
