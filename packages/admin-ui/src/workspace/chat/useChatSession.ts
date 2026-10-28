@@ -3,6 +3,8 @@ import { workspaceApi } from '../workspace-api'
 import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
+import { conversationPrint, savedConversationChange } from '@view'
+import { watchSharedRead } from '../watch-shared-read'
 
 const ACTIVE = 'atomic:playground:active:v1'
 const running = (state: unknown) => ['preparing', 'generating', 'stopping'].includes(String(state))
@@ -13,12 +15,18 @@ export function useChatSession() {
   const [error, setError] = useState('')
   const [recents, setRecents] = useState<RecordValue[]>([])
   const live = useRef(true),
-    locked = useRef(false)
+    locked = useRef(false),
+    // Each conversation as this page last saved or loaded it, and a count of its saves: a read that
+    // started before a save is older than what the page shows.
+    synced = useRef(new Map<string, string>()),
+    saves = useRef(0)
+  const mark = (value: RecordValue) => synced.current.set(text(value.id), conversationPrint(value))
   const refresh = useCallback(async () => setRecents(rows(await workspaceApi.execute('history.list'))), [])
   const open = async (id: string) => {
     if (locked.current) return
     const result = record(await workspaceApi.execute('history.load', { id }))
     if (!result.id) throw new Error('This conversation is no longer available.')
+    mark(result)
     setChat(result)
     setJob({})
     setError('')
@@ -27,18 +35,22 @@ export function useChatSession() {
     let current = initial
     while (live.current) {
       setJob(current)
-      setChat({
+      const shown = {
         ...conversation,
         id: current.conversation_id,
         model: current.model,
         messages: [...rows(conversation.messages), record(current.message)],
-      })
+      }
+      setChat(shown)
       if (!running(current.state)) {
         localStorage.removeItem(ACTIVE)
         if (current.error) setError(text(current.error))
         const saved = record(await workspaceApi.execute('history.load', { id: current.conversation_id }))
-        // Keep the visible reply if the disk save failed.
-        if (saved.id && !current.error) setChat(saved)
+        // Keep the visible reply if the disk save failed; it is what later changes are compared with.
+        if (saved.id && !current.error) {
+          mark(saved)
+          setChat(saved)
+        } else if (saved.id) mark(shown)
         await refresh()
         return
       }
@@ -49,7 +61,6 @@ export function useChatSession() {
   }
   useEffect(() => {
     live.current = true
-    void refresh().catch((e) => setError(describeError(e)))
     let active: string | null = null
     try {
       active = localStorage.getItem(ACTIVE)
@@ -84,6 +95,49 @@ export function useChatSession() {
     // One recovery per mount; watch uses server state and does not capture the selected conversation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh])
+  // Another client's chats, turns, renames and deletions (the terminal writes the same history).
+  useEffect(() => {
+    let first = true
+    return watchSharedRead(
+      () => workspaceApi.execute('history.list'),
+      (value) => {
+        first = false
+        setRecents(rows(value))
+      },
+      // Only the first read says the history is unavailable; a later one keeps the list shown.
+      (e) => {
+        if (first) setError(describeError(e))
+        first = false
+      }
+    )
+  }, [])
+  const openId = typeof chat.id === 'string' ? chat.id : ''
+  useEffect(() => {
+    if (!openId || busy) return
+    let at = saves.current
+    return watchSharedRead(
+      async () => {
+        at = saves.current
+        return record(await workspaceApi.execute('history.load', { id: openId }))
+      },
+      (saved) => {
+        if (at !== saves.current || locked.current) return
+        setChat((shown) => {
+          if (shown.id !== openId) return shown
+          const change = savedConversationChange(shown, saved, synced.current.get(openId))
+          if (change === 'adopt') {
+            mark(saved)
+            return saved
+          }
+          if (change !== 'deleted') return shown
+          synced.current.delete(openId)
+          // The same draft key keeps what was typed for the deleted chat.
+          return { messages: [], draft_key: openId }
+        })
+      },
+      () => {}
+    )
+  }, [openId, busy])
   const save = async (next: RecordValue, fork = false) => {
     const now = Date.now(),
       value = {
@@ -97,7 +151,9 @@ export function useChatSession() {
         ...next,
         id: fork || !next.id ? crypto.randomUUID() : next.id,
       }
+    saves.current++
     await workspaceApi.execute('history.save', { chat: value })
+    mark(value)
     setChat(value)
     await refresh()
     return value

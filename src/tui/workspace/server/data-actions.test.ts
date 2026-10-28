@@ -5,7 +5,8 @@ import type { ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
 import type { Conversation } from '../../../terminal-data/index.js'
 import type { WorkspaceSnapshot } from '../../../contract/index.js'
-import { dataAction, persistConversation } from './data-actions.js'
+import { dataAction, persistConversation, saveDataEdit } from './data-actions.js'
+import { savedConversationPatch } from '../chat/live-conversation.js'
 
 const HERE = 'http://127.0.0.1:62732/v1'
 function context(saved: Partial<Conversation>) {
@@ -66,4 +67,16 @@ it('saves a conversation on this server with no address, as the Web does, so a p
   ctx.update((s) => ({ ...s, endpoint: 'https://openrouter.ai/api/v1', endpointFollowsServer: false }))
   await persistConversation(ctx)
   expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ endpoint: 'https://openrouter.ai/api/v1' }))
+})
+
+it('keeps taking another client’s turns after a rename here', async () => {
+  const { ctx } = context({})
+  await dataAction('history:c1', ctx)
+  ctx.update((s) => ({ ...s, edit: 'rename-chat', editValue: 'Renamed here' }))
+  await saveDataEdit(ctx)
+  const before = ctx.get()
+  expect(before.conversation?.title).toBe('Renamed here')
+  const turn = [...before.messages, { role: 'assistant' as const, content: 'From the Web' }]
+  const saved = { ...before.conversation!, messages: turn }
+  expect(savedConversationPatch(ctx.controller, before, before, saved)).toMatchObject({ messages: turn })
 })

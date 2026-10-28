@@ -2,17 +2,19 @@ import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { chosenEndpoint, selectLocalModel } from '../chat/model-selection.js'
 import { sameEndpoint } from '../../../terminal-service/index.js'
+import { markSynced } from '../chat/live-conversation.js'
 export async function persistConversation(ctx: Pick<ActionContext, 'get' | 'controller'>): Promise<void> {
   const s = ctx.get()
-  if (s.conversation && s.messages.length)
-    await ctx.controller.history.save({
-      ...s.conversation,
-      // This server is saved as no address, as the Web saves it: a port change leaves it here.
-      endpoint: chosenEndpoint(s) ?? '',
-      model: s.model,
-      messages: s.messages,
-      interrupted: s.generating,
-    })
+  if (!s.conversation || !s.messages.length) return
+  await ctx.controller.history.save({
+    ...s.conversation,
+    // This server is saved as no address, as the Web saves it: a port change leaves it here.
+    endpoint: chosenEndpoint(s) ?? '',
+    model: s.model,
+    messages: s.messages,
+    interrupted: s.generating,
+  })
+  markSynced(ctx.controller, { ...s.conversation, messages: s.messages })
 }
 export async function dataAction(id: string, ctx: ActionContext): Promise<boolean> {
   const { get, update, controller: c } = ctx,
@@ -54,6 +56,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     if (!chat) throw new Error('This conversation is no longer available.')
     await persistConversation(ctx)
     ctx.cancel()
+    markSynced(c, chat)
     const here = s.workspace?.api.endpoint ?? (await c.localEndpoint())
     const follows = !chat.endpoint || sameEndpoint(chat.endpoint, here)
     patch({
@@ -165,6 +168,7 @@ export async function saveDataEdit(ctx: ActionContext): Promise<boolean> {
     if (!title) throw new Error('Give this conversation a title.')
     const chat = { ...s.conversation, title, messages: s.messages }
     await c.history.save(chat)
+    markSynced(c, chat)
     update((v) => ({
       ...v,
       conversation: chat,
