@@ -33,9 +33,9 @@ export function useWorkspaceShortcuts(options: {
       ) {
         event.preventDefault()
         window.dispatchEvent(new Event('atomic:new-chat'))
-      } else if (event.altKey && ['1', '2', '3', '4'].includes(event.key)) {
+      } else if (event.altKey && WORKSPACE_NAVIGATION[Number(event.key) - 1]) {
         event.preventDefault()
-        navigation.navigate(WORKSPACE_NAVIGATION[Number(event.key) - 1].id)
+        navigation.navigate(WORKSPACE_NAVIGATION[Number(event.key) - 1]!.id)
       } else if (event.key === 'Escape') {
         // Escape inside a field is the field's (it clears or leaves it), not the page's.
         if (

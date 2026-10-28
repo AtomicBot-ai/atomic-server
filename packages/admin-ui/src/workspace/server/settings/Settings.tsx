@@ -1,5 +1,10 @@
 // Lifted from Atomic-Chat/web-app/src/routes/settings/general.tsx, interface.tsx and shortcuts.tsx @ 5043013; adapted: supported server settings.
-import { SETTINGS_SECTIONS, SETTINGS_WORKSPACE_SECTIONS, SERVER_SETTINGS_GROUPS } from '@contract'
+import {
+  SETTINGS_SECTIONS,
+  SETTINGS_WORKSPACE_SECTIONS,
+  SERVER_SETTINGS_GROUPS,
+  WORKSPACE_NAVIGATION,
+} from '@contract'
 import type { Workspace } from '../../useWorkspace'
 import { Action, JsonResult, Panel } from '../../Controls'
 import { RuntimeSettings } from './RuntimeSettings'
@@ -42,10 +47,8 @@ export function Settings({
         <section className="settings-card">
           <dl className="settings-shortcuts">
             {[
-              ['Server', 'Alt+1'],
-              ['Models', 'Alt+2'],
-              ['Settings', 'Alt+3'],
-              ['Playground', 'Alt+4'],
+              // The rail's order is the keys' order (`useWorkspaceShortcuts`).
+              ...WORKSPACE_NAVIGATION.map((item, index) => [item.label, `Alt+${index + 1}`]),
               ['Move focus', 'Tab / Shift+Tab'],
               ['Activate', 'Enter'],
               ['Close dialog', 'Escape'],
