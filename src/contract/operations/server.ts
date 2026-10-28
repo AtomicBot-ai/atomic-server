@@ -125,7 +125,7 @@ export const SERVER_OPERATIONS: readonly WorkspaceOperation[] = [
     'remote.status',
     'Remote access',
     'read',
-    'Read the Cloudflare tunnel state, public URL and available start/stop actions.'
+    'Read the Cloudflare tunnel state, public URL and available start/stop actions. While cloudflared is missing (error cloudflared_unavailable), `cloudflared` holds the commands that install it on the server machine and the restart that picks it up.'
   ),
   operation(
     'remote.addresses',

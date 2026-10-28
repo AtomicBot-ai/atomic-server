@@ -12,6 +12,8 @@ arch=('x86_64' 'aarch64')
 url='https://github.com/AtomicBot-ai/eye-cli'
 license=('Apache-2.0')
 depends=('glibc')
+# The server finds it on PATH for remote access; without it, the terminal UI and the web say how to install it.
+optdepends=('cloudflared: public remote access through a Cloudflare tunnel')
 provides=('atc')
 conflicts=('atc')
 # A Bun-compiled binary carries its program after the executable; stripping it cuts the program off.

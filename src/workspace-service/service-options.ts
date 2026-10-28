@@ -1,7 +1,7 @@
 import type { CoreLink } from '../core-link/index.js'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
 import type { ErrorSink } from '../telemetry/index.js'
-import type { WorkspaceAtc } from '../contract/index.js'
+import type { RemoteAccessSetup, WorkspaceAtc } from '../contract/index.js'
 export interface WorkspaceServiceOptions {
   link: CoreLink
   paths: AtcPaths
@@ -18,4 +18,6 @@ export interface WorkspaceServiceOptions {
   probePort?: (host: string, port: number) => Promise<'free' | 'busy'>
   /** What the server knows about atc releases (the daemon's `ReleaseWatch`); absent off a server. */
   atc?: () => WorkspaceAtc
+  /** How to install `cloudflared` here; added to the remote access status while the core has none to run. */
+  remoteSetup?: RemoteAccessSetup
 }

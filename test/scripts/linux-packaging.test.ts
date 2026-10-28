@@ -93,6 +93,12 @@ describe('renderPkgbuild', () => {
     expect(text).toContain(`sha256sums_aarch64=('${hash('5')}')`)
   })
 
+  it('offers cloudflared from extra for remote access, without requiring it', () => {
+    const text = renderPkgbuild(template, { version: '0.3.0', sums, sourceBase: 'https://dl/v0.3.0' })
+    expect(text).toContain("optdepends=('cloudflared: public remote access through a Cloudflare tunnel')")
+    expect(text).toContain("depends=('glibc')\n")
+  })
+
   it('writes LF line ends from a CRLF template', () => {
     const crlf = template.replace(/\r?\n/g, '\r\n')
     const text = renderPkgbuild(crlf, { version: '0.3.0', sums, sourceBase: 'x' })
