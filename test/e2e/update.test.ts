@@ -3,7 +3,8 @@
  * stand-in on loopback (`ATC_GITHUB_API`) that serves the same binary as the release, and restarts the
  * server it had started. A second run with a tampered SHA256SUMS must leave the binary alone.
  */
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
@@ -25,6 +26,14 @@ const asset = assetName(ATC_VERSION, target)
 let sums = ''
 let server: Server | undefined
 let api = ''
+/** Every atc this file started and has not seen exit: a hung one is killed, never left holding atc.exe. */
+const children = new Set<ChildProcess>()
+/**
+ * Longer than any step takes, shorter than the test's 120 s: the whole first case took 14 s on
+ * windows-2022 (run 40568607499), so a run still going after this long has hung, and killing it leaves
+ * the failure with what atc printed instead of a timeout and an `EPERM: unlink atc.exe` in afterAll.
+ */
+const RUN_TIMEOUT_MS = 90_000
 
 beforeAll(async () => {
   if (!enabled) return
@@ -57,10 +66,19 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  for (const child of children) kill(child)
   if (enabled) await run(['stop', '--force', '--kill', '--data-folder', dataFolder])
   if (server) await new Promise<void>((resolve) => server!.close(() => resolve()))
-  rmSync(root, { recursive: true, force: true })
+  // Windows lets go of a killed process's executable a moment after the kill.
+  rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
 })
+
+/** The process and, on Windows, everything it spawned: a server it started would hold the binary too. */
+function kill(child: ChildProcess): void {
+  if (child.exitCode !== null || child.pid === undefined) return
+  if (process.platform === 'win32') spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'])
+  else child.kill('SIGKILL')
+}
 
 /** What a run printed, for a failed assertion: the exit code alone does not say why. */
 const said = (r: { code: number | null; out: string; err: string }) =>
@@ -70,11 +88,20 @@ const said = (r: { code: number | null; out: string; err: string }) =>
 function run(args: string[]): Promise<{ code: number | null; out: string; err: string }> {
   return new Promise((resolve) => {
     const child = spawn(installed, args, { env: { ...process.env, NO_COLOR: '1', ATC_GITHUB_API: api } })
+    children.add(child)
     let out = ''
     let err = ''
     child.stdout.on('data', (c: Buffer) => (out += c.toString()))
     child.stderr.on('data', (c: Buffer) => (err += c.toString()))
-    child.on('close', (code) => resolve({ code, out, err }))
+    const hung = setTimeout(() => {
+      err += `\natc ${args.join(' ')} did not exit within ${RUN_TIMEOUT_MS / 1000} s; killed`
+      kill(child)
+    }, RUN_TIMEOUT_MS)
+    child.on('close', (code) => {
+      clearTimeout(hung)
+      children.delete(child)
+      resolve({ code, out, err })
+    })
   })
 }
 
