@@ -64,6 +64,7 @@
   top: calc(100% + 8px);
   right: 0;
   width: 240px;
+  max-width: calc(100vw - 32px);
   max-height: min(65dvh, 530px);
   overflow-y: auto;
   background: #242726;
@@ -71,6 +72,10 @@
   border: 1px solid #4c504f;
   border-radius: 12px;
   box-shadow: 0 16px 50px #0009;
+}
+.hub-menu[data-align='start'] {
+  right: auto;
+  left: 0;
 }
 .hub-menu fieldset {
   border: 0;
@@ -179,10 +184,6 @@
   }
   .hub-search {
     flex-basis: calc(100% - 150px);
-  }
-  .hub-menu {
-    right: auto;
-    left: 0;
   }
 }
 .hub-media-list h2 {

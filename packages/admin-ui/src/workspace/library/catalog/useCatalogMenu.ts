@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 
+/** `.hub-menu`'s width and the room it keeps from the window's edge, in CSS pixels. */
+const MENU_WIDTH = 240,
+  EDGE = 16
+
+/**
+ * Which side of its button a menu opens toward: under the button's right edge (`end`) while that keeps
+ * it in the window, else under its left edge. A wrapped toolbar puts a button at either edge.
+ */
+export function menuAlign(anchor: { left: number; right: number }, viewport: number): 'start' | 'end' {
+  if (anchor.right - MENU_WIDTH >= EDGE) return 'end'
+  return anchor.left + MENU_WIDTH <= viewport - EDGE ? 'start' : 'end'
+}
+
 /** Native filter inputs with desktop popover keyboard navigation and focus return. */
 export function useCatalogMenu() {
   const [menu, setMenu] = useState('')
@@ -11,6 +24,8 @@ export function useCatalogMenu() {
   useEffect(() => {
     if (!menu) return
     const panel = ref.current?.querySelector<HTMLElement>('.hub-menu')
+    const anchor = panel?.parentElement
+    if (panel && anchor) panel.dataset.align = menuAlign(anchor.getBoundingClientRect(), window.innerWidth)
     const first =
       panel?.querySelector<HTMLElement>('input:checked') ?? panel?.querySelector<HTMLElement>('input, button')
     first?.focus()
