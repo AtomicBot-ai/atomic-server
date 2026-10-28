@@ -136,6 +136,7 @@ it('keeps the current settings page and draft when a first model finishes in the
     api: vi.fn(async () => {}),
     localEndpoint: async () => 'http://127.0.0.1:1337/v1',
     save: vi.fn(),
+    unset: vi.fn(),
   })
   await setupAction('setup-finish', t.ctx)
   expect(t.ctx.get()).toMatchObject({
@@ -145,5 +146,8 @@ it('keeps the current settings page and draft when a first model finishes in the
     configDraft: { 'api.port': '3002' },
     model: 'ready-model',
     setup: null,
+    endpointFollowsServer: true,
   })
+  expect(t.ctx.controller.unset).toHaveBeenCalledWith('tui.endpoint')
+  expect(t.ctx.controller.save).not.toHaveBeenCalledWith('tui.endpoint', expect.anything())
 })

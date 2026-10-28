@@ -11,6 +11,7 @@ import { useRuntimeData, useWaitingGame } from './runtime/runtime-effects.js'
 import { persistConversation } from './server/data-actions.js'
 import { startup } from './startup.js'
 import { isPicker } from './chat/picker.js'
+import { chosenEndpoint } from './chat/model-selection.js'
 import { useWorkspaceData } from './runtime/data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
@@ -187,7 +188,7 @@ function WorkspaceContent(
     })
     void c
       .chat(
-        s.endpoint,
+        chosenEndpoint(s),
         s.model,
         messages,
         (token) => {

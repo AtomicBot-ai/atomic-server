@@ -11,6 +11,7 @@ it.each([
 ])('separates first-run completion from later downloads: %j', async (flags, page, complete) => {
   const c = {
     config: async () => ({ values: defaultConfig() }),
+    localEndpoint: async () => 'http://127.0.0.1:1337/v1',
     history: { list: async () => [] },
     engineSelection: { read: async () => '' },
     setup: {
@@ -41,6 +42,7 @@ it.each([
 it('honors a legacy manual choice whose verification flag is false', async () => {
   const c = {
     config: async () => ({ values: defaultConfig() }),
+    localEndpoint: async () => 'http://127.0.0.1:1337/v1',
     history: { list: async () => [] },
     engineSelection: { read: async () => '' },
     setup: { read: async () => null },
@@ -63,6 +65,23 @@ it.each([63163, 0])('defaults to this workspace endpoint when the API port is %s
   expect(localEndpoint).toHaveBeenCalledOnce()
 })
 
+it('follows this server when the config file only repeats the default endpoint', async () => {
+  // Any config edit (here the API port another client set) writes the default endpoint into the file.
+  const config = resolveConfig({ env: {}, flags: { 'api.port': 62732 } })
+  config.sources['tui.endpoint'] = 'file'
+  const c = {
+    config: async () => config,
+    localEndpoint: async () => 'http://127.0.0.1:62732/v1',
+    history: { list: async () => [] },
+    engineSelection: { read: async () => '' },
+    setup: { read: async () => null },
+  } as unknown as WorkspaceController
+  expect(await startup(c)).toMatchObject({
+    endpoint: 'http://127.0.0.1:62732/v1',
+    endpointFollowsServer: true,
+  })
+})
+
 it.each(['file', 'env', 'flag'] as const)('preserves an explicit %s endpoint', async (source) => {
   const endpoint = 'https://remote.example/v1'
   const config = resolveConfig({ env: {}, flags: { 'tui.endpoint': endpoint, 'api.port': 63163 } })
@@ -75,6 +94,6 @@ it.each(['file', 'env', 'flag'] as const)('preserves an explicit %s endpoint', a
     engineSelection: { read: async () => '' },
     setup: { read: async () => null },
   } as unknown as WorkspaceController
-  expect((await startup(c)).endpoint).toBe(endpoint)
+  expect(await startup(c)).toMatchObject({ endpoint, endpointFollowsServer: false })
   expect(localEndpoint).not.toHaveBeenCalled()
 })

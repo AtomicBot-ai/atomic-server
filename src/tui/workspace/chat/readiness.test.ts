@@ -65,6 +65,7 @@ it('keeps a pending selected model in place and preserves the draft until downlo
 it('does not apply local server readiness to a separately connected endpoint', () => {
   const s = ready('openai')
   s.endpoint = 'https://provider.example/v1'
+  s.endpointFollowsServer = false
   s.workspace.services = []
   s.workspace.api.running = false
   expect(chatReadiness(s)).toBeNull()
@@ -143,3 +144,14 @@ it.each(['http://127.0.0.1:1338/v1', 'https://provider.example/v1'])(
     })
   }
 )
+
+it('judges a Playground that follows this server by the server, even before its address catches up', () => {
+  // The terminal resolved 1337 from its own config; the server already reports another port.
+  const s = {
+    ...ready('llamacpp-upstream'),
+    endpoint: 'http://127.0.0.1:62732/v1',
+    endpointFollowsServer: true,
+  }
+  s.workspace.api.running = false
+  expect(chatReadiness(s)).toMatchObject({ ready: false, message: 'Start the server to send a message.' })
+})

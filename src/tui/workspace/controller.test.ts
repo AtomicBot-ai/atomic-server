@@ -108,3 +108,42 @@ it('turns a managed engine’s context overflow in the chat into the limit, the 
     folder.cleanup()
   }
 })
+
+it('sends a Playground that follows this server through the server, whatever port its own config names', async () => {
+  const folder = tmpDataFolder(),
+    link = fakeCoreLink(),
+    // The terminal's config already says 62732; the API still answers where the snapshot says.
+    config = resolveConfig({ env: {}, flags: { 'api.port': 62732 } })
+  const request = vi.fn<typeof fetch>()
+  const c = new WorkspaceController(
+    {
+      request,
+      apiKey: '',
+      chatKey: '',
+      base: {
+        paths: folder.paths,
+        attach: async () => link,
+        loadConfig: async () => config,
+        runDoctor: async () => [],
+        pendingHostSteps: async () => [],
+        loginUrl: async () => '',
+        openUrl: async () => undefined,
+        now: () => new Date(),
+      },
+    },
+    () => undefined,
+    () => undefined,
+    () => undefined
+  )
+  const read = vi.spyOn(c.runtime, 'read').mockRejectedValue(new Error('through the server'))
+  try {
+    await expect(c.chat(null, 'qwen', [{ role: 'user', content: 'hi' }], () => {})).rejects.toThrow(
+      'through the server'
+    )
+    expect(read).toHaveBeenCalledWith('chat.start', expect.anything())
+    expect(request).not.toHaveBeenCalled()
+  } finally {
+    c.dispose()
+    folder.cleanup()
+  }
+})

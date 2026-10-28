@@ -19,15 +19,14 @@ export function chatReadiness(s: WorkspaceState) {
       acquire: null,
     }
   const local = s.workspace?.api.endpoint
-  const remote = Boolean(local && s.endpoint && !sameEndpoint(s.endpoint, local))
+  const remote = !s.endpointFollowsServer && Boolean(local && s.endpoint && !sameEndpoint(s.endpoint, local))
   const readiness = inferenceReadiness(s.workspace, { model: s.model, kind: 'chat', requireApi: true })
   if (!s.model.trim())
     return !remote && !readiness.ready
       ? readiness
       : { ready: false, waiting: false, message: 'Choose a model to continue.', acquire: 'catalog' as const }
-  // A model this server is still downloading is not sent anywhere: the terminal's endpoint can differ
-  // from the API address in the snapshot (a port set only in the server's environment, or changed
-  // after the terminal opened) and still be this server.
+  // A model this server is still downloading is not sent anywhere: an endpoint typed in by hand can
+  // name this server by another address (`localhost`, a LAN address) and still be it.
   if (remote && s.workspace && setupModelPending(s.workspace, s.model)) return readiness
   return remote ? null : readiness
 }

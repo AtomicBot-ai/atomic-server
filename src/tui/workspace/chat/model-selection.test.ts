@@ -26,7 +26,8 @@ function fixture() {
   const tasks = [deferred(), deferred(), deferred()]
   let index = 0
   const loadModel = vi.fn(() => tasks[index++]!.promise),
-    save = vi.fn(async () => {})
+    save = vi.fn(async () => {}),
+    unset = vi.fn(async () => {})
   const ctx: ActionContext = {
     get: () => state,
     update: (fn) => {
@@ -38,11 +39,12 @@ function fixture() {
     controller: {
       loadModel,
       save,
+      unset,
       localEndpoint: async () => 'http://127.0.0.1:1337/v1',
       runtime: { execute: vi.fn(async () => ({ vision: true })) },
     } as unknown as WorkspaceController,
   }
-  return { ctx, tasks, loadModel, save }
+  return { ctx, tasks, loadModel, save, unset }
 }
 const rowText = (frame: ReturnType<typeof workspaceFrame>, y: number) =>
   frame.cells[y]!.map((cell) => cell.char).join('')
@@ -109,8 +111,24 @@ it('keeps the latest selection when earlier loads succeed or fail later', async 
   t.tasks[2]!.resolve()
   await another
   expect(t.ctx.get()).toMatchObject({ model: 'remote', modelLoad: null, loadError: null, busy: false })
-  expect(t.save).toHaveBeenLastCalledWith('tui.endpoint', 'http://127.0.0.1:1337/v1')
+  // This server is saved as no endpoint at all, so a later port change cannot leave it behind.
+  expect(t.unset).toHaveBeenLastCalledWith('tui.endpoint')
+  expect(t.save).not.toHaveBeenCalledWith('tui.endpoint', expect.anything())
   expect(t.save).not.toHaveBeenCalledWith('tui.model', 'first')
+})
+
+it('saves a local model as this server, whatever address it had, and keeps a remote endpoint literal', async () => {
+  const t = fixture()
+  t.ctx.update((s) => ({ ...s, endpoint: 'https://openrouter.ai/api/v1', endpointFollowsServer: false }))
+  const local = selectLocalModel('installed:0', t.ctx)
+  await vi.waitFor(() => expect(t.loadModel).toHaveBeenCalledOnce())
+  t.tasks[0]!.resolve()
+  await local
+  expect(t.ctx.get()).toMatchObject({ endpoint: 'http://127.0.0.1:1337/v1', endpointFollowsServer: true })
+  expect(t.unset).toHaveBeenLastCalledWith('tui.endpoint')
+  t.ctx.update((s) => ({ ...s, endpoint: 'https://openrouter.ai/api/v1', endpointFollowsServer: false }))
+  await selectEndpointModel('openai/gpt-5', t.ctx)
+  expect(t.save).toHaveBeenLastCalledWith('tui.endpoint', 'https://openrouter.ai/api/v1')
 })
 
 it('keeps the failed choice visible with a working Retry action in the composer', async () => {

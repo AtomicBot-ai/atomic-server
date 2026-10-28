@@ -4,7 +4,12 @@ import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { isPicker, pickerRows } from './picker.js'
 import { loadAction } from './chat-load.js'
-import { beginModelSelection, persistModelSelection, selectLocalModel } from './model-selection.js'
+import {
+  beginModelSelection,
+  chosenEndpoint,
+  persistModelSelection,
+  selectLocalModel,
+} from './model-selection.js'
 import type { WorkspaceController } from '../controller.js'
 const reads = new WeakMap<WorkspaceController, number>()
 export async function pickerAction(id: string, ctx: ActionContext): Promise<boolean> {
@@ -37,7 +42,10 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
         const engines = await c.engineSelection.list(await c.setup.catalogs())
         if (fresh()) patch({ engines })
       } else {
-        const [local, remote] = await Promise.allSettled([c.installed(), c.models(s.endpoint)])
+        const [local, remote] = await Promise.allSettled([
+          c.installed(),
+          c.models(s.endpoint, s.endpointFollowsServer),
+        ])
         if (fresh())
           patch({
             installed: local.status === 'fulfilled' ? local.value : s.installed,
@@ -105,7 +113,7 @@ export async function pickerAction(id: string, ctx: ActionContext): Promise<bool
             ['llamacpp', 'llamacpp-upstream'].includes(engine.provider)))
       patch({ engine: engine.id, ...(local && !compatible ? { model: '' } : {}) })
       if (local && !compatible) {
-        await persistModelSelection(ctx, '', get().endpoint, fresh)
+        await persistModelSelection(ctx, '', chosenEndpoint(get()), fresh)
         if (!fresh()) return true
       }
       if (compatible) {

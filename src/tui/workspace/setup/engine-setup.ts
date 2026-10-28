@@ -260,7 +260,7 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
       await c.setup.clearPath()
       await c.engineSelection.remember(job.engine)
       const endpoint = await c.localEndpoint()
-      await c.save('tui.endpoint', endpoint)
+      await c.unset('tui.endpoint')
       await c.save('tui.model', job.model)
       update((s) => ({
         ...s,
@@ -270,6 +270,7 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
         model: job.model,
         engine: job.engine,
         endpoint,
+        endpointFollowsServer: true,
         ...(view.destination ? {} : { page: 'server', serverView: 'connect', focus: 'copy-endpoint' }),
         message: view.destination ? '' : `${job.model} is running on ${job.engine}.`,
       }))

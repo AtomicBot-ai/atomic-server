@@ -1,10 +1,9 @@
 import { defineCommand, AtcError } from '../../cli/index.js'
 import type { CommandRun } from '../../cli/index.js'
 import { ClientKeys } from '../../terminal-data/index.js'
-import { startApi, streamChat, listChatModels } from '../../terminal-service/index.js'
+import { startApi, streamChat, listChatModels, followsLocalServer } from '../../terminal-service/index.js'
 import { workspace } from '../server/control.js'
 import { contextExceeded } from '../../workspace-service/index.js'
-import { defaultConfig } from '../../config/index.js'
 export const apiStart: CommandRun = async (inv, ctx) => {
   const config = structuredClone((await ctx.config()).values)
   if (typeof inv.values['host'] === 'string') config.api.host = inv.values['host']
@@ -74,11 +73,7 @@ export const chatCommand = defineCommand({
     const local = await workspace(ctx, false)
       .then((service) => service.snapshot())
       .catch(() => null)
-    // Config edits serialize defaults too; a saved default is still the local-server shortcut.
-    const useLocal =
-      inv.values['endpoint'] === undefined &&
-      config.sources['tui.endpoint'] !== 'env' &&
-      config.values.tui.endpoint === defaultConfig().tui.endpoint
+    const useLocal = inv.values['endpoint'] === undefined && followsLocalServer(config)
     const endpoint = String(
       inv.values['endpoint'] ?? (useLocal && local ? local.api.endpoint : config.values.tui.endpoint)
     )

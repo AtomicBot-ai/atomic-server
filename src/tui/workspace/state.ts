@@ -172,6 +172,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   edit: string
   editValue: string
   endpoint: string
+  /** The Playground talks to this server: `endpoint` follows the server's address as snapshots report it. */
+  endpointFollowsServer: boolean
   model: string
   models: string[]
   images: ChatImage[]
@@ -264,6 +266,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     edit: '',
     editValue: '',
     endpoint: 'http://127.0.0.1:1337/v1',
+    endpointFollowsServer: true,
     model: '',
     models: [],
     messages: [],

@@ -141,7 +141,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     await controller.save(isEndpoint ? 'tui.endpoint' : edit.slice(8), value)
     patch({
       overlay: null,
-      ...(isEndpoint ? { endpoint: value, model: '', models: [] } : {}),
+      ...(isEndpoint ? { endpoint: value, endpointFollowsServer: false, model: '', models: [] } : {}),
       focus: isEndpoint && s.page === 'chat' ? 'composer' : PAGE_FOCUS[s.page],
       message: isEndpoint
         ? 'Connection saved. Choose a model to begin.'
@@ -159,7 +159,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     try {
       const installed = await controller.installed()
       patch({ installed })
-      const models = await controller.models(s.endpoint)
+      const models = await controller.models(s.endpoint, s.endpointFollowsServer)
       if (get().endpoint === s.endpoint)
         patch({
           models,

@@ -22,7 +22,7 @@ import type { TuiDeps } from '../controller.js'
 import { TuiController, oneLine } from '../controller.js'
 import type { TuiCommand } from '../controller.js'
 import { createLogger } from '../../output/index.js'
-import { setConfigValue } from '../../config/index.js'
+import { setConfigValue, unsetConfigValue } from '../../config/index.js'
 import type { CoreLink } from '../../core-link/index.js'
 import {
   listChatModels,
@@ -97,6 +97,9 @@ export class WorkspaceController {
   }
   async save(key: string, raw: string): Promise<void> {
     await setConfigValue(this.deps.base.paths.configFile, await this.deps.base.loadConfig(), key, raw)
+  }
+  async unset(key: string): Promise<void> {
+    await unsetConfigValue(this.deps.base.paths.configFile, await this.deps.base.loadConfig(), key)
   }
   config() {
     return this.deps.base.loadConfig()
@@ -188,8 +191,9 @@ export class WorkspaceController {
       return this.localKey()
     return this.deps.chatKey
   }
+  /** `endpoint` null is this server, wherever it listens: the turn goes through the server, not HTTP. */
   async chat(
-    endpoint: string,
+    endpoint: string | null,
     model: string,
     messages: ChatMessage[],
     onText: (text: string) => void,
@@ -202,7 +206,7 @@ export class WorkspaceController {
     const turn = new AbortController()
     this.turn = turn
     try {
-      if (sameEndpoint(endpoint, await this.localEndpoint()))
+      if (endpoint === null || sameEndpoint(endpoint, await this.localEndpoint()))
         return await sharedChat(
           this.runtime,
           model,
