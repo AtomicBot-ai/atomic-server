@@ -1,0 +1,30 @@
+[
+  {
+    "label": "Load an installed model…",
+    "value": ""
+  },
+  {
+    "label": "llamacpp-upstream · LFM2-1.2B-Q4_K_M",
+    "value": "llamacpp-upstream|LiquidAI/LFM2-1.2B-Q4_K_M"
+  },
+  {
+    "label": "llamacpp · LFM2-1.2B-Q4_K_M",
+    "value": "llamacpp|LiquidAI/LFM2-1.2B-Q4_K_M"
+  },
+  {
+    "label": "atomic-prism · LFM2-1.2B-Q4_K_M",
+    "value": "atomic-prism|LiquidAI/LFM2-1.2B-Q4_K_M"
+  },
+  {
+    "label": "llamacpp-upstream · LFM2.5-1.2B-Instruct-Q4_K_M",
+    "value": "llamacpp-upstream|LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M"
+  },
+  {
+    "label": "llamacpp · LFM2.5-1.2B-Instruct-Q4_K_M",
+    "value": "llamacpp|LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M"
+  },
+  {
+    "label": "atomic-prism · LFM2.5-1.2B-Instruct-Q4_K_M",
+    "value": "atomic-prism|LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M"
+  }
+]

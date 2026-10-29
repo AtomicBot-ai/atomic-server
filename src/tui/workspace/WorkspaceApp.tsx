@@ -204,7 +204,8 @@ function WorkspaceContent(
         },
         chatFeatureRequest(s),
         s.conversation?.id,
-        s.documents
+        s.documents,
+        s.conversation?.revision
       )
       .then((response) => {
         if (epoch.current === id)
@@ -216,7 +217,12 @@ function WorkspaceContent(
               : v.messages,
             conversation:
               response && v.conversation
-                ? { ...v.conversation, id: response.conversation_id, request_settings: chatFeatureRequest(s) }
+                ? {
+                    ...v.conversation,
+                    id: response.conversation_id,
+                    ...(response.revision !== undefined ? { revision: response.revision } : {}),
+                    request_settings: chatFeatureRequest(s),
+                  }
                 : v.conversation,
             ...(response?.message.tool_calls?.length
               ? { overlay: 'chat-tools', focus: 'chat-tools-approve' }
@@ -264,7 +270,7 @@ function WorkspaceContent(
       if (result.quit || result.action === 'quit') {
         const current = controller.current
         if (current)
-          void persistConversation({ get: () => latest.current, controller: current }).then(
+          void persistConversation({ get: () => latest.current, controller: current, update }).then(
             () => exit(),
             (e) => patch({ message: oneLine(e) })
           )

@@ -33,7 +33,7 @@ export async function updateWorkspaceConfig(
     const field = fieldFor(key)
     if (!field || key === 'api.cors') throw new AtcError('ATC_USAGE', `Unsupported setting: ${key}.`)
     const problem = checkValue(field, value)
-    if (problem) throw new AtcError('ATC_CONFIG_INVALID', problem)
+    if (problem) throw new AtcError('ATC_USAGE', problem)
   }
   const resolved = resolveConfig({ fileText: await readTextFile(paths.configFile), env: {} }),
     next = resolved.file?.config ?? structuredClone(config)

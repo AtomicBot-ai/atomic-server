@@ -1,0 +1,34 @@
+[
+  {
+    "provider": "llamacpp-upstream",
+    "revision": 11,
+    "threads": 2,
+    "extra_args": "-ngl 0 -c 2048",
+    "cache_type_k": "f16",
+    "flash_attn": "auto"
+  },
+  {
+    "provider": "atomic-prism",
+    "revision": 11,
+    "threads": 4,
+    "extra_args": "-ngl 0 -c 1024",
+    "cache_type_k": "f16",
+    "flash_attn": "auto"
+  },
+  {
+    "provider": "llamacpp",
+    "revision": 11,
+    "threads": -1,
+    "extra_args": "",
+    "cache_type_k": "turbo3",
+    "flash_attn": "auto"
+  },
+  {
+    "provider": "mlx",
+    "revision": 11
+  },
+  {
+    "provider": "litert-lm",
+    "revision": 11
+  }
+]

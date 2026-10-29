@@ -36,8 +36,11 @@ export async function chatOperation(
       const chat = object(input['chat'])
       if (!Array.isArray(chat['messages']) || typeof chat['id'] !== 'string')
         throw new AtcError('ATC_USAGE', 'A chat needs id and messages.')
-      await history.save(chat as unknown as Conversation)
-      return { saved: true }
+      await history.save(
+        chat as unknown as Conversation,
+        Number(input['expected_revision'] ?? chat['revision'] ?? 0)
+      )
+      return { saved: true, chat }
     }
     case 'chat.start':
       return chats.start(input)

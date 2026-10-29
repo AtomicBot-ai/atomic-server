@@ -1,3 +1,4 @@
+import { chatBaseline } from './chat-baseline.js'
 import { chatProvider } from '../cloud/chat-readiness.js'
 import { randomUUID } from 'node:crypto'
 import type { WorkspaceChat, WorkspaceInput } from '../../contract/index.js'
@@ -13,6 +14,7 @@ import { mergeChatDelta, readChatStream } from './chat-stream.js'
 interface Job {
   id: string
   conversation_id: string
+  conversation_revision?: number
   state: 'preparing' | 'generating' | 'stopping' | 'complete' | 'stopped' | 'failed'
   message: Record<string, unknown>
   usage?: unknown
@@ -87,6 +89,7 @@ export class ChatJobs {
     if (!status.running) throw new AtcError('ATC_USAGE', 'Start the API on the Server page, then retry.')
     const endpoint = publicEndpoint(object(status), this.options.config).endpoint
     let chat = input['conversation_id'] ? await this.history.load(String(input['conversation_id'])) : null
+    const expectedRevision = chatBaseline(chat, input, request['messages'] as unknown[])
     chat ??= this.history.create(endpoint, model, '')
     const previous = chat.messages as unknown as Record<string, unknown>[]
     chat.messages = (request['messages'] as Record<string, unknown>[]).map((message, index) => {
@@ -109,11 +112,12 @@ export class ChatJobs {
     } = request
     chat.request_settings = parameters
     chat.interrupted = true
-    await this.history.save(chat)
+    await this.history.save(chat, expectedRevision)
     const job: Running = {
       view: {
         id: randomUUID(),
         conversation_id: chat.id,
+        conversation_revision: chat.revision ?? 0,
         state: 'preparing',
         message: { role: 'assistant', content: '' },
         model,
@@ -217,14 +221,17 @@ export class ChatJobs {
         // The stored copy may have been renamed or archived meanwhile: the answer joins it. Deleted
         // meanwhile: it stays deleted.
         const stored = await this.history.load(chat.id).catch(() => undefined)
-        if (stored !== null)
-          await this.history.save({
+        if (stored !== null) {
+          const next = {
             ...(stored ?? chat),
             messages: chat.messages,
             model: chat.model,
             ...(chat.request_settings ? { request_settings: chat.request_settings } : {}),
             interrupted: chat.interrupted,
-          })
+          }
+          await this.history.save(next, stored?.revision ?? 0)
+          view.conversation_revision = next.revision ?? 0
+        }
       } catch {
         view.error = 'The answer could not be saved. Export it before leaving this page.'
         state = 'failed'

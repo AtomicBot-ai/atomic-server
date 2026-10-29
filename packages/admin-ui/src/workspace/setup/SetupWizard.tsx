@@ -41,6 +41,7 @@ export function SetupWizard({
 }) {
   const [step, setStep] = useState<FirstRunStep>(w.snapshot?.setups.length ? 'permissions' : 'model')
   const [waitingDestination, setWaitingDestination] = useState<'endpoint' | 'agents' | null>(null)
+  const [modelChoice, setModelChoice] = useState('')
   const [review, setReview] = useState<RecordValue | null>(null)
   const [engineDialog, setEngineDialog] = useState('')
   const choosing = useRef(false)
@@ -115,6 +116,8 @@ export function SetupWizard({
           {!waitingDestination && step === 'model' && (
             <FirstModel
               workspace={w}
+              initialChoice={modelChoice}
+              onChoice={setModelChoice}
               actionContainer={modelActionContainer}
               select={async (m, installed) => {
                 if (installed) {

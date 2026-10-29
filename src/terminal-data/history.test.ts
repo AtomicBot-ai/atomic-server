@@ -134,3 +134,39 @@ it('lists again without reading a conversation that has not changed since the la
     await rm(folder, { recursive: true, force: true })
   }
 })
+
+it('allows only one of two clients saving the same loaded revision to replace a chat', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-history-cas-'))
+  try {
+    const a = new ChatHistory(folder),
+      b = new ChatHistory(folder),
+      chat = a.create('', 'local', '')
+    await a.save(chat)
+    const first = (await a.load(chat.id))!,
+      second = (await b.load(chat.id))!
+    first.messages.push({ role: 'user', content: 'A' })
+    second.messages.push({ role: 'user', content: 'B' })
+    const results = await Promise.allSettled([a.save(first, first.revision), b.save(second, second.revision)])
+    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
+    expect((await a.load(chat.id))?.messages).toHaveLength(1)
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})
+
+it('keeps the revision stable for an unchanged save and refreshes an identical older copy', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'atc-history-noop-'))
+  try {
+    const history = new ChatHistory(folder),
+      chat = history.create('', 'model', '')
+    await history.save(chat)
+    const revision = chat.revision
+    await history.save(chat, revision)
+    expect(chat.revision).toBe(revision)
+    const older = { ...chat, revision: 0 }
+    await history.save(older, 0)
+    expect(older.revision).toBe(revision)
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})

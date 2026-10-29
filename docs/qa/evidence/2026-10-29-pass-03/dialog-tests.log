@@ -1,0 +1,13 @@
+
+> @atomicbot-ai/atc-admin-ui@0.1.0 test
+> vitest run src/workspace/chat/ChatDialogs.test.tsx
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/packages/admin-ui
+
+ ✓ src/workspace/chat/ChatDialogs.test.tsx (5 tests) 315ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  15:01:39
+   Duration  1.00s (transform 136ms, setup 149ms, collect 156ms, tests 315ms, environment 252ms, prepare 29ms)

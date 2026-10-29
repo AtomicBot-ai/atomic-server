@@ -1,0 +1,43 @@
+{
+  "queries": [
+    {
+      "query": "content",
+      "title_or_message_text_matches": 0,
+      "browser_message_search_results": 203
+    },
+    {
+      "query": "role",
+      "title_or_message_text_matches": 0,
+      "browser_message_search_results": 203
+    },
+    {
+      "query": "QA03 JSONL user",
+      "title_or_message_text_matches": 2,
+      "browser_message_search_results": 2
+    }
+  ],
+  "saved_chat_count": 203,
+  "minimal_conversation": {
+    "id": "cbe168cc-e366-49e8-95d9-f1170f9719b6",
+    "title": "QA03 minimal search",
+    "endpoint": "",
+    "model": "",
+    "workingDirectory": "",
+    "createdAt": 1793275113819,
+    "updatedAt": 1793275113820,
+    "messages": [
+      {
+        "role": "user",
+        "content": "HELLO_879"
+      },
+      {
+        "role": "assistant",
+        "content": "WORLD_321"
+      }
+    ],
+    "interrupted": false,
+    "request_settings": {}
+  },
+  "minimal_query": "content",
+  "minimal_browser_result_titles": ["QA03 minimal search"]
+}

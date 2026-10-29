@@ -1,0 +1,9 @@
+{
+  "stage": "ready",
+  "file": "/private/tmp/atomic-qa-deep-ii5MT9/data/llamacpp/models/LiquidAI/LFM2-1.2B-Q4_K_M/LFM2-1.2B-Q4_K_M.gguf",
+  "bytes": 730893248,
+  "expectedBytes": 730893248,
+  "sha256": "55175400e3f509a9616227afeffd58d87e80b9f628a5d3d54ada884d85221fed",
+  "expectedSha256": "55175400e3f509a9616227afeffd58d87e80b9f628a5d3d54ada884d85221fed",
+  "match": true
+}

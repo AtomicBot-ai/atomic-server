@@ -1,0 +1,23 @@
+
+> @atomicbot-ai/atc@0.2.8 test:e2e:web
+> vitest run --project e2e-web
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |e2e-web| test/e2e-web/admin-api.test.ts (2 tests) 2682ms
+ ✓ |e2e-web| test/e2e-web/qa-regressions.test.ts (4 tests) 2769ms
+ ✓ |e2e-web| test/e2e-web/first-run.test.ts (1 test) 2708ms
+   ✓ shows the waiting screen for an interrupted first model, then opens the server from it  539ms
+ ✓ |e2e-web| test/e2e-web/first-run-layout.test.ts (3 tests) 3239ms
+   ✓ keeps the waiting heading below the download card and in view at 688×955  471ms
+   ✓ keeps the waiting heading below the download card and in view at 1280×900  335ms
+ ✓ |e2e-web| test/e2e-web/models.test.ts (5 tests) 3860ms
+   ✓ lists LiteRT-LM families with their variants inline and opens the engine’s own dialog  494ms
+ ✓ |e2e-web| test/e2e-web/server.test.ts (2 tests) 4288ms
+   ✓ starts the API from the Start button with no model loaded  1353ms
+
+ Test Files  6 passed (6)
+      Tests  17 passed (17)
+   Start at  16:37:33
+   Duration  4.69s (transform 225ms, setup 84ms, collect 1.80s, tests 19.55s, environment 0ms, prepare 238ms)

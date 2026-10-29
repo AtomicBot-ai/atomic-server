@@ -1,0 +1,21 @@
+{
+  "time": "2026-10-29T12:20:23.032Z",
+  "label": "failed-Prism-GPU-switch",
+  "api": {
+    "running": true,
+    "host": "127.0.0.1",
+    "port": 65213,
+    "prefix": "/v1",
+    "requires_api_key": true,
+    "pid": 21654
+  },
+  "sessions": [],
+  "processes": [],
+  "apiModels": {
+    "status": 200,
+    "body": {
+      "data": [],
+      "object": "list"
+    }
+  }
+}

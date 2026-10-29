@@ -5,13 +5,14 @@
  * (a model of the managed store).
  */
 
+import { searchCatalog } from './catalog-search.js'
 import { randomUUID } from 'node:crypto'
 import { basename, isAbsolute, join, resolve } from 'node:path'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { ModelRegistry } from '@atomic-chat/core/models'
 import type { WorkspaceInput } from '../../contract/index.js'
 import { AtcError } from '../../errors/index.js'
-import { installedModels, modelFiles, searchHub } from '../../terminal-setup/index.js'
+import { installedModels, modelFiles } from '../../terminal-setup/index.js'
 import type { WorkspaceCatalog } from './catalog.js'
 import type { CatalogCategory } from './catalog.js'
 import type { ManagedModelSetups } from '../managed/managed-model-setups.js'
@@ -125,7 +126,7 @@ export async function modelOperation(
           String(input['engine']),
           String(input['query'])
         )
-      return searchHub(String(input['query']), d.request)
+      return searchCatalog(d.catalog, String(input['query'] ?? ''), d.request, input['engine'] === 'mlx')
     case 'models.files':
       return modelFiles(String(input['repo']), d.request)
     case 'models.installed': {

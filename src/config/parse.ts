@@ -3,6 +3,7 @@
  * (`config set`, environment variables), and the environment overrides.
  */
 
+import { apiPrefixError } from '../workspace-view/index.js'
 import { AtcError } from '../errors/index.js'
 import { envNameFor, FIELDS, getAt, setAt } from './schema.js'
 import type { AtcConfig, FieldSpec } from './schema.js'
@@ -44,6 +45,7 @@ export function coerceValue(field: FieldSpec, raw: string): unknown {
 
 /** Check a value already typed (from JSON) against the field; returns the problem, if any. */
 export function checkValue(field: FieldSpec, value: unknown): string | undefined {
+  if (field.path === 'api.prefix') return apiPrefixError(value)
   const type = field.type
   if (type === 'string' && typeof value !== 'string') return `${field.path} must be a string`
   if (type === 'number') {

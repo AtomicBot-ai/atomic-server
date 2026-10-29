@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/Settings.tsx @ 5043013; adapted: persistent API settings and named keyring.
+import { apiPrefixError } from '@view'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
@@ -67,9 +68,7 @@ export function ServerConfiguration({
     text(draft.port, '').trim() === '' || !Number.isInteger(port) || port < 0 || port > 65535
       ? 'Enter a whole number from 0 to 65535. Use 0 to choose a free port.'
       : ''
-  const prefixError = text(draft.prefix, '').startsWith('/')
-    ? ''
-    : 'Start the API prefix with /, for example /v1.'
+  const prefixError = apiPrefixError(draft.prefix)
   const valid = !portError && !prefixError
   return (
     <section className="server-settings" aria-label="Server configuration">

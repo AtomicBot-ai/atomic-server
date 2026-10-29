@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
 import { readdir, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -5,6 +6,7 @@ import type { ChatMessage } from '../terminal-service/index.js'
 import { readDocument, mutateDocument } from './store.js'
 import { AtcError } from '../errors/index.js'
 export interface Conversation {
+  revision?: number
   id: string
   title: string
   endpoint: string
@@ -39,14 +41,28 @@ export class ChatHistory {
       interrupted: false,
     }
   }
-  async save(chat: Conversation): Promise<void> {
-    await mutateDocument<Conversation | null>(this.path(chat.id), null, (previous) => ({
-      ...chat,
-      updatedAt:
-        previous && JSON.stringify(previous.messages) === JSON.stringify(chat.messages)
-          ? previous.updatedAt
-          : Date.now(),
-    }))
+  async save(chat: Conversation, expectedRevision?: number): Promise<void> {
+    const saved = await mutateDocument<Conversation | null>(this.path(chat.id), null, (previous) => {
+      if (previous) {
+        const { revision: _oldRevision, updatedAt: _oldTime, ...old } = previous
+        const { revision: _revision, updatedAt: _time, ...next } = chat
+        if (isDeepStrictEqual(old, next)) return previous
+      }
+      if (expectedRevision !== undefined && expectedRevision !== (previous?.revision ?? 0))
+        throw new AtcError(
+          'ATC_USAGE',
+          'This conversation changed in another client. Reopen it before retrying; your draft has been kept.'
+        )
+      return {
+        ...chat,
+        revision: (previous?.revision ?? 0) + 1,
+        updatedAt:
+          previous && JSON.stringify(previous.messages) === JSON.stringify(chat.messages)
+            ? previous.updatedAt
+            : Date.now(),
+      }
+    })
+    Object.assign(chat, { revision: saved!.revision, updatedAt: saved!.updatedAt })
   }
   async load(id: string): Promise<Conversation | null> {
     return readDocument(this.path(id), null)

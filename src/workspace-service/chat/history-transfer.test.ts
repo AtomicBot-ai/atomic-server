@@ -72,11 +72,10 @@ describe('importing conversations', () => {
   it.each([
     ['nothing', []],
     ['not a list', { messages: [] }],
-    ['more than 100', Array.from({ length: 101 }, () => conversation())],
   ])('refuses %s', async (_, value) => {
     await expect(importConversations(history(), value)).rejects.toMatchObject({
       code: 'ATC_USAGE',
-      message: 'Import between 1 and 100 conversations at a time.',
+      message: 'Import at least one conversation.',
     })
   })
 
@@ -113,4 +112,25 @@ describe('importing conversations', () => {
     })
     expect(await store.list()).toEqual([])
   })
+})
+
+it('restores an export containing 101 conversations in one validated batch', async () => {
+  const store = history()
+  const result = await importConversations(
+    store,
+    Array.from({ length: 101 }, (_, i) => conversation({ title: `Chat ${i}` }))
+  )
+  expect(result.imported).toBe(101)
+  expect(await store.list()).toHaveLength(101)
+})
+
+it('validates a bad entry past the old batch boundary before writing any conversation', async () => {
+  const store = history()
+  await expect(
+    importConversations(store, [
+      ...Array.from({ length: 101 }, () => conversation()),
+      conversation({ messages: 'broken' }),
+    ])
+  ).rejects.toThrow('messages array')
+  expect(await store.list()).toEqual([])
 })

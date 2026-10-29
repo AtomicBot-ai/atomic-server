@@ -221,3 +221,14 @@ describe('model ids in paths', () => {
     ).rejects.toThrow('Invalid')
   })
 })
+
+it.each([{ flash_attn: 'qa-invalid-mode' }, { cache_type_k: 'qa-invalid-cache' }, { threads: '4' }])(
+  'rejects an invalid settings patch before calling core: %j',
+  async (values) => {
+    const link = fakeCoreLink()
+    await expect(
+      coreOperation(link, 'settings.update', { provider: 'llamacpp-upstream', values })
+    ).rejects.toThrow()
+    expect(link.calls).toEqual([])
+  }
+)

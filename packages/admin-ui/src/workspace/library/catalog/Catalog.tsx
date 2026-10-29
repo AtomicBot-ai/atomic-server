@@ -114,7 +114,7 @@ export function Catalog({
     void execute(
       'models.search',
       format === 'gguf' || format === 'mlx'
-        ? { query }
+        ? { query, ...(format === 'mlx' ? { engine: 'mlx' } : {}) }
         : {
             engine: FORMAT_ENGINE[format] ?? engineForModels,
             query,

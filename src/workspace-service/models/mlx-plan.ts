@@ -1,3 +1,4 @@
+import { AtcError } from '../../errors/index.js'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { looksLikeHfRepo } from '@atomic-chat/core/models'
@@ -8,7 +9,8 @@ import type { ArtifactPlan } from './artifact-plan.js'
 export async function mlxPlan(
   row: CatalogRow,
   dataFolder: string,
-  request: typeof fetch
+  request: typeof fetch,
+  requireMlxTag = false
 ): Promise<ArtifactPlan> {
   if (row.source['format'] !== 'mlx' || !looksLikeHfRepo(row.id))
     throw new Error('Choose an MLX repository from the catalog.')
@@ -17,7 +19,9 @@ export async function mlxPlan(
     redirect: 'error',
   })
   if (!metadata.ok) throw new Error(`Model metadata returned HTTP ${metadata.status}.`)
-  const info = (await metadata.json()) as { sha?: string }
+  const info = (await metadata.json()) as { sha?: string; tags?: string[] }
+  if (requireMlxTag && !info.tags?.includes('mlx'))
+    throw new AtcError('ATC_USAGE', 'Choose a repository tagged as an MLX checkpoint.')
   if (!info.sha || !/^[a-f0-9]{40,64}$/.test(info.sha))
     throw new Error('The repository has no immutable revision.')
   let url = `https://huggingface.co/api/models/${row.id}/tree/${info.sha}?recursive=true&expand=false&limit=1000`

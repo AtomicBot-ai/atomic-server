@@ -85,3 +85,32 @@ it('applies the edited system prompt once without leaking internal draft fields 
   })
   expect(messages[0]!.content).toBe('Old prompt')
 })
+
+it('sends the loaded revision for a deliberate system edit and returns the final saved revision', async () => {
+  const read = vi.fn(async () => ({
+    id: 'job',
+    state: 'complete',
+    conversation_id: 'chat',
+    conversation_revision: 9,
+    message: { role: 'assistant', content: 'Done' },
+  }))
+  const result = await sharedChat(
+    { read } as unknown as WorkspaceRuntime,
+    'model',
+    [
+      { role: 'system', content: 'Old' },
+      { role: 'user', content: 'Hi' },
+    ],
+    { atomic_system: 'New' },
+    new AbortController().signal,
+    () => {},
+    'chat',
+    [],
+    7
+  )
+  expect(read).toHaveBeenCalledWith(
+    'chat.start',
+    expect.objectContaining({ conversation_id: 'chat', expected_revision: 7 })
+  )
+  expect(result).toMatchObject({ revision: 9 })
+})

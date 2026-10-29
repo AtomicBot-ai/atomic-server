@@ -10,6 +10,7 @@ function parts() {
     save: vi.fn(async () => undefined),
   }
   const chats = {
+    running: vi.fn(() => [] as Array<{ id: string; conversation_id: string; state: 'generating' }>),
     start: vi.fn(async () => ({ id: 'job' })),
     get: vi.fn(async (id: string) => ({ id, state: 'generating' })),
     cancel: vi.fn(async (id: string) => ({ id, state: 'cancelled' })),
@@ -40,11 +41,23 @@ describe('chat operations', () => {
     )
     expect(await chatOperation(p, 'history.save', { chat: { id: 'c1', messages: [] } })).toEqual({
       saved: true,
+      chat: { id: 'c1', messages: [] },
     })
-    expect(history.save).toHaveBeenCalledWith({ id: 'c1', messages: [] })
+    expect(history.save).toHaveBeenCalledWith({ id: 'c1', messages: [] }, 0)
   })
 
   it('leaves any other operation to the next owner', async () => {
     expect(await chatOperation(parts().parts, 'keys.list', {})).toBe(NOT_CORE)
   })
+})
+
+it('refuses replacing messages while a response is active in another client', async () => {
+  const { chats, history, parts: p } = parts()
+  chats.running.mockReturnValue([{ id: 'job', conversation_id: 'c1', state: 'generating' }])
+  await expect(
+    chatOperation(p, 'history.save', {
+      chat: { id: 'c1', messages: [{ role: 'user', content: 'replacement' }] },
+    })
+  ).rejects.toThrow('active request')
+  expect(history.save).not.toHaveBeenCalled()
 })

@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-10-29** — [Keep an exploratory QA ledger](2026-10-29-keep-an-exploratory-qa-ledger.md) — stable defect IDs, session journals and synthetic evidence for repeated exploratory passes.
+
 - **2026-10-24** — [Show engine update results before offering installation](2026-10-24-show-engine-update-results.md) — shared update feedback, explicit install offers, and Save only for changed settings.
 
 - **2026-10-24** — [Separate model selection from load status](2026-10-24-separate-model-selection-from-load-status.md) — qualified local badges and immediate terminal selection with pending/error feedback inside the composer.
@@ -115,3 +117,4 @@ add a new one that says which record it supersedes.
 - **2026-10-29** — [Saved chats reach the other client within one poll, and its unsaved reply wins](2026-10-29-chats-reach-the-other-client.md) — 0.2.7 retest B06: both clients read `history.list` and the open chat again every 2.5 s; `savedConversationChange` compares a title+messages print with what each client last saved or loaded; deletions empty the chat and keep the draft; `ChatHistory.list` caches summaries by file stamp; running requests in the snapshot's `chats`, followed with `chat.progress`.
 - **2026-10-29** — [Show engine installation status in both lists](2026-10-29-engine-list-status.md) — 0.2.7 retest B08: one selector combines engine builds with live installs and managed-engine state for the terminal and web lists.
 - **2026-10-29** — [Report release runs to Telegram](2026-10-29-release-telegram-notifications.md) — best-effort start and final messages, including Linux repository publication and unsigned dry runs.
+- [2026-10-29 — Guard shared edits and preserve model recovery boundaries](2026-10-29-guard-qa-recovery-and-shared-edits.md)

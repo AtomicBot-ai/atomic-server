@@ -1,0 +1,18 @@
+bun test v1.3.14 (0d9b296a)
+
+test/runtime-compat/documents.test.ts:
+(pass) extracts PDF text and portable skills without native rendering or external workers [112.53ms]
+
+test/runtime-compat/ink.test.ts:
+(pass) ink > renders, reads raw keys, follows a resize, and restores the terminal on exit [394.87ms]
+
+test/runtime-compat/node-behaviours.test.ts:
+(pass) runtime behaviours > a detached, unref-ed child does not keep the parent alive and survives it [62.81ms]
+(pass) runtime behaviours > gzip round-trips base64 payloads (the embedded admin assets) [1.24ms]
+(pass) runtime behaviours > streams server-sent events chunk by chunk [81.23ms]
+(pass) runtime behaviours > writes byte ranges at their offsets in one file and writes at 0 after a truncate (the downloader) [9.36ms]
+
+ 6 pass
+ 0 fail
+ 15 expect() calls
+Ran 6 tests across 3 files. [1071.00ms]

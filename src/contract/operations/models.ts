@@ -21,7 +21,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'models.search',
     'Search Hugging Face',
     'read',
-    "Search Hugging Face for model repositories. With a managed engine: its curated models first, then safetensors repositories narrowed by the descriptor's architectures and the largest card; an exact owner/repo is always shown. With foundry-local: conf's curated models, then Microsoft's catalog, each variant for this platform with the core's verdict. With litert-lm: conf's curated models, then Hugging Face's (unverified) of conf's organisations, variants by file name.",
+    "Search Hugging Face for model repositories, preserving curated matches. With mlx: MLX-tagged checkpoints; otherwise GGUF repositories. With a managed engine: its curated models first, then safetensors repositories narrowed by the descriptor's architectures and the largest card; an exact owner/repo is always shown. With foundry-local: conf's curated models, then Microsoft's catalog, each variant for this platform with the core's verdict. With litert-lm: conf's curated models, then Hugging Face's (unverified) of conf's organisations, variants by file name.",
     { properties: { query: { type: 'string' }, engine: { type: 'string' } } }
   ),
   operation(
@@ -166,7 +166,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'artifacts.plan',
     'Review media installation',
     'read',
-    'Plan a catalog model download by category, model and quantization, without downloading. Its digest is what artifacts.install accepts.',
+    'Plan a catalog model download by category, model and quantization, without downloading. For text, an MLX-tagged Hub repository outside the catalog is also accepted. Its digest is what artifacts.install accepts.',
     {
       properties: {
         category: { type: 'string', enum: ['text', 'image', 'video', 'embedding', 'decision'] },

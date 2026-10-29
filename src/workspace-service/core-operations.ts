@@ -6,7 +6,8 @@ import { AtcError } from '../errors/index.js'
 import type { WorkspaceInput } from '../contract/index.js'
 import { modelIdPath, object, segment } from './validation.js'
 import { managedEngineOperation } from './engines/managed-engines.js'
-import { orderEngines } from '../workspace-view/index.js'
+import { engineSettingsSchema } from './settings.js'
+import { orderEngines, settingValuesError } from '../workspace-view/index.js'
 export { NOT_CORE } from './not-core.js'
 export async function coreOperation(
   link: CoreLink,
@@ -77,17 +78,23 @@ export async function coreOperation(
       )
     case 'settings.get':
       return get(`/settings/${segment(input['provider'])}`)
-    case 'settings.update':
+    case 'settings.update': {
       // The core switches builds in the load queue's turn and unloads the old one's sessions.
       // core-boundary: version_backend — named only to refuse it, so the build goes through engines.activate
       if ('version_backend' in object(input['values']))
         throw new AtcError('ATC_USAGE', 'Choose the engine build with engines.activate, not a setting.')
+      const problem = settingValuesError(
+        object(input['values']),
+        engineSettingsSchema(String(input['provider'])).descriptors
+      )
+      if (problem) throw new AtcError('ATC_USAGE', problem)
       return link.request('PATCH', `/settings/${segment(input['provider'])}`, {
         values: input['values'],
         ...(input['expected_revision'] !== undefined
           ? { expected_revision: input['expected_revision'] }
           : {}),
       })
+    }
     case 'hardware.info':
       return get('/hardware/info')
     case 'hardware.refresh':

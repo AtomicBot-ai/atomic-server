@@ -1,0 +1,1 @@
+2026-10-29T12:19:37.021Z [info] atomic-prism/LiquidAI/LFM2-1.2B-Q4_K_M: [stderr] /Users/runner/work/llama.cpp/llama.cpp/ggml/src/ggml-metal/ggml-metal-context.m:315: GGML_ASSERT(buf_src) failed

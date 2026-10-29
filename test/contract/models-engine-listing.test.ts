@@ -114,10 +114,30 @@ describe('atc models pull --engine mlx', () => {
     expect(plan.total_download_bytes).toBe(5700)
   })
 
-  it('points at the catalog for a repository that is not in it', async () => {
+  it('plans a verified MLX repository outside the curated catalog', async () => {
     await server()
-    expect(await t.run(['models', 'pull', 'mlx-community/Other-4bit', '--engine', 'mlx'])).toBe(2)
-    expect(err()).toContain('atc models catalog --engine mlx')
+    const id = 'mlx-community/Other-4bit'
+    hub.files.set(`/api/models/${id}`, { body: Buffer.from(JSON.stringify({ sha: SHA, tags: ['mlx'] })) })
+    hub.files.set(`/api/models/${id}/tree/${SHA}?recursive=true&expand=false&limit=1000`, {
+      body: Buffer.from(
+        JSON.stringify([
+          { type: 'file', path: 'config.json', size: 2 },
+          { type: 'file', path: 'model.safetensors', size: 2 },
+        ])
+      ),
+    })
+    expect(await t.run(['models', 'pull', id, '--engine', 'mlx', '--dry-run', '--json'])).toBe(0)
+    expect(JSON.parse(out()).result).toMatchObject({ engine: 'mlx', model_id: id, total_download_bytes: 4 })
+  })
+
+  it('refuses an uncurated repository without MLX metadata', async () => {
+    await server()
+    const id = 'owner/Not-MLX'
+    hub.files.set(`/api/models/${id}`, {
+      body: Buffer.from(JSON.stringify({ sha: SHA, tags: ['safetensors'] })),
+    })
+    expect(await t.run(['models', 'pull', id, '--engine', 'mlx', '--dry-run'])).toBe(2)
+    expect(err()).toContain('MLX checkpoint')
   })
 })
 

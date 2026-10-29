@@ -1,3 +1,4 @@
+import { chatBaseline } from './chat-baseline.js'
 import { chatProvider } from '../cloud/chat-readiness.js'
 import type { EnrichChat } from './chat-jobs.js'
 import type { WorkspaceInput } from '../../contract/index.js'
@@ -20,6 +21,8 @@ export async function completeChat(
   const body = object(input['request'])
   if (!Array.isArray(body['messages']) || !body['model'])
     throw new AtcError('ATC_USAGE', 'Choose a model and provide messages.')
+  let chat = input['conversation_id'] ? await history.load(String(input['conversation_id'])) : null
+  const expectedRevision = chatBaseline(chat, input, body['messages'] as unknown[])
   const provider = await chatProvider(options.link, String(body['model']), String(input['provider'] ?? ''))
   const { result } = await callPublic(
     options.link,
@@ -35,7 +38,6 @@ export async function completeChat(
   ).catch((error: unknown) => {
     throw contextExceeded(provider, error instanceof Error ? error.message : String(error)) ?? error
   })
-  let chat = input['conversation_id'] ? await history.load(String(input['conversation_id'])) : null
   chat ??= history.create(
     publicEndpoint(object(await options.link.server.status()), options.config).endpoint,
     String(body['model']),
@@ -52,6 +54,6 @@ export async function completeChat(
   chat.title = typeof first === 'string' ? first.slice(0, 70) : 'Media chat'
   chat.model = String(body['model'])
   chat.interrupted = false
-  await history.save(chat)
+  await history.save(chat, expectedRevision)
   return { ...object(result), conversation_id: chat.id }
 }

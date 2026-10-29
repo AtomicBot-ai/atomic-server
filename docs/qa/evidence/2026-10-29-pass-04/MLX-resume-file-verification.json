@@ -1,0 +1,54 @@
+{
+  "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+  "immutable_revision": "dee2f8a2786e6648bb644a7ca40652842490034b",
+  "paused_bytes": 268543146,
+  "declared_total_bytes": 663391416,
+  "actual_total_bytes": 663391416,
+  "files": [
+    {
+      "name": "config.json",
+      "size": 1572,
+      "expected_size": 1572,
+      "size_matches": true
+    },
+    {
+      "name": "generation_config.json",
+      "size": 132,
+      "expected_size": 132,
+      "size_matches": true
+    },
+    {
+      "name": "model.safetensors",
+      "size": 658540250,
+      "expected_size": 658540250,
+      "size_matches": true,
+      "sha256": "d837f243744bbdbe7dd032f90b482a1c45d5b6035b25c1d7804d0f4c74b5c004",
+      "expected_sha256": "d837f243744bbdbe7dd032f90b482a1c45d5b6035b25c1d7804d0f4c74b5c004",
+      "hash_matches": true
+    },
+    {
+      "name": "model.safetensors.index.json",
+      "size": 23414,
+      "expected_size": 23414,
+      "size_matches": true
+    },
+    {
+      "name": "special_tokens_map.json",
+      "size": 434,
+      "expected_size": 434,
+      "size_matches": true
+    },
+    {
+      "name": "tokenizer.json",
+      "size": 4733389,
+      "expected_size": 4733389,
+      "size_matches": true
+    },
+    {
+      "name": "tokenizer_config.json",
+      "size": 92225,
+      "expected_size": 92225,
+      "size_matches": true
+    }
+  ]
+}

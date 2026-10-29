@@ -1,0 +1,23 @@
+{
+  "time": "2026-10-29T12:26:06.540Z",
+  "label": "TurboQuant-same-model",
+  "api": {
+    "running": true,
+    "host": "127.0.0.1",
+    "port": 65213,
+    "prefix": "/v1",
+    "requires_api_key": true,
+    "pid": 21654
+  },
+  "sessions": [],
+  "processes": [
+    "24366 21654 /private/tmp/atomic-qa-pass04-doPU13/data/llamacpp/backends/b10298-2.1.0/macos-arm64/build/bin/llama-server --no-webui --jinja -m /private/tmp/atomic-qa-pass04-doPU13/data/llamacpp/models/LiquidAI/LFM2-1.2B-Q4_K_M/LFM2-1.2B-Q4_K_M.gguf -a LiquidAI/LFM2-1.2B-Q4_K_M --port 3100 -ngl -1 --flash-attn auto --parallel 1 -kvu --cache-type-k turbo3 --cache-type-v turbo3 --fit on"
+  ],
+  "apiModels": {
+    "status": 200,
+    "body": {
+      "data": [],
+      "object": "list"
+    }
+  }
+}

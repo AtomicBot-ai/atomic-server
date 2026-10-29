@@ -42,6 +42,7 @@ export interface SetupProgress {
   restart?: boolean
 }
 export interface HubRepository {
+  source?: { format: 'mlx' }
   id: string
   downloads: number
   title?: string

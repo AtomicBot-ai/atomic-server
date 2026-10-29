@@ -1,0 +1,18 @@
+[
+  {
+    "name": "qa-skill-alpha",
+    "description": "Duplicate creation probe",
+    "body": "DUPLICATE_REPLACEMENT_MUST_REQUIRE_CONFIRMATION",
+    "enabled": true,
+    "updated_at": 1793271822911,
+    "resources": {}
+  },
+  {
+    "name": "qa-skill-beta",
+    "description": "",
+    "body": "BETA_REPLACED_BY_CREATE",
+    "enabled": true,
+    "updated_at": 1793271867198,
+    "resources": {}
+  }
+]

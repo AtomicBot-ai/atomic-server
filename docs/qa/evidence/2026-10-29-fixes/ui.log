@@ -1,0 +1,17 @@
+ ✓ src/workspace/library/downloads/floating-paused.test.tsx (1 test) 35ms
+ ✓ src/workspace/library/engines/EnginesTab.test.tsx (1 test) 49ms
+ ✓ src/services/core-bridge.test.ts (10 tests) 6ms
+ ✓ src/workspace/library/catalog/catalog-models.test.ts (13 tests) 3ms
+ ✓ src/workspace/chat/chat-request.test.ts (6 tests) 3ms
+ ✓ src/workspace/media/media-data.test.ts (4 tests) 2ms
+ ✓ src/workspace/library/catalog/model-logos.test.ts (3 tests) 2ms
+ ✓ src/workspace/setup/setup-data.test.ts (6 tests) 2ms
+ ✓ src/workspace/server/settings/runtime-setting-error.test.ts (11 tests) 2ms
+ ✓ src/workspace/library/downloads/download-data.test.ts (2 tests) 2ms
+ ✓ src/workspace/library/engines/engine-setting-groups.test.ts (1 test) 1ms
+ ✓ src/workspace/setup/media-download.test.ts (1 test) 1ms
+
+ Test Files  112 passed (112)
+      Tests  431 passed (431)
+   Start at  16:28:55
+   Duration  10.47s (transform 2.22s, setup 20.72s, collect 20.05s, tests 49.24s, environment 46.27s, prepare 5.41s)

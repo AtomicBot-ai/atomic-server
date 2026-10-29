@@ -1,0 +1,36 @@
+{
+  "time": "2026-10-29T12:40:24.023Z",
+  "label": "before-MLX-load-confirmation",
+  "api": {
+    "running": true,
+    "host": "127.0.0.1",
+    "port": 50554,
+    "prefix": "/v1",
+    "requires_api_key": true,
+    "pid": 26916
+  },
+  "sessions": [
+    {
+      "provider": "atomic-prism",
+      "model_id": "LiquidAI/LFM2-1.2B-Q4_K_M",
+      "port": 3429
+    }
+  ],
+  "processes": [
+    "27534 26916 /private/tmp/atomic-qa-pass04-doPU13/data/atomic-prism/backends/prism-b10826-c9c34bc/macos-arm64/build/bin/llama-server --no-webui --jinja -m /private/tmp/atomic-qa-pass04-doPU13/data/llamacpp/models/LiquidAI/LFM2-1.2B-Q4_K_M/LFM2-1.2B-Q4_K_M.gguf -a LiquidAI/LFM2-1.2B-Q4_K_M --port 3429 -ngl -1 --threads 4 --flash-attn auto --parallel 1 -kvu --no-reasoning-preserve --fit on -ngl 0 -c 1024"
+  ],
+  "apiModels": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "created": 1,
+          "id": "LiquidAI/LFM2-1.2B-Q4_K_M",
+          "object": "model",
+          "owned_by": "prism-llama.cpp"
+        }
+      ],
+      "object": "list"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+
+> @atomicbot-ai/atc@0.2.8 build:bin
+> npm run embed:ui && node scripts/build-binaries.mjs --host
+
+
+> @atomicbot-ai/atc@0.2.8 embed:ui
+> node scripts/embed-admin-assets.mjs
+
+embedded 109 file(s) from packages/admin-ui/dist → src/admin/static-assets.generated.ts (build 1ecc01e5a5d1b786)
+bun build --compile --target=bun-darwin-arm64 --production --keep-names --sourcemap --define __ATC_GIT_SHA__="609ce03db0f1" --define __ATC_BUILD_DATE__="2026-10-29" --define __ATC_TARGET__="aarch64-apple-darwin" /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/src/bin.ts --outfile /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin
+  [55ms]  minify  -6.75 MB (estimate)
+  [63ms]  bundle  1722 modules
+ [187ms] compile  /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin
+/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin: replacing existing signature
+built 1 binary into dist/bin

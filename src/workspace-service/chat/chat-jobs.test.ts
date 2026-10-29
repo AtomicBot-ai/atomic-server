@@ -77,13 +77,14 @@ it('does not bring back a conversation deleted while its answer streamed', async
 })
 
 it('runs one request per conversation even when two start at once', async () => {
-  const { jobs, release, settled, fetch } = await harness()
+  const { jobs, history, release, settled, fetch } = await harness()
   const first = await jobs.start({ request: { model: 'm', messages } })
   await release()
   await settled(first.id)
   const input = {
     request: { model: 'm', messages: [...messages, { role: 'user', content: 'again' }] },
     conversation_id: first.conversation_id,
+    expected_revision: (await history.load(first.conversation_id))?.revision ?? 0,
   }
   const results = await Promise.allSettled([jobs.start(input), jobs.start(input)])
   expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
@@ -107,4 +108,29 @@ it('lists the requests still running, by conversation, for the other clients to 
   await release()
   await settled(job.id)
   expect(jobs.running()).toEqual([])
+})
+
+it('rejects a stale tab after another request has completed without changing durable messages', async () => {
+  const { jobs, history, release, settled, fetch } = await harness()
+  const first = await jobs.start({ request: { model: 'm', messages } })
+  await release()
+  await settled(first.id)
+  const stale = (await history.load(first.conversation_id))!
+  const second = await jobs.start({
+    conversation_id: stale.id,
+    expected_revision: stale.revision ?? 0,
+    request: { model: 'm', messages: [...stale.messages, { role: 'user', content: 'new turn' }] },
+  })
+  await release()
+  await settled(second.id)
+  const latest = (await history.load(stale.id))!
+  await expect(
+    jobs.start({
+      conversation_id: stale.id,
+      expected_revision: stale.revision ?? 0,
+      request: { model: 'm', messages: [...stale.messages, { role: 'user', content: 'stale turn' }] },
+    })
+  ).rejects.toThrow(/changed|Reopen/)
+  expect((await history.load(stale.id))?.messages).toEqual(latest.messages)
+  expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
 })

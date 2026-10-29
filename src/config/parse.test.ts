@@ -50,3 +50,10 @@ describe('envOverrides', () => {
     ])
   })
 })
+
+it.each(['/qa v1', '/qa?x', '/qa#x', '/qa%20v1', '/qa//v1', '/qa/../v1', 'v1', '/тест'])(
+  'refuses an API prefix that cannot be matched verbatim as a route: %s',
+  (prefix) => {
+    expect(checkValue(fieldFor('api.prefix')!, prefix)).toMatch(/prefix/)
+  }
+)

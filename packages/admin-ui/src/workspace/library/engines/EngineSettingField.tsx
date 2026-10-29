@@ -25,6 +25,9 @@ export function EngineSettingField({
     options = Array.isArray(props.options) ? props.options : []
   const disabled = inactiveSetting(field, values),
     value = values[name] ?? descriptorDefault(field) ?? ''
+  const supported = options.some(
+    (option) => (typeof option === 'string' ? option : record(option).value) === value
+  )
   const changed =
     Object.keys(changedValues(saved, name in values ? { [name]: values[name] } : {}, [field])).length > 0
   return (
@@ -59,6 +62,9 @@ export function EngineSettingField({
             value={text(value, '')}
             onChange={(e) => update(name, e.target.value)}
           >
+            {!supported && (
+              <option value={text(value, '')}>Unsupported saved value: {text(value, '')}</option>
+            )}
             {options.map((option, i) => (
               <option key={i} value={typeof option === 'string' ? option : text(record(option).value)}>
                 {typeof option === 'string' ? option : text(record(option).label ?? record(option).value)}

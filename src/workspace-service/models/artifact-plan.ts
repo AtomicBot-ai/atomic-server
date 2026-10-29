@@ -16,6 +16,8 @@ export interface ArtifactPlan {
   created_at: number
 }
 export interface ArtifactJob {
+  /** Registration completed once; a later explicit model removal must stay removed. */
+  registered?: boolean
   id: string
   plan: ArtifactPlan
   stage: 'queued' | 'installing_engine' | 'downloading' | 'ready' | 'failed' | 'cancelled' | 'interrupted'

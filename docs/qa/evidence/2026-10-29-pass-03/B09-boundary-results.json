@@ -1,0 +1,10 @@
+{
+  "exported_conversations": 101,
+  "export_bytes": 41634,
+  "sha256": "79af08380fb19ba41c42e42469c9dbe7fe6196ecc52ea148f641418aec35b8fb",
+  "attempts_101": 2,
+  "saved_count_before": 101,
+  "saved_count_after_rejections": 101,
+  "control_100": "browser import succeeded",
+  "saved_count_after_control": 201
+}

@@ -1,20 +1,45 @@
+import type { WorkspaceController } from '../controller.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { chosenEndpoint, selectLocalModel } from '../chat/model-selection.js'
 import { sameEndpoint } from '../../../terminal-service/index.js'
 import { markSynced } from '../chat/live-conversation.js'
-export async function persistConversation(ctx: Pick<ActionContext, 'get' | 'controller'>): Promise<void> {
-  const s = ctx.get()
-  if (!s.conversation || !s.messages.length) return
-  await ctx.controller.history.save({
-    ...s.conversation,
-    // This server is saved as no address, as the Web saves it: a port change leaves it here.
-    endpoint: chosenEndpoint(s) ?? '',
-    model: s.model,
-    messages: s.messages,
-    interrupted: s.generating,
-  })
-  markSynced(ctx.controller, { ...s.conversation, messages: s.messages })
+const saves = new WeakMap<WorkspaceController, Promise<void>>()
+/** Serialize this terminal's writes and reject a copy another client has already replaced. */
+export function persistConversation(
+  ctx: Pick<ActionContext, 'get' | 'controller' | 'update'>
+): Promise<void> {
+  const next = (saves.get(ctx.controller) ?? Promise.resolve())
+    .catch(() => {})
+    .then(async () => {
+      const s = ctx.get()
+      if (!s.conversation || !s.messages.length) return
+      // The server owns local streaming history; the terminal must not write partial copies over it.
+      if (
+        s.generating &&
+        (chosenEndpoint(s) === null || sameEndpoint(s.endpoint, await ctx.controller.localEndpoint()))
+      )
+        return
+      const chat = {
+        ...s.conversation,
+        endpoint: chosenEndpoint(s) ?? '',
+        model: s.model,
+        messages: s.messages,
+        interrupted: s.generating,
+      }
+      await ctx.controller.history.save(chat, s.conversation.revision ?? 0)
+      markSynced(ctx.controller, chat)
+      ctx.update((v) =>
+        v.conversation?.id === chat.id && v.conversation.revision === s.conversation?.revision
+          ? {
+              ...v,
+              conversation: { ...v.conversation, revision: chat.revision ?? 0, updatedAt: chat.updatedAt },
+            }
+          : v
+      )
+    })
+  saves.set(ctx.controller, next)
+  return next
 }
 export async function dataAction(id: string, ctx: ActionContext): Promise<boolean> {
   const { get, update, controller: c } = ctx,
@@ -52,9 +77,9 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
   } else if (id === 'history-search') {
     patch({ overlay: 'endpoint', edit: 'history-search', editValue: s.historyFilter, focus: 'save-edit' })
   } else if (id.startsWith('history:')) {
+    await persistConversation(ctx)
     const chat = await c.history.load(id.slice(8))
     if (!chat) throw new Error('This conversation is no longer available.')
-    await persistConversation(ctx)
     ctx.cancel()
     markSynced(c, chat)
     const here = s.workspace?.api.endpoint ?? (await c.localEndpoint())
@@ -167,7 +192,7 @@ export async function saveDataEdit(ctx: ActionContext): Promise<boolean> {
     const title = s.editValue.trim().slice(0, 100)
     if (!title) throw new Error('Give this conversation a title.')
     const chat = { ...s.conversation, title, messages: s.messages }
-    await c.history.save(chat)
+    await c.history.save(chat, chat.revision ?? 0)
     markSynced(c, chat)
     update((v) => ({
       ...v,

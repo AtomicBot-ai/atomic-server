@@ -63,10 +63,13 @@ it('saves a conversation on this server with no address, as the Web does, so a p
     messages: [{ role: 'user', content: 'hi' }],
   }))
   await persistConversation(ctx)
-  expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ endpoint: '' }))
+  expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ endpoint: '' }), 0)
   ctx.update((s) => ({ ...s, endpoint: 'https://openrouter.ai/api/v1', endpointFollowsServer: false }))
   await persistConversation(ctx)
-  expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ endpoint: 'https://openrouter.ai/api/v1' }))
+  expect(save).toHaveBeenLastCalledWith(
+    expect.objectContaining({ endpoint: 'https://openrouter.ai/api/v1' }),
+    0
+  )
 })
 
 it('keeps taking another client’s turns after a rename here', async () => {
@@ -79,4 +82,16 @@ it('keeps taking another client’s turns after a rename here', async () => {
   const turn = [...before.messages, { role: 'assistant' as const, content: 'From the Web' }]
   const saved = { ...before.conversation!, messages: turn }
   expect(savedConversationPatch(ctx.controller, before, before, saved)).toMatchObject({ messages: turn })
+})
+
+it('leaves streaming history to the local server and submits the loaded revision on later saves', async () => {
+  const { ctx, save } = context({ revision: 7 })
+  await dataAction('history:c1', ctx)
+  ctx.update((s) => ({ ...s, generating: true }))
+  save.mockClear()
+  await persistConversation(ctx)
+  expect(save).not.toHaveBeenCalled()
+  ctx.update((s) => ({ ...s, generating: false }))
+  await persistConversation(ctx)
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ revision: 7 }), 7)
 })

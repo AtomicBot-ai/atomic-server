@@ -1,0 +1,11 @@
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |e2e| test/e2e/tui-flows.test.ts (2 tests) 4000ms
+   ✓ atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > lists LiteRT-LM families in Local models from the format filter and opens a variant’s engine in its own panel  2895ms
+   ✓ atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > opens on a config file from before tui.mode left, and lists the migrated settings without it  663ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  14:29:30
+   Duration  4.29s (transform 27ms, setup 9ms, collect 145ms, tests 4.00s, environment 0ms, prepare 28ms)

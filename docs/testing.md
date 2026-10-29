@@ -1,5 +1,7 @@
 # Testing
 
+Exploratory sessions and confirmed defects are recorded in the [QA ledger](qa/README.md), with stable finding IDs, reproduction steps and evidence. Passing automated checks does not replace an exploratory session.
+
 Seven layers, six of them vitest projects in `vitest.config.ts` and one in the admin package. Every layer
 runs in an isolated data folder; none reaches the network or starts a real engine. A release served from
 loopback stands in for GitHub wherever downloading is under test.
