@@ -1,6 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live media catalog and download jobs.
 import { useEffect, useState } from 'react'
-import { Image, Video } from 'lucide-react'
 import { Action } from '../Controls'
 import { bytes, record, rows, text } from '../types'
 import type { RecordValue } from '../types'
@@ -8,6 +7,7 @@ import type { Workspace } from '../useWorkspace'
 import { describeError } from '@/services/admin-api'
 import { DeleteConfirmation } from '../library/DeleteConfirmation'
 import { downloadRows } from '@view'
+import { MediaPreview } from './MediaPreview'
 import { OptionalMediaDownload } from './OptionalMediaDownload'
 import { mediaDownload } from './media-download'
 
@@ -62,9 +62,7 @@ export function OptionalMedia({
           const state = text(record(job).stage ?? record(job).state, '')
           return (
             <article key={category} className={job ? 'selected' : ''}>
-              <div className={`first-media-art ${category}`} aria-hidden="true">
-                {category === 'image' ? <Image size={36} /> : <Video size={36} />}
-              </div>
+              <MediaPreview modality={category === 'image' ? 'image' : 'video'} />
               <h2>
                 {choice
                   ? text(choice.name ?? choice.title ?? choice.id)

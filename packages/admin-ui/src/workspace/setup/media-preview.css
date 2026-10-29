@@ -1,0 +1,60 @@
+/* The media preview (`MediaPreview.tsx`), after the desktop's `.ob-media-scene` rules @ 2d0323463. It bleeds
+   over the card's 20px side padding to its edges. It is a dark studio shot in either theme, so what sits on it
+   keeps light-on-dark colours; the line under it takes the card's own border colour. */
+.first-media-scene {
+  position: relative;
+  isolation: isolate;
+  height: 240px;
+  margin: 0 -20px 22px;
+  overflow: hidden;
+  border-bottom: 1px solid;
+  border-bottom-color: inherit;
+  background: #172022;
+}
+.first-media-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.first-media-kind {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #e0e5eb;
+  font-size: 12px;
+}
+/* Over the clip: a frosted dark disc in both themes. */
+.first-media-grid .first-media-toggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #ffffff30;
+  border-radius: 50%;
+  background: #151b24bb;
+  color: #edf3f5;
+  backdrop-filter: blur(12px);
+}
+.first-media-grid .first-media-toggle:hover {
+  background: #3b4556;
+}
+.first-media-grid .first-media-toggle:focus-visible {
+  outline: 2px solid #bee8df;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .first-media-scene {
+    height: 230px;
+  }
+}

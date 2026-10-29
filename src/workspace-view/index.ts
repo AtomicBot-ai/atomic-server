@@ -3,6 +3,7 @@ export { downloadRows } from './downloads/downloads.js'
 export { localModelStatus, catalogModelMatches } from './catalog/local-model-status.js'
 export type { LocalModelIdentity, ModelDeviceStatus } from './catalog/local-model-status.js'
 export { inferenceReadiness, setupModelPending } from './setup/inference-readiness.js'
+export { reminderSet } from './setup/reminder.js'
 export { OAUTH_POLL_MS, signInStep } from './connectors/connector-sign-in.js'
 export type { SignInStep } from './connectors/connector-sign-in.js'
 export {

@@ -149,6 +149,20 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     required: ['setup_id'],
   }),
   operation(
+    'setup.reminder',
+    'Email me when it is ready',
+    'configure',
+    "Register an email address with Atomic's reminder service (api.atomic.chat) for one email when a model that is still downloading is ready. The server keeps a random token and the model, never the address, and asks for the email itself once the download finishes.",
+    {
+      properties: {
+        email: { type: 'string' },
+        model: { type: 'string', description: 'Model to wait for; defaults to the latest model download' },
+        model_name: { type: 'string', description: 'The model name the email shows' },
+      },
+      required: ['email'],
+    }
+  ),
+  operation(
     'downloads.remove',
     'Remove download',
     'configure',

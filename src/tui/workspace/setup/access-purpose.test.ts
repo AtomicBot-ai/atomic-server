@@ -38,7 +38,8 @@ const shown = (s: ReturnType<typeof createWorkspace>) =>
 it('shows permission details, opens the real web admin, and never invents granted permissions', async () => {
   const t = fixture()
   expect(shown(t.ctx.get())).toContain('Notifications')
-  expect(shown(t.ctx.get())).toContain('Microphone')
+  // There is no voice input, so the terminal asks for nothing it will not use.
+  expect(shown(t.ctx.get())).not.toContain('Microphone')
   await t.action('first-permission:notifications')
   expect(shown(t.ctx.get())).toContain('Allow notifications for Web?')
   expect(shown(t.ctx.get())).toContain('browser permission')

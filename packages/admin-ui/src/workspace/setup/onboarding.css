@@ -174,19 +174,6 @@
   background: #19211b;
   padding: 0 20px 20px;
 }
-.first-media-art {
-  display: grid;
-  place-items: center;
-  margin: 0 -20px 20px;
-  height: 126px;
-  font-size: 54px;
-  color: #d0e9d8;
-  background: radial-gradient(ellipse at 10% 20%, #56876c, transparent 80%), #1e3429;
-}
-.first-media-art.video {
-  color: #d5d5ea;
-  background: radial-gradient(ellipse at 90% 10%, #686784, transparent 80%), #292936;
-}
 .first-media-grid article h2 {
   font-size: 18px;
   margin: 0 0 16px;

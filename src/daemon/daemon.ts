@@ -206,7 +206,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         .catch((e: unknown) => log.debug(`pending host steps: ${String(e)}`))
     }, PENDING_POLL_MS)
     pendingTimer.unref?.()
-    undo.push(() => clearInterval(pendingTimer), offEvents)
+    undo.push(() => clearInterval(pendingTimer), offEvents, workspace.stop)
 
     let admin: AdminServer | undefined
     const status = adminStatus({
@@ -268,6 +268,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         sessions.stop()
         releases.stop()
         clearInterval(pendingTimer)
+        workspace.stop()
         offEvents()
         await admin?.close()
         await removeDaemonRecord(paths.daemonRecord, core.instanceId)

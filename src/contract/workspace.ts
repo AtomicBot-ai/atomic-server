@@ -97,6 +97,17 @@ export interface WorkspaceSnapshot {
   atc?: WorkspaceAtc
   /** Playground requests still running (`chat.start`): a client follows one in the chat it shows. */
   chats?: WorkspaceChat[]
+  /** The model-ready email (`setup.reminder`) both clients show; never the address. */
+  reminder?: WorkspaceReminder | null
+}
+/** An email reminder for a downloading model. The server keeps no address, only what it waits for. */
+export interface WorkspaceReminder {
+  setup_id: string
+  model: string
+  model_name: string
+  /** `waiting` until the download is done and the service took the notification (`queued`). */
+  status: 'waiting' | 'queued' | 'expired' | 'failed'
+  registered_at: number
 }
 export interface WorkspaceChat {
   /** The job id, for `chat.progress`. */

@@ -60,8 +60,14 @@
   background: #303934;
   color: inherit;
 }
+.waiting-email-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ew-muted, #a5b5ac);
+}
 .waiting-email-status {
-  min-height: 1.2em;
+  min-height: 3em;
   font-size: 13px;
   color: var(--ew-muted, #a5b5ac);
 }
@@ -74,7 +80,8 @@
   }
 }
 
-.waiting-email-status.invalid {
+.waiting-email-status.invalid,
+.waiting-email-status.failed {
   color: #ffb3a7;
 }
 .waiting-email input[aria-invalid='true'] {
