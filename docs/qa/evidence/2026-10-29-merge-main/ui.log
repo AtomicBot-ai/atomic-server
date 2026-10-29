@@ -1,0 +1,293 @@
+
+> @atomicbot-ai/atc@0.2.8 test:ui
+> npm run test --workspace packages/admin-ui
+
+
+> @atomicbot-ai/atc-admin-ui@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/packages/admin-ui
+
+ ✓ src/workspace/server/connection/connection-waiting.test.tsx (7 tests) 943ms
+ ✓ src/workspace/media/Media.test.tsx (6 tests) 1179ms
+ ✓ src/workspace/library/engines/engine-presets.test.tsx (8 tests) 1261ms
+stderr | src/workspace/setup/connect-before-snapshot.test.tsx > chooses once while it reads the server
+An update to Destinations inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/workspace/setup/connect-before-snapshot.test.tsx (4 tests) 1087ms
+   ✓ chooses once while it reads the server  403ms
+ ✓ src/workspace/library/cloud/provider-dismissal.test.tsx (7 tests) 1207ms
+   ✓ Escape returns the inline provider step to permissions without an intermediate provider list  434ms
+ ✓ src/workspace/library/catalog/catalog-engine-filter.test.tsx (3 tests) 1272ms
+   ✓ keeps vLLM results visible and searches its selected engine catalog  692ms
+   ✓ keeps SGLang results visible and searches its selected engine catalog  506ms
+ ✓ src/workspace/server/server-desktop.test.tsx (9 tests) 1298ms
+   ✓ follows overview search through one guide to prepared connection details and a real request  502ms
+   ✓ explains invalid server port and prefix values, then clears warnings after correction  319ms
+ ✓ src/workspace/library/catalog/catalog-requests.test.tsx (8 tests) 1383ms
+   ✓ searches after typing without requiring Enter and returns focus to search after clearing  488ms
+ ✓ src/workspace/library/cloud/provider-failures.test.tsx (7 tests) 2230ms
+   ✓ keeps a failed connection editable and retries successfully: The provider rejected this API key. Check the key and try again.  418ms
+   ✓ keeps a failed connection editable and retries successfully: Could not reach the provider. Check its base URL and try again.  325ms
+   ✓ keeps a failed connection editable and retries successfully: This endpoint did not return an OpenAI-compatible model list.  326ms
+   ✓ keeps a failed connection editable and retries successfully: Model not available from this provider: requested-model.  324ms
+   ✓ requires a provider and valid endpoint without embedded credentials before submitting  740ms
+ ✓ src/workspace/library/cloud/custom-endpoint-import.test.tsx (7 tests) 1853ms
+   ✓ keeps custom endpoints usable after cancel, successful checking, edit and adding another  819ms
+   ✓ reveals an imported GGUF in Text after importing from Images with a search  364ms
+ ✓ src/workspace/shared-state.test.tsx (5 tests) 1565ms
+   ✓ keeps an explicitly opened Guide me visible after completed setup refreshes  577ms
+   ✓ closes an open web onboarding when the terminal completes setup and keeps an explicitly reopened guide  484ms
+   ✓ updates start/stop status from the other client without resetting the current page or search  395ms
+ ✓ src/workspace/server/onboarding-connection.test.tsx (1 test) 1811ms
+   ✓ counts a connection prepared during first-run after returning to Overview  1810ms
+ ✓ src/workspace/WorkspaceApp.chat-sidebar.test.tsx (4 tests) 2331ms
+   ✓ keeps history in the shared sidebar and preserves drafts and search through resize  1017ms
+   ✓ honors a saved hidden-history preference and keeps one working New chat action  337ms
+   ✓ keeps global navigation and command shortcuts outside an open modal until Escape closes it  470ms
+   ✓ keeps a pending history import above the workspace after resize and preserves its late failure  507ms
+ ✓ src/workspace/setup/waiting-setup.test.tsx (4 tests) 956ms
+   ✓ offers a playable final wait, the model-ready email and an exit while download continues  789ms
+ ✓ src/workspace/games/DownloadGame.test.tsx (6 tests) 1100ms
+   ✓ supports flagging, safe reveal, keyboard movement and restart  423ms
+ ✓ src/workspace/library/catalog/catalog-desktop.test.tsx (6 tests) 1138ms
+   ✓ opens variant controls inline and downloads exactly the chosen variant  337ms
+ ✓ src/workspace/server/connectors/ConnectorsSettings.test.tsx (5 tests) 1001ms
+   ✓ shows desktop catalog and requires a secret before saving and checking a connector  377ms
+ ✓ src/workspace/server/connection/connection-model-flow.test.tsx (6 tests) 3222ms
+   ✓ changes models inside onboarding without losing the selected agent or visiting a previous stage  931ms
+   ✓ keeps a failed model check inside the picker and retries without changing onboarding stage  696ms
+   ✓ preserves the selected installed model through onboarding handoff and guide reopening  693ms
+   ✓ saves the actual download model before handoff instead of restoring a previous installed choice  482ms
+ ✓ src/workspace/library/catalog/catalog-installed.test.tsx (8 tests) 1050ms
+   ✓ shows a raw image artifact only in its category, matches its variant to the family, and unloads the running model  415ms
+ ✓ src/workspace/runtime-confirmations.test.tsx (4 tests) 907ms
+   ✓ confirms stop in the app, locks the pending request and retains a late failure for retry  471ms
+ ✓ src/workspace/setup/desktop-flows.test.tsx (7 tests) 1277ms
+   ✓ keeps model navigation in one footer with keyboard access to Back, Skip setup, and Continue  322ms
+   ✓ keeps the desktop controls while going directly from media to server destinations  422ms
+ ✓ src/workspace/library/catalog/catalog-runtime.test.tsx (3 tests) 846ms
+   ✓ checks blockers inline, locks engine choice during download, and retries the same request without a confirmation  516ms
+ ✓ src/workspace/server/remote-cloud.test.tsx (2 tests) 923ms
+   ✓ stores cloud credentials only on explicit Connect and removes the password from the form afterwards  702ms
+ ✓ src/workspace/navigation.test.tsx (8 tests) 1165ms
+   ✓ shared workspace structure > uses the canonical page, server section, and playground task order  378ms
+ ✓ src/workspace/workspace.test.tsx (6 tests) 733ms
+   ✓ real workspace controls > keeps a reopened chat in its position and Shift+Enter never sends  348ms
+ ✓ src/workspace/library/catalog/ModelBranches.test.tsx (8 tests) 982ms
+ ✓ src/workspace/library/cloud/cloud-checks.test.tsx (2 tests) 884ms
+   ✓ shows a pending connection until validation finishes and then mutes the connected provider card  526ms
+   ✓ keeps failed settings editable without marking the provider connected  357ms
+ ✓ src/workspace/chat/ChatDialogs.test.tsx (5 tests) 836ms
+   ✓ renames with keyboard and retains a failed draft while locking duplicate submissions and Escape  375ms
+ ✓ src/workspace/bug-hunt.test.tsx (5 tests) 912ms
+   ✓ empties the composer once the request is accepted, not when the answer ends  328ms
+   ✓ keeps the server on the network the person chose when an agent connection is configured  483ms
+ ✓ src/workspace/library/install/import-errors.test.tsx (3 tests) 702ms
+   ✓ explains an import error and preserves the path for retry: ENOENT: no such file or directory, open '/missing.gguf'  389ms
+ ✓ src/workspace/library/engines/engine-confirmations.test.tsx (4 tests) 678ms
+ ✓ src/workspace/chat/Chat.error.test.tsx (4 tests) 671ms
+ ✓ src/workspace/server/settings/settings-parity.test.tsx (11 tests) 1001ms
+ ✓ src/workspace/navigation-return.test.tsx (3 tests) 969ms
+   ✓ Escape returns Settings to the previous model section  493ms
+   ✓ Escape closes an agent guide directly to the server section that opened it  413ms
+ ✓ src/workspace/library/cloud/cloud-provider-focus.test.tsx (2 tests) 614ms
+   ✓ restores a failed provider field only when focus has not moved elsewhere: false  371ms
+ ✓ src/workspace/server/settings/settings-desktop.test.tsx (5 tests) 542ms
+ ✓ src/workspace/server/connection/connection-model-retry.test.tsx (4 tests) 633ms
+ ✓ src/workspace/library/catalog/catalog-litert.test.tsx (2 tests) 476ms
+   ✓ keeps LiteRT-LM variants inline, opens the engine dialog, and downloads after the plan  410ms
+ ✓ src/workspace/chat/Chat.readiness.test.tsx (4 tests) 640ms
+ ✓ src/workspace/library/engines/LiteRtLm.test.tsx (6 tests) 559ms
+ ✓ src/workspace/server/ServerKeys.test.tsx (3 tests) 405ms
+ ✓ src/workspace/library/engines/EngineSetup.test.tsx (8 tests) 435ms
+ ✓ src/workspace/chat/ChatParameters.test.tsx (2 tests) 475ms
+   ✓ opens request controls from the trailing icon and preserves edits when Escape closes the drawer  433ms
+ ✓ src/workspace/server/DetailPicker.test.tsx (5 tests) 385ms
+ ✓ src/workspace/library/catalog/model-confirmations.test.tsx (3 tests) 447ms
+ ✓ src/workspace/library/install/auto-download.test.tsx (3 tests) 419ms
+ ✓ src/workspace/server/connection/useConnectionModel.test.tsx (2 tests) 309ms
+ ✓ src/workspace/library/engines/EngineSettings.test.tsx (4 tests) 535ms
+ ✓ src/workspace/intro/EngineIntro.test.tsx (8 tests) 393ms
+ ✓ src/workspace/library/catalog/LoadStages.test.tsx (4 tests) 547ms
+ ✓ src/workspace/chat/Chat.live.test.tsx (3 tests) 7872ms
+   ✓ shows chats and turns another client saves, keeping the draft, and a deletion  7536ms
+ ✓ src/workspace/setup/MediaPreview.test.tsx (4 tests) 105ms
+ ✓ src/workspace/library/catalog/CatalogCategory.test.tsx (2 tests) 553ms
+   ✓ previews category choices with the keyboard and Escape returns focus without changing the catalog  406ms
+ ✓ src/workspace/setup/optional-media.test.tsx (3 tests) 534ms
+   ✓ keeps the successful category available when another catalog fails and supports retry  317ms
+ ✓ src/workspace/library/engines/FoundryLocal.test.tsx (4 tests) 434ms
+ ✓ src/workspace/library/downloads/download-controls.test.tsx (3 tests) 391ms
+ ✓ src/workspace/server/server-first.test.tsx (4 tests) 382ms
+   ✓ keeps startup models and container settings editable in their own sections  325ms
+ ✓ src/workspace/rail.test.tsx (2 tests) 413ms
+ ✓ src/workspace/server/settings/numeric-wheel.test.tsx (2 tests) 355ms
+ ✓ src/workspace/server/connection/connection-step-focus.test.tsx (1 test) 244ms
+ ✓ src/workspace/setup/variant-onboarding.test.tsx (2 tests) 400ms
+ ✓ src/workspace/chat/ChatModelPicker.test.tsx (2 tests) 372ms
+   ✓ searches models, selects a ready model, and dismisses with Escape  346ms
+ ✓ src/services/events.test.ts (6 tests) 169ms
+ ✓ src/workspace/library/engines/EngineBuilds.test.tsx (2 tests) 380ms
+ ✓ src/workspace/useDialog.test.tsx (3 tests) 174ms
+ ✓ src/workspace/chat/ChatAttachments.test.tsx (3 tests) 184ms
+ ✓ src/workspace/chat/ChatNavigation.test.tsx (3 tests) 310ms
+ ✓ src/workspace/library/catalog/providers.test.tsx (3 tests) 215ms
+ ✓ src/workspace/library/DeleteConfirmation.test.tsx (1 test) 210ms
+ ✓ src/workspace/setup/Permissions.test.tsx (3 tests) 312ms
+ ✓ src/workspace/browse-engine.test.tsx (2 tests) 354ms
+ ✓ src/workspace/useWorkspaceSidebar.test.tsx (2 tests) 288ms
+ ✓ src/workspace/library/engines/use-engine-settings-data.test.tsx (2 tests) 123ms
+ ✓ src/workspace/chat/ChatTools.test.tsx (2 tests) 292ms
+ ✓ src/workspace/useEngines.test.tsx (2 tests) 117ms
+ ✓ src/workspace/setup/FirstModel.test.tsx (3 tests) 262ms
+ ✓ src/workspace/downloads-badge.test.tsx (1 test) 159ms
+ ✓ src/workspace/library/catalog/catalog-filter-label.test.tsx (1 test) 285ms
+ ✓ src/workspace/server/remote-setup.test.tsx (3 tests) 166ms
+ ✓ src/workspace/Controls.test.tsx (1 test) 107ms
+ ✓ src/workspace/library/install/PlanCommands.test.tsx (5 tests) 166ms
+ ✓ src/workspace/server/start-readiness.test.tsx (1 test) 146ms
+ ✓ src/workspace/setup/SetupReview.test.tsx (2 tests) 138ms
+ ✓ src/workspace/library/downloads/download-handoff.test.tsx (2 tests) 111ms
+ ✓ src/workspace/HostStepBanner.test.tsx (4 tests) 189ms
+ ✓ src/workspace/chat/history-search.test.tsx (3 tests) 215ms
+ ✓ src/workspace/library/downloads/engine-downloads.test.tsx (2 tests) 123ms
+ ✓ src/workspace/useWorkspace.test.tsx (1 test) 67ms
+ ✓ src/workspace/intro/IntroScreen.test.tsx (2 tests) 172ms
+ ✓ src/workspace/chat/ChatFeaturePicker.test.tsx (1 test) 132ms
+ ✓ src/workspace/UpdateToast.test.tsx (4 tests) 56ms
+ ✓ src/workspace/HelpMenu.test.tsx (1 test) 98ms
+stderr | src/workspace/server/remote-access-local.test.tsx > says what the API on host true (running: 127.0.0.1) means for the network
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/workspace/server/remote-access-local.test.tsx > says what the API on host true (running: 0.0.0.0) means for the network
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | src/workspace/server/remote-access-local.test.tsx > says what the API on host false (running: 127.0.0.1) means for the network
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+An update to RemoteAccess inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ src/workspace/server/remote-access-local.test.tsx (3 tests) 101ms
+ ✓ src/workspace/WorkspaceBrand.test.tsx (1 test) 42ms
+ ✓ src/services/core-bridge.test.ts (10 tests) 6ms
+ ✓ src/workspace/watch-shared-read.test.ts (8 tests) 11ms
+ ✓ src/workspace/chat/ChatToolbar.test.tsx (1 test) 36ms
+ ✓ src/services/error-reporting.test.ts (3 tests) 5ms
+ ✓ src/containers/AdminRoot.test.tsx (1 test) 159ms
+ ✓ src/workspace/chat/Chat.draft.test.tsx (1 test) 92ms
+ ✓ src/workspace/library/engines/EnginesTab.test.tsx (1 test) 17ms
+ ✓ src/workspace/library/downloads/floating-paused.test.tsx (1 test) 53ms
+ ✓ src/workspace/games/mines.test.ts (5 tests) 29ms
+ ✓ src/workspace/chat/chat-draft.test.ts (2 tests) 8ms
+ ✓ src/workspace/library/downloads/download-attention.test.tsx (1 test) 8ms
+ ✓ src/workspace/chat/chat-request.test.ts (6 tests) 2ms
+ ✓ src/workspace/library/catalog/catalog-models.test.ts (13 tests) 3ms
+ ✓ src/workspace/library/catalog/model-logos.test.ts (3 tests) 2ms
+ ✓ src/workspace/media/media-data.test.ts (4 tests) 3ms
+ ✓ src/workspace/server/settings/runtime-setting-error.test.ts (11 tests) 3ms
+ ✓ src/workspace/setup/setup-data.test.ts (6 tests) 3ms
+ ✓ src/workspace/library/downloads/download-data.test.ts (2 tests) 2ms
+ ✓ src/workspace/setup/media-download.test.ts (1 test) 1ms
+ ✓ src/workspace/library/engines/engine-setting-groups.test.ts (1 test) 1ms
+
+ Test Files  114 passed (114)
+      Tests  439 passed (439)
+   Start at  16:53:29
+   Duration  16.24s (transform 3.56s, setup 35.78s, collect 33.08s, tests 67.55s, environment 81.31s, prepare 6.08s)
+
