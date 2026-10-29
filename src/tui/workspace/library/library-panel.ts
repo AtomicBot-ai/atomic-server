@@ -3,7 +3,7 @@ import { drawCatalogBrowser } from './catalog-browser.js'
 import { installedModelRows } from './installed-model-rows.js'
 import { drawDownloadCard } from '../setup/download-card.js'
 import { card } from '../draw/cards.js'
-import { downloadRows, verdictLine } from '../../../workspace-view/index.js'
+import { downloadRows, engineStatus, verdictLine } from '../../../workspace-view/index.js'
 import type { ManagedVerdict } from '../../../contract/index.js'
 
 import { button, COLORS, text } from '../draw/canvas.js'
@@ -53,12 +53,16 @@ export function drawLibrary(
     if (!items.length) text(c, x, row, 'No downloads.', COLORS.muted, width)
   } else {
     const indices = s.libraryRows.map((_, i) => i)
-    const h = bottom - row >= 6 ? 3 : 1
+    // An engine card says what is installed on a line of its own; with no room for one, after the name.
+    const engines = s.libraryView === 'engines'
+    const h = engines && bottom - row >= 8 ? 4 : bottom - row >= 6 ? 3 : 1
     const win = computeRowWindow(indices.length, s.selected, Math.max(1, Math.floor((bottom - row - 1) / h)))
     indices.slice(win.start, win.start + win.count).forEach((index, i) => {
       const v = s.libraryRows[index]!
       const id = `library-row:${index}`
-      if (h === 1) button(c, id, x, row + i, v.name.slice(0, width - 2), v.description || v.id, focus)
+      const status = engines ? engineStatus(v.source ?? {}, s.workspace) : ''
+      const name = engines && h < 4 ? `${v.name} · ${status}` : v.name
+      if (h === 1) button(c, id, x, row + i, name.slice(0, width - 2), status || v.description || v.id, focus)
       else
         card(c, {
           id,
@@ -66,9 +70,9 @@ export function drawLibrary(
           y: row + i * h,
           width,
           height: h,
-          title: `${s.catalogLikes.includes(v.id) ? '* ' : ''}${v.name}`,
-          icon: s.libraryView === 'engines' ? '[E]' : '[M]',
-          detail: v.description || v.id,
+          title: `${s.catalogLikes.includes(v.id) ? '* ' : ''}${name}`,
+          icon: engines ? '[E]' : '[M]',
+          detail: status || v.description || v.id,
           focus,
         })
     })

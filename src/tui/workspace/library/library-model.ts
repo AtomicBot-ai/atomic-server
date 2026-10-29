@@ -1,4 +1,4 @@
-import { engineName } from '../../../workspace-view/index.js'
+import { engineName, engineStatus } from '../../../workspace-view/index.js'
 export interface LibraryRow {
   id: string
   name: string
@@ -20,8 +20,7 @@ export function libraryRows(value: unknown, kind: LibraryView): LibraryRow[] {
         ? o['engines']
         : []
   return entries.map((entry) => {
-    const r = record(entry),
-      active = record(r['active'])
+    const r = record(entry)
     return {
       id: String(r['id'] ?? r['engine'] ?? ''),
       name:
@@ -30,16 +29,7 @@ export function libraryRows(value: unknown, kind: LibraryView): LibraryRow[] {
           : String(r['name'] ?? r['id'] ?? ''),
       category: String(r['category'] ?? kind),
       source: kind === 'engines' ? r : record(r['source']),
-      description:
-        kind === 'engines'
-          ? active['version']
-            ? `Installed · ${active['version']} · ${active['variant']}`
-            : r['error']
-              ? String(record(r['error'])['message'] ?? 'Unavailable')
-              : Array.isArray(r['builds']) && r['builds'].length
-                ? 'Installed'
-                : 'Not installed'
-          : String(r['description'] ?? ''),
+      description: kind === 'engines' ? engineStatus(r) : String(r['description'] ?? ''),
     }
   })
 }

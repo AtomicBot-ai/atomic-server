@@ -38,7 +38,10 @@ it.each([
     card!.y + card!.height
   )
   // Playing the game scrolls the content to it.
-  await content.evaluate((e) => e.scrollTo(0, e.scrollHeight))
+  await content.evaluate((e) => {
+    const content = e as unknown as { scrollTo: (x: number, y: number) => void; scrollHeight: number }
+    content.scrollTo(0, content.scrollHeight)
+  })
   const area = (await content.boundingBox())!,
     heading = (await page.getByRole('heading', { level: 1 }).boundingBox())!
   expect(heading.y).toBeGreaterThanOrEqual(area.y)
