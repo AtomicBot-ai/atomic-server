@@ -1,0 +1,65 @@
+Fixes temporarily removed, unit
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /qa v1
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /qa?x
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /qa#x
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /qa%20v1
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /qa//v1
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /qa/../v1
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: v1
+ FAIL  |unit| src/config/parse.test.ts > refuses an API prefix that cannot be matched verbatim as a route: /тест
+ FAIL  |unit| src/workspace-service/chat/chat-jobs.test.ts > rejects a stale tab after another request has completed without changing durable messages
+ FAIL  |unit| src/workspace-service/chat/history-transfer.test.ts > importing conversations > refuses nothing
+ FAIL  |unit| src/workspace-service/chat/history-transfer.test.ts > importing conversations > refuses not a list
+ FAIL  |unit| src/workspace-service/chat/history-transfer.test.ts > restores an export containing 101 conversations in one validated batch
+ FAIL  |unit| src/workspace-service/chat/history-transfer.test.ts > validates a bad entry past the old batch boundary before writing any conversation
+ FAIL  |unit| src/workspace-service/features/features.test.ts > refuses a duplicate skill name on create or rename and preserves both existing instructions
+ FAIL  |unit| src/workspace-service/models/catalog-search.test.ts > keeps curated display-name matches and searches the right format: mlx
+ FAIL  |unit| src/workspace-service/models/catalog-search.test.ts > keeps curated display-name matches and searches the right format: undefined
+ FAIL  |unit| src/workspace-service/models/catalog-search.test.ts > plans an MLX search result outside staff picks after checking its repository format
+ FAIL  |unit| src/workspace-service/models/mlx-registration.test.ts > lists a completed MLX download as installed before any load, including after reconnect
+ FAIL  |unit| src/workspace-service/models/mlx-registration.test.ts > registers an older completed job at startup, but leaves cancelled and missing downloads alone
+ Test Files  6 failed (6)
+      Tests  19 failed | 32 passed (51)
+
+Fixes temporarily removed, UI
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/workspace/chat/chat-draft.test.ts > restores unsent text after a page reload and removes it after sending
+ FAIL  src/workspace/chat/history-search.test.tsx > does not match JSON metadata content in message text search
+ FAIL  src/workspace/chat/history-search.test.tsx > does not match JSON metadata role in message text search
+ FAIL  src/workspace/chat/history-search.test.tsx > does not match JSON metadata atomic_meta in message text search
+ FAIL  src/workspace/setup/desktop-flows.test.tsx > keeps the selected second model after downloading and returning with Back
+ FAIL  src/workspace/library/catalog/catalog-requests.test.tsx > searches MLX through the MLX engine and keeps MLX results visible
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"flash_attn":"qa-invalid-mode"}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"cache_type_k":"qa-invalid-cache"}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"threads":"4"}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"threads":null}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"flash_attn":true}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"threads":4,"flash_attn":"invalid"}
+ Test Files  5 failed (5)
+      Tests  12 failed | 16 passed (28)
+
+Preset error persistence before correction
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"flash_attn":"qa-invalid-mode"}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"cache_type_k":"qa-invalid-cache"}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"threads":"4"}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"threads":null}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"flash_attn":true}
+ FAIL  src/workspace/library/engines/engine-presets.test.tsx > rejects an invalid preset atomically: {"threads":4,"flash_attn":"invalid"}
+ Test Files  1 failed (1)
+      Tests  6 failed | 2 passed (8)
+
+Preset error persistence after correction
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+
+Unchanged-save revision before correction
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |unit| src/terminal-data/history.test.ts > keeps the revision stable for an unchanged save and refreshes an identical older copy
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+
+Unchanged-save revision after correction
+ Test Files  4 passed (4)
+      Tests  30 passed (30)

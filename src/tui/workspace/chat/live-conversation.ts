@@ -26,7 +26,7 @@ export function savedConversationPatch(
   const open = now.conversation
   if (!open || before.generating || now.generating) return {}
   if (open.id !== before.conversation?.id || now.messages !== before.messages) return {}
-  const shown = { id: open.id, title: open.title, messages: now.messages }
+  const shown = { revision: open.revision, id: open.id, title: open.title, messages: now.messages }
   const change = savedConversationChange(shown, saved, prints.get(c)?.get(open.id))
   if (change === 'adopt' && saved) {
     markSynced(c, saved)

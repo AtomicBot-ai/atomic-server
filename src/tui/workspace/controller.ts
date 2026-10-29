@@ -199,8 +199,11 @@ export class WorkspaceController {
     onText: (text: string) => void,
     preferences: Record<string, unknown> = {},
     conversationId?: string,
-    documents: { name: string; text: string }[] = []
-  ): Promise<{ message: ChatMessage; conversation_id: string; messages?: ChatMessage[] } | undefined> {
+    documents: { name: string; text: string }[] = [],
+    revision?: number
+  ): Promise<
+    { message: ChatMessage; conversation_id: string; messages?: ChatMessage[]; revision?: number } | undefined
+  > {
     if (!model.trim()) throw new Error('Choose a model to continue.')
     this.turn?.abort()
     const turn = new AbortController()
@@ -215,7 +218,8 @@ export class WorkspaceController {
           turn.signal,
           onText,
           conversationId,
-          documents
+          documents,
+          revision
         )
       await streamChat({
         endpoint,

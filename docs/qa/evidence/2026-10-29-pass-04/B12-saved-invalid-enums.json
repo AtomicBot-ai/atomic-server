@@ -1,0 +1,12 @@
+{
+  "flash_probe": {
+    "saved": "qa-invalid-mode",
+    "browser_selected_option": "auto",
+    "reload": "succeeded; unsupported mode omitted from arguments"
+  },
+  "cache_probe": {
+    "saved": "qa-invalid-cache",
+    "browser_selected_option": "f32",
+    "reload": "succeeded; actual process argument --cache-type-k q8_0 despite the browser showing f32"
+  }
+}

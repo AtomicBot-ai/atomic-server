@@ -131,6 +131,22 @@ export class FeatureDocument {
             operation === 'skills.import'
               ? importSkill(archive?.content ?? String(input['content']))
               : skillValue(value)
+          if (
+            current.skills.some(
+              (skill) =>
+                skill.name === next.name && (operation === 'skills.import' || skill.name !== value['id'])
+            )
+          )
+            throw new AtcError(
+              'ATC_USAGE',
+              `A skill named ${next.name} already exists. Edit it or choose another name.`
+            )
+          if (
+            operation === 'skills.save' &&
+            value['id'] &&
+            !current.skills.some((skill) => skill.name === value['id'])
+          )
+            throw new AtcError('ATC_USAGE', 'This skill no longer exists. Reopen the skills list.')
           next.resources =
             archive?.resources ??
             current.skills.find((s) => s.name === (value['id'] ?? next.name))?.resources ??

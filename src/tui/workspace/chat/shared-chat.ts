@@ -9,7 +9,8 @@ export async function sharedChat(
   signal: AbortSignal,
   onText: (text: string) => void,
   conversationId?: string,
-  documents: { name: string; text: string }[] = []
+  documents: { name: string; text: string }[] = [],
+  revision?: number
 ) {
   const { atomic_system, ...requestPreferences } = preferences
   if (typeof atomic_system === 'string')
@@ -38,7 +39,12 @@ export async function sharedChat(
   }
   const initial = (await runtime.read('chat.start', {
     request: { ...requestPreferences, model, messages },
-    ...(conversationId ? { conversation_id: conversationId } : {}),
+    ...(conversationId
+      ? {
+          conversation_id: conversationId,
+          ...(revision !== undefined ? { expected_revision: revision } : {}),
+        }
+      : {}),
   })) as Record<string, unknown>
   const id = String(initial['id'])
   let job = initial,
@@ -61,7 +67,14 @@ export async function sharedChat(
       }
       if (!['preparing', 'generating', 'stopping'].includes(String(job['state']))) {
         if (job['error']) throw remoteError(new Error(String(job['error'])))
-        return { message, conversation_id: String(job['conversation_id']), messages }
+        return {
+          message,
+          conversation_id: String(job['conversation_id']),
+          messages,
+          ...(typeof job['conversation_revision'] === 'number'
+            ? { revision: job['conversation_revision'] }
+            : {}),
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 150))
       job = (await runtime.read('chat.progress', { id })) as Record<string, unknown>

@@ -1,0 +1,17 @@
+ ✓ |unit| src/terminal-setup/same-files.test.ts (4 tests) 2ms
+ ✓ |unit| src/workspace-view/setup/setup.test.ts (2 tests) 1ms
+ ✓ |unit| src/daemon/spawn.test.ts (1 test) 1ms
+ ✓ |unit| src/workspace-service/models/download-proxy.test.ts (2 tests) 2ms
+ ✓ |unit| src/version.test.ts (1 test) 1ms
+ ✓ |unit| src/commands/models/engine-settings.test.ts (5 tests) 2ms
+ ✓ |unit| src/tui/workspace/chat/failed-turn.test.ts (2 tests) 1ms
+ ✓ |unit| src/cli/not-implemented.test.ts (2 tests) 1ms
+ ✓ |contract| test/contract/daemon.test.ts (11 tests) 20206ms
+   ✓ the daemon owns the folder > lets a command attach, hold a lease, and detects a foreign owner  20079ms
+ ✓ |contract| test/contract/commands.test.ts (12 tests) 30449ms
+   ✓ admin and doctor > prints a login link only when the daemon has an admin  30091ms
+[?25h
+ Test Files  359 passed (359)
+      Tests  2684 passed (2684)
+   Start at  16:36:49
+   Duration  32.39s (transform 5.56s, setup 2.04s, collect 126.57s, tests 119.33s, environment 27ms, prepare 12.61s)

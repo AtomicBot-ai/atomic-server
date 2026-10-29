@@ -116,3 +116,8 @@ export { remoteSetupView } from './remote/remote-setup.js'
 export type { RemoteSetupView } from './remote/remote-setup.js'
 export { conversationPrint, savedConversationChange } from './chat/saved-conversation.js'
 export { engineStatus } from './engines/engine-status.js'
+
+export { settingValuesError } from './engines/settings-validation.js'
+
+export { apiPrefixError } from './api-prefix.js'
+export { conversationSearchText } from './chat/conversation-search.js'

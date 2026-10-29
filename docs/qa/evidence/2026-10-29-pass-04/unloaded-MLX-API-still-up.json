@@ -1,0 +1,21 @@
+{
+  "time": "2026-10-29T12:46:50.326Z",
+  "label": "unloaded-MLX-API-still-up",
+  "api": {
+    "running": true,
+    "host": "127.0.0.1",
+    "port": 50554,
+    "prefix": "/v1",
+    "requires_api_key": true,
+    "pid": 26916
+  },
+  "sessions": [],
+  "processes": [],
+  "apiModels": {
+    "status": 200,
+    "body": {
+      "data": [],
+      "object": "list"
+    }
+  }
+}

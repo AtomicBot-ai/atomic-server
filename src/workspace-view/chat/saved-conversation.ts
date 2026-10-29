@@ -4,6 +4,7 @@
  */
 
 interface ConversationCopy {
+  revision?: unknown
   id?: unknown
   title?: unknown
   messages?: unknown
@@ -28,5 +29,5 @@ export function savedConversationChange(
   if (saved.id !== shown.id) return 'keep'
   const local = conversationPrint(shown)
   if (synced !== undefined && local !== synced) return 'keep'
-  return conversationPrint(saved) === local ? 'keep' : 'adopt'
+  return conversationPrint(saved) === local && saved.revision === shown.revision ? 'keep' : 'adopt'
 }

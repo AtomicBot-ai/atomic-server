@@ -151,3 +151,17 @@ it('retains the current search after starting a model download', async () => {
   expect(await screen.findByRole('button', { name: 'Remote model', exact: true })).toBeInTheDocument()
   expect(screen.getByLabelText('Search for models')).toHaveValue('Remote')
 })
+
+it('searches MLX through the MLX engine and keeps MLX results visible', async () => {
+  const { workspace, execute } = workspaceFixture({
+    ...answers,
+    'models.catalog': { rows: [] },
+    'models.search': (input: Record<string, unknown>) => ({
+      rows: input.engine === 'mlx' ? [model('mlx-community/LFM2-4bit', 'mlx')] : [model('owner/LFM2-GGUF')],
+    }),
+  })
+  render(<Catalog engine="mlx" workspace={workspace} openCommand={vi.fn()} />)
+  await userEvent.type(screen.getByLabelText('Search for models'), 'LFM2{Enter}')
+  expect(execute).toHaveBeenCalledWith('models.search', { query: 'LFM2', engine: 'mlx' })
+  expect(await screen.findByText('mlx-community/LFM2-4bit', { selector: 'strong' })).toBeInTheDocument()
+})

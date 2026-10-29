@@ -1,0 +1,15 @@
+
+> @atomicbot-ai/atc@0.2.8 test:runtime-compat
+> vitest run --project runtime-compat
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |runtime-compat| test/runtime-compat/node-behaviours.test.ts (4 tests) 157ms
+ ✓ |runtime-compat| test/runtime-compat/ink.test.ts (1 test) 79ms
+[?25h ✓ |runtime-compat| test/runtime-compat/documents.test.ts (1 test) 53ms
+
+ Test Files  3 passed (3)
+      Tests  6 passed (6)
+   Start at  16:31:53
+   Duration  1.04s (transform 177ms, setup 0ms, collect 1.17s, tests 289ms, environment 0ms, prepare 361ms)

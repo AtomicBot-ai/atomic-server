@@ -27,6 +27,7 @@ it('uses the packaged server binary to extract PDFs and persist portable skills'
   const exported = call('skills.export', { id: 'proof' })
   expect(exported.code, exported.err).toBe(0)
   expect(JSON.parse(exported.out).result.name).toBe('proof.skill')
+  expect(call('skills.remove', { id: 'proof' }).code).toBe(0)
   const reimported = call('skills.import', { data: JSON.parse(exported.out).result.data })
   expect(reimported.code, reimported.err).toBe(0)
   expect(JSON.parse(reimported.out).result.skills[0].body).toContain('Instructions')

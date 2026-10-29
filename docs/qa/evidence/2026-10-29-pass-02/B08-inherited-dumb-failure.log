@@ -1,0 +1,232 @@
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ❯ |e2e| test/e2e/tui-flows.test.ts (2 tests | 2 failed) 13129ms
+   × atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > lists LiteRT-LM families in Local models from the format filter and opens a variant’s engine in its own panel 12473ms
+     → Agents & tools, Filters, click Filters, Format: LiteRT-LM, click Format: LiteRT-LM, Gemma 3 1B, click Gemma 4 E4B, Install engine, click Install engine, Not installed
+Usage: atc <command> [options]
+
+Atomic Server keeps models on this machine and serves them over an OpenAI-compatible API; atc is its command. Install an engine, pull a model, run it — and manage it all from here, the terminal UI (bare `atc` on a terminal) or the local web admin.
+
+Server:
+  control  Typed server operations for scripts and agents
+  setup    Plan, apply or skip server setup
+  mcp      Serve agent tools over MCP stdio
+  start    Start the server (core, API, web admin) in the background
+  stop     Stop the server: unload the models, stop the API and the admin
+  restart  Stop the server if it runs, then start it
+  status   Show the server, the API endpoint, running models and the admin URL
+  logs     Show the server log
+
+Models & engines:
+  run       Load a downloaded model
+  unload    Unload a model; keep its files and server running
+  models    Discover, download and manage model files
+  engines   Discover and manage engine builds
+  hardware  Hardware facts and engine devices
+
+Access:
+  connect  Connection details or launch an installed agent
+  api      The OpenAI-compatible API and its key
+  admin    The web admin: open it, see where it listens, manage its token
+  tui      Full-screen terminal UI over the server (what bare `atc` opens on a terminal)
+  chat     Send a message to an OpenAI-compatible model
+
+System:
+  config      Read and change atc settings
+  doctor      Check the installation: folders, config, ports, PATH, GPU, managed engines
+  service     Run the server as an OS service (systemd, launchd, Windows task)
+  update      Update atc to the latest release
+  version     Print the atc, core and admin versions
+  completion  Print a shell completion script (bash, zsh, fish, powershell)
+
+Global options:
+  --json                Print the result as one JSON document (errors go to stderr as JSON)
+  -v, --verbose         Debug-level logging on stderr
+  -q, --quiet           Only errors on stderr; no progress
+  -y, --yes             Answer yes to safe confirmations; required for elevation and deletion
+                        without a terminal
+  --data-folder <path>  Data folder to work with (default: <system data>/atomic-chat-cli/data)
+  --no-color            Disable ANSI colours (NO_COLOR is honoured too)
+  -h, --help            Show help
+  --version             Print the version
+
+Run `atc <command> --help` for a command; `atc <command> <subcommand> --help` for a subcommand.
+: expected false to be true // Object.is equality
+   × atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > opens on a config file from before tui.mode left, and lists the migrated settings without it 447ms
+     → web admin) in the background
+  stop     Stop the server: unload the models, stop the API and the admin
+  restart  Stop the server if it runs, then start it
+  status   Show the server, the API endpoint, running models and the admin URL
+  logs     Show the server log
+
+Models & engines:
+  run       Load a downloaded model
+  unload    Unload a model; keep its files and server running
+  models    Discover, download and manage model files
+  engines   Discover and manage engine builds
+  hardware  Hardware facts and engine devices
+
+Access:
+  connect  Connection details or launch an installed agent
+  api      The OpenAI-compatible API and its key
+  admin    The web admin: open it, see where it listens, manage its token
+  tui      Full-screen terminal UI over the server (what bare `atc` opens on a terminal)
+  chat     Send a message to an OpenAI-compatible model
+
+System:
+  config      Read and change atc settings
+  doctor      Check the installation: folders, config, ports, PATH, GPU, managed engines
+  service     Run the server as an OS service (systemd, launchd, Windows task)
+  update      Update atc to the latest release
+  version     Print the atc, core and admin versions
+  completion  Print a shell completion script (bash, zsh, fish, powershell)
+
+Global options:
+  --json                Print the result as one JSON document (errors go to stderr as JSON)
+  -v, --verbose         Debug-level logging on stderr
+  -q, --quiet           Only errors on stderr; no progress
+  -y, --yes             Answer yes to safe confirmations; required for elevation and deletion
+                        without a terminal
+  --data-folder <path>  Data folder to work with (default: <system data>/atomic-chat-cli/data)
+  --no-color            Disable ANSI colours (NO_COLOR is honoured too)
+  -h, --help            Show help
+  --version             Print the version
+
+Run `atc <command> --help` for a command; `atc <command> <subcommand> --help` for a subcommand.
+: expected false to be true // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |e2e| test/e2e/tui-flows.test.ts > atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > lists LiteRT-LM families in Local models from the format filter and opens a variant’s engine in its own panel
+AssertionError: Agents & tools, Filters, click Filters, Format: LiteRT-LM, click Format: LiteRT-LM, Gemma 3 1B, click Gemma 4 E4B, Install engine, click Install engine, Not installed
+Usage: atc <command> [options]
+
+Atomic Server keeps models on this machine and serves them over an OpenAI-compatible API; atc is its command. Install an engine, pull a model, run it — and manage it all from here, the terminal UI (bare `atc` on a terminal) or the local web admin.
+
+Server:
+  control  Typed server operations for scripts and agents
+  setup    Plan, apply or skip server setup
+  mcp      Serve agent tools over MCP stdio
+  start    Start the server (core, API, web admin) in the background
+  stop     Stop the server: unload the models, stop the API and the admin
+  restart  Stop the server if it runs, then start it
+  status   Show the server, the API endpoint, running models and the admin URL
+  logs     Show the server log
+
+Models & engines:
+  run       Load a downloaded model
+  unload    Unload a model; keep its files and server running
+  models    Discover, download and manage model files
+  engines   Discover and manage engine builds
+  hardware  Hardware facts and engine devices
+
+Access:
+  connect  Connection details or launch an installed agent
+  api      The OpenAI-compatible API and its key
+  admin    The web admin: open it, see where it listens, manage its token
+  tui      Full-screen terminal UI over the server (what bare `atc` opens on a terminal)
+  chat     Send a message to an OpenAI-compatible model
+
+System:
+  config      Read and change atc settings
+  doctor      Check the installation: folders, config, ports, PATH, GPU, managed engines
+  service     Run the server as an OS service (systemd, launchd, Windows task)
+  update      Update atc to the latest release
+  version     Print the atc, core and admin versions
+  completion  Print a shell completion script (bash, zsh, fish, powershell)
+
+Global options:
+  --json                Print the result as one JSON document (errors go to stderr as JSON)
+  -v, --verbose         Debug-level logging on stderr
+  -q, --quiet           Only errors on stderr; no progress
+  -y, --yes             Answer yes to safe confirmations; required for elevation and deletion
+                        without a terminal
+  --data-folder <path>  Data folder to work with (default: <system data>/atomic-chat-cli/data)
+  --no-color            Disable ANSI colours (NO_COLOR is honoured too)
+  -h, --help            Show help
+  --version             Print the version
+
+Run `atc <command> --help` for a command; `atc <command> <subcommand> --help` for a subcommand.
+: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ test/e2e/tui-flows.test.ts:73:78
+     71|     )
+     72|     const screen = strip(result.out)
+     73|     expect(result.ok, result.failed.join(', ') + '\n' + screen.slice(-…
+       |                                                                              ^
+     74|     expect(result.code, screen.slice(-2000)).toBe(0)
+     75|     // The LiteRT-LM panel, not a generic build list that would instal…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |e2e| test/e2e/tui-flows.test.ts > atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > opens on a config file from before tui.mode left, and lists the migrated settings without it
+AssertionError: web admin) in the background
+  stop     Stop the server: unload the models, stop the API and the admin
+  restart  Stop the server if it runs, then start it
+  status   Show the server, the API endpoint, running models and the admin URL
+  logs     Show the server log
+
+Models & engines:
+  run       Load a downloaded model
+  unload    Unload a model; keep its files and server running
+  models    Discover, download and manage model files
+  engines   Discover and manage engine builds
+  hardware  Hardware facts and engine devices
+
+Access:
+  connect  Connection details or launch an installed agent
+  api      The OpenAI-compatible API and its key
+  admin    The web admin: open it, see where it listens, manage its token
+  tui      Full-screen terminal UI over the server (what bare `atc` opens on a terminal)
+  chat     Send a message to an OpenAI-compatible model
+
+System:
+  config      Read and change atc settings
+  doctor      Check the installation: folders, config, ports, PATH, GPU, managed engines
+  service     Run the server as an OS service (systemd, launchd, Windows task)
+  update      Update atc to the latest release
+  version     Print the atc, core and admin versions
+  completion  Print a shell completion script (bash, zsh, fish, powershell)
+
+Global options:
+  --json                Print the result as one JSON document (errors go to stderr as JSON)
+  -v, --verbose         Debug-level logging on stderr
+  -q, --quiet           Only errors on stderr; no progress
+  -y, --yes             Answer yes to safe confirmations; required for elevation and deletion
+                        without a terminal
+  --data-folder <path>  Data folder to work with (default: <system data>/atomic-chat-cli/data)
+  --no-color            Disable ANSI colours (NO_COLOR is honoured too)
+  -h, --help            Show help
+  --version             Print the version
+
+Run `atc <command> --help` for a command; `atc <command> <subcommand> --help` for a subcommand.
+: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ test/e2e/tui-flows.test.ts:92:55
+     90|       env
+     91|     )
+     92|     expect(result.ok, strip(result.out).slice(-2000)).toBe(true)
+       |                                                       ^
+     93|     expect(result.code).toBe(0)
+     94|     const list = runAtc(['config', 'list', '--json', '--data-folder', …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  14:29:04
+   Duration  13.46s (transform 29ms, setup 9ms, collect 179ms, tests 13.13s, environment 0ms, prepare 28ms)

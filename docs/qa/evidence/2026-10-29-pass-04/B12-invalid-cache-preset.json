@@ -1,0 +1,5 @@
+{
+  "format": "atomic-engine-settings-v1",
+  "provider": "llamacpp-upstream",
+  "values": { "flash_attn": "auto", "cache_type_k": "qa-invalid-cache" }
+}

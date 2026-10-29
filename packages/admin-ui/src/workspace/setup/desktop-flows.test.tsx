@@ -151,3 +151,34 @@ it('keeps failed verification in review and allows retry without claiming succes
   })
   expect(screen.queryByText('Codex CLI is connected')).not.toBeInTheDocument()
 })
+
+it('keeps the selected second model after downloading and returning with Back', async () => {
+  const { workspace } = workspaceFixture(
+    {
+      ...answers,
+      'models.installed': [],
+      'models.catalog': [
+        { id: 'repo/first', name: 'First recommendation' },
+        { id: 'repo/second', name: 'My second choice' },
+      ],
+      'models.files': [{ filename: 'model.gguf', size: 500 }],
+      'models.plan': {
+        digest: 'digest',
+        provider: 'llamacpp-upstream',
+        total_download_bytes: 500,
+        blockers: [],
+      },
+      'models.install': { setup_id: 'job', plan: { model_id: 'repo/second' } },
+    },
+    { setup: null }
+  )
+  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'My second choice' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  await screen.findByRole('heading', { name: 'Permissions' })
+  await userEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+  expect(await screen.findByRole('button', { name: 'My second choice' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
+})

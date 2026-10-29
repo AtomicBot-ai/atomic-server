@@ -176,11 +176,17 @@ export function useChatSession(others: WorkspaceChat[] = []) {
         id: fork || !next.id ? crypto.randomUUID() : next.id,
       }
     saves.current++
-    await workspaceApi.execute('history.save', { chat: value })
-    mark(value)
-    setChat(value)
+    const result = record(
+      await workspaceApi.execute('history.save', {
+        chat: value,
+        expected_revision: fork ? 0 : Number(next.revision ?? 0),
+      })
+    )
+    const saved = result.chat ? record(result.chat) : value
+    mark(saved)
+    setChat(saved)
     await refresh()
-    return value
+    return saved
   }
   const generate = async (
     messages: RecordValue[],
@@ -204,7 +210,7 @@ export function useChatSession(others: WorkspaceChat[] = []) {
         await workspaceApi.execute('chat.start', {
           request: { ...request, messages: wireMessages },
           provider,
-          ...(base.id ? { conversation_id: base.id } : {}),
+          ...(base.id ? { conversation_id: base.id, expected_revision: Number(base.revision ?? 0) } : {}),
         })
       )
       started = true

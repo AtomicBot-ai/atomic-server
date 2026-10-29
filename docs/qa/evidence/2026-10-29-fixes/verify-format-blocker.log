@@ -1,0 +1,31 @@
+
+> @atomicbot-ai/atc@0.2.8 verify
+> npm run lint && npm run typecheck && npm run format:check && node scripts/gen-third-party-notices.mjs --check && npm test && npm run test:ui && npm run build && npm run build:ui && npm run build:bin && npm run test:e2e && npm run test:e2e:web && npm run test:runtime-compat && npm run test:installers
+
+
+> @atomicbot-ai/atc@0.2.8 lint
+> eslint . && node scripts/check-runtime-agnostic.mjs && node scripts/check-core-boundary.mjs && node scripts/check-module-boundaries.mjs && node scripts/gen-module-map.mjs --check && npm run lint --workspaces --if-present
+
+runtime-agnostic: ok
+The module map in AGENTS.md is current
+
+> @atomicbot-ai/atc-admin-ui@0.1.0 lint
+> eslint .
+
+
+> @atomicbot-ai/atc@0.2.8 typecheck
+> tsc -p tsconfig.json --noEmit && npm run typecheck --workspaces --if-present
+
+
+> @atomicbot-ai/atc-admin-ui@0.1.0 typecheck
+> tsc -b
+
+
+> @atomicbot-ai/atc@0.2.8 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] .claude/worktrees/sad-wescoff-af178a/test/fixtures/foundry-local/microsoft-catalog.json
+[warn] .claude/worktrees/sad-wescoff-af178a/test/fixtures/foundry-local/resolve-qwen3-0.6b-generic-gpu.json
+[warn] .claude/worktrees/sad-wescoff-af178a/test/fixtures/managed/runtimes/tensorrt-llm-1.2.1-r2.json
+[warn] Code style issues found in 3 files. Run Prettier with --write to fix.

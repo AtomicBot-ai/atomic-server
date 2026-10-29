@@ -1,3 +1,4 @@
+import { conversationSearchText } from '@view'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Search, X } from 'lucide-react'
@@ -65,8 +66,7 @@ export function ChatHistorySearch({
             const found: RecordValue[] = []
             for (const item of recents) {
               const chat = await workspaceApi.execute<RecordValue>('history.load', { id: item.id })
-              if (JSON.stringify([chat.title, chat.messages]).toLowerCase().includes(query.toLowerCase()))
-                found.push(item)
+              if (conversationSearchText(chat).toLowerCase().includes(query.toLowerCase())) found.push(item)
             }
             if (revision === queryRevision.current) setMatches(found)
           }}

@@ -1,0 +1,234 @@
+{
+  "engines": [
+    {
+      "engine": "llamacpp-upstream",
+      "kind": "llamacpp",
+      "active_choice": "client",
+      "builds": [
+        {
+          "version": "b11946",
+          "variant": "macos-arm64",
+          "origin": "downloaded",
+          "active": true,
+          "in_use": false,
+          "removable": false,
+          "not_removable_reason": "active"
+        }
+      ],
+      "active": {
+        "version": "b11946",
+        "variant": "macos-arm64"
+      },
+      "latest": {
+        "version": "b11946",
+        "variant": "macos-arm64"
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "cache",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "llamacpp",
+      "kind": "llamacpp",
+      "active_choice": "client",
+      "builds": [
+        {
+          "version": "b10298-2.1.0",
+          "variant": "macos-arm64",
+          "origin": "downloaded",
+          "active": true,
+          "in_use": false,
+          "removable": false,
+          "not_removable_reason": "active"
+        }
+      ],
+      "active": {
+        "version": "b10298-2.1.0",
+        "variant": "macos-arm64"
+      },
+      "latest": {
+        "version": "b10298-2.1.0",
+        "variant": "macos-arm64"
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "remote",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "atomic-prism",
+      "kind": "llamacpp",
+      "active_choice": "client",
+      "builds": [
+        {
+          "version": "prism-b10826-c9c34bc",
+          "variant": "macos-arm64",
+          "origin": "downloaded",
+          "active": true,
+          "in_use": false,
+          "removable": false,
+          "not_removable_reason": "active"
+        }
+      ],
+      "active": {
+        "version": "prism-b10826-c9c34bc",
+        "variant": "macos-arm64"
+      },
+      "latest": {
+        "version": "prism-b10826-c9c34bc",
+        "variant": "macos-arm64",
+        "download_bytes": 11851527
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "cache",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "mlx",
+      "kind": "engine-build",
+      "active_choice": "core",
+      "builds": [
+        {
+          "version": "mlxvlm-macos-arm64-07ba5a1",
+          "variant": "macos-arm64",
+          "origin": "downloaded",
+          "active": true,
+          "in_use": false,
+          "removable": false,
+          "not_removable_reason": "active"
+        }
+      ],
+      "active": {
+        "version": "mlxvlm-macos-arm64-07ba5a1",
+        "variant": "macos-arm64"
+      },
+      "latest": {
+        "version": "mlxvlm-macos-arm64-07ba5a1",
+        "variant": "macos-arm64",
+        "published_at": "2026-08-28T10:38:38Z"
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "remote",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "foundry-local",
+      "kind": "engine-build",
+      "active_choice": "core",
+      "builds": [
+        {
+          "version": "v2.1.0",
+          "variant": "macos-arm64",
+          "origin": "downloaded",
+          "active": true,
+          "in_use": false,
+          "removable": false,
+          "not_removable_reason": "active"
+        }
+      ],
+      "active": {
+        "version": "v2.1.0",
+        "variant": "macos-arm64"
+      },
+      "latest": {
+        "version": "v2.1.0",
+        "variant": "macos-arm64",
+        "published_at": "2026-09-30T00:43:42Z"
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "remote",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "litert-lm",
+      "kind": "engine-build",
+      "active_choice": "core",
+      "builds": [
+        {
+          "version": "0.18.1",
+          "variant": "macos-arm64",
+          "origin": "downloaded",
+          "active": true,
+          "in_use": false,
+          "removable": false,
+          "not_removable_reason": "active"
+        }
+      ],
+      "active": {
+        "version": "0.18.1",
+        "variant": "macos-arm64"
+      },
+      "latest": {
+        "version": "0.18.1",
+        "variant": "macos-arm64",
+        "published_at": "2026-10-19T22:44:33Z"
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "remote",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "sd-cpp",
+      "kind": "engine-build",
+      "active_choice": "core",
+      "builds": [],
+      "active": null,
+      "latest": {
+        "version": "master-1017-be48649-a095652b",
+        "variant": "macos-arm64"
+      },
+      "update": {
+        "needed": false,
+        "target": null,
+        "apply": "swap"
+      },
+      "source": "remote",
+      "source_error": null,
+      "error": null
+    },
+    {
+      "engine": "tensorrt-llm",
+      "kind": "managed",
+      "available": false
+    },
+    {
+      "engine": "vllm",
+      "kind": "managed",
+      "available": false
+    },
+    {
+      "engine": "sglang",
+      "kind": "managed",
+      "available": false
+    }
+  ]
+}

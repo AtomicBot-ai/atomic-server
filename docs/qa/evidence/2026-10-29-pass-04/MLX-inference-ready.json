@@ -1,0 +1,37 @@
+{
+  "time": "2026-10-29T12:43:22.998Z",
+  "label": "MLX-inference-ready",
+  "api": {
+    "running": true,
+    "host": "127.0.0.1",
+    "port": 50554,
+    "prefix": "/v1",
+    "requires_api_key": true,
+    "pid": 26916
+  },
+  "sessions": [
+    {
+      "provider": "mlx",
+      "model_id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+      "port": 3404
+    }
+  ],
+  "processes": [
+    "28483 26916 /private/tmp/atomic-qa-pass04-doPU13/data/mlx/backends/mlxvlm-macos-arm64-07ba5a1/macos-arm64/mlx-server --model /private/tmp/atomic-qa-pass04-doPU13/data/workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit --host 127.0.0.1 --port 3404 --max-kv-size 16384",
+    "28484 28483 /private/tmp/atomic-qa-pass04-doPU13/data/mlx/backends/mlxvlm-macos-arm64-07ba5a1/macos-arm64/mlx-server --model /private/tmp/atomic-qa-pass04-doPU13/data/workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit --host 127.0.0.1 --port 3404 --max-kv-size 16384"
+  ],
+  "apiModels": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "created": 1,
+          "id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+          "object": "model",
+          "owned_by": "mlx"
+        }
+      ],
+      "object": "list"
+    }
+  }
+}

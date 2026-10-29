@@ -11,6 +11,7 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-10-29** — [Keep an exploratory QA ledger](2026-10-29-keep-an-exploratory-qa-ledger.md) — stable defect IDs, session journals and synthetic evidence for repeated exploratory passes.
 - **2026-10-29** — [Report errors at each workspace boundary](2026-10-29-report-errors-at-each-workspace-boundary.md) — shared process reporting, background and browser coverage, bounded exit waits and consent.
 
 - **2026-10-24** — [Show engine update results before offering installation](2026-10-24-show-engine-update-results.md) — shared update feedback, explicit install offers, and Save only for changed settings.
@@ -117,5 +118,6 @@ add a new one that says which record it supersedes.
 - **2026-10-29** — [Saved chats reach the other client within one poll, and its unsaved reply wins](2026-10-29-chats-reach-the-other-client.md) — 0.2.7 retest B06: both clients read `history.list` and the open chat again every 2.5 s; `savedConversationChange` compares a title+messages print with what each client last saved or loaded; deletions empty the chat and keep the draft; `ChatHistory.list` caches summaries by file stamp; running requests in the snapshot's `chats`, followed with `chat.progress`.
 - **2026-10-29** — [Show engine installation status in both lists](2026-10-29-engine-list-status.md) — 0.2.7 retest B08: one selector combines engine builds with live installs and managed-engine state for the terminal and web lists.
 - **2026-10-29** — [Report release runs to Telegram](2026-10-29-release-telegram-notifications.md) — best-effort start and final messages, including Linux repository publication and unsigned dry runs.
+- [2026-10-29 — Guard shared edits and preserve model recovery boundaries](2026-10-29-guard-qa-recovery-and-shared-edits.md)
 - **2026-10-29** — [Share the download job journal](2026-10-29-share-the-download-job-journal.md) — one `SetupJournal` for Foundry, LiteRT and managed downloads; three policy flags at each constructor; each provider keeps its own `run`; GGUF setups stay separate.
 - **2026-10-29** — [The server sends the model-ready email](2026-10-29-the-server-sends-the-model-ready-email.md) — `setup.reminder` registers the address with api.atomic.chat from the server; `email-reminder.json` keeps a token and the model, never the address; the server notifies when the download is done (30 s check, desktop backoff); snapshot `reminder` for both clients; consent copy shown only while downloading; supersedes the 2026-10-24 local email mock.

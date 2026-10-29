@@ -1,0 +1,590 @@
+
+> @atomicbot-ai/atc@0.2.8 test
+> vitest run --project unit --project contract
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |unit| src/workspace-service/chat/chat-operations.test.ts (10 tests) 5ms
+stderr | src/tui/workspace/runtime/shared-conversations.test.tsx > shows chats and turns another client saves, keeping the draft, and a deletion
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-lifecycle.test.tsx > waits for deliberate input with a selected engine and unfinished onboarding
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-lifecycle.test.tsx > waits for deliberate input with a installed engine and unfinished onboarding
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-lifecycle.test.tsx > keeps a fresh hero visible until the user opens engine selection
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-lifecycle.test.tsx > keeps a fresh hero visible until the user opens engine selection
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-lifecycle.test.tsx > keeps a fresh hero visible until the user opens engine selection
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-lifecycle.test.tsx > wakes its eyes once without advancing onboarding
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/intro-lifecycle.test.tsx (4 tests) 1296ms
+   ✓ wakes its eyes once without advancing onboarding  1209ms
+ ✓ |contract| test/contract/daemon-boot.test.ts (3 tests) 851ms
+   ✓ the server once it is ready > warns about a models.autoLoad entry it cannot load and stays up  748ms
+ ✓ |unit| src/workspace-service/engines/engine-downloads.test.ts (13 tests) 1309ms
+   ✓ shares queued progress with both frontend snapshots and reports it as pending readiness  509ms
+ ✓ |contract| test/contract/attach-starting.test.ts (3 tests) 1897ms
+   ✓ attaching to a starting server > is not "not running": it waits, then says the server is still starting  333ms
+   ✓ launching while another starter wins the folder > keeps waiting for the live owner instead of reporting its own daemon gone  1541ms
+ ✓ |unit| src/terminal-data/store.test.ts (10 tests) 2744ms
+   ✓ gives up on a rename that keeps failing, and leaves no temporary file  367ms
+   ✓ keeps trying a refused rename for several seconds, not a fixed number of times  2071ms
+ ✓ |contract| test/contract/model-commands.test.ts (15 tests) 1576ms
+   ✓ the default engine > loads with the default engine when it is vLLM and the host registers it  310ms
+   ✓ the default engine > loads with a named engine without asking which engines the host has  303ms
+   ✓ Foundry Local models > runs a variant on foundry-local without --engine  305ms
+   ✓ LiteRT-LM models > runs a variant on litert-lm, named or not  606ms
+stderr | src/tui/workspace/runtime/other-turn.test.tsx > streams a reply the Web is generating in the chat open here, then keeps the saved one
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/server/connection-picker.test.ts (10 tests) 417ms
+ ✓ |contract| test/contract/terminal-onboarding.test.ts (1 test) 1282ms
+   ✓ walks first-run setup with mouse and keyboard, gates access, and resumes the download after a server restart  1282ms
+ ✓ |unit| src/tui/workspace/frame.test.ts (13 tests) 382ms
+stderr | src/tui/workspace/runtime/other-turn.test.tsx > streams a reply the Web is generating in the chat open here, then keeps the saved one
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/runtime/other-turn.test.tsx > does not follow its own turn or a turn in another chat
+The current testing environment is not configured to support act(...)
+
+ ✓ |contract| test/contract/managed-pull.test.ts (7 tests) 2115ms
+   ✓ atc models pull --engine <managed> > prints the plan, downloads the revision into the store and follows it to ready  1056ms
+   ✓ atc models pull --engine <managed> > says how to continue a failed download at the same revision, whatever main is by then  1012ms
+ ✓ |contract| test/contract/foundry-pull.test.ts (5 tests) 1084ms
+   ✓ atc models pull --engine foundry-local > downloads the default variant (NPU first) and follows it to ready  1029ms
+stderr | src/tui/workspace/WorkspaceApp.readiness.test.tsx > blocks an empty-model mouse Send before any request, conversation, or draft clearing
+The current testing environment is not configured to support act(...)
+
+ ✓ |contract| test/contract/agent-handoff.test.ts (1 test) 351ms
+   ✓ releases mouse capture before handing off and returns to Server without stopping the API  351ms
+ ✓ |unit| src/tui/workspace/chat/picker.test.ts (4 tests) 232ms
+stderr | src/tui/workspace/WorkspaceApp.readiness.test.tsx > blocks an empty-model keyboard Send before any request, conversation, or draft clearing
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/WorkspaceApp.readiness.test.tsx (2 tests) 321ms
+stderr | src/tui/workspace/runtime/other-turn.test.tsx > does not follow its own turn or a turn in another chat
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/runtime/other-turn.test.tsx (2 tests) 1029ms
+   ✓ streams a reply the Web is generating in the chat open here, then keeps the saved one  425ms
+   ✓ does not follow its own turn or a turn in another chat  604ms
+ ✓ |unit| src/tui/workspace/setup/first-model.test.ts (11 tests) 364ms
+ ✓ |unit| src/workspace-service/chat/chat-jobs.test.ts (9 tests) 964ms
+ ✓ |unit| src/workspace-service/foundry/foundry-model-setups.test.ts (8 tests) 220ms
+ ✓ |unit| src/document-import/document-import.test.ts (11 tests) 580ms
+   ✓ bounds archive expansion, entry count, truncated streams and paths  523ms
+ ✓ |contract| test/contract/litert-pull.test.ts (6 tests) 3117ms
+   ✓ atc models pull --engine litert-lm > downloads the default variant (GPU before CPU here) and follows it to ready  1051ms
+   ✓ atc models pull --engine litert-lm > takes the variant for --backend  1017ms
+   ✓ atc models pull --engine litert-lm > continues a download by its request id even when a new plan would differ  1019ms
+ ✓ |contract| test/contract/shared-workspace.test.ts (4 tests) 154ms
+ ✓ |contract| test/contract/daemon-upgrade.test.ts (5 tests) 183ms
+ ✓ |unit| src/downloads/downloader.test.ts (14 tests) 310ms
+ ✓ |unit| src/workspace-service/models/model-setup-checks.test.ts (6 tests) 303ms
+ ✓ |contract| test/contract/models-engine-listing.test.ts (7 tests) 386ms
+   ✓ atc run --engine mlx > loads a downloaded checkpoint the server never loaded before  315ms
+ ✓ |unit| src/core-link/stale-owner.test.ts (17 tests) 485ms
+   ✓ the old owner over its control API > kills after a shutdown that does not release the lock, only with --kill  422ms
+ ✓ |unit| src/downloads/ranges.test.ts (6 tests) 199ms
+ ✓ |unit| src/workspace-service/managed/managed-model-setups.test.ts (9 tests) 270ms
+ ✓ |unit| src/workspace-service/models/model-setups.test.ts (7 tests) 262ms
+ ✓ |unit| src/tui/workspace/draw/brand-compact.test.ts (9 tests) 187ms
+ ✓ |unit| src/workspace-service/chat/history-transfer.test.ts (12 tests) 133ms
+ ✓ |unit| src/core-link/watch.test.ts (4 tests) 330ms
+ ✓ |unit| src/tui/workspace/media/media.test.ts (13 tests) 145ms
+ ✓ |unit| src/update/node-files.test.ts (4 tests) 354ms
+   ✓ nodeUpdateFiles.download > gives up a stream that sends nothing for the stall time, instead of waiting forever  308ms
+ ✓ |contract| test/contract/engine-commands.test.ts (14 tests) 215ms
+ ✓ |unit| src/tui/workspace/chat/model-selection.test.ts (5 tests) 429ms
+ ✓ |unit| src/tui/workspace/input.test.ts (22 tests) 159ms
+ ✓ |unit| src/workspace-service/service.test.ts (15 tests) 110ms
+ ✓ |contract| test/contract/agent-controls.test.ts (6 tests) 327ms
+   ✓ agent and scripted workspace commands > routes friendly load and structured operations to the same Core  307ms
+ ✓ |contract| test/contract/run-engine-choice.test.ts (3 tests) 316ms
+   ✓ the engine a load goes to > loads on the installed build of the same family when the default is not installed  308ms
+ ✓ |unit| src/tui/workspace/draw/brand-arm-poses.test.ts (5 tests) 117ms
+ ✓ |unit| src/workspace-service/engines/engine-download-model.test.ts (2 tests) 128ms
+ ✓ |unit| src/workspace-service/features/features.test.ts (11 tests) 90ms
+ ✓ |unit| src/host/exec.test.ts (4 tests) 270ms
+ ✓ |unit| src/workspace-service/litert/litert-model-setups.test.ts (7 tests) 157ms
+ ✓ |contract| test/contract/daemon-log.test.ts (3 tests) 160ms
+ ✓ |unit| src/tui/workspace/server/connection-dialog.test.ts (9 tests) 101ms
+ ✓ |unit| src/terminal-data/history.test.ts (7 tests) 88ms
+ ✓ |unit| src/workspace-service/models/download-removal.test.ts (11 tests) 168ms
+ ✓ |contract| test/contract/foundry-commands.test.ts (9 tests) 5028ms
+   ✓ atc engines accelerators foundry-local > prepares every unprepared accelerator with an execution provider, showing its progress  1006ms
+   ✓ atc engines accelerators foundry-local > follows a prepare another client runs instead of failing  3004ms
+   ✓ atc engines install foundry-local > prepares the accelerators after the install, unless --no-accelerators  1006ms
+ ✓ |contract| test/contract/litert-engine.test.ts (11 tests) 5029ms
+   ✓ atc engines install litert-lm > installs the build and prepares openvino after it on a host with an Intel NPU  1009ms
+   ✓ atc engines accelerators litert-lm > prepares openvino with --prepare, showing its progress  1003ms
+   ✓ atc engines accelerators litert-lm > follows a prepare another client runs instead of failing  3002ms
+ ✓ |unit| src/workspace-service/connectors/connector-client.test.ts (13 tests) 232ms
+ ✓ |unit| src/core-link/lifecycle.test.ts (4 tests) 212ms
+ ✓ |unit| src/workspace-service/models/artifact-races.test.ts (2 tests) 241ms
+ ✓ |unit| src/tui/workspace/server/connection-guide.test.ts (13 tests) 162ms
+ ✓ |unit| src/workspace-service/client.test.ts (8 tests) 223ms
+ ✓ |contract| test/contract/client-errors.test.ts (1 test) 81ms
+ ✓ |unit| src/workspace-service/connectors/connector-oauth.test.ts (5 tests) 164ms
+ ✓ |unit| src/tui/workspace/server/server-shell.test.ts (12 tests) 113ms
+ ✓ |unit| src/workspace-service/setup-journal.test.ts (11 tests) 97ms
+stderr | src/tui/workspace/intro-background-engine.test.tsx > accepts a server-owned engine job, leaves the intro, and never cancels it on unmount
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ✓ |contract| test/contract/litert-models.test.ts (6 tests) 110ms
+stderr | src/tui/workspace/intro-background-engine.test.tsx > accepts a server-owned engine job, leaves the intro, and never cancels it on unmount
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-background-engine.test.tsx > accepts a server-owned engine job, leaves the intro, and never cancels it on unmount
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-background-engine.test.tsx > accepts a server-owned engine job, leaves the intro, and never cancels it on unmount
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/intro-background-engine.test.tsx > accepts a server-owned engine job, leaves the intro, and never cancels it on unmount
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/intro-background-engine.test.tsx (1 test) 54ms
+ ✓ |unit| src/terminal-setup/service.test.ts (9 tests) 54ms
+ ✓ |unit| src/tui/workspace/controller.test.ts (3 tests) 195ms
+ ✓ |contract| test/contract/service.test.ts (12 tests) 90ms
+ ✓ |contract| test/contract/admin-session-restart.test.ts (1 test) 143ms
+ ✓ |unit| src/tui/workspace/draw/brand.test.ts (20 tests) 90ms
+ ✓ |unit| src/workspace-service/reminders/email-reminders.test.ts (8 tests) 118ms
+ ✓ |contract| test/contract/managed-run.test.ts (7 tests) 181ms
+ ✓ |unit| src/tui/workspace/draw/brand-shadow.test.ts (11 tests) 94ms
+ ✓ |unit| src/tui/workspace/polished-flows.test.ts (11 tests) 59ms
+ ✓ |unit| src/tui/workspace/server/settings-panel.test.ts (8 tests) 112ms
+ ✓ |unit| src/admin/workspace.test.ts (5 tests) 68ms
+ ✓ |unit| src/workspace-service/models/model-setup-cancel.test.ts (1 test) 127ms
+stderr | src/tui/workspace/WorkspaceApp.test.tsx > working terminal workspace > closes open onboarding after the web finishes it (intro=true)
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/workspace-service/features/feature-document.test.ts (5 tests) 44ms
+stderr | src/tui/workspace/WorkspaceApp.test.tsx > working terminal workspace > closes open onboarding after the web finishes it (intro=false)
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/daemon/log-follow.test.ts (6 tests) 81ms
+ ✓ |contract| test/contract/engine-host-steps.test.ts (3 tests) 101ms
+ ✓ |unit| src/tui/workspace/setup/cloud-step.test.ts (8 tests) 133ms
+ ✓ |unit| src/workspace-service/models/mlx-registration.test.ts (2 tests) 117ms
+stderr | src/tui/workspace/runtime/shared-conversations.test.tsx > shows chats and turns another client saves, keeping the draft, and a deletion
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/runtime/shared-conversations.test.tsx > keeps a reply this terminal has not saved yet over an older saved copy
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/chat/picker-actions.test.ts (8 tests) 117ms
+ ✓ |contract| test/contract/daemon-hardware.test.ts (1 test) 97ms
+ ✓ |unit| src/tui/workspace/library/library-actions.test.ts (3 tests) 72ms
+ ✓ |contract| test/contract/engine-remove.test.ts (7 tests) 105ms
+ ✓ |unit| src/downloads/single-restart.test.ts (1 test) 85ms
+ ✓ |unit| src/workspace-service/litert/litert-model-setups.journal.test.ts (3 tests) 55ms
+ ✓ |unit| src/tui/controller.test.ts (8 tests) 46ms
+ ✓ |unit| src/workspace-service/managed/managed-model-setups.journal.test.ts (2 tests) 46ms
+ ✓ |unit| src/tui/workspace/bug-hunt.test.ts (8 tests) 68ms
+ ✓ |unit| src/tui/workspace/draw/backdrop.test.ts (9 tests) 77ms
+ ✓ |unit| src/workspace-service/cloud/chat-readiness.test.ts (3 tests) 75ms
+ ✓ |contract| test/contract/daemon-release.test.ts (1 test) 81ms
+ ✓ |unit| src/terminal-setup/curated.test.ts (5 tests) 68ms
+ ✓ |contract| test/contract/daemon-remote.test.ts (1 test) 96ms
+ ✓ |unit| src/tui/workspace/library/catalog-journey.test.ts (14 tests) 74ms
+ ✓ |unit| src/host/host-step.test.ts (6 tests) 31ms
+ ✓ |unit| src/tui/workspace/setup/waiting-setup.test.ts (8 tests) 32ms
+ ✓ |unit| src/output/logger.test.ts (9 tests) 29ms
+ ✓ |unit| src/workspace-service/models/model-reporting.test.ts (1 test) 54ms
+ ✓ |unit| src/terminal-data/keys.test.ts (3 tests) 71ms
+ ✓ |unit| src/core-link/daemon-record.test.ts (3 tests) 45ms
+ ✓ |unit| src/workspace-service/foundry/foundry.test.ts (6 tests) 66ms
+ ✓ |unit| src/host/acl.test.ts (11 tests) 54ms
+ ✓ |unit| src/workspace-service/engines/terminal-download-handoff.test.ts (1 test) 70ms
+ ✓ |unit| src/io.test.ts (10 tests) 55ms
+ ✓ |contract| test/contract/engine-relogin.test.ts (7 tests) 79ms
+ ✓ |contract| test/contract/daemon-start-failure.test.ts (3 tests) 50ms
+ ✓ |unit| src/tui/workspace/library/engine-update-flow.test.ts (5 tests) 60ms
+ ✓ |unit| src/commands/models/follow.test.ts (9 tests) 49ms
+ ✓ |unit| src/downloads/proxy.test.ts (3 tests) 33ms
+ ✓ |unit| src/workspace-service/litert/litert.test.ts (4 tests) 45ms
+ ✓ |unit| src/workspace-service/models/artifacts.test.ts (1 test) 28ms
+ ✓ |unit| src/tui/workspace/chat/composer-status.test.ts (5 tests) 36ms
+ ✓ |unit| src/tui/workspace/library/cloud-navigation.test.ts (13 tests) 51ms
+ ✓ |unit| src/agent-launch/prepare.test.ts (3 tests) 35ms
+ ✓ |contract| test/contract/engine-update.test.ts (8 tests) 45ms
+ ✓ |unit| src/tui/workspace/draw/brand-motion.test.ts (5 tests) 52ms
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=true
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/server/connection-waiting.test.ts (3 tests) 50ms
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/downloads/use-download-attention.test.tsx > bounds terminal attention and respects motion=false
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/downloads/use-download-attention.test.tsx (2 tests) 30ms
+ ✓ |unit| src/workspace-service/models/hf-revision.test.ts (13 tests) 31ms
+ ✓ |unit| src/telemetry/reporter.test.ts (7 tests) 17ms
+ ✓ |unit| src/terminal-setup/engines.test.ts (5 tests) 18ms
+ ✓ |unit| src/workspace-service/cloud/cloud-connections.test.ts (13 tests) 43ms
+ ✓ |unit| src/tui/workspace/library/library-panel.test.ts (7 tests) 37ms
+ ✓ |unit| src/workspace-service/snapshot-sharing.test.ts (7 tests) 45ms
+ ✓ |contract| test/contract/codex-connect.test.ts (3 tests) 43ms
+ ✓ |unit| src/workspace-service/models/media-migration.test.ts (1 test) 26ms
+ ✓ |unit| src/tui/render-reporting.test.tsx (1 test) 40ms
+ ✓ |unit| src/tui/workspace/sidebar-controls.test.ts (6 tests) 18ms
+stderr | src/tui/workspace/WorkspaceApp.test.tsx > working terminal workspace > reflects API start and stop from another client without leaving the current screen
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/WorkspaceApp.test.tsx (8 tests) 8451ms
+   ✓ working terminal workspace > opens Playground explicitly, selects a discovered model, edits and sends a message, then resizes  335ms
+   ✓ working terminal workspace > starts an engine in the background and keeps model choice interactive while it downloads  2586ms
+   ✓ working terminal workspace > closes open onboarding after the web finishes it (intro=true)  2551ms
+   ✓ working terminal workspace > reflects API start and stop from another client without leaving the current screen  2562ms
+ ✓ |unit| src/workspace-service/models/model-providers.test.ts (4 tests) 53ms
+ ✓ |unit| src/tui/workspace/server/compact-status.test.ts (7 tests) 39ms
+ ✓ |unit| test/scripts/line-endings.test.ts (1 test) 27ms
+ ✓ |contract| test/contract/terminal.test.ts (3 tests) 25ms
+ ✓ |unit| src/workspace-service/features/workspace-embeddings.test.ts (6 tests) 30ms
+ ✓ |unit| src/workspace-service/foundry/foundry-store.test.ts (3 tests) 20ms
+ ✓ |unit| src/tui/workspace/library/model-status.test.ts (4 tests) 33ms
+ ✓ |unit| src/tui/workspace/setup/setup-panel.test.ts (15 tests) 33ms
+ ✓ |contract| test/contract/host-step.test.ts (1 test) 22ms
+ ✓ |unit| src/tui/workspace/setup/access-purpose.test.ts (7 tests) 30ms
+ ✓ |unit| src/tui/workspace/navigation/navigation.test.ts (4 tests) 33ms
+ ✓ |unit| src/tui/workspace/setup/media-step.test.ts (11 tests) 33ms
+ ✓ |unit| src/workspace-service/snapshot/snapshot.test.ts (4 tests) 32ms
+ ✓ |unit| src/workspace-service/foundry/foundry-catalog.test.ts (8 tests) 25ms
+ ✓ |unit| src/workspace-service/managed/managed-models.test.ts (5 tests) 26ms
+ ✓ |unit| src/tui/workspace/server/feature-actions.test.ts (4 tests) 22ms
+ ✓ |unit| src/terminal-service/documents.test.ts (2 tests) 14ms
+ ✓ |unit| src/tui/workspace/library/catalog-import.test.ts (3 tests) 28ms
+ ✓ |unit| src/tui/workspace/chat/chat-load.test.ts (6 tests) 32ms
+ ✓ |unit| src/downloads/discard.test.ts (3 tests) 20ms
+ ✓ |contract| test/contract/engine-status.test.ts (8 tests) 30ms
+ ✓ |unit| src/tui/workspace/library/cloud-layout.test.ts (8 tests) 30ms
+ ✓ |unit| src/tui/workspace/server/cockpit.test.ts (6 tests) 32ms
+ ✓ |unit| src/workspace-service/foundry/foundry-model-plan.test.ts (4 tests) 24ms
+ ✓ |unit| src/tui/workspace/chat/composer.test.ts (7 tests) 22ms
+ ✓ |unit| src/workspace-service/models/hub-fetch.test.ts (3 tests) 23ms
+ ✓ |unit| src/tui/workspace/navigation/rail.test.ts (4 tests) 21ms
+ ✓ |unit| src/tui/workspace/server/connection-launch.test.ts (3 tests) 26ms
+ ✓ |unit| src/tui/workspace/setup/engine-setup.test.ts (8 tests) 23ms
+ ✓ |unit| src/tui/workspace/games/waiting-game.test.ts (9 tests) 22ms
+ ✓ |unit| src/tui/workspace/chat/parameters.test.ts (4 tests) 24ms
+ ✓ |unit| src/workspace-service/litert/litert-store.test.ts (3 tests) 26ms
+ ✓ |contract| test/contract/status-downloads.test.ts (1 test) 14ms
+ ✓ |unit| src/workspace-service/reminders/reminder-operation.test.ts (1 test) 7ms
+stderr | src/tui/workspace/runtime/shared-panels.test.tsx > refreshes cloud connection tags while retaining credentials being edited locally
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/runtime/shared-panels.test.tsx > refreshes cloud connection tags while retaining credentials being edited locally
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/runtime/shared-panels.test.tsx > updates remote engine settings without discarding edits or advancing their conflict revision
+The current testing environment is not configured to support act(...)
+
+stderr | src/tui/workspace/runtime/shared-panels.test.tsx > updates remote engine settings without discarding edits or advancing their conflict revision
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/runtime/shared-panels.test.tsx (2 tests) 19ms
+ ✓ |unit| src/tui/workspace/intro/intro-art.test.ts (6 tests) 14ms
+ ✓ |unit| src/workspace-service/models/catalog-search.test.ts (3 tests) 24ms
+ ✓ |unit| src/tui/workspace/server/connection-art.test.ts (5 tests) 18ms
+ ✓ |unit| src/workspace-service/settings.test.ts (14 tests) 10ms
+ ✓ |contract| test/contract/config-engine.test.ts (8 tests) 27ms
+ ✓ |unit| src/tui/workspace/library/cloud-failures.test.ts (12 tests) 18ms
+ ✓ |unit| src/workspace-service/litert/litert-list.test.ts (14 tests) 16ms
+ ✓ |contract| test/contract/status-host-steps.test.ts (2 tests) 21ms
+ ✓ |unit| src/main-reporting.test.ts (3 tests) 19ms
+ ✓ |unit| src/tui/workspace/server/connection-error-layout.test.ts (4 tests) 20ms
+ ✓ |unit| src/telemetry/notice.test.ts (9 tests) 8ms
+ ✓ |contract| test/contract/managed-store.test.ts (3 tests) 19ms
+ ✓ |unit| src/tui/workspace/intro/intro-canvas.test.ts (5 tests) 13ms
+ ✓ |contract| test/contract/models-list-size.test.ts (1 test) 22ms
+ ✓ |unit| src/workspace-service/engines/engine-preference.test.ts (2 tests) 17ms
+ ✓ |unit| src/tui/workspace/draw/brand-wake.test.ts (12 tests) 13ms
+ ✓ |unit| src/terminal-service/client.test.ts (8 tests) 10ms
+ ✓ |unit| src/workspace-service/connectors/connector-runtime.test.ts (4 tests) 11ms
+ ✓ |unit| src/tui/workspace/chat/readiness.test.ts (12 tests) 20ms
+ ✓ |unit| src/tui/workspace/library/download-connection-return.test.ts (9 tests) 16ms
+ ✓ |unit| src/terminal-setup/forget-download.test.ts (1 test) 11ms
+stderr | src/tui/workspace/runtime/shared-conversations.test.tsx > keeps a reply this terminal has not saved yet over an older saved copy
+The current testing environment is not configured to support act(...)
+
+ ✓ |unit| src/tui/workspace/library/engine-panel.test.ts (17 tests) 18ms
+ ✓ |unit| src/tui/workspace/runtime/shared-conversations.test.tsx (2 tests) 12697ms
+   ✓ shows chats and turns another client saves, keeping the draft, and a deletion  7540ms
+   ✓ keeps a reply this terminal has not saved yet over an older saved copy  5157ms
+ ✓ |unit| src/tui/workspace/server/agent-brand.test.ts (2 tests) 13ms
+ ✓ |unit| src/downloads/verify.test.ts (3 tests) 22ms
+ ✓ |unit| src/config/file.test.ts (2 tests) 22ms
+ ✓ |unit| src/downloads/on-disk.test.ts (2 tests) 18ms
+ ✓ |unit| src/contract/workspace-operations.test.ts (160 tests) 9ms
+ ✓ |unit| test/scripts/linux-packaging.test.ts (28 tests) 15ms
+ ✓ |unit| src/workspace-service/foundry/foundry-template.test.ts (3 tests) 9ms
+ ✓ |unit| src/workspace-service/workspace-logs.test.ts (5 tests) 8ms
+ ✓ |unit| src/tui/workspace/setup/litert-setup.test.ts (4 tests) 14ms
+ ✓ |unit| src/workspace-service/managed/managed-model-plan.test.ts (4 tests) 9ms
+ ✓ |unit| test/scripts/core-boundary.test.ts (7 tests) 10ms
+ ✓ |unit| src/host/ports.test.ts (8 tests) 11ms
+ ✓ |unit| src/workspace-service/models/gguf-facts.test.ts (15 tests) 8ms
+ ✓ |unit| src/admin/token.test.ts (1 test) 5ms
+ ✓ |unit| test/scripts/module-boundaries.test.ts (16 tests) 10ms
+ ✓ |unit| src/tui/workspace/library/engine-settings.test.ts (7 tests) 13ms
+ ✓ |unit| src/tui/workspace/library/engine-actions.test.ts (8 tests) 10ms
+ ✓ |unit| src/tui/workspace/library/cloud-actions.test.ts (4 tests) 14ms
+ ✓ |unit| src/tui/workspace/library/catalog-table.test.ts (5 tests) 13ms
+ ✓ |unit| src/tui/workspace/download-handoff.test.ts (3 tests) 10ms
+ ✓ |unit| src/tui/workspace/input/input-sequence.test.ts (9 tests) 10ms
+ ✓ |unit| src/tui/workspace/chat/features.test.ts (2 tests) 4ms
+ ✓ |unit| src/tui/workspace/actions.test.ts (7 tests) 11ms
+ ✓ |unit| src/tui/workspace/library/engine-downloads.test.ts (3 tests) 6ms
+ ✓ |unit| src/config/edit.test.ts (3 tests) 17ms
+ ✓ |unit| src/tui/workspace/server/connection-illustrations.test.ts (3 tests) 9ms
+ ✓ |unit| src/workspace-service/models/mlx-plan.test.ts (12 tests) 9ms
+ ✓ |unit| src/tui/workspace/library/litert-panel.test.ts (6 tests) 10ms
+ ✓ |unit| src/tui/workspace/library/catalog-variants.test.ts (9 tests) 6ms
+ ✓ |unit| src/update/apply.test.ts (12 tests) 8ms
+ ✓ |unit| src/tui/workspace/server/connection-model-return.test.ts (5 tests) 11ms
+ ✓ |unit| src/workspace-service/server-operations.test.ts (10 tests) 8ms
+ ✓ |unit| src/workspace-service/litert/litert-hf.test.ts (41 tests) 8ms
+ ✓ |unit| src/tui/workspace/library/foundry-panel.test.ts (7 tests) 12ms
+ ✓ |unit| src/tui/workspace/server/server-remote.test.ts (5 tests) 9ms
+ ✓ |unit| src/tui/workspace/operations/operation-actions.test.ts (4 tests) 7ms
+ ✓ |unit| src/tui/workspace/draw/brand-intro-motion.test.ts (2 tests) 6ms
+ ✓ |unit| src/workspace-service/chat/chat-request.test.ts (16 tests) 9ms
+ ✓ |unit| src/tui/workspace/library/engine-status-row.test.ts (2 tests) 9ms
+ ✓ |unit| src/terminal-service/media.test.ts (1 test) 21ms
+ ✓ |unit| src/telemetry/config.test.ts (12 tests) 2ms
+ ✓ |unit| test/scripts/module-map.test.ts (6 tests) 5ms
+ ✓ |unit| src/tui/workspace/startup.test.ts (11 tests) 5ms
+ ✓ |unit| src/daemon/run.test.ts (3 tests) 7ms
+ ✓ |unit| src/tui/workspace/runtime/poll.test.ts (4 tests) 4ms
+ ✓ |unit| src/update/release-watch.test.ts (5 tests) 7ms
+ ✓ |unit| src/host/service-manager.test.ts (20 tests) 6ms
+ ✓ |unit| src/tui/workspace/library/download-controls.test.ts (2 tests) 8ms
+ ✓ |unit| src/workspace-service/remote-setup.test.ts (9 tests) 7ms
+ ✓ |unit| src/tui/workspace/server/profile-layout.test.ts (3 tests) 8ms
+ ✓ |unit| src/workspace-view/connectors/mcp-catalog.test.ts (24 tests) 5ms
+ ✓ |unit| src/workspace-service/cloud/cloud.test.ts (2 tests) 4ms
+ ✓ |unit| src/agent-control/mcp.test.ts (5 tests) 4ms
+ ✓ |unit| src/telemetry/lazy-reporter.test.ts (4 tests) 5ms
+ ✓ |unit| src/tui/workspace/navigation/navigation-return.test.ts (6 tests) 7ms
+ ✓ |unit| src/terminal-setup/engine-catalogs.test.ts (2 tests) 2ms
+ ✓ |unit| src/workspace-view/engines/litert.test.ts (6 tests) 1ms
+ ✓ |unit| src/workspace-service/engines/engine-install.test.ts (23 tests) 6ms
+ ✓ |unit| src/tui/workspace/setup/setup-actions.test.ts (5 tests) 7ms
+ ✓ |unit| src/commands/models/engine-listing.test.ts (13 tests) 3ms
+ ✓ |unit| src/host/service-plans.test.ts (28 tests) 5ms
+ ✓ |unit| src/tui/workspace/chat/engine-picker-setup.test.ts (3 tests) 7ms
+ ✓ |unit| src/admin/auth.test.ts (3 tests) 4ms
+ ✓ |unit| src/tui/workspace/media/media-defaults.test.ts (4 tests) 9ms
+ ✓ |unit| src/config/parse.test.ts (18 tests) 4ms
+ ✓ |unit| src/workspace-service/managed/managed-catalog.test.ts (10 tests) 6ms
+ ✓ |unit| src/main.test.ts (3 tests) 6ms
+ ✓ |unit| src/workspace-service/models/gguf-plan.test.ts (14 tests) 4ms
+ ✓ |unit| src/telemetry/failures.test.ts (9 tests) 5ms
+ ✓ |unit| src/tui/workspace/setup/setup-engine-restrictions.test.ts (4 tests) 7ms
+ ✓ |unit| src/core-link/patient-fetch.test.ts (2 tests) 4ms
+ ✓ |unit| src/workspace-view/engines/engines.test.ts (37 tests) 4ms
+ ✓ |unit| src/daemon/boot.test.ts (7 tests) 4ms
+ ✓ |unit| src/workspace-view/setup/connection-model.test.ts (18 tests) 5ms
+ ✓ |unit| src/update/update.test.ts (5 tests) 5ms
+ ✓ |unit| src/tui/workspace/server/data-actions.test.ts (6 tests) 4ms
+ ✓ |unit| src/workspace-view/downloads/downloads.test.ts (20 tests) 4ms
+ ✓ |unit| src/tui/workspace/chat/image-actions.test.ts (1 test) 6ms
+ ✓ |unit| src/tui/workspace/chat/shared-chat.test.ts (5 tests) 5ms
+ ✓ |unit| src/tui/workspace/setup/download-card.test.ts (5 tests) 4ms
+ ✓ |unit| src/workspace-service/snapshot/require-readiness.test.ts (7 tests) 4ms
+ ✓ |unit| src/terminal-service/operations.test.ts (5 tests) 4ms
+ ✓ |unit| src/downloads/protocol.test.ts (9 tests) 4ms
+ ✓ |unit| src/workspace-service/engines/managed-engines.test.ts (8 tests) 4ms
+ ✓ |unit| src/workspace-service/policy.test.ts (5 tests) 4ms
+ ✓ |unit| src/core-link/events.test.ts (5 tests) 3ms
+ ✓ |unit| src/host/elevator.test.ts (20 tests) 3ms
+ ✓ |unit| src/admin/client-reports.test.ts (2 tests) 4ms
+ ✓ |unit| src/tui/workspace/library/variant-engine-actions.test.ts (8 tests) 4ms
+ ✓ |unit| src/tui/state.test.ts (8 tests) 4ms
+ ✓ |unit| src/cli/command.test.ts (8 tests) 4ms
+ ✓ |unit| src/workspace-view/catalog/local-model-status.test.ts (23 tests) 4ms
+ ✓ |unit| test/scripts/licenses.test.ts (22 tests) 3ms
+ ✓ |unit| src/workspace-service/reminders/reminder-policy.test.ts (27 tests) 3ms
+ ✓ |unit| src/workspace-view/engines/foundry.test.ts (20 tests) 5ms
+ ✓ |unit| src/tui/workspace/draw/fortress.test.ts (1 test) 3ms
+ ✓ |unit| src/telemetry/reports.test.ts (34 tests) 4ms
+ ✓ |unit| src/config/migrations.test.ts (14 tests) 3ms
+ ✓ |unit| src/workspace-service/snapshot/snapshot-cache.test.ts (6 tests) 3ms
+ ✓ |unit| src/commands/server/human-output.test.ts (6 tests) 3ms
+ ✓ |unit| src/tui/model.test.ts (11 tests) 4ms
+ ✓ |unit| src/doctor/checks.test.ts (15 tests) 4ms
+ ✓ |unit| src/terminal-setup/engine-progress.test.ts (2 tests) 2ms
+ ✓ |unit| src/host/cloudflared.test.ts (19 tests) 3ms
+ ✓ |unit| src/workspace-view/engines/engine-status.test.ts (12 tests) 2ms
+ ✓ |unit| src/terminal-setup/wait.test.ts (2 tests) 4ms
+ ✓ |unit| src/tui/workspace/draw/controls.test.ts (5 tests) 3ms
+ ✓ |unit| src/config/schema.test.ts (4 tests) 2ms
+ ✓ |unit| src/tui/workspace/server/settings-actions.test.ts (1 test) 2ms
+ ✓ |unit| src/daemon/session-watch.test.ts (8 tests) 3ms
+ ✓ |unit| src/workspace-view/engines/engine-live.test.ts (7 tests) 2ms
+ ✓ |unit| src/daemon/cloudflared.test.ts (2 tests) 4ms
+ ✓ |unit| src/tui/workspace/runtime/shared-state.test.ts (9 tests) 3ms
+ ✓ |unit| src/daemon/engine-log.test.ts (1 test) 2ms
+ ✓ |unit| src/workspace-view/connectors/connector-sign-in.test.ts (7 tests) 2ms
+ ✓ |unit| src/workspace-view/setup/inference-readiness.test.ts (6 tests) 3ms
+ ✓ |unit| src/workspace-view/catalog/catalog-filter.test.ts (10 tests) 2ms
+ ✓ |unit| src/tui/workspace/operations/operation-model.test.ts (2 tests) 3ms
+ ✓ |unit| src/workspace-service/snapshot/readiness.test.ts (2 tests) 4ms
+ ✓ |unit| src/workspace-view/engines/engine-updates.test.ts (10 tests) 3ms
+ ✓ |unit| src/workspace-service/models/download-operations.test.ts (7 tests) 3ms
+ ✓ |unit| src/workspace-service/features/embedding-retrieval.test.ts (2 tests) 3ms
+ ✓ |unit| src/update/trust.test.ts (19 tests) 3ms
+ ✓ |unit| src/admin/relay.test.ts (1 test) 1ms
+ ✓ |unit| src/agent-launch/plan.test.ts (3 tests) 2ms
+ ✓ |unit| src/workspace-view/downloads/download-controls.test.ts (11 tests) 4ms
+ ✓ |unit| src/config/paths.test.ts (4 tests) 3ms
+ ✓ |unit| src/tui/workspace/draw/viewport.test.ts (1 test) 2ms
+ ✓ |unit| src/workspace-view/engines/engine-order.test.ts (18 tests) 3ms
+ ✓ |unit| src/workspace-view/catalog/catalog-formats.test.ts (10 tests) 4ms
+ ✓ |unit| src/cli/flags.test.ts (8 tests) 3ms
+ ✓ |unit| src/workspace-view/downloads/download-estimate.test.ts (12 tests) 6ms
+ ✓ |unit| src/tui/workspace/downloads/floating-downloads.test.ts (1 test) 2ms
+ ✓ |unit| src/downloads/disk.test.ts (15 tests) 2ms
+ ✓ |unit| src/update/targets.test.ts (9 tests) 4ms
+ ✓ |unit| src/tui/workspace/draw/tooltip.test.ts (3 tests) 2ms
+ ✓ |unit| src/config/resolve.test.ts (2 tests) 3ms
+ ✓ |unit| src/output/progress.test.ts (3 tests) 2ms
+ ✓ |unit| src/daemon/core-env.test.ts (5 tests) 2ms
+ ✓ |unit| src/admin/bff.test.ts (34 tests) 5ms
+ ✓ |unit| src/host/server-launch.test.ts (12 tests) 3ms
+ ✓ |unit| src/output/prompt.test.ts (4 tests) 2ms
+ ✓ |unit| src/workspace-view/engines/settings-form.test.ts (13 tests) 3ms
+ ✓ |unit| src/workspace-service/download-mutations.test.ts (6 tests) 3ms
+ ✓ |unit| src/workspace-view/remote/remote-setup.test.ts (7 tests) 3ms
+ ✓ |unit| src/output/printer.test.ts (3 tests) 2ms
+ ✓ |unit| src/workspace-view/engines/settings-validation.test.ts (10 tests) 2ms
+ ✓ |unit| src/workspace-view/engines/load-engine.test.ts (6 tests) 6ms
+ ✓ |unit| src/host/facts.test.ts (3 tests) 6ms
+ ✓ |unit| src/workspace-view/engines/loads.test.ts (5 tests) 2ms
+ ✓ |unit| src/tui/workspace/draw/word-wrap.test.ts (2 tests) 8ms
+ ✓ |unit| src/cli/default-command.test.ts (9 tests) 2ms
+ ✓ |unit| src/workspace-view/catalog/cloud-catalog.test.ts (1 test) 2ms
+ ✓ |unit| src/host/helper.test.ts (2 tests) 2ms
+ ✓ |unit| src/tui/workspace/library/library-model.test.ts (1 test) 1ms
+ ✓ |unit| src/workspace-view/catalog/model-import-error.test.ts (5 tests) 2ms
+ ✓ |unit| src/tui/workspace/server/api-actions.test.ts (1 test) 2ms
+ ✓ |unit| src/agent-control/input.test.ts (6 tests) 2ms
+ ✓ |unit| src/update/install-source.test.ts (10 tests) 2ms
+ ✓ |unit| src/output/format.test.ts (3 tests) 2ms
+ ✓ |unit| src/cli/help.test.ts (3 tests) 2ms
+ ✓ |unit| src/errors/errors.test.ts (3 tests) 2ms
+ ✓ |unit| src/output/color.test.ts (8 tests) 2ms
+ ✓ |unit| src/terminal-service/local-endpoint.test.ts (6 tests) 2ms
+ ✓ |unit| src/workspace-view/connectors/connector-tools.test.ts (1 test) 2ms
+ ✓ |unit| src/workspace-view/api-prefix.test.ts (14 tests) 2ms
+ ✓ |unit| src/cli/completion.test.ts (5 tests) 2ms
+ ✓ |unit| src/workspace-view/chat/saved-conversation.test.ts (8 tests) 1ms
+ ✓ |unit| src/workspace-service/models/setup-engines.test.ts (1 test) 2ms
+ ✓ |unit| src/admin/bff-json.test.ts (1 test) 2ms
+ ✓ |unit| src/workspace-view/setup/reminder.test.ts (7 tests) 1ms
+ ✓ |unit| src/admin/gates.test.ts (3 tests) 2ms
+ ✓ |unit| src/contract/workspace-navigation.test.ts (2 tests) 1ms
+ ✓ |unit| test/scripts/reporting-config.test.ts (1 test) 2ms
+ ✓ |unit| src/workspace-service/features/feature-prompt.test.ts (2 tests) 2ms
+ ✓ |unit| src/workspace-view/chat/conversation-search.test.ts (1 test) 1ms
+ ✓ |unit| src/tui/workspace/server/server-status.test.ts (2 tests) 2ms
+ ✓ |unit| src/workspace-service/chat/chat-baseline.test.ts (2 tests) 1ms
+ ✓ |unit| src/output/table.test.ts (2 tests) 1ms
+ ✓ |unit| src/workspace-view/update/update-notice.test.ts (3 tests) 1ms
+ ✓ |unit| src/workspace-view/engines/engine-progress.test.ts (1 test) 1ms
+ ✓ |unit| src/terminal-setup/same-files.test.ts (4 tests) 2ms
+ ✓ |unit| src/workspace-view/setup/setup.test.ts (2 tests) 1ms
+ ✓ |unit| src/errors/ownership.test.ts (1 test) 1ms
+ ✓ |unit| src/daemon/spawn.test.ts (1 test) 1ms
+ ✓ |unit| src/workspace-service/models/download-proxy.test.ts (2 tests) 1ms
+ ✓ |unit| src/tui/workspace/chat/failed-turn.test.ts (2 tests) 1ms
+ ✓ |unit| src/commands/models/engine-settings.test.ts (5 tests) 2ms
+ ✓ |unit| src/version.test.ts (1 test) 1ms
+ ✓ |unit| src/tui/error-text.test.ts (1 test) 1ms
+ ✓ |unit| src/cli/not-implemented.test.ts (2 tests) 1ms
+ ✓ |contract| test/contract/daemon.test.ts (11 tests) 20228ms
+   ✓ the daemon owns the folder > lets a command attach, hold a lease, and detects a foreign owner  20087ms
+ ✓ |contract| test/contract/commands.test.ts (12 tests) 30443ms
+   ✓ admin and doctor > prints a login link only when the daemon has an admin  30094ms
+
+ Test Files  381 passed (381)
+      Tests  2790 passed (2790)
+   Start at  16:54:52
+   Duration  32.29s (transform 5.62s, setup 2.01s, collect 131.70s, tests 118.88s, environment 31ms, prepare 13.84s)

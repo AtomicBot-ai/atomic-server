@@ -1,0 +1,28 @@
+0.00.036.962 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.037.011 I srv          init: The UI is disabled
+0.00.037.012 I srv          init: Use --ui/--no-ui (or deprecated --webui/--no-webui) to enable/disable
+0.00.037.051 W srv  llama_server: -----------------
+0.00.037.052 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.037.052 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.037.053 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.037.053 W srv  llama_server: -----------------
+0.00.038.398 I srv    load_model: loading model '/private/tmp/atomic-qa-deep-ii5MT9/data/llamacpp/models/LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M/LFM2.5-1.2B-Instruct-Q4_K_M.gguf'
+0.00.234.197 I cmn          init: llama threadpool init, n_threads = 12
+/Users/runner/work/llama.cpp/llama.cpp/ggml/src/ggml-metal/ggml-metal-context.m:315: GGML_ASSERT(buf_src) failed
+WARNING: Using native backtrace. Set GGML_BACKTRACE_LLDB for more info.
+WARNING: GGML_BACKTRACE_LLDB may cause native MacOS Terminal.app to crash.
+See: https://github.com/ggml-org/llama.cpp/pull/17869
+0   libggml-base.0.21.0.dylib           0x0000000102e99490 ggml_print_backtrace + 276
+1   libggml-base.0.21.0.dylib           0x0000000102f0aee8 ggml_abort + 156
+2   libggml-metal.0.21.0.dylib          0x000000010459b284 ggml_metal_get_tensor_async + 0
+3   libggml-base.0.21.0.dylib           0x0000000102eb8b38 _ZZL33ggml_backend_sched_compute_splitsP18ggml_backend_schedENK3$_1clEP11ggml_tensorS3_ + 456
+4   libggml-base.0.21.0.dylib           0x0000000102eb66e8 ggml_backend_sched_graph_compute_async + 1568
+5   libllama.0.2.0.dylib                0x0000000103046604 _ZN13llama_context13graph_computeEP11ggml_cgraphb + 172
+6   libllama.0.2.0.dylib                0x00000001030460b8 _ZN13llama_context14process_ubatchERK12llama_ubatch14llm_graph_typeP22llama_memory_context_iR11ggml_status + 732
+7   libllama.0.2.0.dylib                0x0000000103047ee8 _ZN13llama_context6decodeERK11llama_batch + 2556
+8   libllama.0.2.0.dylib                0x000000010304d8c8 llama_decode + 20
+9   libllama-common.0.2.0.dylib         0x0000000103f15a68 _Z23common_init_from_paramsR13common_paramsb + 1956
+10  libllama-server-impl.dylib          0x000000010364ab6c _ZN19server_context_impl10load_modelER13common_params + 1964
+11  libllama-server-impl.dylib          0x00000001035ad370 _Z12llama_serverR13common_paramsiPPc + 20312
+12  libllama-server-impl.dylib          0x00000001035a83b4 _Z12llama_serveriPPc + 164
+13  dyld                                0x000000018c3784e4 start + 6992

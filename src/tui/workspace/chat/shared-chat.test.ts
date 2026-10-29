@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest'
 import { sharedChat } from './shared-chat.js'
+import { isRemoteError } from '../../../errors/index.js'
 import type { WorkspaceRuntime } from '../runtime/runtime.js'
 it('sends prepared documents and feature choices through shared jobs without mutating drafts', async () => {
   const read = vi.fn(async (operation: string) =>
@@ -84,4 +85,54 @@ it('applies the edited system prompt once without leaking internal draft fields 
     },
   })
   expect(messages[0]!.content).toBe('Old prompt')
+})
+
+it('sends the loaded revision for a deliberate system edit and returns the final saved revision', async () => {
+  const read = vi.fn(async () => ({
+    id: 'job',
+    state: 'complete',
+    conversation_id: 'chat',
+    conversation_revision: 9,
+    message: { role: 'assistant', content: 'Done' },
+  }))
+  const result = await sharedChat(
+    { read } as unknown as WorkspaceRuntime,
+    'model',
+    [
+      { role: 'system', content: 'Old' },
+      { role: 'user', content: 'Hi' },
+    ],
+    { atomic_system: 'New' },
+    new AbortController().signal,
+    () => {},
+    'chat',
+    [],
+    7
+  )
+  expect(read).toHaveBeenCalledWith(
+    'chat.start',
+    expect.objectContaining({ conversation_id: 'chat', expected_revision: 7 })
+  )
+  expect(result).toMatchObject({ revision: 9 })
+})
+
+it('keeps server job failures owned by the server when a revision was supplied', async () => {
+  const read = vi.fn(async () => ({ id: 'job', state: 'failed', error: 'Could not save answer' }))
+  const error = await sharedChat(
+    { read } as unknown as WorkspaceRuntime,
+    'model',
+    [],
+    {},
+    new AbortController().signal,
+    () => {},
+    'chat',
+    [],
+    7
+  ).catch((error: unknown) => error)
+  expect(error).toBeInstanceOf(Error)
+  expect(isRemoteError(error)).toBe(true)
+  expect(read).toHaveBeenCalledWith(
+    'chat.start',
+    expect.objectContaining({ conversation_id: 'chat', expected_revision: 7 })
+  )
 })

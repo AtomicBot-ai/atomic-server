@@ -18,6 +18,8 @@ export function FirstModel({
   onSkip,
   actionContainer,
   category = 'text',
+  initialChoice = '',
+  onChoice,
 }: {
   workspace: Workspace
   select: (model: RecordValue, installed: boolean) => void | Promise<void>
@@ -25,10 +27,12 @@ export function FirstModel({
   onSkip?: () => void | Promise<void>
   actionContainer?: HTMLElement | null
   category?: string
+  initialChoice?: string
+  onChoice?: (choice: string) => void
 }) {
   const [models, setModels] = useState<RecordValue[]>([])
   const [installed, setInstalled] = useState<RecordValue[]>([])
-  const [selected, setSelected] = useState('')
+  const [selected, setSelected] = useState(initialChoice)
   const [engine, setEngine] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -67,27 +71,44 @@ export function FirstModel({
       .then(([selectedEngine, available, local]) => {
         if (!live) return
         setEngine(selectedEngine)
-        setModels(
-          available.filter(
-            (m) =>
-              !rows(local).some((l) => {
-                const id = text(l.id ?? l.model_id, '')
-                const repo = text(m.id ?? m.model_id, '')
-                // A Foundry Local or LiteRT-LM family is installed as one of its variants; a GGUF
-                // download under its file name is its catalog row (the registry names the repository).
-                const variants = rows(record(m.litert ?? m.foundry).variants).map((v) => text(v.id, ''))
-                return (
-                  catalogModelMatches(id, repo, undefined, text(l.repository, '') || undefined) ||
-                  variants.includes(id)
-                )
-              })
-          )
+        const remaining = available.filter(
+          (m) =>
+            !rows(local).some((l) => {
+              const id = text(l.id ?? l.model_id, '')
+              const repo = text(m.id ?? m.model_id, '')
+              // A Foundry Local or LiteRT-LM family is installed as one of its variants; a GGUF
+              // download under its file name is its catalog row (the registry names the repository).
+              const variants = rows(record(m.litert ?? m.foundry).variants).map((v) => text(v.id, ''))
+              return (
+                catalogModelMatches(id, repo, undefined, text(l.repository, '') || undefined) ||
+                variants.includes(id)
+              )
+            })
         )
+        setModels(remaining)
         setInstalled(rows(local))
         const first = rows(local)[0] ?? available[0]
-        setSelected(
-          first ? `${rows(local).length ? 'local' : 'catalog'}:${text(first.id ?? first.model_id)}` : ''
-        )
+        const keys = [
+          ...rows(local).map((m) => `local:${text(m.id ?? m.model_id)}`),
+          ...remaining.map((m) => `catalog:${text(m.id ?? m.model_id)}`),
+        ]
+        setSelected((previous) => {
+          if (keys.includes(previous)) return previous
+          const repository = previous.slice(previous.indexOf(':') + 1)
+          const downloaded = rows(local).find((m) =>
+            catalogModelMatches(
+              text(m.id ?? m.model_id),
+              repository,
+              undefined,
+              text(m.repository, '') || undefined
+            )
+          )
+          return downloaded
+            ? `local:${text(downloaded.id ?? downloaded.model_id)}`
+            : first
+              ? `${rows(local).length ? 'local' : 'catalog'}:${text(first.id ?? first.model_id)}`
+              : ''
+        })
       })
       .catch((e) => {
         if (live) setError(describeError(e))
@@ -109,7 +130,10 @@ export function FirstModel({
           key={id}
           className={`first-model-card ${selected === id ? 'selected' : ''}`}
           aria-pressed={selected === id}
-          onClick={() => setSelected(id)}
+          onClick={() => {
+            setSelected(id)
+            onChoice?.(id)
+          }}
         >
           <ModelMark model={m} />
           <span className="first-model-text">

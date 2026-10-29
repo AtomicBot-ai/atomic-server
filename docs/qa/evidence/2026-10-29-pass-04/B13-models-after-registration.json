@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "operation": "models.installed",
+  "status": "ok",
+  "result": [
+    {
+      "id": "LiquidAI/LFM2-1.2B-Q4_K_M",
+      "provider": "llamacpp-upstream",
+      "name": "LFM2-1.2B-Q4_K_M",
+      "repository": "LiquidAI/LFM2-1.2B-GGUF",
+      "size_bytes": 730893248,
+      "providers": ["llamacpp-upstream", "llamacpp", "atomic-prism"]
+    },
+    {
+      "id": "LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M",
+      "provider": "llamacpp-upstream",
+      "name": "LFM2.5-1.2B-Instruct-Q4_K_M",
+      "repository": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+      "size_bytes": 730895168,
+      "providers": ["llamacpp-upstream", "llamacpp", "atomic-prism"]
+    },
+    {
+      "id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+      "name": "LFM2.5 1.2B (MLX)",
+      "provider": "mlx",
+      "providers": ["mlx"]
+    }
+  ]
+}

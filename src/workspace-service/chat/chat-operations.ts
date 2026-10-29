@@ -1,5 +1,6 @@
 /** The workspace's chat operations: history and generation jobs; `NOT_CORE` for any other. */
 
+import { isDeepStrictEqual } from 'node:util'
 import { AtcError } from '../../errors/index.js'
 import type { ChatHistory, ClientKeys, Conversation } from '../../terminal-data/index.js'
 import type { WorkspaceInput } from '../../contract/index.js'
@@ -14,7 +15,7 @@ export interface ChatParts {
   options: WorkspaceServiceOptions
   keys: ClientKeys
   history: ChatHistory
-  chats: Pick<ChatJobs, 'start' | 'get' | 'cancel'>
+  chats: Pick<ChatJobs, 'start' | 'get' | 'cancel' | 'running'>
   request: typeof fetch
   enrich: EnrichChat
 }
@@ -36,8 +37,19 @@ export async function chatOperation(
       const chat = object(input['chat'])
       if (!Array.isArray(chat['messages']) || typeof chat['id'] !== 'string')
         throw new AtcError('ATC_USAGE', 'A chat needs id and messages.')
-      await history.save(chat as unknown as Conversation)
-      return { saved: true }
+      if (chats.running().some((job) => job.conversation_id === chat['id'])) {
+        const stored = await history.load(chat['id'])
+        if (!stored || !isDeepStrictEqual(stored.messages, chat['messages']))
+          throw new AtcError(
+            'ATC_USAGE',
+            'This conversation has an active request. Wait before editing messages.'
+          )
+      }
+      await history.save(
+        chat as unknown as Conversation,
+        Number(input['expected_revision'] ?? chat['revision'] ?? 0)
+      )
+      return { saved: true, chat }
     }
     case 'chat.start':
       return chats.start(input)

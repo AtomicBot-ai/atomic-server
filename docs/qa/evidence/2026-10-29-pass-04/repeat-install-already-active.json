@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "operation": "engines.install",
+  "status": "ok",
+  "result": {
+    "updated": false,
+    "reason": "already-active",
+    "active": {
+      "version": "b11946",
+      "variant": "macos-arm64"
+    },
+    "retired": [],
+    "kept_in_use": []
+  }
+}

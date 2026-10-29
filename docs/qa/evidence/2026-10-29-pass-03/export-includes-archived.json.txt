@@ -1,0 +1,48 @@
+{
+  "format": "atomic-conversations-v1",
+  "conversations": [
+    {
+      "endpoint": "",
+      "workingDirectory": "",
+      "model": "",
+      "createdAt": 1793274552990,
+      "updatedAt": 1793274552991,
+      "interrupted": false,
+      "title": "QA03 import beta",
+      "id": "94d6cc77-95a8-4fc3-8feb-86270f6e1fd9",
+      "messages": [
+        {
+          "role": "user",
+          "content": "BETA_KEEP_321"
+        },
+        {
+          "role": "assistant",
+          "content": "BETA_REPLY_654"
+        }
+      ],
+      "request_settings": {},
+      "archived": true
+    },
+    {
+      "id": "b26f57ae-fdfe-4b76-87c0-bf44108349b2",
+      "title": "QA03 import alpha — Привет 👋",
+      "endpoint": "",
+      "model": "LiquidAI/LFM2-1.2B-Q4_K_M",
+      "workingDirectory": "",
+      "createdAt": 1793274552990,
+      "updatedAt": 1793274552990,
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply exactly IMPORT_ALPHA_OK."
+        },
+        {
+          "role": "assistant",
+          "content": "IMPORT_ALPHA_OK"
+        }
+      ],
+      "interrupted": false,
+      "request_settings": {}
+    }
+  ]
+}

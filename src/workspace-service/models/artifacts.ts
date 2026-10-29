@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
-import { ModelRegistry } from '@atomic-chat/core/models'
+import { registerMlx, recoverMlx } from './mlx-registration.js'
 import { Downloader } from '../../downloads/index.js'
 import type { WorkspaceInput } from '../../contract/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
@@ -43,8 +43,12 @@ export class ArtifactService {
       })
   }
   /** Move what an earlier atc downloaded to where the core looks for it; before any job runs. */
-  migrate(): Promise<{ kept: string[] }> {
-    return migrateMediaFolders(this.options.paths.dataFolder, this.directory)
+  async migrate(): Promise<{ kept: string[] }> {
+    const result = await migrateMediaFolders(this.options.paths.dataFolder, this.directory)
+    for (const job of await this.list())
+      if (job.stage === 'ready' && !job.registered && (await recoverMlx(this.options.paths, job.plan)))
+        await writeDocument(this.path(job.id), { ...job, registered: true })
+    return result
   }
   private path(id: string) {
     if (!/^[\w-]{1,120}$/.test(id))
@@ -54,11 +58,22 @@ export class ArtifactService {
   async plan(input: WorkspaceInput) {
     const category = input['category'] as CatalogCategory,
       { rows } = await this.catalog.list(category),
-      row = rows.find((r) => r.id === input['model_id'])
+      curated = rows.find((r) => r.id === input['model_id']),
+      row =
+        curated ??
+        (category === 'text'
+          ? {
+              id: String(input['model_id']),
+              name: String(input['model_id']),
+              category,
+              description: '',
+              source: { format: 'mlx' },
+            }
+          : undefined)
     if (!row) throw new AtcError('ATC_USAGE', 'Choose a model from the current catalog.')
     const plan =
       category === 'text'
-        ? await mlxPlan(row, this.options.paths.dataFolder, this.request)
+        ? await mlxPlan(row, this.options.paths.dataFolder, this.request, !curated)
         : artifactPlan(row, this.options.paths.dataFolder, input['quant'] as string | undefined)
     const free = await this.options.link.disk.available()
     await writeDocument(this.path(plan.digest), plan)
@@ -148,6 +163,10 @@ export class ArtifactService {
   }
   private async persist(job: ArtifactJob, worker: Worker, stage: ArtifactJob['stage'], error?: unknown) {
     await this.mutations.run(job.id, async () => {
+      if (stage === 'ready' && !worker.cancelled) {
+        await registerMlx(this.options.paths, job.plan)
+        if (job.plan.engine === 'mlx') job.registered = true
+      }
       job.stage = worker.cancelled ? 'cancelled' : stage
       job.updated_at = Date.now()
       if (error && !worker.cancelled) job.error = error instanceof Error ? error.message : String(error)
@@ -234,10 +253,8 @@ export class ArtifactService {
     if (job.stage !== 'ready') throw new AtcError('ATC_USAGE', 'Finish downloading this model first.')
     const link = this.options.link
     if (job.plan.engine === 'mlx') {
-      await new ModelRegistry(this.options.paths.layout, 'mlx').write(job.plan.model_id, {
-        model_path: String(job.plan.load['model_path']),
-        name: job.plan.name,
-      })
+      await registerMlx(this.options.paths, job.plan)
+      if (!job.registered) await writeDocument(this.path(job.id), { ...job, registered: true })
       return link.models.load('mlx', job.plan.model_id)
     }
     if (['image', 'video'].includes(job.plan.category)) {

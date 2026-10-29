@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "operation": "artifacts.list",
+  "status": "ok",
+  "result": [
+    {
+      "id": "04a45984-ef4d-4e60-8aea-6fd77a372bfb",
+      "plan": {
+        "category": "text",
+        "model_id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+        "name": "LFM2.5 1.2B (MLX)",
+        "engine": "mlx",
+        "files": [
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/config.json",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/config.json",
+            "size": 1572,
+            "sha256": null
+          },
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/generation_config.json",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/generation_config.json",
+            "size": 132,
+            "sha256": null
+          },
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/model.safetensors",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/model.safetensors",
+            "size": 658540250,
+            "sha256": "d837f243744bbdbe7dd032f90b482a1c45d5b6035b25c1d7804d0f4c74b5c004"
+          },
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/model.safetensors.index.json",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/model.safetensors.index.json",
+            "size": 23414,
+            "sha256": null
+          },
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/special_tokens_map.json",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/special_tokens_map.json",
+            "size": 434,
+            "sha256": null
+          },
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/tokenizer.json",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/tokenizer.json",
+            "size": 4733389,
+            "sha256": null
+          },
+          {
+            "url": "https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit/resolve/dee2f8a2786e6648bb644a7ca40652842490034b/tokenizer_config.json",
+            "save_path": "workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit/tokenizer_config.json",
+            "size": 92225,
+            "sha256": null
+          }
+        ],
+        "total_download_bytes": 663391416,
+        "load": {
+          "provider": "mlx",
+          "model_id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+          "model_path": "/private/tmp/atomic-qa-pass04-doPU13/data/workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit"
+        },
+        "digest": "6fd554099f892ece8b38338dd710160544a01c4a95a4fd1d8a14657295851f35",
+        "created_at": 1793276632430
+      },
+      "stage": "ready",
+      "updated_at": 1793277433412,
+      "transferred": 268543146
+    }
+  ]
+}

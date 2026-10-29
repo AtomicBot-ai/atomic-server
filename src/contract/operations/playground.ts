@@ -17,8 +17,11 @@ export const PLAYGROUND_OPERATIONS: readonly WorkspaceOperation[] = [
     'history.save',
     'Save chat',
     'configure',
-    'Save a conversation (id and messages), replacing the stored copy.',
-    { properties: { chat: { type: 'object' } }, required: ['chat'] }
+    'Save a conversation with its loaded revision; reject a stale copy rather than overwriting another client.',
+    {
+      properties: { chat: { type: 'object' }, expected_revision: { type: 'integer', minimum: 0 } },
+      required: ['chat'],
+    }
   ),
   operation('history.remove', 'Delete chat', 'configure', 'Delete a saved conversation.', {
     properties: { id: { type: 'string' } },
@@ -53,6 +56,7 @@ export const PLAYGROUND_OPERATIONS: readonly WorkspaceOperation[] = [
           ['model', 'messages']
         ),
         conversation_id: { type: 'string' },
+        expected_revision: { type: 'integer', minimum: 0 },
       },
       required: ['request'],
     }
@@ -67,6 +71,7 @@ export const PLAYGROUND_OPERATIONS: readonly WorkspaceOperation[] = [
         request: { type: 'object' },
         provider: { type: 'string' },
         conversation_id: { type: 'string' },
+        expected_revision: { type: 'integer', minimum: 0 },
       },
       required: ['request'],
     }

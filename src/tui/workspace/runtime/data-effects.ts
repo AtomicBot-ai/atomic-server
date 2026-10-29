@@ -207,7 +207,7 @@ export function useWorkspaceData(
     const controller = c.current
     if (!controller) return
     const save = () =>
-      void persistConversation({ get: () => latest.current, controller })
+      void persistConversation({ get: () => latest.current, controller, update })
         .then(async () => {
           if (!latest.current.generating) {
             const history = await controller.history.list()

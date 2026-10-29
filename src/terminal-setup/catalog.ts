@@ -5,14 +5,15 @@ import type { HubRepository } from './types.js'
 export async function searchHub(
   query: string,
   request: typeof fetch,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  format: 'gguf' | 'mlx' = 'gguf'
 ): Promise<HubRepository[]> {
   const results = await Promise.allSettled(
-    ['AtomicChat', ''].map(async (author) => {
+    (format === 'mlx' ? ['mlx-community', ''] : ['AtomicChat', '']).map(async (author) => {
       const url = new URL('https://huggingface.co/api/models')
       url.search = new URLSearchParams({
         search: query.trim().replace(/^AtomicChat\//i, ''),
-        filter: 'gguf',
+        filter: format,
         sort: 'downloads',
         direction: '-1',
         limit: '60',
@@ -27,7 +28,11 @@ export async function searchHub(
       if (!Array.isArray(rows)) throw new Error('The model catalog returned an invalid response.')
       return rows
         .filter((r) => typeof r.id === 'string')
-        .map((r) => ({ id: r.id, downloads: Number(r.downloads) || 0 }))
+        .map((r) => ({
+          id: r.id,
+          downloads: Number(r.downloads) || 0,
+          ...(format === 'mlx' ? { source: { format: 'mlx' as const } } : {}),
+        }))
     })
   )
   if (results.every((r) => r.status === 'rejected')) throw (results[0] as PromiseRejectedResult).reason

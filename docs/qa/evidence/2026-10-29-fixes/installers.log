@@ -1,0 +1,30 @@
+
+> @atomicbot-ai/atc@0.2.8 test:installers
+> vitest run --project installers
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ↓ |installers| test/installers/install-ps1.test.ts (2 tests | 2 skipped)
+ ✓ |installers| test/installers/install-sh.test.ts (16 tests) 17345ms
+   ✓ install.sh picks the binary for the machine > {"os":"Linux","cpu":"x86_64"} → x86_64-unknown-linux-gnu  7297ms
+   ✓ install.sh picks the binary for the machine > {"os":"Linux","cpu":"x86_64","avx2":false} → x86_64-unknown-linux-gnu-baseline  1189ms
+   ✓ install.sh picks the binary for the machine > {"os":"Linux","cpu":"x86_64","musl":true} → x86_64-unknown-linux-musl  796ms
+   ✓ install.sh picks the binary for the machine > {"os":"Linux","cpu":"aarch64"} → aarch64-unknown-linux-gnu  778ms
+   ✓ install.sh picks the binary for the machine > {"os":"Linux","cpu":"aarch64","musl":true} → aarch64-unknown-linux-musl  689ms
+   ✓ install.sh picks the binary for the machine > {"os":"Linux","cpu":"aarch64","avx2":false} → aarch64-unknown-linux-gnu  780ms
+   ✓ install.sh picks the binary for the machine > {"os":"Darwin","cpu":"arm64"} → aarch64-apple-darwin  652ms
+   ✓ install.sh picks the binary for the machine > {"os":"Darwin","cpu":"x86_64"} → x86_64-apple-darwin  908ms
+   ✓ install.sh picks the binary for the machine > {"os":"Darwin","cpu":"x86_64","rosetta":true} → aarch64-apple-darwin  759ms
+   ✓ install.sh refuses rather than installing something unverified > stops on a checksum mismatch and leaves nothing behind  523ms
+   ✓ install.sh refuses rather than installing something unverified > stops when there is no tool to verify the download with  482ms
+   ✓ install.sh refuses rather than installing something unverified > names the assets when this machine has no binary  363ms
+   ✓ install.sh refuses rather than installing something unverified > refuses an unknown CPU  344ms
+   ✓ install.sh and PATH > adds the folder to the shell rc once, however often it runs  718ms
+   ✓ install.sh beside a Linux package > installs, and says the package copy in /usr/bin is shadowed  517ms
+   ✓ install.sh beside a Linux package > says nothing without a package  516ms
+
+ Test Files  1 passed | 1 skipped (2)
+      Tests  16 passed | 2 skipped (18)
+   Start at  16:31:55
+   Duration  17.76s (transform 97ms, setup 0ms, collect 163ms, tests 17.34s, environment 0ms, prepare 141ms)

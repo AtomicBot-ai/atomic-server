@@ -1,0 +1,17 @@
+[
+  {
+    "id": "mlx-community/LFM2-24B-A2B-4bit",
+    "title": "LFM2 24B A2B (MLX)",
+    "format": "mlx"
+  },
+  {
+    "id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+    "title": "LFM2.5 1.2B (MLX)",
+    "format": "mlx"
+  },
+  {
+    "id": "mlx-community/LFM2-1.2B-4bit",
+    "title": "LFM2 1.2B (MLX)",
+    "format": "mlx"
+  }
+]

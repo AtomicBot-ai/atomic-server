@@ -76,7 +76,10 @@ it('reports a history read failure even when fallback persistence succeeds', asy
   const job = await jobs.start({ request: { model: 'm', messages } })
   vi.spyOn(history, 'load').mockRejectedValueOnce(Object.assign(new Error('read failed'), { code: 'EIO' }))
   await release()
-  expect((await settled(job.id)).state).toBe('complete')
+  const result = await settled(job.id)
+  expect(result.state).toBe('complete')
+  expect(result.conversation_revision).toBe((await history.load(job.conversation_id))?.revision)
+  expect(capture).toHaveBeenCalledTimes(1)
   expect(capture).toHaveBeenCalledWith(
     expect.objectContaining({ tags: expect.objectContaining({ operation: 'history.load' }) })
   )
@@ -121,13 +124,14 @@ it('does not bring back a conversation deleted while its answer streamed', async
 })
 
 it('runs one request per conversation even when two start at once', async () => {
-  const { jobs, release, settled, fetch } = await harness()
+  const { jobs, history, release, settled, fetch } = await harness()
   const first = await jobs.start({ request: { model: 'm', messages } })
   await release()
   await settled(first.id)
   const input = {
     request: { model: 'm', messages: [...messages, { role: 'user', content: 'again' }] },
     conversation_id: first.conversation_id,
+    expected_revision: (await history.load(first.conversation_id))?.revision ?? 0,
   }
   const results = await Promise.allSettled([jobs.start(input), jobs.start(input)])
   expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected'])
@@ -151,4 +155,45 @@ it('lists the requests still running, by conversation, for the other clients to 
   await release()
   await settled(job.id)
   expect(jobs.running()).toEqual([])
+})
+
+it('rejects a stale tab after another request has completed without changing durable messages', async () => {
+  const { jobs, history, release, settled, fetch } = await harness()
+  const first = await jobs.start({ request: { model: 'm', messages } })
+  await release()
+  await settled(first.id)
+  const stale = (await history.load(first.conversation_id))!
+  const second = await jobs.start({
+    conversation_id: stale.id,
+    expected_revision: stale.revision ?? 0,
+    request: { model: 'm', messages: [...stale.messages, { role: 'user', content: 'new turn' }] },
+  })
+  await release()
+  await settled(second.id)
+  const latest = (await history.load(stale.id))!
+  await expect(
+    jobs.start({
+      conversation_id: stale.id,
+      expected_revision: stale.revision ?? 0,
+      request: { model: 'm', messages: [...stale.messages, { role: 'user', content: 'stale turn' }] },
+    })
+  ).rejects.toThrow(/changed|Reopen/)
+  expect((await history.load(stale.id))?.messages).toEqual(latest.messages)
+  expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
+})
+
+it('reports a read failure but refuses fallback persistence over a newer saved revision', async () => {
+  const { jobs, history, release, settled, capture } = await harness()
+  const job = await jobs.start({ request: { model: 'm', messages } })
+  const saved = (await history.load(job.conversation_id))!
+  await history.save({ ...saved, title: 'New title from another client' })
+  const latest = (await history.load(saved.id))!
+  vi.spyOn(history, 'load').mockRejectedValueOnce(Object.assign(new Error('read failed'), { code: 'EIO' }))
+  await release()
+  expect((await settled(job.id)).state).toBe('failed')
+  expect(await history.load(saved.id)).toEqual(latest)
+  expect(capture).toHaveBeenCalledTimes(1)
+  expect(capture).toHaveBeenCalledWith(
+    expect.objectContaining({ tags: expect.objectContaining({ operation: 'history.load' }) })
+  )
 })

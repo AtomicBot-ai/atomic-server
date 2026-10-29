@@ -1,0 +1,36 @@
+{
+  "time": "2026-10-29T12:43:55.985Z",
+  "label": "MLX-to-GGUF-return",
+  "api": {
+    "running": true,
+    "host": "127.0.0.1",
+    "port": 50554,
+    "prefix": "/v1",
+    "requires_api_key": true,
+    "pid": 26916
+  },
+  "sessions": [
+    {
+      "provider": "llamacpp-upstream",
+      "model_id": "LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M",
+      "port": 3831
+    }
+  ],
+  "processes": [
+    "29049 26916 /private/tmp/atomic-qa-pass04-doPU13/data/llamacpp-upstream/backends/b11946/macos-arm64/build/bin/llama-server --no-webui --jinja -m /private/tmp/atomic-qa-pass04-doPU13/data/llamacpp/models/LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M/LFM2.5-1.2B-Instruct-Q4_K_M.gguf -a LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M --port 3831 -ngl -1 --threads 2 --flash-attn auto --parallel 1 -kvu --no-reasoning-preserve --fit on --fit-target 13762 -ngl 0 -c 2048"
+  ],
+  "apiModels": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "created": 1,
+          "id": "LiquidAI/LFM2.5-1.2B-Instruct-Q4_K_M",
+          "object": "model",
+          "owned_by": "llama.cpp-upstream"
+        }
+      ],
+      "object": "list"
+    }
+  }
+}

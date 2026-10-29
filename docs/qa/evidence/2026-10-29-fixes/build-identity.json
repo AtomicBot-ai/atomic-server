@@ -1,0 +1,9 @@
+{
+  "base_commit": "609ce03db0f1320c343cb2406e80b594309668c4",
+  "working_tree": "uncommitted local fixes",
+  "binary_sha256": "6b7070d11e24343c5409a08f338176ca7a6900a1b0c5b973944ed37a72b041de",
+  "admin_build": "1ecc01e5a5d1b786",
+  "platform": "macOS arm64",
+  "core": "0.19.1",
+  "qa_server_stopped": true
+}

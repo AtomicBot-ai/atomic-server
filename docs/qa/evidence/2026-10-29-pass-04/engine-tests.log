@@ -1,0 +1,11 @@
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |unit| src/workspace-service/engines/engine-install.test.ts (20 tests) 5ms
+ ✓ |unit| src/workspace-service/engines/engine-downloads.test.ts (13 tests) 1304ms
+   ✓ shares queued progress with both frontend snapshots and reports it as pending readiness  512ms
+
+ Test Files  2 passed (2)
+      Tests  33 passed (33)
+   Start at  15:49:35
+   Duration  2.06s (transform 384ms, setup 17ms, collect 906ms, tests 1.31s, environment 0ms, prepare 63ms)

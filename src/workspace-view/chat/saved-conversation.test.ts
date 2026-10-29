@@ -22,3 +22,7 @@ it.each([
 ] as const)('%s: %s', (_, saved, last, change) => {
   expect(savedConversationChange(shown, saved, last)).toBe(change)
 })
+
+it('adopts a newer revision even when only request settings changed', () => {
+  expect(savedConversationChange({ ...shown, revision: 2 }, { ...shown, revision: 3 }, synced)).toBe('adopt')
+})

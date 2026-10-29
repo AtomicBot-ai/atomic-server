@@ -1,0 +1,27 @@
+{
+  "B03": {
+    "stale_rejected": true,
+    "newer_messages_preserved": true,
+    "error": {
+      "error": {
+        "code": "ATC_USAGE",
+        "message": "This conversation changed in another client. Reopen it before retrying; your draft has been kept."
+      }
+    }
+  },
+  "B02": {
+    "invalid_prefix_rejected_by_server": true
+  },
+  "B12": {
+    "invalid_enum_rejected_by_server": true,
+    "saved_value": "auto"
+  },
+  "B07": {
+    "duplicate_create_rejected": true,
+    "original_body_preserved": true
+  },
+  "B09": {
+    "imported_original_export_count": 101,
+    "all_preserved": true
+  }
+}

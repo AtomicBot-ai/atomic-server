@@ -1,0 +1,60 @@
+
+> @atomicbot-ai/atc@0.2.8 test:e2e
+> vitest run --project e2e
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |e2e| test/e2e/output.test.ts (1 test) 1001ms
+   ✓ writes a --json document larger than a pipe holds in full, for a reader that pauses  1000ms
+ ✓ |e2e| test/e2e/chat.test.ts (1 test) 1033ms
+   ✓ streams chat through the built executable against an isolated local endpoint  1031ms
+ ✓ |e2e| test/e2e/foundry-host.test.ts (2 tests) 1214ms
+   ✓ atc foundry-host (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > answers an unknown mode with the host usage line, not an atc error  1004ms
+ ↓ |e2e| test/e2e/service.test.ts (1 test | 1 skipped)
+ ✓ |e2e| test/e2e/reporting.test.ts (2 tests) 1258ms
+   ✓ reports a failed command before the built program exits, without free-form release content  1055ms
+ ✓ |e2e| test/e2e/litert-host.test.ts (4 tests | 1 skipped) 1440ms
+   ✓ atc litert-host (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > passes [ 'nope' ] to the core host parser without opening atc  1002ms
+ ✓ |e2e| test/e2e/mcp.test.ts (4 tests) 2239ms
+   ✓ atc mcp (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > keeps connector programs out of a read-only session and refuses a guessed name  1008ms
+   ✓ atc mcp (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > keeps connector programs out of a --allow-exec without writes session and refuses a guessed name  310ms
+   ✓ atc mcp (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > offers them with --allow-writes and --allow-exec  453ms
+ ✓ |e2e| test/e2e/workspace-documents.test.ts (1 test) 2943ms
+   ✓ uses the packaged server binary to extract PDFs and persist portable skills  2502ms
+ ✓ |e2e| test/e2e/tui-flows.test.ts (2 tests) 5860ms
+   ✓ atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > lists LiteRT-LM families in Local models from the format filter and opens a variant’s engine in its own panel  4624ms
+   ✓ atc tui journeys (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > opens on a config file from before tui.mode left, and lists the migrated settings without it  783ms
+ ✓ |e2e| test/e2e/v021-fixes.test.ts (3 tests) 6347ms
+   ✓ a port another program holds > is busy to doctor and refused by api start, on the wildcard address too  2501ms
+   ✓ the server once it is ready > starts the API by default, keeps it down on api.autoStart=false, and logs an autoLoad it cannot do  2487ms
+   ✓ models catalog --engine > narrows the catalog to what the engine runs and refuses an unknown engine  1241ms
+ ✓ |e2e| test/e2e/managed-engines.test.ts (3 tests) 8240ms
+   ✓ managed engines (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > refuses without consent and without a terminal, printing the plan, and begins no operation  3891ms
+   ✓ managed engines (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > begins with --yes, detaches, and --resume follows the pull to ready  2033ms
+   ✓ managed engines (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > removes vllm keeping the models  579ms
+ ✓ |e2e| test/e2e/cli.test.ts (9 tests | 1 skipped) 8997ms
+   ✓ atc (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > reports its version and help  1206ms
+   ✓ atc (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > starts a daemon, serves and stops its public API, then stops the owner  3008ms
+   ✓ atc (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > replaces a server another build left running: status says so, restart and stop reach it  1655ms
+   ✓ atc (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > keeps its own log: `atc logs` shows it, `atc logs -f` follows it live  2176ms
+ ✓ |e2e| test/e2e/foundry-local.test.ts (4 tests) 9984ms
+   ✓ Foundry Local (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > installs the engine through the proxy and prepares the accelerator the host offers  5119ms
+   ✓ Foundry Local (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > downloads a variant across an expired link, continuing the partial file  2279ms
+   ✓ Foundry Local (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > loads the variant, and the public API answers from it  637ms
+ ✓ |e2e| test/e2e/update.test.ts (2 tests) 9908ms
+   ✓ atc update on the built binary > replaces itself with the verified release and restarts the server onto it  9160ms
+   ✓ atc update on the built binary > leaves the binary alone when the download does not match SHA256SUMS  315ms
+ ✓ |e2e| test/e2e/tui.test.ts (4 tests) 10809ms
+   ✓ atc tui (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > refuses without a terminal, and bare atc prints help there  601ms
+   ✓ atc tui (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > returns from engine choice to the intro with Escape on a fresh command entry  2153ms
+   ✓ atc tui (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > opens on bare atc in a pseudo-terminal, switches screens, and gives the terminal back  6903ms
+   ✓ atc tui (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > quits when Esc and Ctrl+Q reach it as one write, as on a busy runner  816ms
+ ✓ |e2e| test/e2e/managed-models.test.ts (3 tests) 14003ms
+   ✓ managed models (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > continues a download a server restart interrupted, then the providers list the model  2587ms
+   ✓ a managed load (/Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/dist/bin/atc-aarch64-apple-darwin) > shows the stages of the load, then the public API answers from the vLLM container  1028ms
+
+ Test Files  15 passed | 1 skipped (16)
+      Tests  43 passed | 3 skipped (46)
+   Start at  16:55:47
+   Duration  14.27s (transform 296ms, setup 301ms, collect 1.85s, tests 85.27s, environment 1ms, prepare 952ms)

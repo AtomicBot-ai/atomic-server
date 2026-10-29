@@ -157,7 +157,7 @@ it('imports portable skill resources and exposes names without including file da
   })
   expect((await service.view()).skills[0]).not.toHaveProperty('resources')
   await service.execute('skills.save', {
-    value: { name: 'packaged', description: 'Edited', body: 'Updated instructions' },
+    value: { id: 'packaged', name: 'packaged', description: 'Edited', body: 'Updated instructions' },
   })
   expect(await service.execute('skills.export', { id: 'packaged' })).toMatchObject({
     name: 'packaged.skill',
@@ -246,4 +246,28 @@ it('keeps a connector connected when one tool call fails, and saves only the att
   expect(view.attachments).not.toHaveProperty('planted')
   expect(view.attachments).not.toHaveProperty('nested')
   expect(view.attachments['max_file_size_mb']).toBe(5)
+})
+
+it('refuses a duplicate skill name on create or rename and preserves both existing instructions', async () => {
+  const service = new WorkspaceFeatureService(dir)
+  await service.execute('skills.save', {
+    value: { name: 'review', description: 'Original', body: 'Keep me' },
+  })
+  await service.execute('skills.save', { value: { name: 'other', description: 'Other', body: 'Keep too' } })
+  await expect(
+    service.execute('skills.save', { value: { name: 'review', body: 'Replacement' } })
+  ).rejects.toThrow(/already exists/)
+  await expect(
+    service.execute('skills.save', { value: { id: 'other', name: 'review', body: 'Replacement' } })
+  ).rejects.toThrow(/already exists/)
+  expect(await service.execute('skills.export', { id: 'review' })).toMatchObject({
+    content: expect.stringContaining('Keep me'),
+  })
+  expect(await service.execute('skills.export', { id: 'other' })).toMatchObject({
+    content: expect.stringContaining('Keep too'),
+  })
+  await service.execute('skills.save', { value: { id: 'review', name: 'review', body: 'Intentional edit' } })
+  expect(await service.execute('skills.export', { id: 'review' })).toMatchObject({
+    content: expect.stringContaining('Intentional edit'),
+  })
 })

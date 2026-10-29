@@ -3,8 +3,10 @@ import { AtcError } from '../../errors/index.js'
 import { object } from '../validation.js'
 
 export async function importConversations(history: ChatHistory, value: unknown) {
-  if (!Array.isArray(value) || !value.length || value.length > 100)
-    throw new AtcError('ATC_USAGE', 'Import between 1 and 100 conversations at a time.')
+  if (!Array.isArray(value) || !value.length)
+    throw new AtcError('ATC_USAGE', 'Import at least one conversation.')
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > 32 * 1024 * 1024)
+    throw new AtcError('ATC_USAGE', 'Choose conversations smaller than 32 MB in total.')
   const documents = value.map((entry) => {
     const data = object(entry),
       messages = data['messages']

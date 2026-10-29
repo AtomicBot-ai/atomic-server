@@ -1,0 +1,9 @@
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli
+
+ ✓ |unit| src/workspace-service/chat/history-transfer.test.ts (11 tests) 13ms
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  15:01:38
+   Duration  344ms (transform 52ms, setup 8ms, collect 182ms, tests 13ms, environment 0ms, prepare 26ms)

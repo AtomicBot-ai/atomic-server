@@ -1,0 +1,16 @@
+
+> @atomicbot-ai/atc-admin-ui@0.1.0 test
+> vitest run src/workspace/library/engines/EngineSettings.test.tsx src/workspace/library/engines/EngineBuilds.test.tsx src/workspace/library/engines/use-engine-settings-data.test.tsx src/workspace/chat/ChatModelPicker.test.tsx
+
+
+ RUN  v3.2.7 /Users/aleksejkalina/code/atomicbot/atomic-chat-workspace/eye-cli/packages/admin-ui
+
+ ✓ src/workspace/library/engines/use-engine-settings-data.test.tsx (2 tests) 116ms
+ ✓ src/workspace/library/engines/EngineBuilds.test.tsx (2 tests) 114ms
+ ✓ src/workspace/chat/ChatModelPicker.test.tsx (2 tests) 130ms
+ ✓ src/workspace/library/engines/EngineSettings.test.tsx (4 tests) 211ms
+
+ Test Files  4 passed (4)
+      Tests  10 passed (10)
+   Start at  15:49:37
+   Duration  986ms (transform 219ms, setup 700ms, collect 520ms, tests 571ms, environment 1.23s, prepare 124ms)

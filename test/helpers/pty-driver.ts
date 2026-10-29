@@ -105,7 +105,7 @@ export function runPty(
 ): PtyResult {
   const res = spawnSync('python3', ['-c', DRIVER, JSON.stringify(steps), ...command], {
     encoding: 'utf8',
-    env: { TERM: 'xterm-256color', NO_COLOR: '1', ...env },
+    env: { NO_COLOR: '1', ...env, TERM: 'xterm-256color' },
     timeout,
   })
   if (res.status !== 0) throw new Error(`pty driver: ${res.stderr}`)

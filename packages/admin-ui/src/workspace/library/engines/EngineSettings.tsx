@@ -7,7 +7,7 @@ import { EngineReload } from './EngineReload'
 import { useEngineSettingsData } from './use-engine-settings-data'
 import { useEffect, useState } from 'react'
 import type { GpuFacts } from '@atomic-chat/core/contracts'
-import { changedValues, engineFamily, engineName } from '@view'
+import { changedValues, engineFamily, engineName, settingValuesError } from '@view'
 import { useDialog } from '../../useDialog'
 import type { Workspace } from '../../useWorkspace'
 import { Action, Field } from '../../Controls'
@@ -31,6 +31,7 @@ export function EngineSettings({
     useEngineSettingsData(provider, w.execute, provider !== 'sd-cpp')
   const [query, setQuery] = useState(''),
     [group, setGroup] = useState('All')
+  const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState(''),
     [changedOnly, setChangedOnly] = useState(false)
   const { ask, confirmation, waiting } = useConfirmation()
@@ -84,6 +85,7 @@ export function EngineSettings({
   const update = (name: string, value: unknown) => {
     setValues((current) => ({ ...current, [name]: value }))
     setNotice('')
+    setFormError('')
   }
   const loaded = w.snapshot?.services.filter((s) => s.provider === provider && s.kind === 'chat') ?? []
   return (
@@ -114,9 +116,9 @@ export function EngineSettings({
             : 'Settings apply on the next model load.'}
         </p>
         {loading && <p role="status">Loading engine settings…</p>}
-        {error && (
+        {(formError || error) && (
           <p role="alert" className="ew-error">
-            {error}
+            {formError || error}
           </p>
         )}
         <input
@@ -200,16 +202,15 @@ export function EngineSettings({
                   if (data.format !== 'atomic-engine-settings-v1' || data.provider !== provider)
                     throw new Error('This preset is for a different engine or format.')
                   const incoming = record(data.values),
-                    known = new Set(fields.map((f) => text(f.key)))
-                  if (Object.keys(incoming).some((key) => !known.has(key)))
-                    throw new Error('This preset has settings unsupported by this engine build.')
+                    problem = settingValuesError(incoming, fields)
+                  if (problem) throw new Error(problem)
                   setValues({ ...values, ...incoming })
                   setChangedOnly(true)
                   setQuery('')
                   setNotice('Imported settings are staged. Review and save to apply on the next model load.')
-                  setError('')
+                  setFormError('')
                 } catch (err) {
-                  setError(describeError(err))
+                  setFormError(describeError(err))
                 }
               }}
             />
@@ -225,20 +226,8 @@ export function EngineSettings({
                 onClick={async () => {
                   if (values.mtp && values.dflash)
                     throw new Error('Choose MTP or DFlash; they cannot be enabled together.')
-                  for (const field of fields) {
-                    const key = text(field.key),
-                      props = record(field.controllerProps),
-                      value = changes[key]
-                    if (
-                      key in changes &&
-                      props.type === 'number' &&
-                      (typeof value !== 'number' ||
-                        !Number.isFinite(value) ||
-                        (typeof props.min === 'number' && value < props.min) ||
-                        (typeof props.max === 'number' && value > props.max))
-                    )
-                      throw new Error(`Enter a valid number for ${text(field.title, key)}.`)
-                  }
+                  const problem = settingValuesError(changes, fields)
+                  if (problem) throw new Error(problem)
                   setSaving(true)
                   try {
                     const result = record(
