@@ -1,0 +1,5 @@
+{
+  "provider": "llamacpp",
+  "revision": 13,
+  "concurrent_slots": 8
+}

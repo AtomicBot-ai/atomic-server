@@ -1,0 +1,24 @@
+
+    ___ _ ___
+   _\ \| |/ /_
+  [_  (X)(X) _]   / ATOMIC SERVER /
+    / /| |\ \
+             │  Playground           │                                    [=]
+│    [=]    │┃                       │
+│  Server   │┃ | Chat                │
+             ┃   Images              │
+│    >_     │┃   Videos              │        How can I help you today?
+│Playground │┃                       │
+             ┃   + New chat          │
+│    [#]    │┃  Recents              │
+│  Models   │┃   B15 recovery c9462b │
+             ┃   B15 recovery 32eb24 │     TUI_RESTART_KEEP_DRAFT   Send ↑
+│    (?)    │┃   B15 recovery 06f2a0 │     _006▏
+│   Help    │┃   B15 recovery f8d8cf │      + Files    mlx-community/LF… ▾
+             │   B15 recovery 5c8c93 │      Tools ▾
+│    [@]    ││   B15 recovery 006344 │
+│    Web    ││   B15 recovery 067db3 │
+             │   B15 recovery a8f398 │
+
+
+       Tab Move   Enter Select   Esc Sections   Ctrl+K Help   Ctrl+Q Quit

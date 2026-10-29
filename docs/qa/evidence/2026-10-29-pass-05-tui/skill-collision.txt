@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Settings             │  Skills                           +-------------------------------------------+
+│    [=]    ││                       │                                   | Instructions                       Edit   |
+│  Server   ││   General             │     Create new skill v            |                                           |
+             │   Attachments         │                                   | ORIGINAL KEEP                             |
+│    >_     ││   Int+------------------------------------------------------------------------------+                 |
+│Playground ││   Key| Edit skills                                                                  |                 |
+             │   Har|                                                                              |                 |
+│    [#]    ││      | Name                                                                         |                 |
+│  Models   ││  Work| [ fix-qa-collision                                                         ] |                 |
+             │   Ass|                                                                              |                 |
+             │   MCP| Description                                                                  |                 |
+             │ | Ski| [ DUPLICATE_QA                                                             ] |                 |
+             │      |                                                                              |                 |
+             │      | Instructions                                                                 |                 |
+             │      | [ DO_NOT_REPLACE_ORIGINAL                                                  ] |                 |
+             │      |                                                                              |                 |
+             │      | Enabled (true/false)                                                         |                 |
+             │      | [ true                                                                     ] |                 |
+             │      |                                                                              |                 |
+             │      |  A skill named fix-qa-collision already exists. Edit it or choose another n  |                 |
+             │      |                                                                              |                 |
+             │      |                                                                  Save        |                 |
+│    (?)    ││      |                                                                              |                 |
+│   Help    ││      +------------------------------------------------------------------------------+                 |
+             │                       │                                   |                                           |
+│    [@]    ││                       │                                   |                                           |
+│    Web    ││                       │                                   |                                           |
+             │                       │                                   |                                           |
+│    (*)    ││                       │                                   |                                           |
+│ Settings  ││                       │                                   +-------------------------------------------+
+             │                       │
+
+
+                             Tab Move   Enter Select   Esc Back   Ctrl+K Help   Ctrl+Q Quit

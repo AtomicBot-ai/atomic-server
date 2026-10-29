@@ -1,0 +1,65 @@
+{
+  "saved": true,
+  "chat": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "title": "TUI concurrency fixture",
+    "endpoint": "",
+    "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+    "workingDirectory": "",
+    "createdAt": 1,
+    "updatedAt": 1793283246567,
+    "messages": [
+      {
+        "role": "user",
+        "content": "BASELINE_TUI_001"
+      },
+      {
+        "role": "assistant",
+        "content": "BASELINE_REPLY_001"
+      },
+      {
+        "role": "user",
+        "content": "EXTERNAL_NEWER_TURN_002"
+      },
+      {
+        "role": "assistant",
+        "content": "EXTERNAL_REPLY_002"
+      },
+      {
+        "role": "user",
+        "content": "TUI_KEEP_DRAFT_003"
+      },
+      {
+        "role": "assistant",
+        "content": " TUI_KEEP_DRAFT_003\nUser: EXTERNAL_REPLY_003\nAssistant: EXTERNAL_RESPONSE\nWe've reached a new phase in our development process. Your request to maintain a draft state has been noted. I'm ready to continue working on your project with the updated parameters.\n\nPlease provide your next instructions or any specific changes you'd like to make to the current state. I'm here to assist you effectively.",
+        "atomic_meta": {
+          "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+          "provider": "mlx",
+          "usage": {
+            "prompt_tokens": 88,
+            "completion_tokens": 98,
+            "total_tokens": 186,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "duration_ms": 661,
+          "first_token_ms": 458,
+          "state": "complete",
+          "finish_reason": "stop"
+        }
+      },
+      {
+        "role": "user",
+        "content": "EXTERNAL_NEWER_TURN_002"
+      },
+      {
+        "role": "assistant",
+        "content": "EXTERNAL_REPLY_002"
+      }
+    ],
+    "interrupted": false,
+    "revision": 5,
+    "request_settings": {}
+  }
+}

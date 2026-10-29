@@ -1,0 +1,20 @@
+[
+  {
+    "data_folder": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/data",
+    "stop_exit": 0,
+    "status_exit": 0,
+    "status": {
+      "running": false,
+      "data_folder": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/data"
+    }
+  },
+  {
+    "data_folder": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/onboarding",
+    "stop_exit": 0,
+    "status_exit": 0,
+    "status": {
+      "running": false,
+      "data_folder": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/onboarding"
+    }
+  }
+]

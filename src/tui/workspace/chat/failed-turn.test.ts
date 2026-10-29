@@ -21,8 +21,10 @@ it('drops the empty answer a failed turn left, says why, and gives the sent text
   expect(failedTurn(now, sent, 'Unable to connect.')).toEqual({
     generating: false,
     message: 'Unable to connect.',
-    messages: [{ role: 'user', content: 'Reply with OK.' }],
+    messages: sent.messages,
+    conversation: sent.conversation,
     draft: 'Reply with OK.',
+    cursor: sent.cursor,
     documents: [],
     images: [],
   })

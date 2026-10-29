@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Error",
+    "message": "ENOENT: no such file or directory, open '/private/tmp/atomic-qa-missing-document-pass06.txt'",
+    "code": "ENOENT"
+  },
+  {
+    "name": "TypeError",
+    "message": "Invalid URL",
+    "code": "ERR_INVALID_URL"
+  }
+]

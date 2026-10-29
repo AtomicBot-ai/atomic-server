@@ -31,7 +31,7 @@ function harness() {
       models: async () => {
         throw new Error('Offline')
       },
-      engineSelection: { list: async () => [engine], select },
+      engineSelection: { list: async () => [engine], select, remember: vi.fn(async () => {}) },
       setup: {
         catalogs: async () => [
           { provider: 'llamacpp', recommended: 'v1/cpu', available: [{ version: 'v1', backend: 'cpu' }] },

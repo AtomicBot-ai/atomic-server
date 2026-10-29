@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Playground           │                                                                            [=]
+│    [=]    ││                       │
+│  Server   ││ | Chat                │  YOU
+             │   Images              │  QA pass06. Reply with exactly OK-PASS06.
+│    >_     ││   Videos              │
+│Playground ││                       │  ATOMIC
+             │   + New chat          │   OK-PASS06.
+│    [#]    ││  Recents              │
+│  Models   ││ | QA pass06. Reply wi │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+│    (?)    ││                       │
+│   Help    ││                       │
+             │                       │
+│    [@]    ││                       │
+│    Web    ││                       │     ▏ Write a message...
+             │                       │
+│    (*)    ││                       │      + Files    mlx-community/LFM2.5-1.2B-Instruct-4bit ▾         Tools ▾
+│ Settings  ││                       │
+             │                       │
+
+
+                           Tab Move   Enter Select   Esc Sections   Ctrl+K Help   Ctrl+Q Quit

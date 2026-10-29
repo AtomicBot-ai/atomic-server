@@ -46,6 +46,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   remote: Record<string, unknown>
   cloud: CloudDraft
   firstRun: FirstRunStep | null
+  /** Model intent belongs to the wizard, including while its setup view is replaced. */
+  firstModelChoice: string
   connection: ConnectionDraft | null
   connectionLanguage: 'curl' | 'python'
   serverQuery: string
@@ -205,6 +207,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     remote: {},
     cloud: { provider: '', url: '', key: '', models: '', editing: false, error: '', providers: [] },
     firstRun: page === 'welcome' || page === 'setup' ? 'model' : null,
+    firstModelChoice: '',
     connection: null,
     connectionLanguage: 'curl',
     serverQuery: '',

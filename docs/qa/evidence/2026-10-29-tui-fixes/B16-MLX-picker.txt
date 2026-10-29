@@ -1,0 +1,21 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____   Inference engine
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/      llama.cpp
+                                                         b11946 / macos-arm64 · Installed
+             │  Playground           │                   llama.cpp TurboQuant                                      =]
+│    [=]    ││                       │                   b10298-2.1.0 / macos-arm64 · Installed
+│  Server   ││ | Chat                │                   Atomic Prism
+             │   Images              │                   prism-b10826-c9c34bc / macos-arm64 · Installed
+│    >_     ││   Videos              │                 ✓ MLX
+│Playground ││                       │                   mlxvlm-macos-arm64-07ba5a1 / macos-arm64 · Installed
+             │   + New chat          │                   Foundry Local
+│    [#]    ││  Recents              │                   v2.1.0 / macos-arm64 · Installed
+│  Models   ││   B15 recovery 563396 │                   LiteRT-LM
+             │   B15 recovery a373a9 │                   0.18.1 / macos-arm64 · Installed
+             │   B15 recovery db5c37 │
+             │   B15 recovery c9462b │                 ↑↓ Browse | Enter Choose | Esc Close
+             │   B15 recovery 32eb24 │
+             │   B15 recovery 06f2a0 │
+             │   B15 recovery f8d8cf │

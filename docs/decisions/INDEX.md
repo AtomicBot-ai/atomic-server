@@ -11,6 +11,7 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-10-29** — [Order terminal selections and navigate complete popup menus](2026-10-29-terminal-selection-and-popup-navigation.md) — one selection queue, visible editor errors, complete Tools navigation, and full-ID engine compatibility.
 - **2026-10-29** — [Keep an exploratory QA ledger](2026-10-29-keep-an-exploratory-qa-ledger.md) — stable defect IDs, session journals and synthetic evidence for repeated exploratory passes.
 - **2026-10-29** — [Report errors at each workspace boundary](2026-10-29-report-errors-at-each-workspace-boundary.md) — shared process reporting, background and browser coverage, bounded exit waits and consent.
 
@@ -121,3 +122,4 @@ add a new one that says which record it supersedes.
 - [2026-10-29 — Guard shared edits and preserve model recovery boundaries](2026-10-29-guard-qa-recovery-and-shared-edits.md)
 - **2026-10-29** — [Share the download job journal](2026-10-29-share-the-download-job-journal.md) — one `SetupJournal` for Foundry, LiteRT and managed downloads; three policy flags at each constructor; each provider keeps its own `run`; GGUF setups stay separate.
 - **2026-10-29** — [The server sends the model-ready email](2026-10-29-the-server-sends-the-model-ready-email.md) — `setup.reminder` registers the address with api.atomic.chat from the server; `email-reminder.json` keeps a token and the model, never the address; the server notifies when the download is done (30 s check, desktop backoff); snapshot `reminder` for both clients; consent copy shown only while downloading; supersedes the 2026-10-24 local email mock.
+- **2026-10-29** — [Preserve terminal choices and recover refused chat turns](2026-10-29-preserve-terminal-selection-and-chat-recovery.md) — B14–B16: first-model intent survives Back; empty failed turns restore the draft and a clean history baseline; unchanged chats skip writes; core-registered MLX and model selections agree with the engine picker.

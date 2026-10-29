@@ -2,8 +2,8 @@ import { messageText } from '../../../terminal-service/index.js'
 import type { WorkspaceState } from '../state.js'
 
 /**
- * The state after a turn failed: the empty answer it opened is dropped (a part that arrived stays), the
- * reason is said, and the sent text comes back unless the person typed something new meanwhile.
+ * A turn with no answer rolls back its optimistic transcript; the sent text returns to the draft.
+ * A partial answer or a newer draft stays. An unchanged transcript can then adopt another client's save.
  */
 export function failedTurn(
   now: WorkspaceState,
@@ -15,7 +15,10 @@ export function failedTurn(
   return {
     generating: false,
     message,
-    messages: empty ? now.messages.slice(0, -1) : now.messages,
-    ...(now.draft ? {} : { draft: sent.draft, documents: sent.documents, images: sent.images }),
+    messages: empty ? sent.messages : now.messages,
+    ...(empty ? { conversation: sent.conversation } : {}),
+    ...(now.draft
+      ? {}
+      : { draft: sent.draft, cursor: sent.cursor, documents: sent.documents, images: sent.images }),
   }
 }

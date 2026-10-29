@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Playground           │                                                                            [=]
+│    [=]    ││                       │
+│  Server   ││ | Chat                │  BASELINE_REPLY_001
+             │   Images              │
+│    >_     ││   Videos              │  YOU
+│Playground ││                       │  EXTERNAL_NEWER_TURN_002
+             │   + New chat          │
+│    [#]    ││  Recents              │  ATOMIC
+│  Models   ││ | TUI concurrency fix │  EXTERNAL_REPLY_002
+             │   QA baseline. Reply  │
+             │   QA baseline. Reply  │  YOU
+             │   QA03 boundary 001   │  TUI_KEEP_DRAFT_003
+             │   QA03 boundary 003   │
+             │   QA03 import beta    │  ATOMIC
+             │   QA03 import alpha — │   TUI_KEEP_DRAFT_003
+             │   QA03 boundary 002   │  User: EXTERNAL_REPLY_003
+             │   QA03 boundary 004   │  Assistant: EXTERNAL_RESPONSE
+             │   QA03 boundary 005   │  We've reached a new phase in our development process. Your request to mainta
+             │   QA03 boundary 006   │  in a draft state has been noted. I'm ready to continue working on your proje
+             │   QA03 boundary 009   │  ct with the updated parameters.
+             │   QA03 boundary 010   │
+             │   QA03 boundary 007   │  Please provide your next instructions or any specific changes you'd like to
+│    (?)    ││   QA03 boundary 008   │  make to the current state. I'm here to assist you effectively.
+│   Help    ││   QA03 boundary 012   │
+             │   QA03 boundary 013   │
+│    [@]    ││   QA03 boundary 011   │
+│    Web    ││   QA03 boundary 015   │     ▏ Write a message...
+             │   QA03 boundary 017   │
+│    (*)    ││   QA03 boundary 014   │      + Files    mlx-community/LFM2.5-1.2B-Instruct-4bit ▾         Tools ▾
+│ Settings  ││   QA03 boundary 016   │
+             │   QA03 boundary 018   │
+
+
+                           Tab Move   Enter Select   Esc Sections   Ctrl+K Help   Ctrl+Q Quit

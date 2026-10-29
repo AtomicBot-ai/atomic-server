@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [
+
+     Attach document
+
+│    Enter a local file path.
+│
+     /private/tmp/atomic-qa-missing-document-fixed.txt_
+│
+│Pl  Enter Confirm | Esc Cancel | Ctrl+U Clear
+     ENOENT: no such file or directory, open '/private/tmp/atomic-qa-missing-document-fixed.txt'
+│
+│
+
+
+
+
+
+
+
+
+
+
+
+
+
+│
+│
+
+│
+│
+
+│     Save
+│ S
+
+
+
+                             Tab Move   Enter Select   Esc Back   Ctrl+K Help   Ctrl+Q Quit

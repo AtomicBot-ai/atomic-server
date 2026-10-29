@@ -1,0 +1,39 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Playground           │                                                                            [=]
+│    [=]    ││                       │
+│  Server   ││ | Chat                │  YOU
+             │   Images              │  B15_BASELINE
+│    >_     ││   Videos              │
+│Playground ││                       │  ATOMIC
+             │   + New chat          │  B15_BASELINE_REPLY
+│    [#]    ││  Recents              │
+│  Models   ││ | B15 recovery db5c37 │
+             │   B15 recovery c9462b │
+             │   B15 recovery 32eb24 │
+             │   B15 recovery 06f2a0 │
+             │   B15 recovery f8d8cf │
+             │   B15 recovery 5c8c93 │
+             │   B15 recovery 006344 │
+             │   B15 recovery 067db3 │
+             │   B15 recovery a8f398 │
+             │   B15 recovery 4122d1 │
+             │   B15 recovery aa57c7 │
+             │   B15 recovery a93a4b │
+             │   B15 recovery 54f511 │
+             │   TUI concurrency fix │
+│    (?)    ││   QA baseline. Reply  │
+│   Help    ││   QA baseline. Reply  │
+             │   QA03 boundary 001   │
+│    [@]    ││   QA03 boundary 003   │
+│    Web    ││   QA03 import beta    │     B15_UNSENT_DRAFT▏                                                Send ↑
+             │   QA03 import alpha — │
+│    (*)    ││   QA03 boundary 002   │      + Files    mlx-community/LFM2.5-1.2B-Instruct-4bit ▾         Tools ▾
+│ Settings  ││   QA03 boundary 004   │
+             │   QA03 boundary 005   │
+
+  This conversation changed in another client. Reopen it before retrying; your draft has been kept.

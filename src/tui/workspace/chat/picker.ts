@@ -25,16 +25,25 @@ export interface PickerRow {
   current?: boolean
 }
 export function pickerRows(s: WorkspaceState): PickerRow[] {
-  if (s.overlay === 'engine-picker')
+  if (s.overlay === 'engine-picker') {
+    const providerId = s.engine.split('|')[0],
+      provider = s.engines.filter((e) => e.provider === providerId),
+      selected =
+        s.engines.find((e) => e.id === s.engine) ??
+        provider.find((e) => e.id === providerId) ??
+        (s.engine === providerId
+          ? (provider.find((e) => e.active) ?? (provider.length === 1 ? provider[0] : undefined))
+          : undefined)
     return [
       ...s.engines.map((e, i) => ({
         id: `pick-engine:${i}`,
         title: engineName(e.provider),
         detail: engineChoiceDetail(e, 'Install & use'),
-        current: e.id === s.engine,
+        current: e.id === selected?.id,
       })),
       { id: 'picker-refresh', title: 'Refresh engines', detail: 'Check compatible builds' },
     ]
+  }
   // A model under each provider that lists it; llama.cpp's two are one row, the engine choice picks.
   const rows: PickerRow[] = s.installed.flatMap((m, i) => {
     const providers = [

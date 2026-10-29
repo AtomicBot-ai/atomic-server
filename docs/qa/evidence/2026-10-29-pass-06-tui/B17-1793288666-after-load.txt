@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Playground           │                                                                            [=]
+│    [=]    ││                       │
+│  Server   ││ | Chat                │
+             │   Images              │
+│    >_     ││   Videos              │
+│Playground ││                       │
+             │   + New chat          │
+│    [#]    ││  Recents              │
+│  Models   ││                       │
+             │                       │                            How can I help you today?
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │     ▏ Write a message...
+             │                       │
+             │                       │      + Files    Choose model ▾                                    Tools ▾
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+│    (?)    ││                       │
+│   Help    ││                       │
+             │                       │
+│    [@]    ││                       │
+│    Web    ││                       │
+             │                       │
+│    (*)    ││                       │
+│ Settings  ││                       │
+             │                       │
+
+  Model loaded.
+                           Tab Move   Enter Select   Esc Sections   Ctrl+K Help   Ctrl+Q Quit

@@ -3,7 +3,7 @@ import { DEFAULT_ATTACHMENTS } from '../../../contract/index.js'
 export async function documentAction(id: string, ctx: ActionContext) {
   const s = ctx.get()
   if (id === 'attachments') {
-    ctx.update((v) => ({ ...v, overlay: 'images', focus: 'document-add' }))
+    ctx.update((v) => ({ ...v, overlay: 'images', focus: 'document-add', message: '' }))
     return true
   }
   if (id === 'document-add') {
@@ -17,6 +17,7 @@ export async function documentAction(id: string, ctx: ActionContext) {
       edit: 'document-path',
       editValue: '',
       focus: 'save-edit',
+      message: '',
     }))
     return true
   }
@@ -30,6 +31,7 @@ export async function documentAction(id: string, ctx: ActionContext) {
       documents: [...(v.documents ?? []), document],
       overlay: null,
       focus: 'composer',
+      message: '',
     }))
     return true
   }

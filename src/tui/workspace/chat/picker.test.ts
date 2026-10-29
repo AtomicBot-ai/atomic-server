@@ -4,6 +4,7 @@ import { workspaceFrame } from '../frame.js'
 import { workspaceInput } from '../input.js'
 import { createWorkspace } from '../state.js'
 import { dimBackdrop } from '../draw/backdrop.js'
+import { pickerRows } from './picker.js'
 
 it.each([
   [54, 24],
@@ -58,3 +59,43 @@ it('offers a store model under each provider that lists it, and a GGUF model onc
     ['installed:1', 'On this device · llama.cpp'],
   ])
 })
+
+it.each([
+  ['llamacpp-upstream', 'pick-engine:1'],
+  ['llamacpp-upstream|b1|cpu', 'pick-engine:0'],
+  ['mlx', 'pick-engine:2'],
+  ['mlx|m1|macos-arm64', 'pick-engine:2'],
+  ['llamacpp-upstream|removed|cpu', undefined],
+  ['', undefined],
+])(
+  'marks one current engine for %s, using the core active build for a provider-only choice',
+  (engine, current) => {
+    const s = createWorkspace('chat')
+    s.overlay = 'engine-picker'
+    s.engine = engine!
+    s.engines = [
+      {
+        id: 'llamacpp-upstream|b1|cpu',
+        provider: 'llamacpp-upstream',
+        version: 'b1',
+        backend: 'cpu',
+        installed: true,
+        active: false,
+      },
+      {
+        id: 'llamacpp-upstream|b2|cpu',
+        provider: 'llamacpp-upstream',
+        version: 'b2',
+        backend: 'cpu',
+        installed: true,
+        active: true,
+      },
+      { id: 'mlx', provider: 'mlx', version: 'm1', backend: 'macos-arm64', installed: true },
+    ]
+    expect(
+      pickerRows(s)
+        .filter((r) => r.current)
+        .map((r) => r.id)
+    ).toEqual(current ? [current] : [])
+  }
+)

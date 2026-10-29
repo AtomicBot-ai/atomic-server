@@ -1,4 +1,5 @@
 import { waitingSetupInput } from './setup/waiting-setup.js'
+import { chatFeaturesInput } from './chat/features-input.js'
 import { railInput } from './navigation/rail.js'
 import { featureInput } from './server/feature-actions.js'
 import { enginePanelInput } from './library/engine-panel-input.js'
@@ -36,6 +37,7 @@ export function workspaceInput(
   ;({ input, key } = inputKey(input, key))
   const shell =
     railInput(input, key, s, frame) ??
+    chatFeaturesInput(input, key, s, frame) ??
     waitingSetupInput(input, key, s) ??
     enginePanelInput(input, key, s) ??
     mediaInput(input, key, s) ??
@@ -109,7 +111,7 @@ export function workspaceInput(
       return {
         patch: {
           hover: target?.id ?? '',
-          message: '',
+          message: s.overlay === 'endpoint' ? s.message : '',
           ...(target?.id.startsWith('setup-repo:') ? { selected: Number(target.id.slice(11)) } : {}),
         },
       }

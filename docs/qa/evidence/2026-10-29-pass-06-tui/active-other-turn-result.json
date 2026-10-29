@@ -1,0 +1,10 @@
+{
+  "active_request_refused": true,
+  "draft_retained": true,
+  "new_chat_opened": true,
+  "quit": {
+    "exit": 0
+  },
+  "rejected_draft_not_saved": true,
+  "other_job_state": "complete"
+}

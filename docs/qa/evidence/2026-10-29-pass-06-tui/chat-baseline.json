@@ -1,0 +1,41 @@
+{
+  "id": "c302726e-2917-422e-a25a-87652c4cfa09",
+  "title": "QA pass06. Reply with exactly OK-PASS06.",
+  "endpoint": "",
+  "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+  "workingDirectory": "/Users/aleksejkalina/.codex/worktrees/tui-qa-fixes/eye-cli",
+  "createdAt": 1793289501765,
+  "updatedAt": 1793289502198,
+  "messages": [
+    {
+      "role": "user",
+      "content": "QA pass06. Reply with exactly OK-PASS06."
+    },
+    {
+      "role": "assistant",
+      "content": " OK-PASS06.",
+      "atomic_meta": {
+        "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+        "provider": "mlx",
+        "usage": {
+          "prompt_tokens": 44,
+          "completion_tokens": 6,
+          "total_tokens": 50,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "duration_ms": 420,
+        "first_token_ms": 410,
+        "state": "complete",
+        "finish_reason": "stop"
+      }
+    }
+  ],
+  "interrupted": false,
+  "revision": 3,
+  "request_settings": {
+    "max_tokens": 64,
+    "atomic_system": ""
+  }
+}

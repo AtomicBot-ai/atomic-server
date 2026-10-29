@@ -1,0 +1,29 @@
+{
+  "id": "f0174434-f6ad-475b-9544-bbcc5d818917",
+  "title": "B15 recovery c9462b",
+  "endpoint": "",
+  "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+  "workingDirectory": "",
+  "createdAt": 1,
+  "updatedAt": 1793283678973,
+  "messages": [
+    {
+      "role": "user",
+      "content": "B15_BASELINE"
+    },
+    {
+      "role": "assistant",
+      "content": "B15_BASELINE_REPLY"
+    },
+    {
+      "role": "user",
+      "content": "B15_EXTERNAL_NEWER"
+    },
+    {
+      "role": "assistant",
+      "content": "B15_EXTERNAL_REPLY"
+    }
+  ],
+  "interrupted": false,
+  "revision": 2
+}

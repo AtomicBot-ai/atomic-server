@@ -56,8 +56,19 @@ export function firstModelChoices(s: WorkspaceState): FirstModelChoice[] {
 }
 
 export function selectedFirstModel(s: WorkspaceState) {
-  const rows = firstModelChoices(s)
-  return rows.find((row) => row.key === s.setup?.firstChoice) ?? rows[0]
+  const rows = firstModelChoices(s),
+    key = s.firstModelChoice,
+    repository = key.startsWith('catalog:') ? key.slice(8) : ''
+  return (
+    rows.find((row) => row.key === key) ??
+    (repository
+      ? rows.find(
+          (row) =>
+            row.installed && (row.key === `local:${repository}` || row.key.startsWith(`local:${repository}/`))
+        )
+      : undefined) ??
+    rows[0]
+  )
 }
 
 /** One scroll region, with group headings and radio cards, above a fixed action bar. */

@@ -1,4 +1,5 @@
 import type { WorkspaceController } from '../controller.js'
+import { isDeepStrictEqual } from 'node:util'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { chosenEndpoint, selectLocalModel } from '../chat/model-selection.js'
@@ -25,15 +26,19 @@ export function persistConversation(
         endpoint: chosenEndpoint(s) ?? '',
         model: s.model,
         messages: s.messages,
-        interrupted: s.generating,
+        interrupted:
+          s.generating ||
+          (s.conversation.interrupted && isDeepStrictEqual(s.messages, s.conversation.messages)),
       }
+      // Reopening or quitting an unchanged copy must not try to write over a newer saved revision.
+      if (isDeepStrictEqual(chat, s.conversation)) return
       await ctx.controller.history.save(chat, s.conversation.revision ?? 0)
       markSynced(ctx.controller, chat)
       ctx.update((v) =>
         v.conversation?.id === chat.id && v.conversation.revision === s.conversation?.revision
           ? {
               ...v,
-              conversation: { ...v.conversation, revision: chat.revision ?? 0, updatedAt: chat.updatedAt },
+              conversation: chat,
             }
           : v
       )
@@ -88,15 +93,12 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
       conversation: chat,
       chatPreferences: chat.request_settings,
       messages: chat.messages,
-      images: [],
-      documents: [],
+      ...(s.conversation?.id === chat.id ? {} : { images: [], documents: [], draft: '', cursor: 0 }),
       endpoint: follows ? here : chat.endpoint,
       endpointFollowsServer: follows,
       model: chat.model,
       page: 'chat',
       focus: 'composer',
-      draft: '',
-      cursor: 0,
       scroll: 0,
       message: chat.interrupted ? 'Resumed conversation. The last response was interrupted.' : '',
     })

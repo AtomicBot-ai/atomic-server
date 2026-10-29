@@ -1,0 +1,30 @@
+{
+  "enabled": 15,
+  "wide_reachable_labels": [
+    "qa-pass06-00",
+    "qa-pass06-01",
+    "qa-pass06-02",
+    "qa-pass06-03",
+    "qa-pass06-04",
+    "qa-pass06-05",
+    "qa-pass06-06",
+    "qa-pass06-07",
+    "qa-pass06-08",
+    "qa-pass06-09",
+    "qa-pass06-10",
+    "qa-pass06-11",
+    "qa-pass06-12",
+    "qa-pass06-13"
+  ],
+  "narrow_reachable_labels": [
+    "qa-pass06-00",
+    "qa-pass06-01",
+    "qa-pass06-02",
+    "qa-pass06-03",
+    "qa-pass06-04",
+    "qa-pass06-05",
+    "qa-pass06-06",
+    "qa-pass06-07"
+  ],
+  "last_skill_visible": false
+}

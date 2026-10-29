@@ -1,0 +1,112 @@
+[
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "5f62c6d3-10fe-4291-b898-b2764528083b",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-71af56",
+    "exit_code": 1,
+    "run": 1
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "bbbac4a5-5f4e-4223-a7a0-4cce899fbb62",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-7f9711",
+    "exit_code": 1,
+    "run": 2
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "82d53a05-5fab-463c-b086-3f3204ec4610",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-5302c7",
+    "exit_code": 1,
+    "run": 3
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "30e36013-c926-4e27-a50c-445d657b6145",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-bbed81",
+    "exit_code": 1,
+    "run": 4
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "67aeb115-ebba-4e8b-a996-724984757599",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-3c56e1",
+    "exit_code": 1,
+    "run": 5
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "0aafbb3b-5d82-4ec2-9105-a9e12cbca256",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-b6d1c7",
+    "exit_code": 1,
+    "run": 6
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "422a21bc-3f06-4f6f-a407-51c4e00c7029",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-b43852",
+    "exit_code": 1,
+    "run": 7
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "83a99af2-99fb-43bc-8907-e965eef83464",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-092a93",
+    "exit_code": 1,
+    "run": 8
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "a2411944-2597-4754-abca-1997eed83307",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-08c03a",
+    "exit_code": 1,
+    "run": 9
+  },
+  {
+    "reopen_shows_newer": false,
+    "new_chat_opened": false,
+    "quit_exited": false,
+    "durable_history_unchanged": true,
+    "draft_visible": true,
+    "id": "f0174434-f6ad-475b-9544-bbcc5d818917",
+    "evidence": "/private/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/repro-327394",
+    "exit_code": 1,
+    "run": 10
+  }
+]

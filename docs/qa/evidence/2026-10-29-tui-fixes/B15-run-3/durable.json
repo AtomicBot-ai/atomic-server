@@ -1,0 +1,29 @@
+{
+  "id": "b6a36193-7c04-45a3-954a-8cf71d9b6204",
+  "title": "B15 recovery 563396",
+  "endpoint": "",
+  "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+  "workingDirectory": "",
+  "createdAt": 1,
+  "updatedAt": 1793287346147,
+  "messages": [
+    {
+      "role": "user",
+      "content": "B15_BASELINE"
+    },
+    {
+      "role": "assistant",
+      "content": "B15_BASELINE_REPLY"
+    },
+    {
+      "role": "user",
+      "content": "B15_EXTERNAL_NEWER"
+    },
+    {
+      "role": "assistant",
+      "content": "B15_EXTERNAL_REPLY"
+    }
+  ],
+  "interrupted": false,
+  "revision": 2
+}

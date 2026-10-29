@@ -14,7 +14,14 @@ export async function imageAction(id: string, ctx: ActionContext): Promise<boole
   if (id === 'image-add') {
     if (s.images.length + (s.documents?.length ?? 0) >= 5)
       throw new Error('Attach up to five files per message.')
-    update((v) => ({ ...v, overlay: 'endpoint', edit: 'image-path', editValue: '', focus: 'save-edit' }))
+    update((v) => ({
+      ...v,
+      overlay: 'endpoint',
+      edit: 'image-path',
+      editValue: '',
+      focus: 'save-edit',
+      message: '',
+    }))
     return true
   }
   if (id.startsWith('image-remove:')) {
