@@ -45,6 +45,9 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       prerelease: ${{ steps.version.outputs.prerelease }}
       publish_packages: ${{ steps.version.outputs.publish_packages }}
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Resolve the version and refuse one already released
@@ -70,6 +73,25 @@ jobs:
             echo "version=$version"; echo "tag=$tag"; echo "prerelease=$prerelease"
             echo "publish_packages=$publish_packages"
           } >> "$GITHUB_OUTPUT"
+      # Notification failures must never block a release.
+      - name: Notify Telegram that the release started
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        continue-on-error: true
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          escape() { local s="$1"; s="${s//&/\&amp;}"; s="${s//</\&lt;}"; s="${s//>/\&gt;}"; printf '%s' "$s"; }
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          kind="release"
+          if [ "$ATC_ALLOW_UNSIGNED" = 1 ]; then kind="unsigned dry run"; fi
+          text="$(printf '%s\n' \
+            "🚀 <b>Atomic Server $(escape "$TAG")</b>: build started ($kind)" \
+            "Ref: <code>$(escape "$GITHUB_REF_NAME")</code> (<code>${GITHUB_SHA:0:7}</code>)" \
+            "Started by: $(escape "$GITHUB_ACTOR")" \
+            "<a href=\"$run_url\">GitHub Actions</a>")"
+          curl -fsS --max-time 15 -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" --data-urlencode "text=$text" \
+            -d parse_mode=HTML -d disable_web_page_preview=true > /dev/null
 
   gates:
     needs: version
@@ -494,3 +516,71 @@ jobs:
     with:
       tag: ${{ needs.version.outputs.tag }}
     secrets: inherit
+
+  notify-finish:
+    needs:
+      [
+        version,
+        gates,
+        build,
+        packages,
+        sign-macos,
+        sign-windows,
+        draft,
+        smoke,
+        smoke-packages,
+        publish,
+        linux-repo,
+      ]
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Notify Telegram that the release finished
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        continue-on-error: true
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION_RESULT: ${{ needs.version.result }}
+          GATES_RESULT: ${{ needs.gates.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          PACKAGES_RESULT: ${{ needs.packages.result }}
+          MAC_RESULT: ${{ needs.sign-macos.result }}
+          WINDOWS_RESULT: ${{ needs.sign-windows.result }}
+          DRAFT_RESULT: ${{ needs.draft.result }}
+          SMOKE_RESULT: ${{ needs.smoke.result }}
+          SMOKE_PACKAGES_RESULT: ${{ needs.smoke-packages.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          LINUX_REPO_RESULT: ${{ needs.linux-repo.result }}
+          PUBLISH_PACKAGES: ${{ needs.version.outputs.publish_packages }}
+        run: |
+          escape() { local s="$1"; s="${s//&/\&amp;}"; s="${s//</\&lt;}"; s="${s//>/\&gt;}"; printf '%s' "$s"; }
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          title="Atomic Server $(escape "${TAG:-$GITHUB_REF_NAME}")"
+          results="$VERSION_RESULT $GATES_RESULT $BUILD_RESULT $PACKAGES_RESULT $MAC_RESULT $WINDOWS_RESULT $DRAFT_RESULT $SMOKE_RESULT $SMOKE_PACKAGES_RESULT $PUBLISH_RESULT $LINUX_REPO_RESULT"
+          case "$results" in
+            *failure*) head="❌ <b>$title</b>: release workflow failed" ;;
+            *cancelled*) head="⏹ <b>$title</b>: release workflow cancelled" ;;
+            *)
+              if [ "$PUBLISH_RESULT" != success ] || { [ "$PUBLISH_PACKAGES" = true ] && [ "$LINUX_REPO_RESULT" != success ]; }; then
+                head="❌ <b>$title</b>: release workflow incomplete"
+              elif [ "$ATC_ALLOW_UNSIGNED" = 1 ]; then
+                head="✅ <b>$title</b>: unsigned dry run completed; release remains a draft"
+              else
+                head="✅ <b>$title</b>: release published"
+              fi ;;
+          esac
+          links="<a href=\"$run_url\">GitHub Actions</a>"
+          if [ "$PUBLISH_RESULT" = success ] && [ "$ATC_ALLOW_UNSIGNED" != 1 ]; then
+            links="$links · <a href=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG\">Release</a>"
+          fi
+          text="$(printf '%s\n' "$head" \
+            "version: $VERSION_RESULT · gates: $GATES_RESULT · build: $BUILD_RESULT · packages: $PACKAGES_RESULT" \
+            "sign macOS: $MAC_RESULT · sign Windows: $WINDOWS_RESULT · draft: $DRAFT_RESULT" \
+            "smoke: $SMOKE_RESULT · smoke packages: $SMOKE_PACKAGES_RESULT" \
+            "publish: $PUBLISH_RESULT · Linux repositories: $LINUX_REPO_RESULT" "$links")"
+          curl -fsS --max-time 15 -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            --data-urlencode "chat_id=$TELEGRAM_CHAT_ID" --data-urlencode "text=$text" \
+            -d parse_mode=HTML -d disable_web_page_preview=true > /dev/null
