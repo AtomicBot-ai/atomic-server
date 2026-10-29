@@ -16,7 +16,7 @@ the code disagree, fix the page.
  │                              public OpenAI-compatible API /v1 on :1337 (the core's public server)
  ├─ AdminServer  :1338          BFF + embedded SPA; admin-token → HttpOnly cookie;
  │                              /api/core/* proxy (the control-token stays here); SSE relay /api/events
- ├─ host agent                  hardware probe → PUT /hardware/override; HostStepExecutor
+ ├─ host agent                  HostStepExecutor
  │                              (pending_host_step → request file → helper → receipt)
  └─ run files                   <data>/atc/run/daemon.json, <data>/atc/run/admin-sessions.json, <data>/atc/logs/daemon.log, graceful shutdown
  privileged helper = the same binary: `atc host-step exec <request.json>` under root / sudo / pkexec / UAC
@@ -25,7 +25,7 @@ the code disagree, fix the page.
 | Process | Lifetime | Responsibilities |
 | --- | --- | --- |
 | `atc <command>` | seconds | Parse, resolve paths and config, `attach` (or spawn) the daemon, hold a lease while it works, print one result, exit with a code. Never holds a URL or token outside `src/core-link/`. |
-| `atc daemon` (hidden) | until `atc stop`, `POST /shutdown` or a signal | Owns the data folder through the core's lock. Runs the core in-process, the admin server, the hardware push, the host-step loop; writes `daemon.json`; cleans up on exit. Spawned by `start` and `admin`; run in place by `atc start --foreground` (containers, OS services). Users know it as "the server" ([`concepts.md`](concepts.md)). |
+| `atc daemon` (hidden) | until `atc stop`, `POST /shutdown` or a signal | Owns the data folder through the core's lock. Runs the core in-process, the admin server and the host-step loop; writes `daemon.json`; cleans up on exit. Spawned by `start` and `admin`; run in place by `atc start --foreground` (containers, OS services). Users know it as "the server" ([`concepts.md`](concepts.md)). |
 | engines | per session | Children of the daemon, journalled by the core in `processes.json`; a later owner reaps orphans. |
 | `atc host-step exec` (hidden) | seconds | The privileged half of a managed-runtime step: file in, file out, no network. |
 | `atc foundry-host …` (hidden) | per Foundry Local session | The core's Foundry Local host, started by the core as `<this binary> foundry-host …`. `src/bin.ts` hands that argv to `@atomic-chat/core/foundry-host` before parsing any command, so its stdout carries the host protocol alone; the binary carries the core's FFI module. |
@@ -202,7 +202,10 @@ journald, launchd and `docker logs`. `atc logs` and the TUI read the tail across
 the file through a rotation by its identity (dev and inode), so no line is lost or read twice. When the
 server is not running, `atc logs` also prints what its last start wrote to `daemon.out.log`.
 
-Not done here: auto-starting the public API and `models.autoLoad` (iteration 2).
+`src/daemon/boot.ts` finishes startup from the config. `bootPlan` reads `api.autoStart` and
+`models.autoLoad`. `startDaemon` runs the API half before it writes the ready `daemon.json`, and the
+model half after that write (`src/daemon/daemon.ts`), so `atc start` is not held by a slow load. A
+failure is a warning; the server stays up, and `atc api start` or `atc run` can finish the job.
 
 ## The admin security model
 
@@ -289,7 +292,7 @@ contract types are the core's (`src/host/managed-types.ts` re-exports them).
 
 | Concern | The core (`atomic-chat-core`) | `atc` |
 | --- | --- | --- |
-| Engines | Engine builds: catalog, hardware tiers, install, update, the optimal-build choice; starting each engine the way it runs (a process, or a container for a managed engine). | Asks (`atc engines`, iterations 2 and 4); pushes hardware facts until the core probes them itself. No engine ships in the binary. |
+| Engines | Engine builds: catalog, hardware tiers, install, update, the optimal-build choice; starting each engine the way it runs (a process, or a container for a managed engine). | Asks (`atc engines`). The core is the only source of hardware facts; atc does not push them. No engine ships in the binary. |
 | Models | `model.yml`, registry, GGUF metadata, sessions, load/unload; HF catalog helpers; compatibility verdicts and Bonsai families. It downloads no model files (0.17.0). | Downloads every model itself (`src/downloads/`) and runs GGUF setups in the server's workspace (`<atc>/model-setups/`): plan, PrismML build through the core, download, `model.yml`, verdict by `model_id`. |
 | Public API | The `/v1` server, its settings (`server.api_key`, `enable_on_startup`). | Where and how to expose it: `api.*` config, `atc api` (iteration 2). |
 | Environments | The managed-runtime state machine, store, image pulls, WSL import, recovery. | Consent UI and the privileged step (above). |
@@ -302,13 +305,7 @@ an export request in the core branch.
 
 ## What is stubbed
 
-`src/cli/not-implemented.ts` is the registry: `PLANNED` maps each stub command to an iteration, and
-`PLANNED_PARTIAL` names the stubbed features of working commands (`logs --follow`, `update apply`,
-`host-step recipes`, `config engine.*` in their time). A unit test keeps the registry and the command tree in agreement,
-and `docs/commands.md` (generated) shows the status of every command. The iteration map: **I2** a first
-model answering (`engines install`, `models pull`, `run`, `unload`, `api start|stop`, `start
---foreground`); **I3** the catalog, resumable pulls, model management and API keys; **I4** engines and
-hardware from the core, the managed runtime, elevation; **I5** admin pages (API, models, engines) and
-non-loopback consent; **I6** service, update apply, doctor completion; **I7** the admin's engine install
-wizard, logs, settings, hardware; **I8** signing and notarisation. The terminal UI shipped early and gains
-a screen per iteration.
+Nothing is registered. `src/cli/not-implemented.ts` still defines `PLANNED` and `PLANNED_PARTIAL`, and
+both are empty objects. A unit test keeps that registry and the command tree in agreement, so a command
+cannot stay listed once it works, or be listed while it is missing from the tree. The status of every
+command is the generated [`commands.md`](commands.md).

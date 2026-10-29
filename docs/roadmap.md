@@ -10,14 +10,12 @@ on. The words (server, engine, engine build, run, unload) are defined in [`conce
 
 ## Where things stand
 
-Working today: `start`, `stop`, `restart`, `status`, `logs`, `admin` (token login, live dashboard),
-`tui` (what bare `atc` opens on a terminal: Overview, Logs, Config, Doctor, Commands), `config`, `doctor`,
-`update --check`, `version`, `completion`, the hidden `daemon` and `host-step exec`. The server boots
-the core in-process, pushes hardware facts to it, serves the web admin and runs the host-step loop. See
-[`architecture.md`](architecture.md) for how the pieces fit.
+The stub registry is empty. `PLANNED` and `PLANNED_PARTIAL` in `src/cli/not-implemented.ts` are empty
+objects, so no command exits 3 as a planned stub. What each command does is [`commands.md`](commands.md).
+The server boots the core in-process, serves the web admin and runs the host-step loop; the core probes
+the hardware. How the pieces fit is [`architecture.md`](architecture.md).
 
-Stubbed: `run`, `unload`, `models *`, `engines *`, `hardware *`, `api *`, `service *`, `update` (apply),
-`start --foreground`, `logs --follow`, `status --watch`, `config engine.*`.
+The iterations below are history: how the server was assembled. They are not a list of what is still missing.
 
 ## Iterations
 

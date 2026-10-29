@@ -1,6 +1,6 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider validation and advanced endpoints.
 import { useEffect, useRef } from 'react'
-import { CLOUD_CONNECTION_NOTES } from '@view'
+import { CLOUD_CONNECTION_NOTES, cloudNeedsKey } from '@view'
 import { Action, Field } from '../../Controls'
 import type { RecordValue } from '../../types'
 
@@ -56,18 +56,7 @@ export function CloudProviderEditor({
       form.current?.querySelector<HTMLInputElement>('input[type="password"]')?.focus()
     submitted.current = null
   }, [checking, error])
-  const needsKey = [
-    'openai',
-    'anthropic',
-    'google',
-    'openrouter',
-    'chatgpt',
-    'deepseek',
-    'xai',
-    'groq',
-    'mistral',
-    'azure',
-  ].includes(value.provider)
+  const needsKey = cloudNeedsKey(value.provider)
   const connectButton = (
     <button
       type="submit"

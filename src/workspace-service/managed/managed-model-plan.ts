@@ -6,6 +6,8 @@
  */
 
 import { createHash } from 'node:crypto'
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { AtomicCoreError } from '@atomic-chat/core'
 import type { ManagedModelLocation } from '@atomic-chat/core/contracts'
 import type { ManagedModelPlan } from '../../contract/index.js'
@@ -21,6 +23,20 @@ export interface StoreFiles {
   readText(path: string): Promise<string | undefined>
   /** Write beside the target, then rename over it: a reader never sees half a file. */
   writeAtomic(path: string, text: string): Promise<void>
+}
+
+/** The server's own disk. Tests pass a fake `StoreFiles` instead. */
+export const nodeStoreFiles: StoreFiles = {
+  size: async (path) => {
+    const s = await stat(path).catch(() => null)
+    return s?.isFile() ? s.size : null
+  },
+  readText: (path) => readFile(path, 'utf8').catch(() => undefined),
+  writeAtomic: async (path, text) => {
+    await mkdir(dirname(path), { recursive: true })
+    await writeFile(`${path}.tmp`, text)
+    await rename(`${path}.tmp`, path)
+  },
 }
 
 /** `relative` (`/`-separated) under `root`, with the root's own separator: a UNC root gets backslashes. */

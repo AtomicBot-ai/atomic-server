@@ -102,7 +102,7 @@ export {
   parseConnectorJson,
 } from './connectors/mcp-catalog.js'
 export { WORKSPACE_COLORS } from './colors.js'
-export { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES } from './catalog/cloud-catalog.js'
+export { CLOUD_CATALOG, CLOUD_CONNECTION_NOTES, cloudNeedsKey } from './catalog/cloud-catalog.js'
 
 export { prioritizeDownloads } from './downloads/downloads.js'
 export { engineUpdateResult } from './engines/engine-updates.js'

@@ -178,7 +178,9 @@ describe('ManagedModelSetups', () => {
     await waitFor(async () => ((await stat(partial).catch(() => null))?.size ?? 0) >= 100)
     // The server stops mid-transfer: its worker is gone and the record still says `downloading`.
     await first.cancel('r3')
-    await waitFor(() => (first as unknown as { running: Map<string, unknown> }).running.size === 0)
+    await waitFor(
+      () => (first as unknown as { journal: { running: Map<string, unknown> } }).journal.running.size === 0
+    )
     const record = join(first.directory, 'r3.json')
     await writeFile(
       record,
