@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CORE_VERSION } from '@atomic-chat/core'
 import { waitForPublishedOwner } from '@atomic-chat/core/host'
+import type * as CoreHost from '@atomic-chat/core/host'
 import { fakeOldOwner } from '../../test/helpers/fake-old-owner.js'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { createLogger } from '../output/index.js'
 import { attachCore } from './attach.js'
 
 vi.mock('@atomic-chat/core/host', async (importOriginal) => {
-  const host = await importOriginal<typeof import('@atomic-chat/core/host')>()
+  const host = await importOriginal<typeof CoreHost>()
   return { ...host, waitForPublishedOwner: vi.fn(host.waitForPublishedOwner) }
 })
 
@@ -20,7 +21,7 @@ describe('attachCore and a foreign core', () => {
   it('waits for a server whose permission checks finish after the old 20-second budget', async () => {
     const t = tmpDataFolder('atc-slow-permissions-')
     cleanups.push(t.cleanup)
-    const host = await vi.importActual<typeof import('@atomic-chat/core/host')>('@atomic-chat/core/host')
+    const host = await vi.importActual<typeof CoreHost>('@atomic-chat/core/host')
     let elapsed = 0
     vi.mocked(waitForPublishedOwner).mockImplementationOnce((layout, options) =>
       host.waitForPublishedOwner(layout, {
