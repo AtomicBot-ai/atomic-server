@@ -32,7 +32,8 @@ export interface AdminSession {
 
 /** `prepare` writes into the data folder before the server starts (a ready setup, a download record). */
 export async function adminSession(
-  prepare: (dataFolder: string) => void | Promise<unknown> = () => {}
+  prepare: (dataFolder: string) => void | Promise<unknown> = () => {},
+  overrides: NodeJS.ProcessEnv = {}
 ): Promise<AdminSession> {
   const scratch = mkdtempSync(join(tmpdir(), 'atc-e2e-web-'))
   const dataFolder = join(scratch, 'data')
@@ -52,6 +53,7 @@ export async function adminSession(
     HF_ENDPOINT: CLOSED,
     ATC_LITERT_LM_MODELS_URL: pathToFileURL(join(ROOT, 'test/fixtures/litert-lm/litert-lm-models.json')).href,
     ATC_FOUNDRY_LOCAL_MODELS_URL: CLOSED,
+    ...overrides,
   }
   const atc = (...args: string[]) => {
     const [exe, ...rest] = [...ATC, '--data-folder', dataFolder, ...args]

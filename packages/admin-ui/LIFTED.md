@@ -14,7 +14,7 @@ Menlo Research, as the rest of this repository; the attribution is in the root `
 | `src/index.css`                       | `web-app/src/index.css`                       | theme tokens and the base layer only; no fonts, markdown, katex, animations |
 | `src/hooks/useServiceHub.ts`          | `web-app/src/hooks/useServiceHub.ts`          | `ServiceHub` is a type-only import                                       |
 | `src/services/atomic-core-runtime.ts` | `extensions/shared/atomicCoreRuntime.ts`      | none, verbatim (prettier skips it: `requirePragma` override in `.prettierrc`) |
-| `src/main.tsx`                        | `web-app/src/main.tsx`                        | renders the admin root, no router; no Sentry, migrations, mobile or zoom handling |
+| `src/main.tsx`                        | `web-app/src/main.tsx`                        | renders the admin root, reports browser failures through the BFF; no router, migrations, mobile or zoom handling |
 | `tsconfig.app.json`, `tsconfig.node.json` | `web-app/tsconfig.*.json`                 | `lib` ES2023 / target ES2022 (the contract's type imports reach Node code); `@contract` path |
 | `eslint.config.js`                    | `web-app/eslint.config.js`                    | tests linted, `components/ui` may export variants                        |
 
@@ -127,3 +127,7 @@ The `807b4d9` onboarding refresh also supplies `setup/FirstModel.tsx` and `onboa
 | `../../src/workspace-view/mcp-connectors.json` (with `mcp-catalog.ts`), `public/images/connectors/*` | `atomic-chat-ui/web-app/src/constants/mcp-connectors.ts`, English MCP strings and public connector assets @ `807b4d9` | Exact catalog templates and branding shared with TUI. |
 
 - `workspace/library/cloud/CustomProviderSummary.tsx` and `custom-endpoints.css` follow `atomic-chat-ui/web-app/src/routes/endpoints.tsx` @ `807b4d9`: centered bordered empty state, compact endpoint cards and a separate heading action. Copy is reduced to the necessary endpoint choice.
+
+## Media step preview — 2026-10-29 (`Atomic-Chat` @ `2d0323463`)
+
+- `workspace/setup/MediaPreview.tsx`, its `first-media-{scene,art,kind,toggle}` rules in `media-preview.css`, and `public/images/onboarding/{robot-studio.webp,robot-wave.mp4}`: `web-app/src/containers/onboarding/steps/MediaPreview.tsx`, `media.css` (`.ob-media-scene`, `.ob-media-art`, `.ob-media-kind`, `.ob-animation-toggle`) and `web-app/public/images/onboarding/` @ `2d0323463`; English strings from `locales/en/onboarding-media.json` inlined, the line under the still takes the card's border colour, and a missing `matchMedia` reads as no reduced-motion preference. The two binaries are copied unchanged.

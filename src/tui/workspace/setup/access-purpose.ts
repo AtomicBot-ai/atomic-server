@@ -12,12 +12,6 @@ const PERMISSIONS = [
     detail: 'Know when a model is ready or a long task finishes.',
     icon: '[!]',
   },
-  {
-    id: 'microphone',
-    title: 'Microphone',
-    detail: 'Speak your prompts and use voice conversations.',
-    icon: '(|)',
-  },
 ] as const
 
 export async function openFirstRunServer(ctx: ActionContext) {
@@ -111,9 +105,7 @@ export function drawPermissionDialog(c: Canvas, s: WorkspaceState, focus: string
     x = Math.floor((c.width - width) / 2)
   const title = `Allow ${p.title.toLowerCase()} for Web?`
   const detail =
-    p.id === 'microphone'
-      ? 'Microphone access is requested by your browser when you start recording. Open the web app to enable it; text chat works here without it.'
-      : 'Download notifications require browser permission. Open the web app to enable notifications on this device.'
+    'Download notifications require browser permission. Open the web app to enable notifications on this device.'
   const lines = wrapWords(detail, width - 4),
     message = s.message ? wrapWords(s.message, width - 4) : [],
     height = Math.min(c.height - 6, lines.length + message.length + 8),

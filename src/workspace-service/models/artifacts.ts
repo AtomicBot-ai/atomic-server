@@ -14,6 +14,7 @@ import { migrateMediaFolders } from './media-migration.js'
 import { mlxPlan } from './mlx-plan.js'
 import { SerialWork } from '../serial.js'
 import { downloadProxy } from './download-proxy.js'
+import { captureFailure } from '../../telemetry/index.js'
 interface Worker {
   cancelled: boolean
   done: Promise<void>
@@ -151,8 +152,8 @@ export class ArtifactService {
     }
     void this.destinations
       .run(destinationOf(job.plan), () => this.run(job, worker))
-      .catch(() => {
-        /* Failed persistence remains recoverable as an interrupted job. */
+      .catch((error: unknown) => {
+        captureFailure(this.options.errors, error, { component: 'artifacts', operation: 'artifacts.persist' })
       })
       .finally(() => {
         if (this.running.get(job.id) === worker) this.running.delete(job.id)
@@ -196,6 +197,11 @@ export class ArtifactService {
       )
       await this.persist(job, worker, 'ready')
     } catch (error) {
+      if (!worker.cancelled && !String(error).includes('Download cancelled'))
+        captureFailure(this.options.errors, error, {
+          component: 'artifacts',
+          operation: `artifacts.${job.stage}`,
+        })
       await this.persist(
         job,
         worker,

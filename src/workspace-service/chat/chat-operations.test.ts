@@ -61,3 +61,14 @@ it('refuses replacing messages while a response is active in another client', as
   ).rejects.toThrow('active request')
   expect(history.save).not.toHaveBeenCalled()
 })
+
+it('allows a metadata-only edit while a response is active', async () => {
+  const { chats, history, parts: p } = parts()
+  const messages = [{ role: 'user', content: 'hi' }]
+  history.load.mockResolvedValue({ id: 'c1', messages } as never)
+  chats.running.mockReturnValue([{ id: 'job', conversation_id: 'c1', state: 'generating' }])
+  await expect(
+    chatOperation(p, 'history.save', { chat: { id: 'c1', title: 'Renamed', messages } })
+  ).resolves.toMatchObject({ saved: true })
+  expect(history.save).toHaveBeenCalledWith({ id: 'c1', title: 'Renamed', messages }, 0)
+})

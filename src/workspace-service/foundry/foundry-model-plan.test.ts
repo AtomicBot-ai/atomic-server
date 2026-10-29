@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 import { foundryModelPlan } from './foundry-model-plan.js'
-import { nodeStoreFiles } from '../managed/managed-model-setups.js'
+import { nodeStoreFiles } from '../managed/managed-model-plan.js'
 
 const raw = (name: string) =>
   readFileSync(new URL(`../../../test/fixtures/foundry-local/${name}`, import.meta.url), 'utf8')

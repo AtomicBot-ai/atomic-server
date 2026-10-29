@@ -26,6 +26,8 @@ import {
 } from '../output/index.js'
 import type { CommandSpec } from './command.js'
 import type { GlobalFlags } from './flags.js'
+import { createAtcReporter, LazyErrorReporter, telemetryConsent } from '../telemetry/index.js'
+import type { ProcessErrorSink } from '../telemetry/index.js'
 
 export interface CoreLinkFactory {
   /**
@@ -36,6 +38,7 @@ export interface CoreLinkFactory {
 }
 
 export interface ContextDeps {
+  errors?: ProcessErrorSink
   io: AtcIo
   flags: GlobalFlags
   paths?: AtcPaths
@@ -57,6 +60,7 @@ export interface ContextDeps {
 }
 
 export interface CommandContext {
+  errors: ProcessErrorSink
   io: AtcIo
   flags: GlobalFlags
   paths: AtcPaths
@@ -105,7 +109,26 @@ export function createContext(deps: ContextDeps): CommandContext {
         },
       }),
   }
+  const errors =
+    deps.errors ??
+    new LazyErrorReporter(
+      async (flag, warn) =>
+        createAtcReporter({
+          env: io.env,
+          consent: telemetryConsent(flag, await loadConfig()),
+          consentForCapture: async () => telemetryConsent(flag, await loadConfig()),
+          dataFolder: paths.dataFolder,
+          telemetryFile: paths.layout.core.telemetry,
+          homeDir: host.facts.homedir,
+          platform: host.facts.platform,
+          arch: host.facts.arch,
+          fetch: io.fetch,
+          warn,
+        }),
+      () => log.debug('An error report could not be sent.')
+    )
   return {
+    errors,
     io,
     flags,
     paths,

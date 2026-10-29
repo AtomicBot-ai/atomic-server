@@ -7,31 +7,13 @@
 
 import { ADMIN_API, ADMIN_HEADER } from '@contract'
 import type { AdminConfigView, AdminErrorBody, AdminStatus } from '@contract'
+import { AdminApiError } from './admin-error'
+import { reportClientFailure } from './error-reporting'
+export { AdminApiError } from './admin-error'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export const ADMIN_BASE = '/api'
-
-export class AdminApiError extends Error {
-  readonly code: string
-  /** The HTTP status, or 0 when the request never got an answer. */
-  readonly status: number
-  readonly details?: string
-  readonly hint?: string
-
-  constructor(
-    code: string,
-    message: string,
-    options: { status?: number; details?: string; hint?: string } = {}
-  ) {
-    super(message)
-    this.name = 'AdminApiError'
-    this.code = code
-    this.status = options.status ?? 0
-    this.details = options.details
-    this.hint = options.hint
-  }
-}
 
 /** The BFF answered 401: there is no session, show the sign-in screen. */
 export function isUnauthorized(error: unknown): boolean {
@@ -39,6 +21,7 @@ export function isUnauthorized(error: unknown): boolean {
 }
 
 export function describeError(error: unknown): string {
+  reportClientFailure(error)
   if (error instanceof AdminApiError) return error.hint ? `${error.message} (${error.hint})` : error.message
   if (error instanceof Error) return error.message
   return String(error)

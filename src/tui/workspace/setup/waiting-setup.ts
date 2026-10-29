@@ -14,17 +14,15 @@ import type { MineGame } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text, wrapWords } from '../draw/canvas.js'
-import { actionButton } from '../draw/cards.js'
-import { fieldControl, scrollTrack } from '../draw/controls.js'
+import { scrollTrack } from '../draw/controls.js'
 import type { InputResult } from '../input-types.js'
 import type { WorkspaceState } from '../state.js'
+import { drawWaitingReminder, saveReminder, type ReminderForm } from './waiting-reminder.js'
 
-export interface FinalSetupState {
+export interface FinalSetupState extends ReminderForm {
   destination: 'endpoint' | 'agent'
   game: MineGame
   flagMode: boolean
-  email: string
-  emailStatus: 'idle' | 'invalid' | 'confirming' | 'confirmed'
 }
 export const finalSetupState = (destination: FinalSetupState['destination']): FinalSetupState => ({
   destination,
@@ -32,6 +30,7 @@ export const finalSetupState = (destination: FinalSetupState['destination']): Fi
   flagMode: false,
   email: '',
   emailStatus: 'idle',
+  emailError: '',
 })
 
 export function drawWaitingSetup(c: Canvas, s: WorkspaceState, focus: string) {
@@ -158,32 +157,8 @@ export function drawWaitingSetup(c: Canvas, s: WorkspaceState, focus: string) {
     'Toggle flag placement',
     focus
   )
-  text(c, sideX, gameY, 'Email me when it is ready', COLORS.text, sideWidth)
-  fieldControl(
-    c,
-    'wait-email',
-    sideX,
-    gameY + 2,
-    sideWidth - 17,
-    state.email || 'Email address',
-    'Email address',
-    focus
-  )
-  const label =
-    state.emailStatus === 'confirming'
-      ? 'Saving...'
-      : state.emailStatus === 'confirmed'
-        ? 'Confirmed'
-        : 'Confirm'
-  actionButton(c, 'wait-save', sideX + sideWidth - 15, gameY + 1, label, 'Confirm email address', focus)
-  if (state.emailStatus === 'confirming' || state.emailStatus === 'confirmed') c.targets.pop()
-  const message =
-    state.emailStatus === 'invalid'
-      ? 'Enter a valid email.'
-      : state.emailStatus === 'confirmed'
-        ? 'Email saved'
-        : ''
-  text(c, sideX, gameY + 4, message, state.emailStatus === 'invalid' ? '#ffb3a7' : COLORS.muted, sideWidth)
+  if (pending)
+    drawWaitingReminder(c, s, state, { x: sideX, y: gameY, width: sideWidth, bottom: actionY }, focus)
 }
 
 export async function waitingSetupAction(id: string, ctx: ActionContext): Promise<boolean> {
@@ -196,19 +171,8 @@ export async function waitingSetupAction(id: string, ctx: ActionContext): Promis
     ctx.update((v) => ({ ...v, finalSetup: null, focus: `first-connect:${state.destination}` }))
   else if (id === 'wait-new') patch({ game: newMineGame() })
   else if (id === 'wait-flag') patch({ flagMode: !state.flagMode })
-  else if (id === 'wait-save') {
-    if (state.emailStatus === 'confirming' || state.emailStatus === 'confirmed') return true
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())
-    patch({ emailStatus: valid ? 'confirming' : 'invalid' })
-    if (!valid) ctx.update((v) => ({ ...v, focus: 'wait-email' }))
-    else {
-      // Local mock only; no subscription or email is sent. A notification service remains future work.
-      await new Promise((resolve) => setTimeout(resolve, 400))
-      const current = ctx.get().finalSetup
-      if (current?.email === state.email && current.emailStatus === 'confirming')
-        patch({ emailStatus: 'confirmed' })
-    }
-  } else if (id.startsWith('wait-cell:')) {
+  else if (id === 'wait-save') await saveReminder(ctx, state)
+  else if (id.startsWith('wait-cell:')) {
     const cell = Number(id.slice(10))
     patch({ game: state.flagMode ? flagMine(state.game, cell) : revealMine(state.game, cell) })
   }
@@ -220,13 +184,13 @@ export function waitingSetupInput(input: string, key: Key, s: WorkspaceState): I
   if (!state || s.overlay || input.startsWith('[<')) return null
   if (key.escape) return { action: 'wait-back' }
   if (s.focus === 'wait-email' && !key.ctrl && !key.meta && !key.tab) {
-    if (state.emailStatus === 'confirming') return {}
+    if (state.emailStatus === 'saving') return {}
     if (key.return) return { action: 'wait-save' }
     if (key.backspace || key.delete)
       return { patch: { finalSetup: { ...state, email: state.email.slice(0, -1), emailStatus: 'idle' } } }
     if (input && [...input].every((char) => char.charCodeAt(0) >= 32 && char.charCodeAt(0) !== 127))
       return {
-        patch: { finalSetup: { ...state, email: (state.email + input).slice(0, 254), emailStatus: 'idle' } },
+        patch: { finalSetup: { ...state, email: (state.email + input).slice(0, 320), emailStatus: 'idle' } },
       }
   }
   if (s.focus.startsWith('wait-cell:')) {

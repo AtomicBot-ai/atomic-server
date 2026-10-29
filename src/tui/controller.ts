@@ -18,12 +18,14 @@ import {
 } from '../core-link/index.js'
 import { followLog, readLogTail } from '../daemon/index.js'
 import type { CheckResult } from '../doctor/index.js'
-import { errorBody } from '../errors/index.js'
 import type { Logger } from '../output/index.js'
 import { createLogger } from '../output/index.js'
 import { configRows, describeEdit } from './model.js'
 import type { Level, PendingHostStep, TuiAction } from './state.js'
 import { MAX_LOG_LINES } from './state.js'
+import { captureFailure, type ErrorSink } from '../telemetry/index.js'
+import { oneLine } from './error-text.js'
+export { oneLine, explained } from './error-text.js'
 
 /** What the terminal UI asks the controller to do; the controller is its only side effect. */
 export type TuiCommand =
@@ -39,6 +41,7 @@ export type TuiCommand =
   | { name: 'doctor' }
 
 export interface TuiDeps {
+  errors?: ErrorSink
   paths: Pick<AtcPaths, 'daemonRecord' | 'daemonLog' | 'daemonOutLog' | 'configFile' | 'layout'>
   /** The command context's attach, with the TUI's own logger so nothing writes under the frame. */
   attach: (options: { launch: boolean; daemonArgs?: readonly string[]; log: Logger }) => Promise<CoreLink>
@@ -62,18 +65,6 @@ export interface TuiControllerLike {
 
 /** How often the record and pending host steps are read again while the daemon is up. */
 const RECORD_POLL_MS = 2000
-
-/** An error on one line: the message and, when there is one, the hint. */
-export function oneLine(error: unknown): string {
-  const body = errorBody(error)
-  return body.hint ? `${body.message} — ${body.hint}` : body.message
-}
-
-/** An error over several lines: the message, its details (a failed start's own log lines) and the hint. */
-export function explained(error: unknown): string {
-  const body = errorBody(error)
-  return [body.message, body.details, body.hint && `Hint: ${body.hint}`].filter(Boolean).join('\n')
-}
 
 export class TuiController implements TuiControllerLike {
   private readonly abort = new AbortController()
@@ -120,6 +111,7 @@ export class TuiController implements TuiControllerLike {
     try {
       await this.execute(command)
     } catch (error) {
+      captureFailure(this.deps.errors, error, { component: 'tui', operation: command.name })
       this.note('error', oneLine(error))
     }
   }

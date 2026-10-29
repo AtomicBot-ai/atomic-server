@@ -1,0 +1,13 @@
+---
+date: 2026-10-29
+title: "Share the download job journal"
+---
+
+# 2026-10-29 — Share the download job journal
+
+- **Context:** Foundry Local, LiteRT-LM and the managed store each kept a copy of the same request-id journal: a plan file per digest, a job file per request id, `SerialWork` per id, and `list` marking a live stage with no worker as `interrupted`. The three copies had drifted in three places only. Foundry and Managed wait for the worker inside `cancel` and copy `snapshot().transferred` onto the job; LiteRT's `cancel` returns while the download is still unwinding and does not record `transferred`. LiteRT's next `install` of that request id waits for the cancelled worker before taking the lane; the other two do not. GGUF `ModelSetups` is a different protocol (`setup_id`, plans under `plans/`, one writer per `model_id`) and was left out.
+- **Decision:** One `SetupJournal` in `src/workspace-service/setup-journal.ts`, inside the existing module and not exported from `index.ts`. Each provider passes one policy object at construction: `awaitWorkerOnCancel` and `recordTransferred` are true for Foundry and Managed and false for LiteRT; `awaitCancelledBeforeInstall` is true only for LiteRT. `hasPlan` stays a predicate (`plan.files` or `plan.file`) because that check is the plan body, not a timing flag. Each class keeps its own `run` — the bytes, the verdict and `model.yml` — and calls `journal.step`. `listJobs` stays in `managed/managed-jobs.ts`.
+- **Consequences:** A change to the lane, the request-id check or the restart reading lands once. The three timings stay observable: characterization tests pin when `cancel` resolves, whether `transferred` is stored, and whether a second `install` waits. `running` lives on the journal, so a test that waited for the private map now reads `journal.running`. The GGUF journal is still separate; folding it in would change its files and its abort path.
+- **Alternatives:** A subclass per provider that copies `install` and `cancel` — the shared text would be the part that had already drifted, and the flags would be hidden in overrides. Picking the strictest `cancel` for all three — LiteRT's `cancel` would then wait for the worker, which the characterization tests reject. A new `src/` module — the journal is the service's own bookkeeping and has no second caller. Folding GGUF `ModelSetups` in — different ids, different files, one writer per model.
+- **Owner:** `team`.
+- **Links:** `src/workspace-service/setup-journal.ts`, `src/workspace-service/foundry/foundry-model-setups.ts`, `src/workspace-service/litert/litert-model-setups.ts`, `src/workspace-service/managed/managed-model-setups.ts`.

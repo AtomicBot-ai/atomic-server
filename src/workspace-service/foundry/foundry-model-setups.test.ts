@@ -40,7 +40,11 @@ function core(verdicts: Record<string, string> = {}) {
   return l
 }
 
-function setups(l = core(), url = confFor()) {
+function setups(
+  l = core(),
+  url = confFor(),
+  downloader?: ConstructorParameters<typeof FoundryModelSetups>[0]['downloader']
+) {
   const data = join(scratch, `data-${n}`)
   return {
     data,
@@ -52,14 +56,16 @@ function setups(l = core(), url = confFor()) {
       arch: 'x64',
       modelsDir: join(data, 'foundry-local', 'models'),
       directory: join(data, 'atc', 'foundry-model-setups'),
-      downloader: new Downloader({
-        dataFolder: data,
-        platform: process.platform,
-        fetch,
-        streams: 1,
-        availableSpace: async () => undefined,
-        sleep: async () => {},
-      }),
+      downloader:
+        downloader ??
+        new Downloader({
+          dataFolder: data,
+          platform: process.platform,
+          fetch,
+          streams: 1,
+          availableSpace: async () => undefined,
+          sleep: async () => {},
+        }),
     }),
   }
 }
@@ -71,6 +77,54 @@ const settled = async (s: FoundryModelSetups, id: string): Promise<FoundryModelJ
   })
   return job!
 }
+
+/**
+ * A download that stays pending until `release`. `cancel` only marks that call to reject with
+ * `Download cancelled`; `snapshot` reports 17 bytes on this task.
+ */
+function heldDownload(id: string) {
+  let marked = false
+  let released = false
+  let calls = 0
+  let rejectPending: (error: Error) => void = () => {}
+  const pending = new Promise<void>((_, reject) => {
+    rejectPending = reject
+  })
+  pending.catch(() => {})
+  let markStarted: () => void = () => {}
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve
+  })
+  return {
+    started,
+    get calls() {
+      return calls
+    },
+    get hanging() {
+      return !released
+    },
+    release: () => {
+      if (released) return
+      released = true
+      rejectPending(new Error(marked ? 'Download cancelled' : 'released'))
+    },
+    downloader: {
+      download: async (taskId: string) => {
+        if (taskId !== id) return
+        calls += 1
+        markStarted()
+        await pending
+      },
+      cancel: (taskId: string) => {
+        if (taskId === id) marked = true
+        return true
+      },
+      snapshot: () => [{ taskId: id, transferred: 17, total: 17, percent: 100 }],
+    },
+  }
+}
+
+const turn = () => new Promise((resolve) => setImmediate(resolve))
 
 describe('FoundryModelSetups', () => {
   it('downloads the NPU variant into its folder, model.yml last with the foundry_local block', async () => {
@@ -168,5 +222,56 @@ describe('FoundryModelSetups', () => {
       'atc engines install foundry-local'
     )
     expect(azure.requests.filter((r) => r.path.startsWith('/container'))).toEqual([])
+  })
+
+  it('does not finish cancel until the hanging download ends, then records transferred 17', async () => {
+    serve('generic-cpu', '1')
+    const held = heldDownload('f-cancel')
+    try {
+      const { s } = setups(core(), confFor(), held.downloader)
+      const plan = await s.plan({ model: 'gemma-4-e2b-it', device: 'cpu' })
+      await s.install({ request_id: 'f-cancel', plan_digest: plan.digest })
+      await held.started
+      let settled = false
+      const cancelling = s.cancel('f-cancel').then(
+        (job) => {
+          settled = true
+          return job
+        },
+        (error: unknown) => {
+          settled = true
+          throw error
+        }
+      )
+      await turn()
+      expect(settled).toBe(false)
+      expect(held.hanging).toBe(true)
+      held.release()
+      await expect(cancelling).resolves.toMatchObject({ stage: 'cancelled', transferred: 17 })
+    } finally {
+      held.release()
+    }
+  })
+
+  it('rejects another plan on the same request id and does not start that download', async () => {
+    serve('openvino-npu', '1')
+    serve('generic-cpu', '2')
+    const held = heldDownload('f-other')
+    try {
+      const { s } = setups(core(), confFor(), held.downloader)
+      const npu = await s.plan({ model: 'gemma-4-e2b-it', device: 'npu' })
+      const cpu = await s.plan({ model: 'gemma-4-e2b-it', device: 'cpu' })
+      expect(cpu.digest).not.toBe(npu.digest)
+      await s.install({ request_id: 'f-other', plan_digest: npu.digest })
+      await held.started
+      expect(held.calls).toBe(1)
+      await expect(s.install({ request_id: 'f-other', plan_digest: cpu.digest })).rejects.toMatchObject({
+        code: 'ATC_USAGE',
+        message: expect.stringContaining('another plan'),
+      })
+      expect(held.calls).toBe(1)
+    } finally {
+      held.release()
+    }
   })
 })

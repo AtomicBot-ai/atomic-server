@@ -53,6 +53,22 @@ const headers = {
   'content-type': 'application/json',
 }
 describe('authenticated workspace BFF', () => {
+  it('accepts bounded browser reports only behind the admin session and origin gates', async () => {
+    const captured: unknown[] = []
+    const { url } = await host({ errors: { capture: (report) => captured.push(report) } })
+    const body = {
+      kind: 'react',
+      name: 'TypeError',
+      frames: ['    at render (/assets/index-Abc12.js:10:20)'],
+    }
+    const call = (value: unknown, h: Record<string, string> = headers) =>
+      fetch(`${url}/api/client-errors`, { method: 'POST', headers: h, body: JSON.stringify(value) })
+    expect((await call(body, { ...headers, authorization: '' })).status).toBe(401)
+    expect((await call(body, { ...headers, origin: 'https://foreign.invalid' })).status).toBe(403)
+    expect((await call({ ...body, message: 'private prompt' })).status).toBe(400)
+    expect((await call(body)).status).toBe(202)
+    expect(captured).toHaveLength(1)
+  })
   it("reports a bug behind the admin API to atc's project, and not its own answers", async () => {
     const captured: unknown[] = []
     const { url } = await host({

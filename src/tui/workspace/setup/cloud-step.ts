@@ -4,10 +4,10 @@ import type { WorkspaceState } from '../state.js'
 import { COLORS, text, graphemes } from '../draw/canvas.js'
 import { actionButton, panel } from '../draw/cards.js'
 import { fieldControl, quietButton, scrollTrack } from '../draw/controls.js'
-import { cloudChoices, cloudNeedsKey } from '../library/cloud-catalog.js'
+import { cloudChoices } from '../library/cloud-catalog.js'
 import { cloudListLayout } from '../library/cloud-layout.js'
 import { computeRowWindow } from '../../row-window.js'
-import { CLOUD_CONNECTION_NOTES } from '../../../workspace-view/index.js'
+import { CLOUD_CONNECTION_NOTES, cloudNeedsKey } from '../../../workspace-view/index.js'
 
 /** First run keeps provider cards and their form on the same screen, as on desktop. */
 export function drawSetupCloud(

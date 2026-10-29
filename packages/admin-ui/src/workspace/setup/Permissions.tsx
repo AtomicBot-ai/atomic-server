@@ -153,10 +153,7 @@ export function PermissionsWarning({
       >
         <ShieldCheck size={30} />
         <h2>Continue without permissions?</h2>
-        <p>
-          Voice input and download notifications may be unavailable. You can enable access later in your
-          browser settings.
-        </p>
+        <p>Download notifications may be unavailable. You can enable them later in your browser settings.</p>
         <div className="ew-actions">
           <Action onClick={close}>Review permissions</Action>
           <Action primary onClick={proceed}>
