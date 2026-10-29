@@ -3,6 +3,7 @@ import { failedTurn } from './chat/failed-turn.js'
 import { useDownloadAttention } from './downloads/use-download-attention.js'
 import { chatFeatureRequest } from './chat/features.js'
 import { useSharedPanels } from './runtime/shared-panels.js'
+import { useOtherTurn } from './runtime/other-turn.js'
 import { useMediaJobs } from './media/media-effects.js'
 import { IntroScreen } from './intro/IntroScreen.js'
 import { messageText } from '../../terminal-service/index.js'
@@ -11,6 +12,7 @@ import { useRuntimeData, useWaitingGame } from './runtime/runtime-effects.js'
 import { persistConversation } from './server/data-actions.js'
 import { startup } from './startup.js'
 import { isPicker } from './chat/picker.js'
+import { chosenEndpoint } from './chat/model-selection.js'
 import { useWorkspaceData } from './runtime/data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
@@ -134,6 +136,7 @@ function WorkspaceContent(
   }, [state.mouse, write])
   useWorkspaceData(state, latest, controller, update)
   useSharedPanels(state.ready, latest, controller, update)
+  useOtherTurn(state, latest, controller, update)
   useMediaJobs(state.ready, latest, controller, update)
   useRuntimeData(state.ready, controller, update)
   useWaitingGame(state, update)
@@ -173,7 +176,7 @@ function WorkspaceContent(
       id = ++epoch.current
     patch({
       conversation: s.conversation ?? {
-        ...c.history.create(s.endpoint, s.model, process.cwd()),
+        ...c.history.create(chosenEndpoint(s) ?? '', s.model, process.cwd()),
         title: s.draft.trim().replace(/\s+/g, ' ').slice(0, 70),
       },
       messages: [...messages, { role: 'assistant', content: '' }],
@@ -187,7 +190,7 @@ function WorkspaceContent(
     })
     void c
       .chat(
-        s.endpoint,
+        chosenEndpoint(s),
         s.model,
         messages,
         (token) => {

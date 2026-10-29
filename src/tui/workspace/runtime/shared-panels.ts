@@ -5,6 +5,7 @@ import type { RefObject } from 'react'
 import type { WorkspaceController } from '../controller.js'
 import type { WorkspaceState } from '../state.js'
 import { libraryRows, record } from '../library/library-model.js'
+import { refreshConversations } from './shared-conversations.js'
 
 /** Poll only open local panels. Catalog searches and unsaved fields belong to this client. */
 export function useSharedPanels(
@@ -20,6 +21,8 @@ export function useSharedPanels(
         state = latest.current
       if (!c) return
       try {
+        if (state.page === 'chat' || state.page === 'history')
+          await refreshConversations(c, state, () => latest.current, live, update)
         if (
           state.firstRun === 'cloud' ||
           (state.page === 'models' && ['cloud', 'endpoint'].includes(state.libraryView))

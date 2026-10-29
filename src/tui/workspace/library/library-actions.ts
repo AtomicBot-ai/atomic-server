@@ -31,7 +31,10 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       focus: 'library:catalog',
       message: '',
     })
-    const [installed, models] = await Promise.all([c.installed(), c.models(s.endpoint).catch(() => s.models)])
+    const [installed, models] = await Promise.all([
+      c.installed(),
+      c.models(s.endpoint, s.endpointFollowsServer).catch(() => s.models),
+    ])
     patch({ installed, models })
     if (get().page !== 'models') return true
     return libraryAction('library:catalog', ctx)

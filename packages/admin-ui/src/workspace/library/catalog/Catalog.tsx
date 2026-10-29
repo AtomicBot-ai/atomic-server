@@ -256,7 +256,12 @@ export function Catalog({
         />
       )}
       {tab === 'engines' && (
-        <EnginesTab engines={engines} loading={loading} onSettings={setSettingsProvider} />
+        <EnginesTab
+          engines={engines}
+          snapshot={w.snapshot}
+          loading={loading}
+          onSettings={setSettingsProvider}
+        />
       )}
       {tab === 'downloads' && <Downloads workspace={w} showTitle={false} />}
       {settingsProvider && (

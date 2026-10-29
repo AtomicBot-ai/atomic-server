@@ -172,8 +172,12 @@ export interface WorkspaceState extends WorkspaceReturnState {
   edit: string
   editValue: string
   endpoint: string
+  /** The Playground talks to this server: `endpoint` follows the server's address as snapshots report it. */
+  endpointFollowsServer: boolean
   model: string
   models: string[]
+  /** The reply of a turn another client is running in the open chat, as it streams (`useOtherTurn`). */
+  otherTurn: { id: string; message: ChatMessage } | null
   images: ChatImage[]
   messages: ChatMessage[]
   generating: boolean
@@ -264,8 +268,10 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     edit: '',
     editValue: '',
     endpoint: 'http://127.0.0.1:1337/v1',
+    endpointFollowsServer: true,
     model: '',
     models: [],
+    otherTurn: null,
     messages: [],
     images: [],
     generating: false,

@@ -1,5 +1,6 @@
 import { setupFinished } from '../../workspace-view/index.js'
 import { newSetup } from '../../terminal-setup/index.js'
+import { followsLocalServer } from '../../terminal-service/index.js'
 import type { WorkspaceController } from './controller.js'
 import { PAGE_FOCUS } from './state.js'
 import type { Page, WorkspaceState } from './state.js'
@@ -13,6 +14,7 @@ export async function startup(c: WorkspaceController, initialPage?: Page): Promi
     c.catalogLikes?.() ?? Promise.resolve([]),
   ])
   const ui = config.values.tui
+  const follows = followsLocalServer(config)
   const complete = setupFinished(setupState) || manifest?.complete === true || manifest?.onboarded === true
   const setup =
     manifest && !manifest.complete && !setupFinished(setupState)
@@ -38,7 +40,8 @@ export async function startup(c: WorkspaceController, initialPage?: Page): Promi
     catalogLikes,
     page,
     settingsGroup: page === 'settings' ? 'tui' : 'api',
-    endpoint: config.sources?.['tui.endpoint'] === 'default' ? await c.localEndpoint() : ui.endpoint,
+    endpoint: follows ? await c.localEndpoint() : ui.endpoint,
+    endpointFollowsServer: follows,
     model: ui.model,
     motion: ui.motion,
     mouse: ui.mouse,

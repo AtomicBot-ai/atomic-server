@@ -40,6 +40,7 @@ function harness() {
       },
       loadModel,
       save,
+      unset: vi.fn(async () => {}),
       localEndpoint: async () => 'http://127.0.0.1:1337/v1',
       config: async () => ({ values: { tui: { mode: 'personal' } } }),
       initializeKeys: async () => {},

@@ -103,9 +103,13 @@ export function useWorkspaceData(
     const poll = async () => {
       if (polling.current || !c.current) return
       polling.current = true
-      const endpoint = latest.current.endpoint
+      const endpoint = latest.current.endpoint,
+        server = latest.current.endpointFollowsServer
       try {
-        const [local, remote] = await Promise.allSettled([c.current.installed(), c.current.models(endpoint)])
+        const [local, remote] = await Promise.allSettled([
+          c.current.installed(),
+          c.current.models(endpoint, server),
+        ])
         if (!live || latest.current.endpoint !== endpoint) return
         update((v) => {
           const chosen =

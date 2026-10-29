@@ -86,6 +86,7 @@ export class WorkspaceService {
     const result = await this.shared.get()
     result.downloads.push(...(await this.engineDownloads.list()), ...this.downloads.downloader.snapshot())
     result.loads = this.loads.list()
+    result.chats = this.chats.running()
     result.setups.push(
       ...(await this.downloads.setups.list()),
       ...(await this.downloads.artifacts.list()),

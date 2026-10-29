@@ -116,6 +116,7 @@ function harness(installed: string[], plan: object = foundryPlan) {
       api: vi.fn(async () => {}),
       localEndpoint: vi.fn(async () => 'http://127.0.0.1:1337/v1'),
       save: vi.fn(async () => {}),
+      unset: vi.fn(async () => {}),
       engineSelection: { remember: vi.fn(async () => {}) },
     } as unknown as WorkspaceController,
     send: vi.fn(),
@@ -156,8 +157,15 @@ describe('guided setup with a managed engine', () => {
     await setupAction('setup-path-finish', t.ctx)
     expect(t.calls('models.load')).toEqual([{ provider: 'vllm', model_id: REPO }])
     expect(t.calls('setup.complete')).toEqual([{ model_id: REPO }])
-    expect(t.get()).toMatchObject({ setup: null, model: REPO, setupComplete: true })
+    expect(t.get()).toMatchObject({
+      setup: null,
+      model: REPO,
+      setupComplete: true,
+      endpointFollowsServer: true,
+    })
     expect(t.setup.clearPath).toHaveBeenCalled()
+    expect(t.ctx.controller.unset).toHaveBeenCalledWith('tui.endpoint')
+    expect(t.ctx.controller.save).not.toHaveBeenCalledWith('tui.endpoint', expect.anything())
   })
 
   it('follows the job from the snapshot: its stage and bytes', () => {

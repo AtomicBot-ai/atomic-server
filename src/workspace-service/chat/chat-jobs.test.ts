@@ -92,3 +92,19 @@ it('runs one request per conversation even when two start at once', async () => 
   await settled(second.value.id)
   expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
 })
+
+it('lists the requests still running, by conversation, for the other clients to follow', async () => {
+  const { jobs, release, settled } = await harness()
+  expect(jobs.running()).toEqual([])
+  const job = await jobs.start({ request: { model: 'm', messages } })
+  expect(jobs.running()).toEqual([
+    {
+      id: job.id,
+      conversation_id: job.conversation_id,
+      state: expect.stringMatching(/preparing|generating/),
+    },
+  ])
+  await release()
+  await settled(job.id)
+  expect(jobs.running()).toEqual([])
+})

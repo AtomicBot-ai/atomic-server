@@ -29,8 +29,15 @@
   overflow: auto;
   scrollbar-gutter: stable;
 }
+/* The step's title stays in view while what is under it scrolls (the waiting screen's email and game do
+   not fit a short window); the padding, not a margin, keeps the scrolled content from showing through. */
 .desktop-workspace .first-run-content > h1 {
-  margin: 0 0 24px;
+  position: sticky;
+  top: -8px;
+  z-index: 2;
+  margin: -8px 0 0;
+  padding: 8px 0 24px;
+  background: #101211;
   font-size: clamp(28px, 3.5vw, 40px);
   letter-spacing: -1px;
 }

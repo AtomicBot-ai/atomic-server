@@ -40,7 +40,7 @@ export function Chat({
   trySkill?: string | null
   onSkillStarted?: () => void
 }) {
-  const s = useChatSession(),
+  const s = useChatSession(w.snapshot?.chats),
     { preferences, save } = useChatPreferences()
   // The draft lives outside this component (`useChatDraft`): Open server leaves the Playground.
   const [draft, setDraft, restoreDraft] = useChatDraft(s.chat),
@@ -115,7 +115,7 @@ export function Chat({
   }, [s.chat.id, s.chat.draft_key])
   useEffect(() => {
     const fresh = () => {
-      if (s.busy) return
+      if (s.holding) return
       s.fresh()
       composer.current?.focus()
     }

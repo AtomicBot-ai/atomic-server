@@ -25,9 +25,12 @@ export function applyWorkspaceSnapshot(
       'setup-permission',
     ].includes(state.overlay) ||
     (state.overlay === 'endpoint' && /^(cloud-|guide-)/.test(state.edit))
+  // Another client can move the API to another port: a Playground on this server goes with it.
+  const here = workspace.api?.endpoint ?? ''
   return {
     ...state,
     workspace,
+    ...(state.endpointFollowsServer && here ? { endpoint: here } : {}),
     clientKeys: workspace.keys,
     transferSamples: sampleDownloads(state.transferSamples, workspace, now),
     ...(setupFinished(workspace.setup) ? { setupComplete: true } : {}),

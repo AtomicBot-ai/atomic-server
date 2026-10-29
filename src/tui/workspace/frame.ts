@@ -86,13 +86,15 @@ export function workspaceFrame(
       newChatButton(c, x + bodyWidth - 17, y, 16, focus)
       y++
     } else y += 2
-    const composerY = s.messages.length
+    // A reply another client is generating in this chat streams in after the saved messages.
+    const messages = s.otherTurn ? [...s.messages, s.otherTurn.message] : s.messages
+    const composerY = messages.length
       ? l.bottom - COMPOSER_HEIGHT + 1
       : Math.min(
           l.bottom - COMPOSER_HEIGHT + 1,
           Math.max(y + 5, Math.floor((y + l.bottom - COMPOSER_HEIGHT) / 2))
         )
-    if (!s.messages.length && height >= 24) {
+    if (!messages.length && height >= 24) {
       text(
         c,
         x + Math.max(0, Math.floor((bodyWidth - 25) / 2)),
@@ -101,13 +103,13 @@ export function workspaceFrame(
         COLORS.text,
         bodyWidth
       )
-    } else if (s.messages.length) {
-      const rows = s.messages
+    } else if (messages.length) {
+      const rows = messages
         .filter((m) => m.role !== 'system')
         .flatMap((m) => [
           m.role === 'user' ? 'YOU' : 'ATOMIC',
           ...wrap(
-            messageText(m.content) || (s.generating ? 'Generating…' : 'No text returned.'),
+            messageText(m.content) || (s.generating || s.otherTurn ? 'Generating…' : 'No text returned.'),
             bodyWidth - 2
           ),
           '',

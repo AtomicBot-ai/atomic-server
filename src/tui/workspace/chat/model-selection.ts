@@ -1,5 +1,6 @@
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
+import type { WorkspaceState } from '../state.js'
 import { modelProvider } from '../../../terminal-setup/index.js'
 import { readVision } from './chat-load.js'
 
@@ -10,10 +11,12 @@ export function beginModelSelection(ctx: ActionContext) {
   selections.set(ctx.controller, revision)
   return () => selections.get(ctx.controller) === revision
 }
+/** What to save as the endpoint: null for this server, which is saved as no address of its own. */
+export const chosenEndpoint = (s: WorkspaceState) => (s.endpointFollowsServer ? null : s.endpoint)
 export async function persistModelSelection(
   ctx: ActionContext,
   model: string,
-  endpoint: string,
+  endpoint: string | null,
   fresh: () => boolean
 ) {
   const previous = saves.get(ctx.controller) ?? Promise.resolve()
@@ -22,7 +25,10 @@ export async function persistModelSelection(
     .then(async () => {
       if (!fresh()) return
       await ctx.controller.save('tui.model', model)
-      if (fresh()) await ctx.controller.save('tui.endpoint', endpoint)
+      if (!fresh()) return
+      // A saved address of this server would stay behind when the API moves to another port.
+      if (endpoint === null) await ctx.controller.unset('tui.endpoint')
+      else await ctx.controller.save('tui.endpoint', endpoint)
     })
   saves.set(ctx.controller, next)
   await next
@@ -54,12 +60,12 @@ export async function selectLocalModel(id: string, ctx: ActionContext, selection
   try {
     const endpoint = await ctx.controller.localEndpoint()
     if (!fresh()) return
-    ctx.update((s) => ({ ...s, endpoint }))
+    ctx.update((s) => ({ ...s, endpoint, endpointFollowsServer: true }))
     await ctx.controller.loadModel(provider, model.id)
     if (!fresh()) return
     const modelVision = await readVision(ctx.controller, provider, model.id)
     if (!fresh()) return
-    await persistModelSelection(ctx, model.id, endpoint, fresh)
+    await persistModelSelection(ctx, model.id, null, fresh)
     if (fresh()) ctx.update((s) => ({ ...s, modelVision, message: 'Model loaded.' }))
   } catch (error) {
     if (fresh())
@@ -93,5 +99,5 @@ export async function selectEndpointModel(model: string, ctx: ActionContext) {
     message: '',
     selected: 0,
   }))
-  await persistModelSelection(ctx, model, ctx.get().endpoint, fresh)
+  await persistModelSelection(ctx, model, chosenEndpoint(ctx.get()), fresh)
 }

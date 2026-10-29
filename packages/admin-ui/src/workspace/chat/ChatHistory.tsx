@@ -40,7 +40,7 @@ export function ChatHistory({
   return (
     <aside className="recents">
       {!embedded && (
-        <button className="new-chat" disabled={s.busy} onClick={s.fresh}>
+        <button className="new-chat" disabled={s.holding} onClick={s.fresh}>
           <MessageCircle size={17} />
           New chat
         </button>
@@ -134,7 +134,7 @@ export function ChatHistory({
             key={text(chat.id)}
             className={`recent ${chat.id === s.chat.id ? 'active' : ''}`}
             title={text(chat.title)}
-            disabled={s.busy}
+            disabled={s.holding}
             onClick={() => void s.open(text(chat.id)).catch((e) => s.setError(describeError(e)))}
           >
             {text(chat.title)}

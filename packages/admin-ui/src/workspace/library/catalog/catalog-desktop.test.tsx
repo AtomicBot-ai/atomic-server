@@ -92,3 +92,20 @@ it('returns focus after choosing a sort and dismisses the popover when Tab leave
   expect(screen.getByRole('button', { name: 'Import' })).toHaveFocus()
   expect(sort).toHaveAttribute('aria-expanded', 'false')
 })
+
+// At 476 px the toolbar wraps: Filters stays at the right edge of the first row, Sort starts the second.
+it('opens each menu toward the side with room, so it stays inside a narrow window', async () => {
+  renderCatalog()
+  vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(476)
+  const at = (name: string, left: number, right: number) =>
+    vi
+      .spyOn(screen.getByRole('button', { name }).parentElement!, 'getBoundingClientRect')
+      .mockReturnValue({ left, right, top: 0, bottom: 40, width: right - left, height: 40 } as DOMRect)
+  at('Filters', 380, 460)
+  at('Sort', 16, 90)
+  await userEvent.click(screen.getByRole('button', { name: 'Filters' }))
+  expect(document.getElementById('catalog-filters')).toHaveAttribute('data-align', 'end')
+  await userEvent.keyboard('{Escape}')
+  await userEvent.click(screen.getByRole('button', { name: 'Sort' }))
+  expect(document.getElementById('catalog-sort')).toHaveAttribute('data-align', 'start')
+})

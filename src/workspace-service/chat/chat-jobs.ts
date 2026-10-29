@@ -1,6 +1,6 @@
 import { chatProvider } from '../cloud/chat-readiness.js'
 import { randomUUID } from 'node:crypto'
-import type { WorkspaceInput } from '../../contract/index.js'
+import type { WorkspaceChat, WorkspaceInput } from '../../contract/index.js'
 import type { ChatHistory, ClientKeys, Conversation } from '../../terminal-data/index.js'
 import { AtcError } from '../../errors/index.js'
 import type { WorkspaceServiceOptions } from '../service-options.js'
@@ -127,6 +127,16 @@ export class ChatJobs {
     this.jobs.set(job.view.id, job)
     void this.run(job, chat, endpoint, body)
     return structuredClone(job.view)
+  }
+  /** The requests still running, for the workspace snapshot: another client follows one in its open chat. */
+  running(): WorkspaceChat[] {
+    return [...this.jobs.values()]
+      .filter((job) => this.active(job.view))
+      .map(({ view }) => ({
+        id: view.id,
+        conversation_id: view.conversation_id,
+        state: view.state as WorkspaceChat['state'],
+      }))
   }
   get(id: string) {
     const job = this.find(id)

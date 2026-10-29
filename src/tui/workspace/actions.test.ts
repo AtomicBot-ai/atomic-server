@@ -17,6 +17,7 @@ function context() {
     },
     controller: {
       save,
+      unset: vi.fn(async () => undefined),
       api,
       run,
       models,
@@ -62,6 +63,26 @@ describe('workspace actions', () => {
     expect(example(ctx.get())).toContain('$ATC_API_KEY')
     await activate('stop-confirm', ctx)
     expect(api).toHaveBeenCalledWith(false)
+  })
+  it('stops following this server once an endpoint is typed in', async () => {
+    const { ctx, save } = context()
+    expect(ctx.get().endpointFollowsServer).toBe(true)
+    await activate('endpoint', ctx)
+    ctx.update((s) => ({ ...s, editValue: 'https://openrouter.ai/api/v1' }))
+    await activate('save-edit', ctx)
+    expect(save).toHaveBeenCalledWith('tui.endpoint', 'https://openrouter.ai/api/v1')
+    expect(ctx.get()).toMatchObject({
+      endpoint: 'https://openrouter.ai/api/v1',
+      endpointFollowsServer: false,
+    })
+  })
+  it('reads the models of this server with its own key', async () => {
+    const { ctx, models } = context()
+    await activate('refresh-models', ctx)
+    expect(models).toHaveBeenCalledWith(ctx.get().endpoint, true)
+    ctx.update((s) => ({ ...s, endpoint: 'https://openrouter.ai/api/v1', endpointFollowsServer: false }))
+    await activate('refresh-models', ctx)
+    expect(models).toHaveBeenLastCalledWith('https://openrouter.ai/api/v1', false)
   })
   it('validates endpoints before writing and does not send a test request to an unrelated endpoint', async () => {
     const { ctx, save, models } = context()

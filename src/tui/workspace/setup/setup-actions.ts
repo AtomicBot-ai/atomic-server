@@ -275,7 +275,7 @@ export async function setupAction(
       const model = manifest.selections[0]!.plan.model_id
       await wait(c.runtime.execute('setup.complete', { model_id: model }))
       const endpoint = await c.localEndpoint()
-      await c.save('tui.endpoint', endpoint)
+      await c.unset('tui.endpoint')
       await c.save('tui.model', model)
       update((s) => ({
         ...s,
@@ -285,6 +285,7 @@ export async function setupAction(
         model,
         engine: engineId,
         endpoint,
+        endpointFollowsServer: true,
         ...(view.destination ? {} : { page: 'server', serverView: 'connect', focus: 'copy-endpoint' }),
         message: view.destination ? '' : 'Server verified. Connect your app or agent below.',
       }))

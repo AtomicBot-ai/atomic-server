@@ -95,6 +95,14 @@ export interface WorkspaceSnapshot {
   loads: WorkspaceLoad[]
   /** The server's own atc and the newer release it has seen; absent when no server answers. */
   atc?: WorkspaceAtc
+  /** Playground requests still running (`chat.start`): a client follows one in the chat it shows. */
+  chats?: WorkspaceChat[]
+}
+export interface WorkspaceChat {
+  /** The job id, for `chat.progress`. */
+  id: string
+  conversation_id: string
+  state: 'preparing' | 'generating' | 'stopping'
 }
 /** What the server knows about atc releases (`update.checkOnStart`: once on start, then daily). */
 export interface WorkspaceAtc {

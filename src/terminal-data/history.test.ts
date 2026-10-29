@@ -108,3 +108,29 @@ it('lists the conversations it can read when one file is damaged', async () => {
     await rm(folder, { recursive: true, force: true })
   }
 })
+
+it('lists again without reading a conversation that has not changed since the last list', async () => {
+  // Both clients list history every few seconds while the Playground is open.
+  const folder = await mkdtemp(join(tmpdir(), 'atc-history-'))
+  try {
+    const store = new ChatHistory(folder)
+    const first = { ...store.create('', 'local', ''), title: 'First' },
+      second = { ...store.create('', 'local', ''), title: 'Second' }
+    first.messages = [{ role: 'user', content: 'one' }]
+    second.messages = [{ role: 'user', content: 'two' }]
+    await store.save(first)
+    await store.save(second)
+    expect((await store.list()).map((c) => c.title).sort()).toEqual(['First', 'Second'])
+    const load = vi.spyOn(store, 'load')
+    expect((await store.list()).map((c) => c.title).sort()).toEqual(['First', 'Second'])
+    expect(load).not.toHaveBeenCalled()
+    // Another process (the server, for the Web) renames one: only that one is read again.
+    await new ChatHistory(folder).save({ ...second, title: 'Second, renamed in the Web' })
+    expect((await store.list()).map((c) => c.title).sort()).toEqual(['First', 'Second, renamed in the Web'])
+    expect(load.mock.calls).toEqual([[second.id]])
+    await new ChatHistory(folder).remove(first.id)
+    expect((await store.list()).map((c) => c.title)).toEqual(['Second, renamed in the Web'])
+  } finally {
+    await rm(folder, { recursive: true, force: true })
+  }
+})

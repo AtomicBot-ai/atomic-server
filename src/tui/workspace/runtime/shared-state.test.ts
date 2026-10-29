@@ -95,3 +95,30 @@ it('keeps Help open while the onboarding beneath it finishes remotely', () => {
     focus: 'close',
   })
 })
+
+const at = (endpoint: string) =>
+  ({ ...snapshot, api: { running: true, endpoint } }) as unknown as WorkspaceSnapshot
+
+it('moves a Playground that follows this server to the address the server now has', () => {
+  const state = {
+    ...createWorkspace('chat'),
+    endpoint: 'http://127.0.0.1:1337/v1',
+    endpointFollowsServer: true,
+  }
+  expect(applyWorkspaceSnapshot(state, at('http://127.0.0.1:62732/v1'), 2)).toMatchObject({
+    endpoint: 'http://127.0.0.1:62732/v1',
+    endpointFollowsServer: true,
+  })
+})
+
+it('leaves an endpoint chosen elsewhere where it is', () => {
+  const state = {
+    ...createWorkspace('chat'),
+    endpoint: 'https://openrouter.ai/api/v1',
+    endpointFollowsServer: false,
+  }
+  expect(applyWorkspaceSnapshot(state, at('http://127.0.0.1:62732/v1'), 2)).toMatchObject({
+    endpoint: 'https://openrouter.ai/api/v1',
+    endpointFollowsServer: false,
+  })
+})
