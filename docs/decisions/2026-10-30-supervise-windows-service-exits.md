@@ -1,0 +1,14 @@
+---
+date: 2026-10-30
+title: "Supervise Windows service exits"
+---
+
+# 2026-10-30 — Supervise Windows service exits
+
+- **Context:** Native Windows x64 and ARM both reproduce failed recovery after killing the scheduled server. Task Scheduler reports `State=Ready`, `LastTaskResult=1` and an unchanged `LastRunTime` after two minutes, despite the configured one-minute `RestartOnFailure`. Microsoft's protocol defines that setting as retrying failed start conditions or action launches, not supervising an action that started and later exited. This is a service defect, not evidence of a flaky assertion. CI's existing `continue-on-error` also hides the failure in its overall success and REST step conclusions; the actual Vitest output is the evidence.
+- **Decision:** The Windows task runs an inline Windows PowerShell supervisor using .NET process APIs. It waits for exactly one `atc start --foreground` child, exits when the child exits zero, and retries launch errors or nonzero exits after five seconds, up to 999 retries. Task Scheduler still owns startup at logon/boot, the supervisor lifetime and launch retries. Resolve the PowerShell executable from the host SystemRoot; quote native arguments and PowerShell literals separately. Store no additional script file and add no dependency.
+- **Decision:** Keep the real service E2E crash/recovery and clean-stop assertions and make the Windows service step mandatory. A passing E2E suite or an overall green job cannot substitute for this outcome. The macOS headless-session report-only policy is outside this change.
+- **Consequences:** Windows has one additional idle PowerShell parent while the service runs. A successful `atc stop` leaves it stopped; `atc service stop` also ends a task waiting between retries. Existing task definitions need `atc service install` again with their current scope/name/data folder after upgrading. Linux and macOS definitions and the published v0.2.9 tag are unchanged. Native Windows CI must pass before removing the one-release exception and marking the PR ready.
+- **Alternatives:** A larger test timeout cannot make a Ready task schedule a missing retry. Repeating time triggers would also restart an intentionally stopped server. A persistent script introduces another executable file to protect and maintain; the inline task action uses the existing registered task boundary. A new Windows service dependency is unnecessary.
+- **Owner:** team.
+- **Links:** [Microsoft RestartOnFailure protocol](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-tsch/2ff4aa5a-7bc4-449f-bbb1-27475645867f), [native ARM reproduction](https://github.com/AtomicBot-ai/atomic-server/actions/runs/40952284470/job/123723735497), [native x64 reproduction](https://github.com/AtomicBot-ai/atomic-server/actions/runs/40952284470/job/123723736024).

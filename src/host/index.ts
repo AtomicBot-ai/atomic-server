@@ -5,7 +5,7 @@
  */
 import { access, mkdir, rm, writeFile } from 'node:fs/promises'
 import { homedir, userInfo } from 'node:os'
-import { dirname } from 'node:path'
+import { dirname, win32 } from 'node:path'
 import { selfCommand } from '@atomic-chat/core/host'
 import type { AtcIo } from '../io.js'
 import { createElevator } from './elevator.js'
@@ -58,6 +58,13 @@ export function nodeHostServices(io: AtcIo, self: readonly string[] = selfComman
       env: {
         home: homedir(),
         uid: typeof process.getuid === 'function' ? process.getuid() : null,
+        windowsPowerShell: win32.join(
+          io.env['SystemRoot'] ?? io.env['SYSTEMROOT'] ?? 'C:\\Windows',
+          'System32',
+          'WindowsPowerShell',
+          'v1.0',
+          'powershell.exe'
+        ),
         windowsUser: io.env['USERDOMAIN']
           ? `${io.env['USERDOMAIN']}\\${userInfo().username}`
           : userInfo().username,

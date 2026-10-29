@@ -105,14 +105,14 @@ jobs:
           npm run build:bin
           npx playwright install ${{ matrix.os == 'ubuntu-latest' && '--with-deps' || '' }} chromium
           npm run test:e2e:web
-      # The real service manager of the runner: installs, crashes and removes a service. systemd on
-      # Linux is the supported path; a launchd agent and a logon task depend on the runner having an
-      # interactive session, so they report but do not fail the build until proven there.
+      # The real service manager: installs, crashes and removes a service. Linux and Windows must
+      # recover the server after a crash. A launchd agent still depends on an interactive GUI session,
+      # so the macOS runner reports that result without making it a gate.
       - name: e2e under the OS service manager
         run: npx vitest run --project e2e test/e2e/service.test.ts
         env:
           ATC_E2E_SERVICE: '1'
-        continue-on-error: ${{ !startsWith(matrix.os, 'ubuntu') }}
+        continue-on-error: ${{ startsWith(matrix.os, 'macos') }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: atc-${{ matrix.os }}
