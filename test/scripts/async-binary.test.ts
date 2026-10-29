@@ -1,6 +1,6 @@
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { runProcess } from '../helpers/async-binary.js'
 
 it('keeps the parent responsive while a child awaits its HTTP reply and forwards stdin, UTF-8 and exit status', async () => {
@@ -43,4 +43,20 @@ it('terminates a hung child at the command timeout', async () => {
   const result = await runProcess(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { timeoutMs: 100 })
   expect(result.code).toBeNull()
   expect(result.err).toContain('Command failed')
+})
+
+it('preserves explicit environment removals, including PowerShell module search paths', async () => {
+  vi.stubEnv('ATC_TEST_PARENT_ONLY', 'must not inherit')
+  try {
+    const env = { ...process.env }
+    delete env['ATC_TEST_PARENT_ONLY']
+    const result = await runProcess(
+      process.execPath,
+      ['-e', 'process.stdout.write(String(process.env.ATC_TEST_PARENT_ONLY))'],
+      { env }
+    )
+    expect(result).toMatchObject({ code: 0, out: 'undefined' })
+  } finally {
+    vi.unstubAllEnvs()
+  }
 })

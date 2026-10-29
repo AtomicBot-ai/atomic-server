@@ -16,7 +16,7 @@ const dataFolder = join(mkdtempSync(join(tmpdir(), 'atc-e2e-fixes-')), 'data')
 
 const atc = (...args: string[]) =>
   runAtcAsync([...args, '--data-folder', dataFolder], {
-    env: { ATC_API_AUTO_START: undefined },
+    env: { ...process.env, ATC_API_AUTO_START: undefined },
     timeoutMs: 90_000,
   })
 const json = <T>(text: string): T => JSON.parse(text) as T

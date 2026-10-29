@@ -243,8 +243,8 @@ describe(`atc (${command.join(' ')})`, async () => {
           },
         })
         expect(judgeWindowsAcl(read, dir, 'directory'), JSON.stringify(read)).toBeNull()
-        await run('stop', '--force', '--kill')
       } finally {
+        await runAtcAsync(['stop', '--force', '--kill', '--data-folder', folder])
         rmSync(join(ROOT, '.e2e-acl'), { recursive: true, force: true })
       }
     },

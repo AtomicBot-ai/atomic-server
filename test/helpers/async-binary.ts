@@ -5,6 +5,7 @@ import type { AtcResult } from './binary.js'
 
 interface ProcessOptions {
   timeoutMs?: number
+  /** Complete child environment when supplied, so removed parent variables stay removed. */
   env?: NodeJS.ProcessEnv
   input?: string
 }
@@ -20,7 +21,7 @@ export function runProcess(
       [...args],
       {
         encoding: 'utf8',
-        env: { ...process.env, NO_COLOR: '1', ...options.env },
+        env: { ...(options.env ?? process.env), NO_COLOR: '1' },
         timeout: options.timeoutMs ?? 60_000,
         killSignal: 'SIGKILL',
         maxBuffer: 8 * 1024 * 1024,
