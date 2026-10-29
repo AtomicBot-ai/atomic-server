@@ -42,14 +42,14 @@ it.each([
   const workspace = await reachDestinations(async () => pending, stale)
   await userEvent.click(await screen.findByRole('button', { name: /Configure an endpoint/ }))
   // The waiting screen, not the server page: its heading follows the refreshed snapshot on its own.
-  expect(await screen.findByLabelText('Email me when it is ready')).toBeInTheDocument()
+  expect(await screen.findByRole('region', { name: 'Minesweeper' })).toBeInTheDocument()
   expect(manual(workspace)).toHaveLength(0)
 })
 
 it('waits when the server cannot say whether the first model is ready', async () => {
   await reachDestinations(async () => null, snapshotFixture({ setup: null }))
   await userEvent.click(await screen.findByRole('button', { name: /Configure an endpoint/ }))
-  expect(await screen.findByLabelText('Email me when it is ready')).toBeInTheDocument()
+  expect(await screen.findByRole('region', { name: 'Minesweeper' })).toBeInTheDocument()
 })
 
 it('chooses once while it reads the server', async () => {

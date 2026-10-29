@@ -36,7 +36,7 @@ it.each([
   [54, 24],
   [120, 36],
 ])(
-  'keeps final waiting game, email confirmation and background exit usable at %ix%i',
+  'keeps final waiting game, the model-ready email and background exit usable at %ix%i',
   async (width, height) => {
     const t = fixture()
     await t.action('first-connect:agent')
@@ -86,11 +86,18 @@ it.each([
     })
   }
 )
-it('keeps email confirmation local, validates it, and Escape returns to the explicit destination choice', async () => {
+const shown = (state: ReturnType<typeof createWorkspace>, width = 120, height = 36) =>
+  workspaceFrame(state, width, height, 0)
+    .cells.map((row) => row.map((cell) => cell.char).join(''))
+    .join('\n')
+
+it('registers the address with the server, validates it, and Escape returns to the explicit destination choice', async () => {
   const t = fixture()
   await t.action('first-connect:endpoint')
+  expect(shown(t.ctx.get())).toContain('You agree to one email when this model is ready')
   await t.action('wait-save')
   expect(t.ctx.get().finalSetup?.emailStatus).toBe('invalid')
+  expect(t.execute).not.toHaveBeenCalled()
   const input = workspaceInput(
     'test@example.com',
     {} as never,
@@ -99,8 +106,9 @@ it('keeps email confirmation local, validates it, and Escape returns to the expl
   )
   t.ctx.update((s) => ({ ...s, ...input.patch }))
   await t.action('wait-save')
-  expect(t.ctx.get().finalSetup?.emailStatus).toBe('confirmed')
-  expect(t.execute).not.toHaveBeenCalled()
+  expect(t.execute).toHaveBeenCalledExactlyOnceWith('setup.reminder', { email: 'test@example.com' })
+  expect(t.ctx.get().finalSetup).toMatchObject({ email: '', emailStatus: 'saved' })
+  expect(shown(t.ctx.get())).toContain("Reminder set. We'll email you when it is ready.")
   const back = workspaceInput(
     '',
     { escape: true } as never,
@@ -115,32 +123,61 @@ it('keeps email confirmation local, validates it, and Escape returns to the expl
   })
 })
 
-it('exposes confirming state, prevents duplicate saves, and never revives a closed waiting screen', async () => {
+it("shows saving, sends once, shows the server's refusal, and never revives a closed waiting screen", async () => {
   const t = fixture()
   await t.action('first-connect:endpoint')
   t.ctx.update((s) => ({ ...s, finalSetup: { ...s.finalSetup!, email: 'person@example.com' } }))
-  vi.useFakeTimers()
-  try {
-    const saving = waitingSetupAction('wait-save', t.ctx)
-    expect(t.ctx.get().finalSetup?.emailStatus).toBe('confirming')
-    await waitingSetupAction('wait-save', t.ctx)
-    expect(t.execute).not.toHaveBeenCalled()
-    await vi.advanceTimersByTimeAsync(400)
-    await saving
-    expect(t.ctx.get().finalSetup?.emailStatus).toBe('confirmed')
-    t.ctx.update((s) => ({ ...s, focus: 'wait-email' }))
-    const edit = workspaceInput('x', {} as never, t.ctx.get(), workspaceFrame(t.ctx.get(), 120, 36, 0))
-    t.ctx.update((s) => ({ ...s, ...edit.patch }))
-    expect(t.ctx.get().finalSetup?.emailStatus).toBe('idle')
-    const next = waitingSetupAction('wait-save', t.ctx)
-    await waitingSetupAction('wait-back', t.ctx)
-    await vi.advanceTimersByTimeAsync(400)
-    await next
-    expect(t.ctx.get().finalSetup).toBeNull()
-  } finally {
-    vi.useRealTimers()
-  }
+  let refuse!: (error: Error) => void
+  t.execute.mockImplementationOnce(() => new Promise((_, reject) => (refuse = reject)))
+  const saving = waitingSetupAction('wait-save', t.ctx)
+  expect(t.ctx.get().finalSetup?.emailStatus).toBe('saving')
+  expect(shown(t.ctx.get())).toContain('Saving your reminder...')
+  await waitingSetupAction('wait-save', t.ctx)
+  expect(t.execute).toHaveBeenCalledOnce()
+  refuse(new Error('Too many requests. Try again in an hour.'))
+  await saving
+  expect(t.ctx.get().finalSetup).toMatchObject({ emailStatus: 'failed', email: 'person@example.com' })
+  expect(shown(t.ctx.get())).toContain('Too many requests. Try again in an hour.')
+  t.ctx.update((s) => ({ ...s, focus: 'wait-email' }))
+  const edit = workspaceInput('x', {} as never, t.ctx.get(), workspaceFrame(t.ctx.get(), 120, 36, 0))
+  t.ctx.update((s) => ({ ...s, ...edit.patch }))
+  expect(t.ctx.get().finalSetup?.emailStatus).toBe('idle')
+  let accept!: () => void
+  t.execute.mockImplementationOnce(() => new Promise((resolve) => (accept = () => resolve({}))))
+  const next = waitingSetupAction('wait-save', t.ctx)
+  await waitingSetupAction('wait-back', t.ctx)
+  accept()
+  await next
+  expect(t.ctx.get().finalSetup).toBeNull()
 })
+
+it('shows the reminder the server keeps, and no email once the model is downloaded', async () => {
+  const t = fixture()
+  await t.action('first-connect:agent')
+  t.ctx.update((s) => ({
+    ...s,
+    workspace: {
+      ...s.workspace!,
+      reminder: {
+        setup_id: 'download',
+        model: 'qwen',
+        model_name: 'qwen',
+        status: 'queued',
+        registered_at: 1,
+      },
+    },
+  }))
+  expect(shown(t.ctx.get())).toContain('Reminder set.')
+  t.ctx.update((s) => ({
+    ...s,
+    workspace: { ...s.workspace!, setups: [{ id: 'download', stage: 'ready', plan: { model_id: 'qwen' } }] },
+  }))
+  const frame = workspaceFrame(t.ctx.get(), 120, 36, 0)
+  expect(frame.targets.some((target) => target.id === 'wait-email' || target.id === 'wait-save')).toBe(false)
+  expect(shown(t.ctx.get())).not.toContain('Email me when it is ready')
+  expect(shown(t.ctx.get())).toContain('Your model is downloaded')
+})
+
 it('reads the server before choosing a connection when the first snapshot has not arrived yet', async () => {
   const t = fixture()
   const pending = t.ctx.get().workspace

@@ -26,6 +26,7 @@ import { modelDownloads } from './models/model-downloads.js'
 import { ChatJobs } from './chat/chat-jobs.js'
 import { serverOperation } from './server-operations.js'
 import { chatOperation } from './chat/chat-operations.js'
+import { EmailReminders } from './reminders/email-reminders.js'
 import type { WorkspaceServiceOptions } from './service-options.js'
 export type { WorkspaceServiceOptions } from './service-options.js'
 export class WorkspaceService {
@@ -41,6 +42,7 @@ export class WorkspaceService {
   private features: WorkspaceFeatureService
   private chats: ChatJobs
   private engineDownloads: EngineDownloads
+  private reminders: EmailReminders
   private readonly shared = new SnapshotCache(() => this.readCore(), { now: Date.now, maxAgeMs: 1000 })
   constructor(private options: WorkspaceServiceOptions) {
     this.features = new WorkspaceFeatureService(
@@ -61,11 +63,23 @@ export class WorkspaceService {
     )
     this.downloads = modelDownloads(options, this.catalog, this.request, this.engineDownloads)
     this.foundry = new FoundryAccelerators(options.link)
+    this.reminders = new EmailReminders({
+      atcDir: options.paths.atcDir,
+      fetch: this.request,
+      setups: () => this.snapshot().then((snapshot) => snapshot.setups),
+      ...(options.platform ? { platform: options.platform } : {}),
+    })
   }
-  /** Once per server, before any work: bring files of an earlier atc to where the core expects them. */
+  /**
+   * Once per server, before any work: bring files of an earlier atc to where the core expects them, and
+   * watch for the download a model-ready email waits for.
+   */
   start(): Promise<{ kept: string[] }> {
+    this.reminders.start()
     return this.downloads.artifacts.migrate()
   }
+  /** Stops watching; the server calls it on shutdown, and it may be passed on unbound. */
+  readonly stop = (): void => this.reminders.stop()
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
@@ -95,6 +109,7 @@ export class WorkspaceService {
       ...(await this.downloads.litert.models.list())
     )
     result.features = await this.features.view()
+    result.reminder = this.reminders.view()
     if (this.options.atc) result.atc = this.options.atc()
     return result
   }
@@ -126,6 +141,7 @@ export class WorkspaceService {
     const input = inputFor(descriptor, raw),
       { link, paths } = this.options
     await requireReadiness(operation, input, () => this.snapshot({ fresh: true }))
+    if (operation === 'setup.reminder') return this.reminders.request(input)
     const preference = await enginePreferenceOperation(link, paths.atcDir, operation, input)
     if (preference !== NOT_CORE) return preference
     const feature = await this.features.execute(operation, input)
