@@ -94,6 +94,8 @@ describe('bootLoader', () => {
       'models.load',
       { provider: 'llamacpp', model_id: 'qwen3-8b' },
     ])
+    calls.length = 0
     await expect(load('missing')).rejects.toThrow('missing is not installed')
+    expect(calls).toEqual([['models.installed', {}]])
   })
 })
