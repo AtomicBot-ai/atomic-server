@@ -127,3 +127,7 @@ The `807b4d9` onboarding refresh also supplies `setup/FirstModel.tsx` and `onboa
 | `../../src/workspace-view/mcp-connectors.json` (with `mcp-catalog.ts`), `public/images/connectors/*` | `atomic-chat-ui/web-app/src/constants/mcp-connectors.ts`, English MCP strings and public connector assets @ `807b4d9` | Exact catalog templates and branding shared with TUI. |
 
 - `workspace/library/cloud/CustomProviderSummary.tsx` and `custom-endpoints.css` follow `atomic-chat-ui/web-app/src/routes/endpoints.tsx` @ `807b4d9`: centered bordered empty state, compact endpoint cards and a separate heading action. Copy is reduced to the necessary endpoint choice.
+
+## Media step preview — 2026-10-29 (`Atomic-Chat` @ `2d0323463`)
+
+- `workspace/setup/MediaPreview.tsx`, its `first-media-{scene,art,kind,toggle}` rules in `media-preview.css`, and `public/images/onboarding/{robot-studio.webp,robot-wave.mp4}`: `web-app/src/containers/onboarding/steps/MediaPreview.tsx`, `media.css` (`.ob-media-scene`, `.ob-media-art`, `.ob-media-kind`, `.ob-animation-toggle`) and `web-app/public/images/onboarding/` @ `2d0323463`; English strings from `locales/en/onboarding-media.json` inlined, the line under the still takes the card's border colour, and a missing `matchMedia` reads as no reduced-motion preference. The two binaries are copied unchanged.
