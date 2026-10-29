@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (X)(X) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Server               │  Configuration
+│    [=]    ││                       │
+│  Server   ││ +--------------------+│  Server host
+             │ |                    |│  [ This device                                                             v  ]
+│    >_     ││ |   [>] Start API    |│
+│Playground ││ |                    |│  Port                                   API prefix
+             │ | Engine             |│  [ 0                                  ] [ /v1/qa v1                           ]
+│    [#]    ││ | MLX ›              |│
+│  Models   ││ | Model              |│   API key  ·  Manage keys ›
+             │ | mlx-community/LFM2 |│  Start automatically                                                    [Off =]
+             │ | Connections        |│   ▸ Advanced
+             │ |                    |│
+             │ +--------------------+│
+             │                       │
+             │   Overview            │
+             │ | Configuration       │
+             │   Remote access       │
+             │   Download proxy      │
+             │                       │
+             │  Agents & tools       │
+             │   [o.o] Claude Code   │
+             │   {*} Codex CLI       │
+│    (?)    ││   (@) Atomic Agent    │
+│   Help    ││   |K| Kilo Code       │
+             │   [pi] pi             │
+│    [@]    ││   [[]] OpenCode       │
+│    Web    ││   [-.-] OpenClaude    │
+             │   [=] Cline CLI       │
+│    (*)    ││   ><> DeepSeek Harnes │
+│ Settings  ││   /Z/ Zed             │  Unsaved changes                                   Discard      Save changes
+             │   [Z] ZCode          ↓│
+
+  Use an API prefix such as /v1: slash-separated letters, numbers, dots, underscores, tildes or hyphens; no spaces or
+                           Tab Move   Enter Select   Esc Sections   Ctrl+K Help   Ctrl+Q Quit

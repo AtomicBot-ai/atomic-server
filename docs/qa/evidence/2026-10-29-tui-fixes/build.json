@@ -1,0 +1,8 @@
+{
+  "base_commit": "ec52295b5264",
+  "uncommitted_fixes": true,
+  "core": "0.19.1",
+  "platform": "macOS arm64",
+  "sha256": "b4bdce187c0e45bd2e51c9889428fc84ec91bbe532d8def6157b9aae45450653",
+  "final_binary_sha256": "b4bdce187c0e45bd2e51c9889428fc84ec91bbe532d8def6157b9aae45450653"
+}

@@ -30,13 +30,13 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
   if (id.startsWith('first-model-choice:')) {
     const index = Number(id.slice(19)),
       choice = firstModelChoices(s)[index]
-    if (choice && s.setup)
-      patch({ setup: { ...s.setup, firstChoice: choice.key }, selected: index, focus: id })
+    if (choice && s.setup) patch({ firstModelChoice: choice.key, selected: index, focus: id })
     return true
   }
   if (id === 'first-model-continue') {
     const choice = selectedFirstModel(s)
     if (!choice || s.setup?.busy) return true
+    patch({ firstModelChoice: choice.key })
     if (choice.installed) return firstRunAction(choice.action, ctx)
     patch({ firstRun: 'permissions', page: 'welcome', focus: 'first-permission:notifications' })
     await setupAction(choice.action, ctx)
@@ -66,7 +66,12 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
     const engine = ctx.get().setup?.engine ?? ''
     await setupAction(pathKind(engine) ? `setup-engine:${engine}` : 'setup-models', ctx)
     if (!ctx.get().firstRun) return true
-    patch({ focus: 'first-model-choice:0', selected: 0 })
+    const chosen = selectedFirstModel(ctx.get()),
+      selected = Math.max(
+        0,
+        firstModelChoices(ctx.get()).findIndex((row) => row.key === chosen?.key)
+      )
+    patch({ focus: `first-model-choice:${selected}`, selected })
     void ctx.controller.runtime
       .execute('hardware.info')
       .then((value) => {

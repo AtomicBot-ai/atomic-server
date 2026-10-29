@@ -1,0 +1,84 @@
+{
+  "skills": [
+    {
+      "name": "qa-pass06-00",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-01",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-02",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-03",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-04",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-05",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-06",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-07",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-08",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-09",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-10",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-11",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-12",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-13",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-14",
+      "enabled": true
+    },
+    {
+      "name": "qa-pass06-15",
+      "enabled": false
+    },
+    {
+      "name": "qa-pass06-16",
+      "enabled": false
+    },
+    {
+      "name": "qa-pass06-17",
+      "enabled": false
+    },
+    {
+      "name": "qa-pass06-18",
+      "enabled": false
+    },
+    {
+      "name": "qa-pass06-19",
+      "enabled": false
+    }
+  ]
+}

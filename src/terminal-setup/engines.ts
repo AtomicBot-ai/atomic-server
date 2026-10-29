@@ -15,6 +15,8 @@ export interface EngineChoice {
   version: string
   backend: string
   installed: boolean
+  /** The build the core reports active; absent when the core did not name one. */
+  active?: boolean
 }
 export { engineName }
 /** A managed engine, Foundry Local or LiteRT-LM not installed yet: its panel installs it, a picker cannot. */
@@ -46,7 +48,7 @@ export class EngineSelection {
   }
   /**
    * Per llama.cpp engine: the builds on disk plus the one the core would install (`latest`), if any;
-   * then every other chat engine the core registers here (a managed engine, Foundry Local, LiteRT-LM),
+   * then every other chat engine the core registers here (MLX, managed, Foundry Local, LiteRT-LM),
    * installed or not, in the app's order: one not installed yet is set up in its own panel.
    */
   async list(catalogs: BackendCatalogResponse[]): Promise<EngineChoice[]> {
@@ -54,7 +56,9 @@ export class EngineSelection {
     const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
     const panels = orderEngines(
       engines
-        .filter((e) => ['managed', 'foundry', 'litert'].includes(engineFamily(e.engine)))
+        .filter(
+          (e) => e.engine === 'mlx' || ['managed', 'foundry', 'litert'].includes(engineFamily(e.engine))
+        )
         .map((e) => e.engine as string)
     ).map((engine) => {
       const row = engines.find((e) => e.engine === engine)!
@@ -74,7 +78,9 @@ export class EngineSelection {
             'GET',
             `/backends/${catalog.provider}`
           )
-          const latest = engines.find((e) => e.engine === catalog.provider)?.latest
+          const current = engines.find((e) => e.engine === catalog.provider),
+            latest = current?.latest,
+            active = current?.active
           const builds = [
             ...backends,
             ...(latest ? [{ version: latest.version, backend: latest.variant }] : []),
@@ -89,6 +95,7 @@ export class EngineSelection {
               version: b.version,
               backend: b.backend,
               installed: backends.some((v) => v.version === b.version && v.backend === b.backend),
+              ...(active ? { active: active.version === b.version && active.variant === b.backend } : {}),
             }))
         })
       )

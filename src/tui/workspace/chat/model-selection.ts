@@ -3,6 +3,7 @@ import type { WorkspaceController } from '../controller.js'
 import type { WorkspaceState } from '../state.js'
 import { modelProvider } from '../../../terminal-setup/index.js'
 import { readVision } from './chat-load.js'
+import { PAGE_FOCUS } from '../state.js'
 
 const selections = new WeakMap<WorkspaceController, number>()
 const saves = new WeakMap<WorkspaceController, Promise<void>>()
@@ -17,7 +18,8 @@ export async function persistModelSelection(
   ctx: ActionContext,
   model: string,
   endpoint: string | null,
-  fresh: () => boolean
+  fresh: () => boolean,
+  engine?: string
 ) {
   const previous = saves.get(ctx.controller) ?? Promise.resolve()
   const next = previous
@@ -29,6 +31,7 @@ export async function persistModelSelection(
       // A saved address of this server would stay behind when the API moves to another port.
       if (endpoint === null) await ctx.controller.unset('tui.endpoint')
       else await ctx.controller.save('tui.endpoint', endpoint)
+      if (engine && fresh()) await ctx.controller.engineSelection.remember(engine)
     })
   saves.set(ctx.controller, next)
   await next
@@ -40,12 +43,13 @@ export async function selectLocalModel(id: string, ctx: ActionContext, selection
     [index, picked] = id.slice(10).split(':')
   const model = state.installed[Number(index)]
   if (!model) return
-  const provider = picked ?? modelProvider(state.engine, model.provider)
+  const provider = picked ?? modelProvider(state.engine, model.provider),
+    engine = state.engine.split('|')[0] === provider ? state.engine : provider
   const fresh = selection ?? beginModelSelection(ctx)
   ctx.update((s) => ({
     ...s,
     model: model.id,
-    ...(picked ? { engine: state.engine.split('|')[0] === picked ? state.engine : picked } : {}),
+    engine,
     modelVision: null,
     modelLoad: { model: model.id, provider },
     loadError: null,
@@ -65,7 +69,7 @@ export async function selectLocalModel(id: string, ctx: ActionContext, selection
     if (!fresh()) return
     const modelVision = await readVision(ctx.controller, provider, model.id)
     if (!fresh()) return
-    await persistModelSelection(ctx, model.id, null, fresh)
+    await persistModelSelection(ctx, model.id, null, fresh, engine)
     if (fresh()) ctx.update((s) => ({ ...s, modelVision, message: 'Model loaded.' }))
   } catch (error) {
     if (fresh())
@@ -100,4 +104,36 @@ export async function selectEndpointModel(model: string, ctx: ActionContext) {
     selected: 0,
   }))
   await persistModelSelection(ctx, model, chosenEndpoint(ctx.get()), fresh)
+}
+
+/** A validated connection is a new selection, even before it has a model. */
+export async function selectEndpoint(endpoint: string, ctx: ActionContext) {
+  const fresh = beginModelSelection(ctx)
+  ctx.update((s) => ({
+    ...s,
+    endpoint,
+    endpointFollowsServer: false,
+    model: '',
+    models: [],
+    modelVision: null,
+    modelLoad: null,
+    loadError: null,
+    busy: false,
+    pickerBusy: false,
+    message: '',
+  }))
+  try {
+    await persistModelSelection(ctx, '', endpoint, fresh)
+  } catch (error) {
+    if (fresh()) throw error
+    return false
+  }
+  if (!fresh()) return false
+  ctx.update((s) => ({
+    ...s,
+    overlay: null,
+    focus: s.page === 'chat' ? 'composer' : PAGE_FOCUS[s.page],
+    message: 'Connection saved. Choose a model to begin.',
+  }))
+  return true
 }

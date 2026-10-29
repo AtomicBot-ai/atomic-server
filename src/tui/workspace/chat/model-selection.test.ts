@@ -38,6 +38,7 @@ function fixture() {
     cancel: vi.fn(),
     controller: {
       loadModel,
+      engineSelection: { remember: vi.fn(async () => {}) },
       save,
       unset,
       localEndpoint: async () => 'http://127.0.0.1:1337/v1',
@@ -153,4 +154,32 @@ it('keeps the failed choice visible with a working Retry action in the composer'
   t.tasks[1]!.resolve()
   await again
   expect(t.ctx.get().loadError).toBeNull()
+})
+
+it('updates the engine and persisted selection when a single-provider MLX model replaces TurboQuant', async () => {
+  const t = fixture()
+  const remember = vi.fn(async () => {})
+  Object.assign(t.ctx.controller, { engineSelection: { remember } })
+  t.ctx.update((s) => ({
+    ...s,
+    engine: 'llamacpp|b1|cpu',
+    installed: [{ id: 'mlx/model', name: 'MLX model', provider: 'mlx' }],
+    engines: [
+      { id: 'llamacpp|b1|cpu', provider: 'llamacpp', version: 'b1', backend: 'cpu', installed: true },
+      { id: 'mlx', provider: 'mlx', version: 'm1', backend: 'macos-arm64', installed: true },
+    ],
+  }))
+  const pending = selectLocalModel('installed:0', t.ctx)
+  await vi.waitFor(() => expect(t.loadModel).toHaveBeenCalledWith('mlx', 'mlx/model'))
+  t.tasks[0]!.resolve()
+  await pending
+  expect(t.ctx.get()).toMatchObject({ engine: 'mlx', model: 'mlx/model', loadError: null })
+  expect(remember).toHaveBeenLastCalledWith('mlx')
+  const { pickerRows } = await import('./picker.js')
+  t.ctx.update((s) => ({ ...s, overlay: 'engine-picker' }))
+  expect(
+    pickerRows(t.ctx.get())
+      .filter((r) => r.current)
+      .map((r) => r.id)
+  ).toEqual(['pick-engine:1'])
 })

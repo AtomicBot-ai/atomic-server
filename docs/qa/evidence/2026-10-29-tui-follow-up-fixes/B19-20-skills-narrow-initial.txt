@@ -1,0 +1,24 @@
+
+    ___ _ ___
+   _\ \| |/ /_
+  [_+--------------------------------------------+
+    | Assistant, skills & tools                  |
+    |                                            |]
+│   | Assistant                                  |
+│  S|  (o) Atomic Chat                           |
+    |  ( ) No assistant                          |
+│   | Skills                                     |
+│Pla|  [ ] qa-pass06-00                          |
+    |  [ ] qa-pass06-01                          |
+│   |  [ ] qa-pass06-02                          |
+│  M|  [ ] qa-pass06-03                          |
+    |  [ ] qa-pass06-04                          |
+│   |  [ ] qa-pass06-05                          |
+│   |  [ ] qa-pass06-06                          |
+    |  [ ] qa-pass06-07                          |
+│   |                                            |
+│   |                                            |
+    +--------------------------------------------+
+
+
+        Tab Move   Enter   Esc Back   ^Q Quit

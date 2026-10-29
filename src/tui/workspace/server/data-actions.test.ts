@@ -91,7 +91,11 @@ it('leaves streaming history to the local server and submits the loaded revision
   save.mockClear()
   await persistConversation(ctx)
   expect(save).not.toHaveBeenCalled()
-  ctx.update((s) => ({ ...s, generating: false }))
+  ctx.update((s) => ({
+    ...s,
+    generating: false,
+    messages: [...s.messages, { role: 'assistant', content: 'New reply' }],
+  }))
   await persistConversation(ctx)
   expect(save).toHaveBeenCalledWith(expect.objectContaining({ revision: 7 }), 7)
 })

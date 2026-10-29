@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (X)(X) _]    / __ |/ __// _ \ /  ' \ / / / __/   _\ \  / -_) / __/| |/ // -_) / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/   /___/  \__/ /_/   |___/ \__/ /_/
+
+             │  Playground           │                                                                            [=]
+│    [=]    ││                       │
+│  Server   ││ | Chat                │
+             │   Images              │
+│    >_     ││   Videos              │
+│Playground ││                       │
+             │   + New chat          │
+│    [#]    ││  Recents              │
+│  Models   ││   QA pass06. Reply wi │
+             │                       │                            How can I help you today?
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │     Keep the endpoint-switch draft▏                                  Send ↑
+             │                       │
+             │                       │      Files 1    Choose model ▾                                    Tools ▾
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+│    (?)    ││                       │
+│   Help    ││                       │
+             │                       │
+│    [@]    ││                       │
+│    Web    ││                       │
+             │                       │
+│    (*)    ││                       │
+│ Settings  ││                       │
+             │                       │
+
+  Connection saved. Choose a model to begin.
+                           Tab Move   Enter Select   Esc Sections   Ctrl+K Help   Ctrl+Q Quit

@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [_  (o+------------------------------------------------------------------------------------------------------+
+    / /|| llama.cpp TurboQuant                                                                                ┃|
+        | Not installed                                                                                       ┃|
+        | settings revision conflict: expected 0, current 1                                                   ┃|-----+
+│    [=]| [ b10298-2.1.0 · macos-arm64                                                                      ] ┃|     |
+│  Serve| [   Activate this build                                                                           ] ┃|     |
+        | [   Remove build                                                                                  ] ┃|-----+
+│    >_ | [ Concurrent Mode: off                                                                            ] ┃|-----+
+│Playgro| [ Concurrent Slots: 16  *                                                                         ] ┃|     |
+        | [ Expose Prometheus /metrics: off                                                                 ] ┃|     |
+│    [#]| [ Parallel Sequences: 1                                                                           ] ┃|-----+
+│  Model| [ Continuous Batching: off                                                                        ] ┃|-----+
+        | [ Environmental variables:                                                                        ] ┃|     |
+        | [ Preserve Reasoning: off                                                                         ] ┃|     |
+        | [ Additional llama-server Arguments:                                                              ] ┃|-----+
+        | [ Timeout for llamacpp: 1800                                                                      ] ┃|-----+
+        | [ Fit context to device memory: on                                                                ] ┃|     |
+        | [ Fit Target per Device (MiB): 1024                                                               ] ┃|     |
+        | [ Fit Minimum Context Size: 4096                                                                  ] ┃|-----+
+        | [ Threads: -1                                                                                     ] ┃|-----+
+        | [ Threads (Batch): -1                                                                             ] ┃|     |
+        | [ Context Shift: off                                                                              ] │|     |
+        | [ Max Tokens to Predict: -1                                                                       ] │|-----+
+        | [ uBatch Size: 512                                                                                ] │|-----+
+        | [ Devices for Offload:                                                                            ] │|     |
+│    (?)| [ GPU Split Mode: Layer v                                                                         ] │|     |
+│   Help| [ Main GPU Index: 0                                                                               ] │|-----+
+        | [ Flash Attention: Auto v                                                                         ] │|-----+
+│    [@]|                                                                                                      |     |
+│    Web|                                                                                                      |     |
+        |                                                                                                      |-----+
+│    (*)|    Install engine       Check for updates       Save changes       Close                             |
+│ Settin|                                                                                                      |
+        +------------------------------------------------------------------------------------------------------+
+
+
+                             Tab Move   Enter Select   Esc Back   Ctrl+K Help   Ctrl+Q Quit

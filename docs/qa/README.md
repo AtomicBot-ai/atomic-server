@@ -8,6 +8,17 @@ A cumulative, repository-local ledger of evidence-backed Atomic Server defects a
 
 ## Fixes — verified
 
+[Follow-up TUI fix validation](sessions/2026-10-29-tui-follow-up-fixes.md).
+
+- **B17 · P2 · TUI** — [A late local-model load overwrites a subsequently saved endpoint](findings/B17-tui-late-model-load-overwrites-endpoint.md).
+- **B18 · P2 · TUI** — [Editors hide save errors and can reveal a stale error after recovery](findings/B18-tui-editor-errors-are-hidden.md).
+- **B19 · P2 · TUI** — [Tools cannot reach the end of a long enabled-skills list](findings/B19-tui-tools-cannot-reach-long-skill-list.md).
+- **B16 · P2 · TUI** — [MLX current marker for full preference IDs saved by another client](findings/B16-tui-engine-picker-cannot-represent-MLX.md).
+[TUI fix validation and remaining limits](sessions/2026-10-29-tui-fixes.md).
+
+- **B15 · P2 · TUI** — [A refused stale turn cannot recover by reopening, New chat or Quit](findings/B15-tui-stale-chat-cannot-reopen-or-exit.md).
+- **B14 · P2 · TUI** — [Back replaces a non-default first-model selection](findings/B14-tui-back-resets-first-model.md).
+
 [Fix validation, tests and remaining limits](sessions/2026-10-29-fixes.md).
 
 - **B13 · P2** — [A fresh MLX download is absent from the chat loader until its first catalog load](findings/B13-downloaded-MLX-missing-from-chat-loader.md).
@@ -25,6 +36,10 @@ A cumulative, repository-local ledger of evidence-backed Atomic Server defects a
 
 ## Sessions
 
+- [2026-10-29 — TUI follow-up fixes B16–B19](sessions/2026-10-29-tui-follow-up-fixes.md).
+- [2026-10-29, pass 06 — TUI state transitions after B14–B16](sessions/2026-10-29-pass-06-tui.md).
+- [2026-10-29 — TUI fixes and regression verification](sessions/2026-10-29-tui-fixes.md).
+- [2026-10-29, pass 05 — TUI counterparts of the web findings](sessions/2026-10-29-pass-05-tui.md).
 - [2026-10-29 — local fixes and regression verification](sessions/2026-10-29-fixes.md).
 - [2026-10-29, pass 01 — onboarding, real engines, downloads and recovery](sessions/2026-10-29-pass-01.md).
 - [2026-10-29, pass 02 — workspace edits, cancellation and history](sessions/2026-10-29-pass-02.md).
@@ -33,7 +48,7 @@ A cumulative, repository-local ledger of evidence-backed Atomic Server defects a
 
 ## Keeping the ledger useful
 
-- Keep IDs stable. The next new finding is **B14**; do not renumber existing findings.
+- Keep IDs stable. The next new finding is **B20**; do not renumber existing findings.
 - Reproduce a candidate, establish its expected behavior, check for duplicates, then add one finding file and link it here.
 - Keep unconfirmed observations and blocked checks in the session log, outside the confirmed finding list.
 - Record exact builds, environment, preconditions, actions, expected/observed results and evidence. Mark source explanations as hypotheses when not established.

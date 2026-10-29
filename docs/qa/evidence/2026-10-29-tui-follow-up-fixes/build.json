@@ -1,0 +1,11 @@
+{
+  "base": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-pass06-3udxpjkp",
+  "data": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-pass06-3udxpjkp/data",
+  "binary": "/Users/aleksejkalina/.codex/worktrees/tui-qa-fixes/eye-cli/dist/bin/atc-aarch64-apple-darwin",
+  "base_commit": "ec52295b5264d6e14b84c2dbc33a91cbf10b5db8",
+  "uncommitted_tui_fixes": true,
+  "sha256": "65cfb897487600186381a7b5465b1ef860df2eb9749eb1e8f60c912208dd52ef",
+  "platform": "macOS arm64",
+  "core": "0.19.1",
+  "verified_at": "2026-10-29T16:48:05.529618+00:00"
+}

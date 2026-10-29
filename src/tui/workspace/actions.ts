@@ -1,5 +1,5 @@
 import { documentAction } from './chat/document-actions.js'
-import { selectEndpointModel } from './chat/model-selection.js'
+import { selectEndpoint, selectEndpointModel } from './chat/model-selection.js'
 import type { ActionContext } from './action-types.js'
 export type { ActionContext } from './action-types.js'
 import { chatFeatureAction } from './chat/features.js'
@@ -136,20 +136,16 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
       if (edit === 'setup-query') await setupAction('setup-search', ctx)
       return
     }
-    const isEndpoint = edit === 'endpoint',
-      value = isEndpoint ? endpointUrl(s.editValue.trim()) : s.editValue
-    await controller.save(isEndpoint ? 'tui.endpoint' : edit.slice(8), value)
-    patch({
-      overlay: null,
-      ...(isEndpoint ? { endpoint: value, endpointFollowsServer: false, model: '', models: [] } : {}),
-      focus: isEndpoint && s.page === 'chat' ? 'composer' : PAGE_FOCUS[s.page],
-      message: isEndpoint
-        ? 'Connection saved. Choose a model to begin.'
-        : 'Setting saved. Restart the API to apply it.',
-    })
-    if (isEndpoint) {
-      await controller.save('tui.model', '')
+    if (edit === 'endpoint') {
+      if (!(await selectEndpoint(endpointUrl(s.editValue.trim()), ctx))) return
       if (get().page === 'models') await activate('refresh-models', ctx)
+    } else {
+      await controller.save(edit.slice(8), s.editValue)
+      patch({
+        overlay: null,
+        focus: PAGE_FOCUS[s.page],
+        message: 'Setting saved. Restart the API to apply it.',
+      })
     }
     await controller.run({ name: 'refresh' })
     return

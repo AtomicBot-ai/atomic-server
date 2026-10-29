@@ -1,0 +1,10 @@
+
+ RUN  v3.2.7 /Users/aleksejkalina/.codex/worktrees/tui-qa-fixes/eye-cli
+
+ ✓ |e2e| test/e2e/tui-first-model-back.test.ts (1 test) 4333ms
+   ✓ first model back navigation > keeps the second installed model after Permissions → Escape → Continue  3997ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  18:23:31
+   Duration  4.86s (transform 83ms, setup 8ms, collect 313ms, tests 4.33s, environment 0ms, prepare 47ms)

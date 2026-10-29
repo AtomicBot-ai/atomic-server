@@ -7,6 +7,7 @@ import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import { panel, actionButton } from '../draw/cards.js'
 import { connectorToolBindings } from '../../../workspace-view/index.js'
 import { featureData } from '../server/feature-model.js'
+import { chatFeatureRows } from './features-list.js'
 import { chatParametersAction } from './parameters.js'
 export function chatFeatureRequest(s: WorkspaceState) {
   const p = s.chatPreferences ?? s.conversation?.request_settings ?? {},
@@ -103,9 +104,7 @@ export async function chatFeatureAction(id: string, ctx: ActionContext) {
 }
 export function drawChatFeatures(c: Canvas, s: WorkspaceState, focus: string) {
   if (s.overlay !== 'chat-features' && s.overlay !== 'chat-tools') return false
-  const data = featureData(s),
-    p = s.chatPreferences ?? s.conversation?.request_settings ?? {},
-    w = Math.min(76, c.width - 8),
+  const w = Math.min(76, c.width - 8),
     h = Math.min(c.height - 6, 24),
     x = Math.floor((c.width - w) / 2),
     y = Math.floor((c.height - h) / 2)
@@ -127,37 +126,7 @@ export function drawChatFeatures(c: Canvas, s: WorkspaceState, focus: string) {
     return true
   }
   text(c, x + 2, y + 1, 'Assistant, skills & tools', COLORS.text, w - 4, undefined, true)
-  const list: [string, string][] = [
-    ['', 'Assistant'],
-    ...data.assistants.map(
-      (a) =>
-        [
-          `chat-assistant:${a.id}`,
-          `${(p['atomic_assistant'] ?? data.default_assistant) === a.id ? '(o)' : '( )'} ${a.name}`,
-        ] as [string, string]
-    ),
-    ['chat-assistant:none', `${p['atomic_assistant'] === 'none' ? '(o)' : '( )'} No assistant`],
-    ['', 'Skills'],
-    ...data.skills
-      .filter((k) => k.enabled)
-      .map(
-        (k) =>
-          [
-            `chat-skill:${k.name}`,
-            `${(p['atomic_skills'] as string[] | undefined)?.includes(k.name) ? '[x]' : '[ ]'} ${k.name}`,
-          ] as [string, string]
-      ),
-    ['', 'MCP connectors'],
-    ...data.connectors
-      .filter((k) => k.enabled)
-      .map(
-        (k) =>
-          [
-            `chat-connector:${k.id}`,
-            `${(p['atomic_connectors'] as string[] | undefined)?.includes(k.id) ? '[x]' : '[ ]'} ${k.name}`,
-          ] as [string, string]
-      ),
-  ]
+  const list = chatFeatureRows(s)
   const at = list.findIndex(([id]) => id === focus),
     offset = Math.max(0, at - (h - 7))
   list

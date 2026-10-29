@@ -1,0 +1,32 @@
+[
+  {
+    "reopen_shows_newer": true,
+    "new_chat_opened": true,
+    "quit_exited": true,
+    "durable_history_unchanged": true,
+    "id": "79f2aac6-de5a-45a8-995f-16ce64826022",
+    "evidence": "B15-run-1",
+    "draft_after_reopen": true,
+    "draft_visible_after_new_chat_and_exit": false
+  },
+  {
+    "reopen_shows_newer": true,
+    "new_chat_opened": true,
+    "quit_exited": true,
+    "durable_history_unchanged": true,
+    "id": "fc542503-c526-45cb-83c2-0c1bcc738597",
+    "evidence": "B15-run-2",
+    "draft_after_reopen": true,
+    "draft_visible_after_new_chat_and_exit": false
+  },
+  {
+    "reopen_shows_newer": true,
+    "new_chat_opened": true,
+    "quit_exited": true,
+    "durable_history_unchanged": true,
+    "id": "b6a36193-7c04-45a3-954a-8cf71d9b6204",
+    "evidence": "B15-run-3",
+    "draft_after_reopen": true,
+    "draft_visible_after_new_chat_and_exit": false
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "source_commit": "66aa71f14ce24c6b186a2d0fa1f0c757176a70f0",
+  "binary_commit": "add2a30be85b",
+  "admin_build": "81ac5b59cce49cc0",
+  "sha256": "259b51a476623369be188ca3210dfa19b1ae3f90bfb95215f9c5b672f22d7aff",
+  "core": "0.19.1",
+  "platform": "macOS arm64",
+  "started_at": "2026-10-29T17:11:45.066906+03:00"
+}

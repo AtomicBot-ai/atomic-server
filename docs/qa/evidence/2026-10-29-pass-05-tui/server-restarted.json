@@ -1,0 +1,17 @@
+{
+  "started": true,
+  "running": true,
+  "pid": 53016,
+  "instance_id": "123cd457-f3ce-4ca9-81f1-6b519ce308dd",
+  "started_at": 1793284042483,
+  "api": {
+    "running": false,
+    "host": "127.0.0.1",
+    "port": 1337,
+    "prefix": "/v1",
+    "requires_api_key": false,
+    "pid": null
+  },
+  "sessions": [],
+  "stopped": true
+}

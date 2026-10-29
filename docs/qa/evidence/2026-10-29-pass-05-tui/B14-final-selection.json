@@ -1,0 +1,4 @@
+{
+  "tui.model": "LiquidAI/LFM2-1.2B-Q4_K_M",
+  "api.prefix": "/v1"
+}

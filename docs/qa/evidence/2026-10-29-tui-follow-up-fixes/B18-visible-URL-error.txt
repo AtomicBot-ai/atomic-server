@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____    / __/ ___   ____ _  __ ___   ____
+  [
+
+     Connect a model endpoint
+
+│    OpenAI-compatible base URL, including /v1
+│
+     not-a-url_
+│
+│Pl  Enter Confirm | Esc Cancel | Ctrl+U Clear
+     "not-a-url" cannot be parsed as a URL.
+│
+│
+
+
+
+
+
+
+
+
+
+
+
+
+
+│
+│
+
+│
+│
+
+│     Save
+│ S
+
+
+
+                             Tab Move   Enter Select   Esc Back   Ctrl+K Help   Ctrl+Q Quit

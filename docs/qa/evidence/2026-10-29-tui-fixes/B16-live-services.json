@@ -1,0 +1,17 @@
+[
+  {
+    "id": "mlx:mlx-community/LFM2.5-1.2B-Instruct-4bit",
+    "provider": "mlx",
+    "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+    "kind": "chat",
+    "state": "ready",
+    "details": {
+      "pid": 77194,
+      "port": 3498,
+      "model_id": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+      "model_path": "/var/folders/kj/7j7q0z2s2_x2kb2l4ytkkpy40000gn/T/atomic-qa-tui-675eyhk4/data/workspace-models/mlx/mlx-community/LFM2.5-1.2B-Instruct-4bit",
+      "is_embedding": false,
+      "provider": "mlx"
+    }
+  }
+]

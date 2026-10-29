@@ -1,0 +1,23 @@
+{
+  "document_error_visible": true,
+  "document_recovery_clears_error": true,
+  "invalid_URL_error_visible": true,
+  "before": {
+    "endpoint": "http://127.0.0.1:9/fixed-1793292401",
+    "model": "",
+    "motion": false,
+    "mouse": true
+  },
+  "after": {
+    "endpoint": "http://127.0.0.1:9/fixed-1793292401",
+    "model": "",
+    "motion": false,
+    "mouse": true
+  },
+  "old_MLX_load_ready": true,
+  "new_endpoint_retained": true,
+  "draft_retained": true,
+  "exit": {
+    "exit": 0
+  }
+}

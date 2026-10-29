@@ -1,0 +1,35 @@
+[
+  {
+    "engine": "mlx",
+    "kind": "engine-build",
+    "active_choice": "core",
+    "builds": [
+      {
+        "version": "mlxvlm-macos-arm64-07ba5a1",
+        "variant": "macos-arm64",
+        "origin": "downloaded",
+        "active": true,
+        "in_use": false,
+        "removable": false,
+        "not_removable_reason": "active"
+      }
+    ],
+    "active": {
+      "version": "mlxvlm-macos-arm64-07ba5a1",
+      "variant": "macos-arm64"
+    },
+    "latest": {
+      "version": "mlxvlm-macos-arm64-07ba5a1",
+      "variant": "macos-arm64",
+      "published_at": "2026-08-28T10:38:38Z"
+    },
+    "update": {
+      "needed": false,
+      "target": null,
+      "apply": "swap"
+    },
+    "source": "remote",
+    "source_error": null,
+    "error": null
+  }
+]

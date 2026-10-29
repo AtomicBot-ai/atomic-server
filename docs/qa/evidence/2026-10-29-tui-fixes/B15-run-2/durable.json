@@ -1,0 +1,29 @@
+{
+  "id": "fc542503-c526-45cb-83c2-0c1bcc738597",
+  "title": "B15 recovery a373a9",
+  "endpoint": "",
+  "model": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+  "workingDirectory": "",
+  "createdAt": 1,
+  "updatedAt": 1793287343053,
+  "messages": [
+    {
+      "role": "user",
+      "content": "B15_BASELINE"
+    },
+    {
+      "role": "assistant",
+      "content": "B15_BASELINE_REPLY"
+    },
+    {
+      "role": "user",
+      "content": "B15_EXTERNAL_NEWER"
+    },
+    {
+      "role": "assistant",
+      "content": "B15_EXTERNAL_REPLY"
+    }
+  ],
+  "interrupted": false,
+  "revision": 2
+}

@@ -1,0 +1,40 @@
+
+    ___ _ ___        ___   __                _           ____
+   _\ \| |/ /_      / _ | / /_ ___   __ _   (_) ____   Inference engine
+  [_  (o)(o) _]    / __ |/ __// _ \ /  ' \ / / / __/
+    / /| |\ \     /_/ |_|\__/ \___//_/_/_//_/  \__/      llama.cpp
+                                                         b11946 / macos-arm64 · Installed
+             │  Playground           │                   llama.cpp TurboQuant                                      =]
+│    [=]    ││                       │                   b10298-2.1.0 / macos-arm64 · Installed
+│  Server   ││ | Chat                │                   Atomic Prism
+             │   Images              │                   prism-b10826-c9c34bc / macos-arm64 · Install & use
+│    >_     ││   Videos              │                 ✓ MLX
+│Playground ││                       │                   mlxvlm-macos-arm64-07ba5a1 / macos-arm64 · Installed
+             │   + New chat          │                   Foundry Local
+│    [#]    ││  Recents              │                   Not installed · Set up in its panel
+│  Models   ││   QA pass06. Reply wi │                   LiteRT-LM
+             │                       │                   Not installed · Set up in its panel
+             │                       │
+             │                       │                 ↑↓ Browse | Enter Choose | Esc Close
+             │                       │
+             │                       │
+             │                       │     Write a message...
+             │                       │
+             │                       │      + Files    mlx-community/LFM2.5-1.2B-Instruct-4bit ▾         Tools ▾
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+             │                       │
+│    (?)    ││                       │
+│   Help    ││                       │
+             │                       │
+│    [@]    ││                       │
+│    Web    ││                       │
+             │                       │
+│    (*)    ││                       │
+│ Settings  ││                       │
+             │                       │
+
+
+                             Tab Move   Enter Select   Esc Back   Ctrl+K Help   Ctrl+Q Quit
