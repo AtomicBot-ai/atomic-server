@@ -41,7 +41,13 @@ async function harness() {
   const keys = new ClientKeys(paths.atcDir)
   await keys.initialize('test-key')
   const history = new ChatHistory(paths.atcDir)
-  const jobs = new ChatJobs({ link, paths, config: defaultConfig(), fetch }, keys, history, async (b) => b)
+  const capture = vi.fn()
+  const jobs = new ChatJobs(
+    { link, paths, config: defaultConfig(), fetch, errors: { capture } },
+    keys,
+    history,
+    async (b) => b
+  )
   const settled = async (id: string) => {
     await vi.waitFor(() => expect(['complete', 'failed', 'stopped']).toContain(jobs.get(id).state))
     return jobs.get(id)
@@ -51,9 +57,47 @@ async function harness() {
     await vi.waitFor(() => expect(releases.length).toBeGreaterThan(0))
     releases.splice(0).forEach((r) => r())
   }
-  return { jobs, history, release, settled, fetch }
+  return { jobs, history, release, settled, fetch, capture }
 }
 const messages = [{ role: 'user', content: 'hi' }]
+
+it('does not report a generation failure already owned by the core HTTP boundary', async () => {
+  const { jobs, settled, fetch, capture } = await harness()
+  vi.mocked(fetch).mockResolvedValueOnce(
+    Response.json({ error: { message: 'engine failed' } }, { status: 500 })
+  )
+  const job = await jobs.start({ request: { model: 'm', messages } })
+  expect((await settled(job.id)).state).toBe('failed')
+  expect(capture).not.toHaveBeenCalled()
+})
+
+it('reports a history read failure even when fallback persistence succeeds', async () => {
+  const { jobs, history, release, settled, capture } = await harness()
+  const job = await jobs.start({ request: { model: 'm', messages } })
+  vi.spyOn(history, 'load').mockRejectedValueOnce(Object.assign(new Error('read failed'), { code: 'EIO' }))
+  await release()
+  expect((await settled(job.id)).state).toBe('complete')
+  expect(capture).toHaveBeenCalledWith(
+    expect.objectContaining({ tags: expect.objectContaining({ operation: 'history.load' }) })
+  )
+})
+
+it('reports a background answer persistence failure without the conversation content', async () => {
+  const { jobs, history, release, settled, capture } = await harness()
+  const job = await jobs.start({ request: { model: 'm', messages } })
+  vi.spyOn(history, 'save').mockRejectedValueOnce(
+    Object.assign(new Error('disk write failed'), { code: 'EIO' })
+  )
+  await release()
+  expect((await settled(job.id)).state).toBe('failed')
+  expect(capture).toHaveBeenCalledTimes(1)
+  expect(capture).toHaveBeenCalledWith(
+    expect.objectContaining({
+      tags: expect.objectContaining({ component: 'chat', operation: 'history.save' }),
+    })
+  )
+  expect(JSON.stringify(capture.mock.calls)).not.toContain('"content"')
+})
 
 it('keeps a rename made while the answer streams, and appends the answer to it', async () => {
   const { jobs, history, release, settled } = await harness()

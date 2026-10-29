@@ -4,6 +4,7 @@ import { requireReadiness } from './snapshot/require-readiness.js'
 import { WorkspaceFeatureService } from './features/features.js'
 import { enginePreferenceOperation } from './engines/engine-preference.js'
 import { AtcError } from '../errors/index.js'
+import { captureFailure } from '../telemetry/index.js'
 import { ChatHistory, ClientKeys } from '../terminal-data/index.js'
 import { WORKSPACE_OPERATIONS, type WorkspaceInput } from '../contract/index.js'
 import { inputFor, object, sanitized } from './validation.js'
@@ -129,6 +130,12 @@ export class WorkspaceService {
   async execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
     try {
       return await this.mutations.run(operation, () => this.dispatch(operation, raw))
+    } catch (error) {
+      captureFailure(this.options.errors, error, {
+        component: 'workspace',
+        operation: WORKSPACE_OPERATIONS.find((op) => op.name === operation)?.name ?? 'unknown',
+      })
+      throw error
     } finally {
       // Even a failed change may have changed something; reads leave the shared snapshot alone.
       if (WORKSPACE_OPERATIONS.find((op) => op.name === operation)?.mutates !== false)

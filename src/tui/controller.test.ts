@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import type { FakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { eventually } from '../../test/helpers/fake-terminal.js'
@@ -57,6 +57,21 @@ const last = <T extends TuiAction['type']>(type: T) =>
   actions.filter((a): a is Extract<TuiAction, { type: T }> => a.type === type).at(-1)
 
 describe('TuiController', () => {
+  it('reports an unexpected local action failure while still showing the error', async () => {
+    const capture = vi.fn()
+    const c = start({
+      errors: { capture },
+      openUrl: async () => {
+        throw new TypeError('local action defect')
+      },
+    })
+    await c.run({ name: 'open-url', url: 'https://example.com' })
+    expect(capture).toHaveBeenCalledTimes(1)
+    expect(capture).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: expect.objectContaining({ component: 'tui' }) })
+    )
+    expect(last('activity')?.line.text).toBe('local action defect')
+  })
   it('reports the server, the config and the log as soon as it starts', async () => {
     start()
     await eventually(() => last('daemon')?.daemon.kind === 'up', 'daemon up')

@@ -1,5 +1,6 @@
 import type { ChatMessage } from '../../../terminal-service/index.js'
 import type { WorkspaceRuntime } from '../runtime/runtime.js'
+import { remoteError } from '../../../errors/index.js'
 export async function sharedChat(
   runtime: WorkspaceRuntime,
   model: string,
@@ -59,7 +60,7 @@ export async function sharedChat(
         shown = content
       }
       if (!['preparing', 'generating', 'stopping'].includes(String(job['state']))) {
-        if (job['error']) throw new Error(String(job['error']))
+        if (job['error']) throw remoteError(new Error(String(job['error'])))
         return { message, conversation_id: String(job['conversation_id']), messages }
       }
       await new Promise((resolve) => setTimeout(resolve, 150))

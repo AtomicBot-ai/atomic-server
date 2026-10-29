@@ -31,6 +31,7 @@ import { workspaceFrame } from './frame.js'
 import { workspaceInputs } from './input/input-sequence.js'
 import { activate } from './actions.js'
 import { CanvasRow } from './draw/CanvasRow.js'
+import { captureFailure } from '../../telemetry/index.js'
 export interface WorkspaceProps {
   showIntro?: boolean
   onLaunch?: (launch: AgentLaunch) => void
@@ -109,10 +110,12 @@ function WorkspaceContent(
         if (!resume) patch(saved)
         if (saved.setup)
           void c.setup.resume().catch((e) => {
+            captureFailure(deps.base.errors, e, { component: 'tui', operation: 'setup.resume' })
             if (live) patch({ message: oneLine(e) })
           })
       })
       .catch((e) => {
+        captureFailure(deps.base.errors, e, { component: 'tui', operation: 'workspace.start' })
         if (live) patch({ message: oneLine(e), ready: true })
       })
     return () => {
@@ -224,6 +227,7 @@ function WorkspaceContent(
           }))
       })
       .catch((e) => {
+        captureFailure(deps.base.errors, e, { component: 'tui', operation: 'chat.send' })
         if (epoch.current === id) patch(failedTurn(latest.current, s, oneLine(e)))
       })
   }
@@ -246,13 +250,14 @@ function WorkspaceContent(
       (latest.current.busy && ['api-toggle', 'stop-confirm', 'refresh-models'].includes(id))
     )
       return
-    void activate(id, context()).catch((e) =>
+    void activate(id, context()).catch((e) => {
+      captureFailure(deps.base.errors, e, { component: 'tui', operation: 'workspace.action' })
       patch({
         message: oneLine(e),
         busy: false,
         ...(isPicker(latest.current.overlay) ? { pickerError: oneLine(e) } : {}),
       })
-    )
+    })
   }
   useInput((input, key: Key) => {
     if (!latest.current.ready) return

@@ -20,6 +20,8 @@ import { ROOT } from './commands/index.js'
 import type { AtcIo } from './io.js'
 import { colorEnabled, colorsFor } from './output/index.js'
 import { ATC_VERSION } from './version.js'
+import { captureFailure } from './telemetry/index.js'
+import type { CommandContext } from './cli/index.js'
 
 export type RunCliDeps = Partial<Omit<ContextDeps, 'io' | 'flags'>>
 
@@ -53,17 +55,27 @@ export async function runCli(argv: readonly string[], io: AtcIo, deps: RunCliDep
       return EXIT.USAGE
     }
   }
+  let ctx: CommandContext | undefined
+  let removeFatal: (() => void) | void = undefined
   try {
     const invocation = parseInvocation(resolved)
     if (!invocation.spec.run) {
       io.stdout(help)
       return EXIT.USAGE
     }
-    const ctx = createContext({ ...deps, io, flags: globals, root })
+    ctx = createContext({ ...deps, io, flags: globals, root })
+    removeFatal = io.catchFatal?.(ctx.errors)
     return await invocation.spec.run(invocation, ctx)
   } catch (e) {
+    captureFailure(ctx?.errors, e, {
+      component: tui || resolved.spec.name === 'tui' ? 'tui' : 'cli',
+      operation: resolved.path.join('.'),
+    })
     if (globals.json) io.stderr(`${JSON.stringify({ error: errorBody(e) })}\n`)
     else io.stderr(`${colors.red('error:')} ${describeError(e)}\n`)
     return exitCodeFor(e)
+  } finally {
+    await ctx?.errors.flush(2000)
+    removeFatal?.()
   }
 }

@@ -12,6 +12,9 @@ import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TARGETS } from './targets.mjs'
+import { assertReleaseReporting } from './reporting-config.mjs'
+
+assertReleaseReporting(process.env)
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const ENTRY = join(ROOT, 'src/bin.ts')

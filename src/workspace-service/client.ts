@@ -2,7 +2,7 @@ import { AtomicCoreError } from '@atomic-chat/core'
 import type { ErrorBody as CoreErrorBody } from '@atomic-chat/core'
 import { readFile } from 'node:fs/promises'
 import { patientFetch, readDaemonRecord, waitForDaemonReady } from '../core-link/index.js'
-import { AtcError, ATC_ERROR_CODES } from '../errors/index.js'
+import { AtcError, ATC_ERROR_CODES, remoteError } from '../errors/index.js'
 import type { AtcErrorCode } from '../errors/index.js'
 import type { WorkspaceInput, WorkspaceSnapshot } from '../contract/index.js'
 import { WorkspaceService } from './service.js'
@@ -55,10 +55,12 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
           details = typeof error['details'] === 'string' ? error['details'] : undefined,
           hint = typeof error['hint'] === 'string' ? error['hint'] : undefined
         if (ATC_ERROR_CODES.includes(code as AtcErrorCode))
-          throw new AtcError(code as AtcErrorCode, message, {
-            ...(details ? { details } : {}),
-            ...(hint ? { hint } : {}),
-          })
+          throw remoteError(
+            new AtcError(code as AtcErrorCode, message, {
+              ...(details ? { details } : {}),
+              ...(hint ? { hint } : {}),
+            })
+          )
         throw AtomicCoreError.fromBody({
           code: code as CoreErrorBody['code'],
           message,

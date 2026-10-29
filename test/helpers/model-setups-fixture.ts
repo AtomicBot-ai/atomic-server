@@ -6,6 +6,7 @@ import { ModelSetups } from '../../src/workspace-service/models/model-setups.js'
 import { fakeCoreLink } from './fake-core-link.js'
 import { tmpDataFolder } from './tmp-data-folder.js'
 import { waitFor } from './wait-for.js'
+import type { ErrorSink } from '../../src/telemetry/index.js'
 
 export const weights = Buffer.alloc(256 * 1024, 3)
 const sha = createHash('sha256').update(weights).digest('hex')
@@ -133,8 +134,15 @@ export function fixture(core: { prism?: boolean; verdictAfter?: string } = {}) {
     fetch: request,
     availableSpace: async () => undefined,
   })
-  const make = () =>
-    new ModelSetups({ link, paths: tmp.paths, downloader, fetch: request, env: { HF_TOKEN: 'hf_secret' } })
+  const make = (errors?: ErrorSink) =>
+    new ModelSetups({
+      link,
+      paths: tmp.paths,
+      downloader,
+      fetch: request,
+      env: { HF_TOKEN: 'hf_secret' },
+      ...(errors ? { errors } : {}),
+    })
   return { tmp, link, hub: state, make, downloader }
 }
 export const settle = async (setups: ModelSetups, id: string, stages = ['ready', 'failed', 'cancelled']) => {

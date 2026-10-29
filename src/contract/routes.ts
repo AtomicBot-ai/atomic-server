@@ -6,6 +6,7 @@ export const ADMIN_API = {
   session: '/api/session',
   config: '/api/config',
   events: '/api/events',
+  clientReports: '/api/client-errors',
   /** Prefix of the control-API proxy: `/api/core/snapshot` → core `/atomic/v1/snapshot`. */
   core: '/api/core',
   setup: '/api/setup',

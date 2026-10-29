@@ -17,6 +17,7 @@ import { fetchFoundryLocalList } from './foundry-list.js'
 import type { FoundryPlanDeps } from './foundry-model-plan.js'
 import { foundryModelPlan, resolveVariant } from './foundry-model-plan.js'
 import { repairTemplateFile } from './foundry-template.js'
+import { captureFailure, type ErrorSink } from '../../telemetry/index.js'
 
 const MAX_RELINKS = 3
 export function foundryModelYml(plan: FoundryModelPlan): string {
@@ -37,6 +38,7 @@ export function foundryModelYml(plan: FoundryModelPlan): string {
 }
 
 export interface FoundryModelSetupsDeps extends Omit<FoundryPlanDeps, 'files'> {
+  errors?: ErrorSink
   directory: string
   downloader: Pick<Downloader, 'download' | 'cancel'> & Partial<Pick<Downloader, 'snapshot'>>
   files?: FoundryPlanDeps['files']
@@ -127,9 +129,16 @@ export class FoundryModelSetups {
       await this.journal.step(job, worker, 'ready')
     } catch (error) {
       const cancelled = worker.cancelled || String(error).includes('Download cancelled')
+      if (!cancelled)
+        captureFailure(this.d.errors, error, {
+          component: 'foundry-setup',
+          operation: `foundry.${job.stage}`,
+        })
       await this.journal
         .step(job, worker, cancelled ? 'cancelled' : 'failed', cancelled ? undefined : error)
-        .catch(() => {})
+        .catch((error: unknown) =>
+          captureFailure(this.d.errors, error, { component: 'foundry-setup', operation: 'foundry.persist' })
+        )
     }
   }
 }

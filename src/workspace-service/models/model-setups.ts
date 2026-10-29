@@ -9,7 +9,6 @@ import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type {
   ModelSetup,
-  ModelSetupEngine,
   ModelSetupPlan,
   ModelSetupPlanRequest,
   ModelSetupStage,
@@ -23,8 +22,11 @@ import { bytesOnDisk } from '../../downloads/index.js'
 import { hfResolveUrl } from '@atomic-chat/core/models'
 import type { SetupRunDeps } from './model-setup-run.js'
 import { SerialWork } from '../serial.js'
+import { captureFailure, type ErrorSink } from '../../telemetry/index.js'
+import { setupEngineInstaller } from './setup-engines.js'
 
-export type ModelSetupsDeps = SetupRunDeps & Pick<GgufFactsDeps, 'fetch'> & { newId?: () => string }
+export type ModelSetupsDeps = SetupRunDeps &
+  Pick<GgufFactsDeps, 'fetch'> & { newId?: () => string; errors?: ErrorSink }
 
 const FINAL: readonly ModelSetupStage[] = ['ready', 'failed', 'cancelled']
 const RESUMABLE: readonly ModelSetupStage[] = ['failed', 'cancelled', 'interrupted']
@@ -37,9 +39,10 @@ interface Run {
 export class ModelSetups {
   private readonly dir: string
   private readonly runs = new Map<string, Run>()
-  private readonly engines = new Map<string, Promise<void>>()
+  private readonly installEngine
   private readonly writes = new SerialWork()
   constructor(private readonly deps: ModelSetupsDeps) {
+    this.installEngine = setupEngineInstaller(deps)
     this.dir = join(deps.paths.atcDir, 'model-setups')
   }
 
@@ -247,13 +250,8 @@ export class ModelSetups {
       await this.writes.run(id, () => this.commit(id, { ...patch, stage: next }))
     }
     try {
-      await runSetup(
-        this.deps,
-        await this.get(id),
-        signal,
-        enter,
-        (engine, taskId) => this.install1(engine, taskId),
-        (patch) => this.writes.run(id, () => this.commit(id, patch)).then(() => undefined)
+      await runSetup(this.deps, await this.get(id), signal, enter, this.installEngine, (patch) =>
+        this.writes.run(id, () => this.commit(id, patch)).then(() => undefined)
       )
       // Registered and accepted: a cancel arriving now changes nothing on disk, so it is ignored.
       stage = 'ready'
@@ -262,6 +260,8 @@ export class ModelSetups {
       const cancelled =
         signal.aborted || error instanceof SetupCancelled || String(error).includes('Download cancelled')
       const code = String((error as { code?: unknown }).code ?? 'ATC_INTERNAL')
+      if (!cancelled)
+        captureFailure(this.deps.errors, error, { component: 'model-setup', operation: `setup.${stage}` })
       await this.writes
         .run(id, () =>
           this.commit(
@@ -271,28 +271,9 @@ export class ModelSetups {
               : { stage: 'failed', stopped_at: stage, error: { code, message: (error as Error).message } }
           )
         )
-        .catch(() => {
-          /* The record stays as it was; it reads as interrupted. */
+        .catch((error: unknown) => {
+          captureFailure(this.deps.errors, error, { component: 'model-setup', operation: 'setup.persist' })
         })
     }
-  }
-
-  /** One install per build, shared by every setup waiting on it. */
-  private install1(engine: ModelSetupEngine, taskId: string): Promise<void> {
-    if (this.deps.installEngine) return this.deps.installEngine(engine, taskId)
-    const key = `${engine.version}/${engine.backend}`
-    let pending = this.engines.get(key)
-    if (!pending) {
-      pending = this.deps.link
-        .request('POST', '/backends/atomic-prism/install', {
-          version: engine.version,
-          backend: engine.backend,
-          task_id: taskId,
-        })
-        .then(() => undefined)
-        .finally(() => this.engines.delete(key))
-      this.engines.set(key, pending)
-    }
-    return pending
   }
 }

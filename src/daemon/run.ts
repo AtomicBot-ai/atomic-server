@@ -5,6 +5,7 @@
  */
 
 import { createAtcReporter, startupFailureReport, telemetryConsent } from '../telemetry/index.js'
+import { markReported } from '../errors/index.js'
 import { startDaemon } from './daemon.js'
 import type { DaemonOptions, RunningDaemon } from './daemon.js'
 
@@ -36,13 +37,14 @@ export async function runDaemon(options: DaemonOptions & { printReadyLine?: bool
       fetch: options.io.fetch,
       warn: (message) => options.log.warn(`error report not sent: ${message}`),
     }))
-  options.io.catchFatal?.(errors)
+  if (!options.errors) options.io.catchFatal?.(errors)
   let daemon: RunningDaemon
   try {
     daemon = await startDaemon({ ...options, errors })
   } catch (error) {
     const report = startupFailureReport(error)
     if (report) {
+      markReported(error)
       errors.capture(report)
       await errors.flush(STARTUP_FLUSH_MS)
     }
@@ -51,6 +53,7 @@ export async function runDaemon(options: DaemonOptions & { printReadyLine?: bool
   started.daemon = daemon
   if (stopRequested) {
     await stop(daemon)
+    await errors.flush(STARTUP_FLUSH_MS)
     return 0
   }
   if (options.printReadyLine !== false)
@@ -58,5 +61,6 @@ export async function runDaemon(options: DaemonOptions & { printReadyLine?: bool
       `${JSON.stringify({ ...daemon.core.readyLine(), admin_url: daemon.record.admin_url })}\n`
     )
   await Promise.race([signalled, daemon.stopped])
+  await errors.flush(STARTUP_FLUSH_MS)
   return 0
 }
