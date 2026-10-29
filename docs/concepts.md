@@ -12,7 +12,8 @@ decision behind it is [Name the product Atomic Server and align the commands wit
 | **`atc`** | The product's command, one binary per platform. | Every command line. Short on purpose: it is typed all day. |
 | **Atomic Chat** | The desktop app. A separate product for a different audience; it shares the core and nothing else. | Only when comparing the two. |
 | **the core** (`atomic-chat-core`, npm `@atomic-chat/core`) | The library both products embed: engines, models, the API. | Docs and code; users meet it as "core 0.5.1" in versions. |
-| `atomic-chat-cli` | This repository's name, and the core's name for the data folder scope (`<system data>/atomic-chat-cli/data`). | Never as a product name. |
+| `atomic-server` | This repository's name on GitHub (`AtomicBot-ai/atomic-server`). | Source and release URLs. |
+| `atomic-chat-cli` | The core's name for the data folder scope (`<system data>/atomic-chat-cli/data`), preserved across the repository rename. | Never as a product name. |
 | `@atomicbot-ai/atc` | The private workspace package. | Nowhere user-facing. |
 
 The desktop app can put a command of its own on `PATH` (its strings call it `atomic-chat-cli`); that is

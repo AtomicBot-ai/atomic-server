@@ -61,7 +61,7 @@ describe('the server and atc releases', () => {
     expect(await read()).toEqual({ version: ATC_VERSION, checked_at: null, update: null })
     expect(github).toEqual([])
     await daemon.releases.check()
-    expect(github).toEqual(['http://github.test/repos/AtomicBot-ai/eye-cli/releases/latest'])
+    expect(github).toEqual(['http://github.test/repos/AtomicBot-ai/atomic-server/releases/latest'])
     // Run from source: nothing installs a release here, so only the page is named.
     expect(await read()).toEqual({
       version: ATC_VERSION,

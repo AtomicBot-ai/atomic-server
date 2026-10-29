@@ -2,10 +2,10 @@
 # Install a released `atc` (a single binary) from GitHub Releases. Adapted from atomic-agent.
 #
 # Usage:
-#   curl -fsSL https://github.com/AtomicBot-ai/eye-cli/releases/latest/download/install.sh | sh
+#   curl -fsSL https://github.com/AtomicBot-ai/atomic-server/releases/latest/download/install.sh | sh
 #
 # Environment:
-#   ATC_REPO=owner/repo      (default: AtomicBot-ai/eye-cli)
+#   ATC_REPO=owner/repo      (default: AtomicBot-ai/atomic-server)
 #   ATC_VERSION=v0.1.0       (optional: pin a tag; default: latest)
 #   ATC_INSTALL_DIR=path     (default: $HOME/.local/bin)
 #   ATC_NO_PATH=1            (optional: skip the rc-file PATH update)
@@ -16,7 +16,7 @@
 
 set -eu
 
-REPO="${ATC_REPO:-AtomicBot-ai/eye-cli}"
+REPO="${ATC_REPO:-AtomicBot-ai/atomic-server}"
 VERSION="${ATC_VERSION:-}"
 INSTALL_DIR="${ATC_INSTALL_DIR:-$HOME/.local/bin}"
 CPUINFO="${ATC_CPUINFO:-/proc/cpuinfo}"

@@ -1,4 +1,4 @@
-# AGENTS.md — Atomic Server (`atc`, repository `eye-cli`)
+# AGENTS.md — Atomic Server (`atc`, repository `atomic-server`)
 
 Operating instructions for AI agents and humans working in this repository. Everything here applies to
 every task. Anything that applies only sometimes lives behind a link.

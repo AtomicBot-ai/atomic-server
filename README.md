@@ -1,4 +1,4 @@
-# eye-cli
+# Atomic Server
 
 Atomic Server provides a web interface and terminal UI for the same local inference server. Both
 support keyboard and mouse controls and share onboarding, downloads, models, and server status.
@@ -13,8 +13,8 @@ This repository continues the terminal work built on
 [`atomic-chat-cli`](https://github.com/AtomicBot-ai/atomic-chat-cli). Build from source with Bun and Node 22:
 
 ```sh
-git clone https://github.com/AtomicBot-ai/eye-cli.git
-cd eye-cli
+git clone https://github.com/AtomicBot-ai/atomic-server.git
+cd atomic-server
 bun install --frozen-lockfile
 npm run build:ui
 npm run embed:ui
@@ -69,17 +69,17 @@ the web admin or terminal UI; the core selects a compatible build for your hardw
 ## Quick start on a server
 
 ```sh
-curl -fsSL https://github.com/AtomicBot-ai/eye-cli/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/AtomicBot-ai/atomic-server/releases/latest/download/install.sh | sh
 ```
 
-On Windows, in PowerShell: `irm https://github.com/AtomicBot-ai/eye-cli/releases/latest/download/install.ps1 | iex`.
+On Windows, in PowerShell: `irm https://github.com/AtomicBot-ai/atomic-server/releases/latest/download/install.ps1 | iex`.
 
 The installer downloads the release's `SHA256SUMS`, picks the binary for this machine — the CPU, musl on
 Alpine, a baseline build for x64 CPUs without AVX2, arm64 under Rosetta — verifies it (and refuses when it
 cannot), puts it in `~/.local/bin/atc` (`%LOCALAPPDATA%\atc\atc.exe` on Windows) and adds that directory to
 `PATH`. `ATC_INSTALL_DIR`, `ATC_VERSION` (a tag, e.g. `v0.1.0`), `ATC_NO_PATH=1` and `ATC_REPO` override the
 defaults. The macOS and Windows binaries are signed (Developer ID with notarisation, Authenticode), and every
-binary carries a build provenance attestation (`gh attestation verify atc-… -R AtomicBot-ai/eye-cli`).
+binary carries a build provenance attestation (`gh attestation verify atc-… -R AtomicBot-ai/atomic-server`).
 
 ### Linux packages
 
@@ -116,7 +116,7 @@ Updates come with `sudo apt upgrade`, `sudo dnf upgrade` or `yay -Syu`; `atc upd
 install and names the command to use. After an upgrade, `atc restart` (or `atc service restart`) moves a
 running server onto the new binary. `sudo apt remove atc`, `sudo dnf remove atc` or `sudo pacman -R atc-bin`
 removes it and leaves the data folder. The repository keeps the last ten releases; older ones are on the
-[releases page](https://github.com/AtomicBot-ai/eye-cli/releases) as `.deb` and `.rpm` files.
+[releases page](https://github.com/AtomicBot-ai/atomic-server/releases) as `.deb` and `.rpm` files.
 
 ```sh
 atc                  # on a terminal: the terminal UI — choose an engine, then a model
