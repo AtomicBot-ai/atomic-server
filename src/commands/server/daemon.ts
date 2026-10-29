@@ -44,6 +44,7 @@ export async function runServerInPlace(
   })
   const level = ctx.log.level === 'debug' ? 'debug' : config.values.log.level
   const log = createLogger(mode === 'foreground' ? tee(file, forwardTo(ctx.log)) : file, { level })
+  ctx.errors.setWarningHandler?.((message) => log.warn(`error report not sent: ${message}`))
   const port = (name: string): number | undefined => {
     const raw = values[name]
     if (typeof raw !== 'string') return undefined
@@ -53,7 +54,9 @@ export async function runServerInPlace(
     return n
   }
   const telemetryFlag = values['telemetry']
+  if (telemetryFlag === 'on' || telemetryFlag === 'off') ctx.errors.setHostConsent?.(telemetryFlag === 'on')
   return runDaemon({
+    errors: ctx.errors,
     paths: ctx.paths,
     io: ctx.io,
     config,

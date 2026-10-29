@@ -15,10 +15,12 @@ import { managedModelPlan, nodeStoreFiles, underRoot } from './managed-model-pla
 import type { StoreFiles } from './managed-model-plan.js'
 import type { ManagedModelDeps } from './managed-models.js'
 import { hubOf } from './managed-models.js'
+import { captureFailure, type ErrorSink } from '../../telemetry/index.js'
 
 export type { StoreFiles } from './managed-model-plan.js'
 
 export interface ManagedModelSetupsDeps extends ManagedModelDeps {
+  errors?: ErrorSink
   /** `<atc>/managed-model-setups`: one record per plan digest and per request id. */
   directory: string
   downloader: Pick<Downloader, 'download' | 'cancel'> & Partial<Pick<Downloader, 'snapshot'>>
@@ -115,9 +117,16 @@ export class ManagedModelSetups {
       await this.journal.step(job, worker, 'ready')
     } catch (error) {
       const cancelled = worker.cancelled || String(error).includes('Download cancelled')
+      if (!cancelled)
+        captureFailure(this.d.errors, error, {
+          component: 'managed-setup',
+          operation: `managed.${job.stage}`,
+        })
       await this.journal
         .step(job, worker, cancelled ? 'cancelled' : 'failed', cancelled ? undefined : error)
-        .catch(() => {})
+        .catch((error: unknown) =>
+          captureFailure(this.d.errors, error, { component: 'managed-setup', operation: 'managed.persist' })
+        )
     }
   }
 }

@@ -80,6 +80,7 @@ export const tuiCommand = defineCommand({
       waitForShutdown: io.waitForShutdown,
       root: ctx.root,
       deps: {
+        errors: ctx.errors,
         paths,
         env: io.env,
         attach: (options) => ctx.core.attach(options),

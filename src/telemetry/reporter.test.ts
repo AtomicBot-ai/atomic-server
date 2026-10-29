@@ -12,7 +12,13 @@ describe('the atc error reporter', () => {
   afterEach(() => {
     for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true })
   })
-  const setup = async (input: { env?: NodeJS.ProcessEnv; consent?: boolean } = {}) => {
+  const setup = async (
+    input: {
+      env?: NodeJS.ProcessEnv
+      consent?: boolean
+      consentForCapture?: () => Promise<boolean | undefined>
+    } = {}
+  ) => {
     const dir = mkdtempSync(join(tmpdir(), 'atc-reporter-'))
     dirs.push(dir)
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response('{}'))
@@ -26,6 +32,7 @@ describe('the atc error reporter', () => {
       arch: 'x64',
       fetch,
       warn: () => {},
+      ...(input.consentForCapture ? { consentForCapture: input.consentForCapture } : {}),
     })
     const send = async () => {
       reporter.capture({ source: 'startup', level: 'fatal', error: new Error(`boom ${Math.random()}`) })
@@ -37,6 +44,22 @@ describe('the atc error reporter', () => {
     capture: () => {},
     update: () => {},
     state: () => ({ enabled, reporting: enabled, has_user: false, tags: {}, source: 'host', host: 'atc' }),
+  })
+
+  it('re-reads a long-lived client choice and fails closed if that choice cannot be read', async () => {
+    let choice: boolean | undefined = true
+    const { fetch, send } = await setup({
+      consentForCapture: async () => {
+        if (choice === undefined) throw new Error('unreadable config')
+        return choice
+      },
+    })
+    await send()
+    choice = false
+    await send()
+    choice = undefined
+    await send()
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 
   it("sends to atc's own project, as atc", async () => {

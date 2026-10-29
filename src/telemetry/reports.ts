@@ -19,10 +19,11 @@ import {
   VALIDATION_CANCELLED_MESSAGE,
 } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
+import { expectedFailure } from './failures.js'
 
 /** An `AtcError` is an answer atc gives on purpose, unless it says atc itself is broken. */
 function isAnswer(error: unknown): boolean {
-  return error instanceof AtcError && error.code !== 'ATC_INTERNAL'
+  return error instanceof AtcError && expectedFailure(error)
 }
 
 /** The server could not start. Ports in use and an owner already running are answers. */
@@ -55,7 +56,7 @@ export function adminFailureReport(input: {
   method: string
   path: string
 }): ErrorReport | null {
-  if (isAnswer(input.error)) return null
+  if (expectedFailure(input.error)) return null
   const report = internalErrorReport({
     source: 'control_route',
     error: input.error,

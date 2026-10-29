@@ -2,6 +2,7 @@ import type { EngineDownloads } from '../engines/engine-downloads.js'
 import { join } from 'node:path'
 import { Downloader } from '../../downloads/index.js'
 import { captureReport, downloadFailureReport } from '../../telemetry/index.js'
+import { markReported } from '../../errors/index.js'
 import { ManagedModelSetups } from '../managed/managed-model-setups.js'
 import { FoundryModelSetups } from '../foundry/foundry-model-setups.js'
 import { LiteRtAccelerators } from '../litert/litert.js'
@@ -25,12 +26,16 @@ export function modelDownloads(
     platform: options.platform ?? process.platform,
     fetch: request,
     availableSpace: async (path) => (await options.link.disk.available(path)) ?? undefined,
-    onFailure: (error) => captureReport(options.errors, downloadFailureReport(error)),
+    onFailure: (error) => {
+      if (options.errors) markReported(error)
+      captureReport(options.errors, downloadFailureReport(error))
+    },
   })
   return {
     downloader,
     artifacts: new ArtifactService(options, catalog, request, downloader, engines?.ensure.bind(engines)),
     managed: new ManagedModelSetups({
+      ...(options.errors ? { errors: options.errors } : {}),
       link: options.link,
       fetch: request,
       env: options.env,
@@ -39,6 +44,7 @@ export function modelDownloads(
       proxy: downloadProxy(options.config),
     }),
     foundry: new FoundryModelSetups({
+      ...(options.errors ? { errors: options.errors } : {}),
       link: options.link,
       fetch: request,
       list: {
@@ -55,6 +61,7 @@ export function modelDownloads(
     litert: {
       accelerators: new LiteRtAccelerators(options.link, { proxy: () => downloadProxy(options.config) }),
       models: new LiteRtModelSetups({
+        ...(options.errors ? { errors: options.errors } : {}),
         link: options.link,
         fetch: request,
         list: {
@@ -72,6 +79,7 @@ export function modelDownloads(
       }),
     },
     setups: new ModelSetups({
+      ...(options.errors ? { errors: options.errors } : {}),
       ...(engines
         ? {
             installEngine: (engine, taskId) =>

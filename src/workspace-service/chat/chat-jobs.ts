@@ -9,6 +9,7 @@ import { chatRequestFor, contextExceeded } from './chat-request.js'
 import { chatAbilities } from '../models/store-variants.js'
 import { publicEndpoint } from '../snapshot/snapshot.js'
 import { mergeChatDelta, readChatStream } from './chat-stream.js'
+import { captureFailure } from '../../telemetry/index.js'
 
 interface Job {
   id: string
@@ -195,6 +196,7 @@ export class ChatJobs {
     } catch (error) {
       state = job.controller.signal.aborted ? 'stopped' : 'failed'
       if (state === 'failed') {
+        captureFailure(this.options.errors, error, { component: 'chat', operation: 'chat.stream' })
         const message = error instanceof Error ? error.message : String(error)
         const context = contextExceeded(view.provider, message)
         view.error = context ? `${context.message} ${context.hint ?? ''}`.trim() : message
@@ -216,7 +218,10 @@ export class ChatJobs {
       try {
         // The stored copy may have been renamed or archived meanwhile: the answer joins it. Deleted
         // meanwhile: it stays deleted.
-        const stored = await this.history.load(chat.id).catch(() => undefined)
+        const stored = await this.history.load(chat.id).catch((error: unknown) => {
+          captureFailure(this.options.errors, error, { component: 'chat', operation: 'history.load' })
+          return undefined
+        })
         if (stored !== null)
           await this.history.save({
             ...(stored ?? chat),
@@ -225,7 +230,8 @@ export class ChatJobs {
             ...(chat.request_settings ? { request_settings: chat.request_settings } : {}),
             interrupted: chat.interrupted,
           })
-      } catch {
+      } catch (error) {
+        captureFailure(this.options.errors, error, { component: 'chat', operation: 'history.save' })
         view.error = 'The answer could not be saved. Export it before leaving this page.'
         state = 'failed'
       }

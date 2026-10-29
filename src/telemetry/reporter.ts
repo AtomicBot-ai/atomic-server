@@ -17,12 +17,15 @@ import type { ErrorReport, ErrorSink, TelemetryControl } from '@atomic-chat/core
 import { ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
 import { atcReportingConfig, BAKED_REPORTING } from './config.js'
 import type { BakedReporting } from './config.js'
+import { flushWithin } from './flush.js'
 
 export class AtcErrorReporter implements ErrorSink {
   private core: TelemetryControl | undefined
+  private pending = new Set<Promise<void>>()
   constructor(
     private readonly reporter: ErrorReporter | undefined,
-    private readonly initialConsent: boolean
+    private readonly initialConsent: boolean,
+    private readonly liveConsent?: () => Promise<boolean>
   ) {}
 
   /** From now on the core's consent decides (the person's live choice). */
@@ -31,17 +34,34 @@ export class AtcErrorReporter implements ErrorSink {
   }
 
   capture(report: ErrorReport): void {
+    if (!this.core && this.liveConsent) {
+      const pending = this.liveConsent()
+        .then((enabled) => {
+          if (this.core ? this.core.state().enabled : enabled) this.reporter?.capture(report)
+        })
+        .catch(() => {
+          /* Unknown consent means no report. */
+        })
+        .finally(() => this.pending.delete(pending))
+      this.pending.add(pending)
+      return
+    }
     const consent = this.core ? this.core.state().enabled : this.initialConsent
     if (consent) this.reporter?.capture(report)
   }
 
   /** Wait for in-flight sends, at most `timeoutMs`. Never rejects. */
-  flush(timeoutMs?: number): Promise<void> {
-    return this.reporter?.flush(timeoutMs) ?? Promise.resolve()
+  flush(timeoutMs = 2000): Promise<void> {
+    return flushWithin(async (remaining) => {
+      await Promise.allSettled([...this.pending])
+      await this.reporter?.flush(remaining())
+    }, timeoutMs)
   }
 }
 
 export interface AtcReporterInput {
+  /** Long-running clients re-read their config before each report, without resetting dedup or caps. */
+  consentForCapture?: () => Promise<boolean | undefined>
   env: NodeJS.ProcessEnv
   /** The host's consent (`--telemetry`, `telemetry.enabled` set in the config); undefined: not given. */
   consent: boolean | undefined
@@ -92,5 +112,12 @@ export async function createAtcReporter(input: AtcReporterInput): Promise<AtcErr
     fetch: input.fetch,
     onSendError: input.warn,
   })
-  return new AtcErrorReporter(reporter, enabled)
+  return new AtcErrorReporter(reporter, enabled, async () => {
+    const stored = await readTelemetryFile(input.telemetryFile)
+    return resolveConsent({
+      env: envConsent(input.env),
+      host: input.consentForCapture ? await input.consentForCapture() : input.consent,
+      stored: stored.enabled,
+    }).enabled
+  })
 }

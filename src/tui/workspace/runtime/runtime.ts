@@ -6,6 +6,7 @@ import { atcPathsFor } from '../../../config/index.js'
 import { createLogger } from '../../../output/index.js'
 import { readDaemonRecord } from '../../../core-link/index.js'
 import type { TuiDeps } from '../../controller.js'
+import { captureFailure } from '../../../telemetry/index.js'
 /** Owns the shared service across polling ticks; metrics survive ordinary refreshes. */
 export class WorkspaceRuntime {
   private service: WorkspaceClient | undefined
@@ -31,6 +32,7 @@ export class WorkspaceRuntime {
       this.config = config
       this.instance = snap.instance_id
       this.service = await createWorkspaceClient({
+        ...(this.deps.errors ? { errors: this.deps.errors } : {}),
         link,
         paths: this.paths,
         config: this.config,
@@ -41,14 +43,22 @@ export class WorkspaceRuntime {
     return this.service
   }
   async snapshot() {
-    return (await this.connect(false)).snapshot()
+    return this.report('workspace.snapshot', async () => (await this.connect(false)).snapshot())
   }
   async execute(name: string, input: Record<string, unknown> = {}) {
-    return (await this.connect(true)).execute(name, input)
+    return this.report('workspace.execute', async () => (await this.connect(true)).execute(name, input))
   }
   /** A read that never starts the server: it fails with `ATC_DAEMON_NOT_RUNNING` when none runs. */
   async read(name: string, input: Record<string, unknown> = {}) {
-    return (await this.connect(false)).execute(name, input)
+    return this.report('workspace.read', async () => (await this.connect(false)).execute(name, input))
+  }
+  private async report<T>(operation: string, work: () => Promise<T>): Promise<T> {
+    try {
+      return await work()
+    } catch (error) {
+      captureFailure(this.deps.errors, error, { component: 'tui', operation })
+      throw error
+    }
   }
   /** How the server was started and its systemd unit (its record): what a new sign-in takes for it. */
   async start(): Promise<{ launch: ServerLaunch; service?: string }> {

@@ -54,7 +54,7 @@ export interface AtcIo {
    * For a process that is the server: a throw nothing caught is said on stderr, reported (up to 2 s)
    * and ends the process with 1, as it would without handlers. Absent in tests.
    */
-  catchFatal?: (reporter: ErrorSink & { flush(timeoutMs?: number): Promise<void> }) => void
+  catchFatal?: (reporter: ErrorSink & { flush(timeoutMs?: number): Promise<void> }) => void | (() => void)
 }
 
 /** The part of a stream a writer uses. */
@@ -158,12 +158,21 @@ export function nodeIo(): AtcIo {
       ),
     question: (prompt, options) => askOnTerminal(prompt, options?.secret === true),
     openUrl: (url) => openInBrowser(url),
-    catchFatal: (reporter) =>
+    catchFatal: (reporter) => {
+      const uncaught = new Set(process.listeners('uncaughtException'))
+      const rejected = new Set(process.listeners('unhandledRejection'))
       processHandlersFor(
         process,
         (text) => process.stderr.write(text),
         (code) => process.exit(code)
-      )({ reporter }),
+      )({ reporter })
+      const addedUncaught = process.listeners('uncaughtException').filter((fn) => !uncaught.has(fn))
+      const addedRejected = process.listeners('unhandledRejection').filter((fn) => !rejected.has(fn))
+      return () => {
+        addedUncaught.forEach((fn) => process.off('uncaughtException', fn))
+        addedRejected.forEach((fn) => process.off('unhandledRejection', fn))
+      }
+    },
     onInterrupt: (handler) => {
       process.once('SIGINT', handler)
       return () => process.off('SIGINT', handler)

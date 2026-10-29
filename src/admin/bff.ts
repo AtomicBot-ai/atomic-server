@@ -22,8 +22,10 @@ import { sanitizeWorkspaceData } from '../workspace-service/index.js'
 import { adminFailureReport, captureReport, type ErrorSink } from '../telemetry/index.js'
 import type { WorkspaceClient } from '../workspace-service/index.js'
 import { serveWorkspaceAsset } from './workspace-assets.js'
+import { ClientReports } from './client-reports.js'
+import { readJson } from './bff-json.js'
+export { MAX_BODY_BYTES } from './bff-json.js'
 
-export const MAX_BODY_BYTES = 8 * 1024 * 1024
 export const SSE_PING_MS = 15_000
 
 /** Control routes a page may read. Prefix match on the path after `/api/core`. */
@@ -135,25 +137,9 @@ function statusFor(error: unknown): number {
   return 500
 }
 
-async function readJson(req: Req, limit = MAX_BODY_BYTES): Promise<unknown> {
-  const chunks: Buffer[] = []
-  let size = 0
-  for await (const chunk of req) {
-    size += (chunk as Buffer).length
-    if (size > limit) throw new AtcError('ATC_USAGE', 'Request body too large.')
-    chunks.push(chunk as Buffer)
-  }
-  const text = Buffer.concat(chunks).toString('utf8')
-  if (!text) return undefined
-  try {
-    return JSON.parse(text)
-  } catch {
-    throw new AtcError('ATC_USAGE', 'Request body is not valid JSON.')
-  }
-}
-
 /** Handle `/api/*`; answers `false` for anything else so the caller can serve the SPA. */
 export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise<boolean> {
+  const clientReports = new ClientReports(deps.errors)
   const notImplemented = (what: string, planned: string) =>
     new AtcError('ATC_NOT_IMPLEMENTED', `${what} is not implemented yet.`, {
       details: `planned for ${planned}`,
@@ -208,6 +194,11 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
             hint: 'open the URL printed by `atc admin`, or send the admin token as a Bearer',
           })
         )
+        return true
+      }
+      if (path === ADMIN_API.clientReports && method === 'POST') {
+        const accepted = clientReports.accept(await readJson(req, 16 * 1024))
+        send(res, accepted ? 202 : 429, {})
         return true
       }
       if (path === ADMIN_API.workspace && method === 'GET') {

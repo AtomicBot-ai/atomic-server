@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-10-29** — [Report errors at each workspace boundary](2026-10-29-report-errors-at-each-workspace-boundary.md) — shared process reporting, background and browser coverage, bounded exit waits and consent.
+
 - **2026-10-24** — [Show engine update results before offering installation](2026-10-24-show-engine-update-results.md) — shared update feedback, explicit install offers, and Save only for changed settings.
 
 - **2026-10-24** — [Separate model selection from load status](2026-10-24-separate-model-selection-from-load-status.md) — qualified local badges and immediate terminal selection with pending/error feedback inside the composer.

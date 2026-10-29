@@ -21,6 +21,7 @@ import { nodeStoreFiles, underRoot } from '../managed/managed-model-plan.js'
 import { SetupJournal } from '../setup-journal.js'
 import { liteRtFileName, liteRtModelPlan } from './litert-model-plan.js'
 import type { LiteRtPlanDeps } from './litert-model-plan.js'
+import { captureFailure, type ErrorSink } from '../../telemetry/index.js'
 
 const KEPT = ['ok', 'accelerator-not-prepared']
 
@@ -56,6 +57,7 @@ export function liteRtModelYml(plan: LiteRtModelPlan, check: LiteRtLmCheckResult
 }
 
 export interface LiteRtModelSetupsDeps extends Omit<LiteRtPlanDeps, 'files'> {
+  errors?: ErrorSink
   directory: string
   downloader: Pick<Downloader, 'download' | 'cancel'>
   files?: LiteRtPlanDeps['files']
@@ -151,9 +153,13 @@ export class LiteRtModelSetups {
       await this.journal.step(job, worker, 'ready')
     } catch (error) {
       const cancelled = worker.cancelled || String(error).includes('Download cancelled')
+      if (!cancelled)
+        captureFailure(this.d.errors, error, { component: 'litert-setup', operation: `litert.${job.stage}` })
       await this.journal
         .step(job, worker, cancelled ? 'cancelled' : 'failed', cancelled ? undefined : error)
-        .catch(() => {})
+        .catch((error: unknown) =>
+          captureFailure(this.d.errors, error, { component: 'litert-setup', operation: 'litert.persist' })
+        )
     }
   }
 }

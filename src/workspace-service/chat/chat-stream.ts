@@ -1,12 +1,17 @@
 import { object } from '../validation.js'
+import { remoteError } from '../../errors/index.js'
 
 /** OpenAI SSE accumulation, including split tool arguments, reasoning and final usage. */
 export async function readChatStream(response: Response, onChunk: (value: Record<string, unknown>) => void) {
   if (!response.ok) {
     const body = object(await response.json().catch(() => ({})))
-    throw new Error(
-      String(
-        object(body['error'])['message'] ?? body['message'] ?? `Generation returned HTTP ${response.status}.`
+    throw remoteError(
+      new Error(
+        String(
+          object(body['error'])['message'] ??
+            body['message'] ??
+            `Generation returned HTTP ${response.status}.`
+        )
       )
     )
   }
@@ -28,7 +33,8 @@ export async function readChatStream(response: Response, onChunk: (value: Record
         if (!data) continue
         if (data === '[DONE]') return
         const chunk = object(JSON.parse(data))
-        if (chunk['error']) throw new Error(String(object(chunk['error'])['message'] ?? 'Generation failed.'))
+        if (chunk['error'])
+          throw remoteError(new Error(String(object(chunk['error'])['message'] ?? 'Generation failed.')))
         onChunk(chunk)
         const choice = object((chunk['choices'] as unknown[] | undefined)?.[0])
         if (choice['finish_reason']) finished = true

@@ -14,7 +14,7 @@ Menlo Research, as the rest of this repository; the attribution is in the root `
 | `src/index.css`                       | `web-app/src/index.css`                       | theme tokens and the base layer only; no fonts, markdown, katex, animations |
 | `src/hooks/useServiceHub.ts`          | `web-app/src/hooks/useServiceHub.ts`          | `ServiceHub` is a type-only import                                       |
 | `src/services/atomic-core-runtime.ts` | `extensions/shared/atomicCoreRuntime.ts`      | none, verbatim (prettier skips it: `requirePragma` override in `.prettierrc`) |
-| `src/main.tsx`                        | `web-app/src/main.tsx`                        | renders the admin root, no router; no Sentry, migrations, mobile or zoom handling |
+| `src/main.tsx`                        | `web-app/src/main.tsx`                        | renders the admin root, reports browser failures through the BFF; no router, migrations, mobile or zoom handling |
 | `tsconfig.app.json`, `tsconfig.node.json` | `web-app/tsconfig.*.json`                 | `lib` ES2023 / target ES2022 (the contract's type imports reach Node code); `@contract` path |
 | `eslint.config.js`                    | `web-app/eslint.config.js`                    | tests linted, `components/ui` may export variants                        |
 

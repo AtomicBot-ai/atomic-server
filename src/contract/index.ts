@@ -4,6 +4,7 @@
  * it; it imports only types from the rest of atc. No `node:*` here.
  */
 export * from './api.js'
+export * from './client-reports.js'
 export * from './events.js'
 export * from './routes.js'
 
