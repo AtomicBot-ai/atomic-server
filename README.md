@@ -45,6 +45,27 @@ in [`docs/concepts.md`](docs/concepts.md).
 > does what most of them will. [`docs/commands.md`](docs/commands.md) is generated from the command specs
 > and is the authoritative list.
 
+## Supported engines
+
+Atomic Server supports these engines through its embedded core. Availability depends on the operating
+system, hardware and compatible builds; `atc engines list` shows what is available on your machine.
+
+- **llama.cpp** (`llamacpp-upstream`) — GGUF models on CPU or GPU.
+- **llama.cpp TurboQuant** (`llamacpp`) — the TurboQuant variant of llama.cpp for GGUF models.
+- **Atomic Prism** (`atomic-prism`) — the PrismML-based engine for GGUF models, including models that
+  require Prism.
+- **MLX** (`mlx`) — MLX models on Apple Silicon Macs.
+- **vLLM** (`vllm`), **SGLang** (`sglang`) and **TensorRT-LLM** (`tensorrt-llm`) — Hugging Face
+  safetensors checkpoints in [managed containers](#managed-engines) on Linux or Windows through WSL.
+- **Foundry Local** (`foundry-local`) — ONNX model variants on supported CPU, GPU or NPU accelerators;
+  see [Foundry Local](#foundry-local) for platforms and setup.
+- **LiteRT-LM** (`litert-lm`) — Google's `.litertlm` models on supported CPU, GPU or Intel NPU
+  accelerators; see [LiteRT-LM](#litert-lm) for platforms and setup.
+- **stable-diffusion.cpp** (`sd-cpp`) — image generation.
+
+Engines are downloaded on demand. Install one with `atc engines install <engine-id>`, or choose it in
+the web admin or terminal UI; the core selects a compatible build for your hardware.
+
 ## Quick start on a server
 
 ```sh
