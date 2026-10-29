@@ -6,8 +6,10 @@
 
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import type { IncomingMessage } from 'node:http'
 import { dirname } from 'node:path'
 import { SESSION_COOKIE } from '../contract/index.js'
+import { tokensMatch } from './token.js'
 
 export const SESSION_IDLE_MS = 24 * 60 * 60 * 1000
 /** A validation only touches the file when the last use moved by this much: not on every request. */
@@ -44,6 +46,12 @@ export class SessionStore {
     this.sessions.set(id, now)
     if (now - last >= TOUCH_WRITE_MS) this.save()
     return true
+  }
+
+  revoke(id: string | undefined): void {
+    if (!id || !this.sessions.has(id)) return
+    this.sessions.delete(id)
+    this.save()
   }
 
   revokeAll(): void {
@@ -95,4 +103,23 @@ export function sessionCookie(id: string, options: { secure?: boolean } = {}): s
 
 export function clearedSessionCookie(): string {
   return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
+}
+
+/** Drop every session when the admin token this process last saw has changed. */
+export function noteToken(state: { issuedFor?: string }, token: string, sessions: SessionStore): void {
+  if (state.issuedFor !== undefined && state.issuedFor !== token) sessions.revokeAll()
+  state.issuedFor = token
+}
+
+/** Cookie or bearer, after noticing a rotated admin token. */
+export async function adminAuthorised(
+  req: Pick<IncomingMessage, 'headers'>,
+  deps: { sessions: SessionStore; adminToken: () => Promise<string> },
+  state: { issuedFor?: string }
+): Promise<boolean> {
+  const token = await deps.adminToken()
+  noteToken(state, token, deps.sessions)
+  const cookie = parseCookies(req.headers.cookie)[SESSION_COOKIE]
+  const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? '')?.[1]
+  return deps.sessions.validate(cookie) || (bearer !== undefined && tokensMatch(bearer, token))
 }

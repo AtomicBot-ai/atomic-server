@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hostFacts } from './facts.js'
+import { hostFacts, probeElevatedWindows, systemInstallDenied } from './facts.js'
 
 const base = {
   arch: 'x64',
@@ -40,5 +40,28 @@ describe('hostFacts', () => {
 
   it('treats macOS as always having a display', () => {
     expect(hostFacts({ ...base, platform: 'darwin' }).hasDisplay).toBe(true)
+  })
+})
+
+describe('Windows elevation', () => {
+  const answered = (stdout: string, over: { code?: number | null; error?: string; timedOut?: boolean } = {}) =>
+    async () => ({ code: 0, stdout, stderr: '', timedOut: false, ...over })
+
+  it('trusts only a successful True from the elevation probe', async () => {
+
+    expect(await probeElevatedWindows(answered('True\r\n'))).toBe(true)
+    expect(await probeElevatedWindows(answered('False'))).toBe(false)
+    expect(await probeElevatedWindows(answered('True', { code: null, error: 'ENOENT' }))).toBe(false)
+    expect(await probeElevatedWindows(answered('True', { code: 1 }))).toBe(false)
+  })
+
+  it('denies a system install when Windows elevation is unknown or false', async () => {
+
+    const win = hostFacts({ ...base, platform: 'win32', euid: null })
+    expect(systemInstallDenied(win)).toBe(true)
+    expect(systemInstallDenied({ ...win, isElevatedWindows: false })).toBe(true)
+    expect(systemInstallDenied({ ...win, isElevatedWindows: true })).toBe(false)
+    expect(systemInstallDenied(hostFacts({ ...base, platform: 'linux', euid: 0 }))).toBe(false)
+    expect(systemInstallDenied(hostFacts({ ...base, platform: 'linux' }))).toBe(true)
   })
 })

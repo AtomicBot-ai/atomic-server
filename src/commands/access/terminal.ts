@@ -1,4 +1,5 @@
-import { defineCommand, AtcError } from '../../cli/index.js'
+import { AtcError, defineCommand, holdCommandLease } from '../../cli/index.js'
+
 import type { CommandRun } from '../../cli/index.js'
 import { ClientKeys } from '../../terminal-data/index.js'
 import { startApi, streamChat, listChatModels, followsLocalServer } from '../../terminal-service/index.js'
@@ -25,6 +26,7 @@ export const apiStart: CommandRun = async (inv, ctx) => {
   if (inv.values['cors'] === false)
     throw new AtcError('ATC_USAGE', 'CORS cannot be disabled by this Core API. Remove --no-cors.')
   const link = await ctx.core.attach({ launch: true })
+  await holdCommandLease(link, ctx.leaseName)
   const keys = new ClientKeys(ctx.paths.atcDir)
   await keys.initialize(key)
   if (key)
@@ -47,7 +49,9 @@ export const apiStart: CommandRun = async (inv, ctx) => {
   return 0
 }
 export const apiStop: CommandRun = async (_inv, ctx) => {
-  const status = await (await ctx.core.attach()).server.stop()
+  const link = await ctx.core.attach()
+  await holdCommandLease(link, ctx.leaseName)
+  const status = await link.server.stop()
   ctx.out.result(status, () => ctx.out.line('API stopped. The daemon remains available.'))
   return 0
 }

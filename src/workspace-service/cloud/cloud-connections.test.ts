@@ -64,6 +64,29 @@ it('checks credentials and model IDs before saving, persists only non-secret che
   await service.execute('cloud.save', { ...input, models: ['two'] })
   expect(await service.execute('cloud.list')).toMatchObject({ providers: [{ connected: false }] })
 })
+it('does not return custom header values from cloud.list', async () => {
+  const { link, service } = fixture(Response.json({ data: [] }))
+  link.responses['GET /cloud/providers'] = {
+    providers: [
+      {
+        provider: 'fixture',
+        has_api_key: true,
+        custom_headers: [{ header: 'Authorization', value: 'secret' }],
+      },
+    ],
+  }
+  const listed = await service.execute('cloud.list')
+  expect(listed).toEqual({
+    providers: [
+      {
+        provider: 'fixture',
+        has_api_key: true,
+        custom_headers: [{ header: 'Authorization' }],
+        connected: false,
+      },
+    ],
+  })
+})
 it.each([
   [new Response('secret-fixture', { status: 401 }), 'rejected this API key'],
   [Response.json({ data: [{ id: 'different' }] }), 'Model not available'],

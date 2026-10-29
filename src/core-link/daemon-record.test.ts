@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -30,6 +30,18 @@ describe('daemon record', () => {
     await removeDaemonRecord(path, 'i1')
     expect(await readDaemonRecord(path)).toBeUndefined()
     expect(await readDaemonRecord(join(dir, 'missing'))).toBeUndefined()
+  })
+
+  it('does not delete a record it cannot read', async () => {
+    const blocked = join(dir, 'blocked-dir')
+    mkdirSync(blocked)
+    await removeDaemonRecord(blocked, 'i1')
+    expect(existsSync(blocked)).toBe(true)
+
+    const corrupt = join(dir, 'corrupt.json')
+    writeFileSync(corrupt, '{')
+    await removeDaemonRecord(corrupt, 'i1')
+    expect(existsSync(corrupt)).toBe(true)
   })
 
   it('reads a starting record and defaults older records to ready', async () => {

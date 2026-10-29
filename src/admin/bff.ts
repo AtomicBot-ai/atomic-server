@@ -10,7 +10,7 @@ import { AtomicCoreError } from '@atomic-chat/core'
 import type { CoreLink } from '../core-link/index.js'
 import { AtcError, errorBody } from '../errors/index.js'
 import type { Logger } from '../output/index.js'
-import { clearedSessionCookie, parseCookies, sessionCookie } from './auth.js'
+import { adminAuthorised, clearedSessionCookie, noteToken, parseCookies, sessionCookie } from './auth.js'
 import type { SessionStore } from './auth.js'
 import { ADMIN_API, SESSION_COOKIE } from '../contract/index.js'
 import type { AdminConfigView, AdminStatus } from '../contract/index.js'
@@ -140,6 +140,7 @@ function statusFor(error: unknown): number {
 /** Handle `/api/*`; answers `false` for anything else so the caller can serve the SPA. */
 export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise<boolean> {
   const clientReports = new ClientReports(deps.errors)
+  const tokenState: { issuedFor?: string } = {}
   const notImplemented = (what: string, planned: string) =>
     new AtcError('ATC_NOT_IMPLEMENTED', `${what} is not implemented yet.`, {
       details: `planned for ${planned}`,
@@ -160,7 +161,8 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
         if (method === 'POST') {
           const body = (await readJson(req)) as { token?: unknown } | undefined
           const presented = typeof body?.token === 'string' ? body.token : undefined
-          if (!tokensMatch(presented, await deps.adminToken())) {
+          const token = await deps.adminToken()
+          if (!tokensMatch(presented, token)) {
             deps.log.warn('admin login refused: bad token')
             sendError(
               res,
@@ -171,22 +173,19 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
             )
             return true
           }
+          noteToken(tokenState, token, deps.sessions)
           send(res, 204, undefined, { 'set-cookie': sessionCookie(deps.sessions.create()) })
           return true
         }
         if (method === 'DELETE') {
+          deps.sessions.revoke(parseCookies(req.headers.cookie)[SESSION_COOKIE])
           send(res, 204, undefined, { 'set-cookie': clearedSessionCookie() })
           return true
         }
         send(res, 405, { error: { code: 'ATC_USAGE', message: 'method not allowed' } })
         return true
       }
-      const cookie = parseCookies(req.headers.cookie)[SESSION_COOKIE]
-      const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? '')?.[1]
-      const authorised =
-        deps.sessions.validate(cookie) ||
-        (bearer !== undefined && tokensMatch(bearer, await deps.adminToken()))
-      if (!authorised) {
+      if (!(await adminAuthorised(req, deps, tokenState))) {
         sendError(
           res,
           401,

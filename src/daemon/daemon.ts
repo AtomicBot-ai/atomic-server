@@ -5,7 +5,7 @@
  * that attaches to it.
  */
 
-import { mkdir } from 'node:fs/promises'
+import { restrictDataFolder } from './restrict-data.js'
 import { WorkspaceService, sanitizeWorkspaceData } from '../workspace-service/index.js'
 import { ClientKeys } from '../terminal-data/index.js'
 import { telemetryConsent } from '../telemetry/index.js'
@@ -16,7 +16,7 @@ import { AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
 import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
-import { HostStepExecutor, HostStepJournal, readServerLaunch, restrictToOwner } from '../host/index.js'
+import { HostStepExecutor, HostStepJournal, probedFacts, readServerLaunch } from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
 import type { AtcIo } from '../io.js'
 import type { Logger } from '../output/index.js'
@@ -72,19 +72,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   const now = options.now ?? Date.now
   const startedAt = now()
   const coreLog = log.child('core')
-  await mkdir(paths.atcDir, { recursive: true })
-  const denied = await restrictToOwner(paths.atcDir, {
-    platform: host.facts.platform,
-    user: io.env['USERDOMAIN'] ? `${io.env['USERDOMAIN']}\\${host.facts.username}` : host.facts.username,
-    exec: host.exec,
-    systemRoot: io.env['SystemRoot'] ?? io.env['SYSTEMROOT'],
-    env: io.env,
-    checked: (problem) =>
-      problem
-        ? log.warn(`could not restrict ${paths.atcDir} to this user: ${problem}`)
-        : log.info(`restricted ${paths.atcDir} to this user`),
-  })
-  if (denied) log.warn(`could not restrict ${paths.atcDir} to this user: ${denied}`)
+  await restrictDataFolder(paths.atcDir, host, io.env, log)
   const keys = new ClientKeys(paths.atcDir)
   // Before the core: with no keyring the public server would check no key at all.
   await keys.initialize(io.env['ATC_API_KEY'] ?? '')
@@ -178,7 +166,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       journal: new HostStepJournal(paths.hostStepsJournal),
       dataFolder: paths.dataFolder,
       instanceId: core.instanceId,
-      context: { ...host.facts, inDaemon: true },
+      context: { ...(await probedFacts(host.facts, host.exec)), inDaemon: true },
       elevator: host.elevator,
       post: (operationId, receipt) =>
         link.environments.hostStepResult(operationId, receipt).then(() => undefined),

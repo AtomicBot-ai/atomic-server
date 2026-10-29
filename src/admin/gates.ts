@@ -22,7 +22,12 @@ export function isLoopbackAddress(address: string | undefined): boolean {
 export function hostNameOf(hostHeader: string | undefined): string {
   if (!hostHeader) return ''
   const h = hostHeader.trim()
-  if (h.startsWith('[')) return h.slice(0, h.indexOf(']') + 1).toLowerCase()
+  if (h.startsWith('[')) {
+    const end = h.indexOf(']')
+    if (end < 0) return ''
+    return h.slice(1, end).toLowerCase()
+  }
+  if (h.startsWith(':') || h.split(':').length > 2) return h.toLowerCase()
   return h.split(':')[0]?.toLowerCase() ?? ''
 }
 

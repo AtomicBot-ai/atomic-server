@@ -2,6 +2,7 @@ import { existsSync, rmSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { fakeOldOwner } from '../../test/helpers/fake-old-owner.js'
 import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
+import { readDaemonRecord, writeDaemonRecord } from './daemon-record.js'
 import { findOutdatedOwner, outdatedError, planStaleStop, stopOutdatedOwner } from './stale-owner.js'
 import type { OutdatedOwner, OwnerView } from './stale-owner.js'
 
@@ -88,6 +89,16 @@ describe('the old owner over its control API', () => {
     const t = tmpDataFolder('atc-stale-')
     cleanups.push(t.cleanup)
     expect(await findOutdatedOwner(t.paths)).toBeUndefined()
+  })
+
+  it('does not treat a version-mismatched core without a matching daemon.json as an outdated atc', async () => {
+    const absent = await setup({ atcRecord: false })
+    expect(await findOutdatedOwner(absent.paths)).toBeUndefined()
+
+    const other = await setup()
+    const current = await readDaemonRecord(other.paths.daemonRecord)
+    await writeDaemonRecord(other.paths.daemonRecord, { ...current!, instance_id: 'someone-else' })
+    expect(await findOutdatedOwner(other.paths)).toBeUndefined()
   })
 
   it('asks it to shut down and waits for the lock to go', async () => {

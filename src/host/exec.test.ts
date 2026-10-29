@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { execCommand, findOnPath } from './exec.js'
+import { execCommand, findOnPath, killTimedOut } from './exec.js'
 
 describe('execCommand', () => {
   it('captures output and exit code without a shell', async () => {
@@ -32,5 +32,38 @@ describe('findOnPath', () => {
     expect(findOnPath('nvidia-smi', { Path: 'C:\\tools', PATHEXT: '.EXE;.CMD' }, 'win32', exists)).toBe(
       'C:\\tools\\nvidia-smi.exe'
     )
+  })
+})
+
+describe('killTimedOut', () => {
+  it('asks taskkill to end the tree on Windows', async () => {
+
+    const calls: string[][] = []
+    await killTimedOut(
+      42,
+      'win32',
+      async (command, args) => {
+        calls.push([command, ...args])
+        return { code: 0, stdout: '', stderr: '', timedOut: false }
+      },
+      false
+    )
+    expect(calls).toEqual([['taskkill', '/PID', '42', '/T', '/F']])
+  })
+
+  // Posix detached children are process-group leaders: the timeout kills -pid, not only the child.
+  it('kills the process group on posix when the child was detached', async () => {
+    const killed: Array<[number, NodeJS.Signals | undefined]> = []
+    const original = process.kill
+    process.kill = ((pid: number, signal?: NodeJS.Signals) => {
+      killed.push([pid, signal])
+      return true
+    }) as typeof process.kill
+    try {
+      await killTimedOut(42, 'linux', async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }), true)
+    } finally {
+      process.kill = original
+    }
+    expect(killed).toEqual([[-42, 'SIGKILL']])
   })
 })

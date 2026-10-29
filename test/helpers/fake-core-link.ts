@@ -128,7 +128,15 @@ export function fakeCoreLink(over: Partial<CoreSnapshot> = {}): FakeCoreLink {
     shutdown: async () => {
       link.shutdowns += 1
     },
-    withLease: async (_name, work) => work(link, 'client-1'),
+    withLease: async (name, work) => {
+      const client = { id: `client-${link.snapshotValue.clients.length + 1}`, name, pid: 1 }
+      link.snapshotValue.clients.push(client)
+      try {
+        return await work(link, client.id)
+      } finally {
+        link.snapshotValue.clients = link.snapshotValue.clients.filter((item) => item !== client)
+      }
+    },
     events: {
       subscribe: async (handler, options) => {
         handlers.add(handler)

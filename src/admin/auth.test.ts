@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCookies, sessionCookie, SessionStore } from './auth.js'
+import { noteToken, parseCookies, sessionCookie, SessionStore } from './auth.js'
 
 describe('SessionStore', () => {
   it('validates live sessions, expires idle ones, revokes all', () => {
@@ -15,6 +15,32 @@ describe('SessionStore', () => {
     store.revokeAll()
     expect(store.validate(other)).toBe(false)
     expect(store.validate(undefined)).toBe(false)
+  })
+
+  it('revokes one id and leaves the other', () => {
+    const store = new SessionStore(() => 0, 100)
+    const kept = store.create()
+    const dropped = store.create()
+    store.revoke(undefined)
+    store.revoke('missing')
+    expect(store.size).toBe(2)
+    store.revoke(dropped)
+    expect(store.validate(dropped)).toBe(false)
+    expect(store.validate(kept)).toBe(true)
+    expect(store.size).toBe(1)
+  })
+
+  it('drops every session when the admin token changes, and not when it repeats', () => {
+    const store = new SessionStore(() => 0, 100)
+    store.create()
+    const state: { issuedFor?: string } = {}
+    noteToken(state, 'token-a', store)
+    expect(store.size).toBe(1)
+    noteToken(state, 'token-a', store)
+    expect(store.size).toBe(1)
+    noteToken(state, 'token-b', store)
+    expect(store.size).toBe(0)
+    expect(state.issuedFor).toBe('token-b')
   })
 })
 

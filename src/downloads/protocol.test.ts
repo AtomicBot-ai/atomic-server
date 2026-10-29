@@ -114,6 +114,8 @@ describe('proxy rules', () => {
     expect(shouldBypassProxy('https://hf.co/x', [])).toBe(false)
     expect(shouldBypassProxy('https://hf.co/x', ['*'])).toBe(true)
     expect(shouldBypassProxy('https://cdn.hf.co/x', ['*.hf.co'])).toBe(true)
+    expect(shouldBypassProxy('https://hf.co/x', ['*.hf.co'])).toBe(true)
+    expect(shouldBypassProxy('https://evilhf.co/x', ['*.hf.co'])).toBe(false)
     expect(shouldBypassProxy('https://hf.co/x', ['hf.co'])).toBe(true)
     expect(shouldBypassProxy('https://hf.co/x', ['other.co'])).toBe(false)
     expect(shouldBypassProxy('nonsense', ['*'])).toBe(false)

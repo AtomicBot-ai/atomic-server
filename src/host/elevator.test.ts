@@ -76,15 +76,23 @@ describe('createElevator', () => {
     )
     expect(await elevator.run('manual', '/tmp/s.request.json')).toEqual({
       kind: 'pending',
-      instructions: 'sudo /bin/atc host-step exec /tmp/s.request.json',
+      instructions: "sudo '/bin/atc' host-step exec '/tmp/s.request.json'",
     })
     expect(manualInstructions(['C:\\atc.exe'], 'C:\\r j.json', 'win32')).toContain('Administrator')
   })
 
+  it('quotes a manual command so the shell cannot expand it', () => {
+    expect(manualInstructions(['/bin/atc'], "/tmp/a$(whoami) b", 'linux')).toBe(
+      "sudo '/bin/atc' host-step exec '/tmp/a$(whoami) b'"
+    )
+    expect(manualInstructions(['/bin/atc'], "/tmp/a'b", 'linux')).toBe("sudo '/bin/atc' host-step exec '/tmp/a'\\''b'")
+    expect(manualInstructions(['C:\\atc.exe'], 'C:\\a b', 'win32')).toContain("'C:\\a b'")
+  })
+
   it.each([
-    ['sudo-tty', ['sudo', '-k', '--', '/bin/atc', 'host-step', 'exec', '/r.json'], 'inherit'],
-    ['pkexec', ['pkexec', '/bin/atc', 'host-step', 'exec', '/r.json'], undefined],
-    ['root', ['/bin/atc', 'host-step', 'exec', '/r.json'], 'inherit'],
+    ['sudo-tty', ['sudo', '-k', '--', '/bin/atc', 'host-step', 'exec', '/s.request.json'], 'inherit'],
+    ['pkexec', ['pkexec', '/bin/atc', 'host-step', 'exec', '/s.request.json'], undefined],
+    ['root', ['/bin/atc', 'host-step', 'exec', '/s.request.json'], 'inherit'],
   ] as const)('runs %s as %j', async (strategy, argv, stdio) => {
     const calls: Array<{ argv: string[]; stdio?: string; env?: NodeJS.ProcessEnv }> = []
     const elevator = createElevator(
@@ -110,7 +118,7 @@ describe('createElevator', () => {
       },
       'linux'
     )
-    expect(await elevator.run(strategy, '/r.json')).toMatchObject({
+    expect(await elevator.run(strategy, '/s.request.json')).toMatchObject({
       kind: 'result',
       result: { outcome: 'completed' },
     })

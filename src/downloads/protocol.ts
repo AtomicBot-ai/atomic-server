@@ -163,7 +163,8 @@ export function shouldBypassProxy(url: string, noProxy: string[]): boolean {
   for (const entry of noProxy) {
     if (entry === '*') return true
     if (entry.startsWith('*.')) {
-      if (host.endsWith(entry.slice(2))) return true
+      const suffix = entry.slice(2).toLowerCase()
+      if (host === suffix || host.endsWith('.' + suffix)) return true
     } else if (host === entry) return true
   }
   return false

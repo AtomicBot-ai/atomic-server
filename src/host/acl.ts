@@ -79,9 +79,8 @@ export function judgeOwnerOnly(acl: WindowsAcl, dir: string): string | undefined
 
 /**
  * Apply it on Windows; elsewhere the file modes already say it. Returns why the grants failed, if they
- * did. The folder is then read back — an exit code of 0 alone does not prove that only the owner is
- * left — and `checked` gets why it is not owner-only, or `undefined`. The read-back starts Windows
- * PowerShell, seconds on a cold machine, so nothing waits for it.
+ * did, or why the read-back is not owner-only. An exit code of 0 alone does not prove that only the
+ * owner is left. `checked` gets the same read-back result.
  */
 export async function restrictToOwner(
   dir: string,
@@ -108,8 +107,9 @@ export async function restrictToOwner(
     const r = await options.exec(icacls, args, { timeoutMs: 30_000 })
     if (r.error || r.code !== 0) return (r.error ?? r.stderr.trim()) || `icacls exit code ${r.code}`
   }
-  void readOwnerOnly(dir, options).then(options.checked)
-  return undefined
+  const problem = await readOwnerOnly(dir, options)
+  options.checked(problem)
+  return problem
 }
 
 async function readOwnerOnly(

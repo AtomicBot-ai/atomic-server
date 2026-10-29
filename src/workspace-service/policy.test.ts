@@ -13,6 +13,12 @@ describe('workspace policies', () => {
       })
     ).toEqual({ nested: { completion_tokens: 12, tokenizer: 'bpe' } })
   })
+  it('drops custom header values and keeps an unrelated value field', () => {
+    expect(
+      sanitized({ custom_headers: [{ header: 'Authorization', value: 'secret' }], has_api_key: true })
+    ).toEqual({ custom_headers: [{ header: 'Authorization' }], has_api_key: true })
+    expect(sanitized({ value: 'keep' })).toEqual({ value: 'keep' })
+  })
   it('calculates weighted decode rate and uses unknown for unavailable live metrics', () => {
     const metrics = new WorkspaceMetrics(),
       now = Date.now()

@@ -30,6 +30,7 @@ describe('trustDowngrade', () => {
     ['unsigned replacing signed', signed('CN=Atomic'), unsigned, 'not signed by CN=Atomic'],
     ['signed replacing unsigned', unsigned, signed('CN=Atomic'), undefined],
     ['unsigned replacing unsigned (Linux)', unsigned, unsigned, undefined],
+    ['invalid Authenticode still pins its subject', signed('CN=Atomic', false), unsigned, 'not signed by CN=Atomic'],
   ] as const)('%s', (_name, current, next, reason) => {
     const why = trustDowngrade(current, next)
     if (reason === undefined) expect(why).toBeUndefined()
@@ -87,6 +88,26 @@ describe('trustOf', () => {
     expect(
       await trustOf('win32', 'C:\\atc.exe', exec({ 'powershell.exe -NoProfile': ok({ stdout }) }))
     ).toEqual(trust)
+  })
+
+  it('treats a codesign probe that did not run as unreadable', async () => {
+    const failed = ok({ code: null, error: 'ENOENT' })
+    const timedOut = ok({ timedOut: true })
+    const unread = { kind: 'codesign' as const, valid: false, probeFailed: true }
+    expect(await trustOf('darwin', '/bin/atc', async () => failed)).toEqual(unread)
+    expect(await trustOf('darwin', '/bin/atc', async () => timedOut)).toEqual(unread)
+    expect(trustDowngrade(unread, { kind: 'unsigned' })).toContain('could not be read')
+    expect(trustDowngrade({ kind: 'codesign', valid: true }, unread)).toContain('could not be read')
+  })
+
+  it('treats an Authenticode probe that did not run, or empty output, as unreadable', async () => {
+    const unread = { kind: 'authenticode' as const, valid: false, probeFailed: true }
+    const probe = async (over: Partial<ExecResult>) =>
+      trustOf('win32', 'C:\\atc.exe', async () => ok(over))
+    expect(await probe({ code: null, error: 'ENOENT' })).toEqual(unread)
+    expect(await probe({ timedOut: true })).toEqual(unread)
+    expect(await probe({ stdout: '' })).toEqual(unread)
+    expect(trustDowngrade(unread, { kind: 'unsigned' })).toContain('could not be read')
   })
 
   it('has nothing to check on Linux', async () => {

@@ -7,6 +7,7 @@
 import { join } from 'node:path'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
+import { probedFacts, systemInstallDenied } from '../../host/index.js'
 import type { ServiceOptions } from '../../host/index.js'
 import { stopServer } from '../server/lifecycle.js'
 
@@ -36,14 +37,14 @@ function serviceOptions(values: Record<string, unknown>, ctx: CommandContext): S
 }
 
 /** A system-wide service is written where only root (or an elevated Windows shell) may write. */
-function requirePrivileges(o: ServiceOptions, ctx: CommandContext): void {
+async function requirePrivileges(o: ServiceOptions, ctx: CommandContext): Promise<void> {
   if (!o.system) return
-  const facts = ctx.host.facts
-  const denied = facts.platform === 'win32' ? facts.isElevatedWindows === false : !facts.isRoot
-  if (!denied) return
+  const elevated = await probedFacts(ctx.host.facts, ctx.host.exec)
+  if (!systemInstallDenied(elevated)) return
+
   throw new AtcError('ATC_ELEVATION_REQUIRED', 'A system-wide service needs administrator rights.', {
     hint:
-      facts.platform === 'win32'
+      elevated.platform === 'win32'
         ? 'run the same command in an elevated PowerShell'
         : `sudo atc service install --system --user ${o.user} --data-folder ${o.dataFolder}`,
   })
@@ -68,7 +69,7 @@ const install = defineCommand({
   },
   run: async (inv, ctx) => {
     const o = serviceOptions(inv.values, ctx)
-    requirePrivileges(o, ctx)
+    await requirePrivileges(o, ctx)
     // A server started by hand would hold the folder, and the service would fail to start behind it.
     const stopped = await stopServer(ctx, { force: false, kill: false })
     if (stopped.stopped) ctx.log.info('stopped the running server; the service starts it again')
@@ -105,7 +106,7 @@ const uninstall = defineCommand({
   options: SCOPE_OPTIONS,
   run: async (inv, ctx) => {
     const o = serviceOptions(inv.values, ctx)
-    requirePrivileges(o, ctx)
+    await requirePrivileges(o, ctx)
     await requireInstalled(o, ctx)
     if (ctx.host.services.kind === 'task') await stopServer(ctx, { force: true, kill: false })
     await ctx.host.services.uninstall(o)
@@ -144,7 +145,7 @@ function control(action: 'start' | 'stop' | 'restart', summary: string) {
     options: SCOPE_OPTIONS,
     run: async (inv, ctx) => {
       const o = serviceOptions(inv.values, ctx)
-      requirePrivileges(o, ctx)
+      await requirePrivileges(o, ctx)
       await requireInstalled(o, ctx)
       // A scheduled task has no signal to stop gracefully with; stop the server through its API first.
       if (action !== 'start' && ctx.host.services.kind === 'task')

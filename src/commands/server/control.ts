@@ -1,5 +1,5 @@
 import { humanLines } from './human-output.js'
-import { AtcError, defineCommand } from '../../cli/index.js'
+import { AtcError, defineCommand, holdCommandLease } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { parseControlInput } from '../../agent-control/index.js'
 import { createWorkspaceClient, WORKSPACE_OPERATIONS } from '../../workspace-service/index.js'
@@ -15,6 +15,7 @@ export async function attachWorkspace(
   launch = true
 ): Promise<{ link: CoreLink; service: WorkspaceClient }> {
   const [link, config] = await Promise.all([ctx.core.attach({ launch }), ctx.config()])
+  await holdCommandLease(link, ctx.leaseName)
   const service = await createWorkspaceClient({
     link,
     paths: ctx.paths,

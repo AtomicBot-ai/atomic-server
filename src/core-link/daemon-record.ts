@@ -54,7 +54,18 @@ export async function writeDaemonRecord(
 }
 
 export async function removeDaemonRecord(path: string, instanceId: string): Promise<void> {
-  const current = await readDaemonRecord(path)
-  if (current && current.instance_id !== instanceId) return // a newer daemon already owns the file
+  let raw: string
+  try {
+    raw = await readFile(path, 'utf8')
+  } catch {
+    return
+  }
+  let parsed: { instance_id?: unknown }
+  try {
+    parsed = JSON.parse(raw) as { instance_id?: unknown }
+  } catch {
+    return
+  }
+  if (!parsed || typeof parsed !== 'object' || parsed.instance_id !== instanceId) return
   await rm(path, { force: true })
 }
