@@ -83,11 +83,14 @@ describe.skipIf(process.platform === 'win32' || !hasPython())('first model back 
         { wait: 'Choose your engine' },
         { type: 's' },
         { wait: 'Choose your first model' },
+        // The asynchronous device summary inserts rows above the model cards.
+        { wait: ' memory', fresh: true },
         { click: 'Second fixture' },
         { click: 'Continue' },
         { wait: 'Notifications' },
         { type: '\u001b' },
         { wait: 'Choose your first model', fresh: true },
+        { wait: ' memory', fresh: true },
         { click: 'Continue' },
         { wait: 'Notifications', fresh: true },
         { type: '\u0011' },
@@ -102,6 +105,6 @@ describe.skipIf(process.platform === 'win32' || !hasPython())('first model back 
     )
     expect(result.ok, result.failed.join(', ') + '\n' + strip(result.out).slice(-4000)).toBe(true)
     expect(result.code, strip(result.out).slice(-2000)).toBe(0)
-    expect(JSON.parse(readFileSync(paths.configFile, 'utf8')).tui.model).toBe('b-second')
+    expect(JSON.parse(readFileSync(paths.configFile, 'utf8')).tui.model, strip(result.out)).toBe('b-second')
   })
 })
