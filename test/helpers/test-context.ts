@@ -31,7 +31,34 @@ export function fakeHost(over: Partial<HostServices> = {}): HostServices {
       hostname: 'h',
       onPath: () => false,
     }),
-    exec: async () => ({ code: null, stdout: '', stderr: '', timedOut: false, error: 'fake host' }),
+    exec: async (command, args, options) => {
+      const ok = { code: 0, stdout: '', stderr: '', timedOut: false }
+      if (
+        /\\System32\\icacls\.exe$/i.test(command) &&
+        args.some((arg) => ['/inheritance:r', '/remove:g', '/setowner'].includes(arg))
+      )
+        return ok
+      if (
+        /\\WindowsPowerShell\\v1\.0\\powershell\.exe$/i.test(command) &&
+        options?.env?.['ATOMIC_HOST_STEP_PATH']
+      ) {
+        const owner = 'S-1-5-21-1-2-3-1001'
+        return {
+          ...ok,
+          stdout: JSON.stringify({
+            reparse: false,
+            directory: true,
+            owner,
+            rules: [owner, 'S-1-5-18', 'S-1-5-32-544'].map((sid) => ({
+              sid,
+              allow: true,
+              rights: 2032127,
+            })),
+          }),
+        }
+      }
+      return { code: null, stdout: '', stderr: '', timedOut: false, error: 'fake host' }
+    },
     elevator: { select: () => 'manual', run: async () => ({ kind: 'pending', instructions: 'fake' }) },
     services: {
       kind: 'systemd',
