@@ -1,11 +1,5 @@
 import { CLOUD_CATALOG } from '../../../workspace-view/index.js'
 import type { CloudDraft } from '../../../contract/index.js'
-export function cloudNeedsKey(provider: string) {
-  return (
-    CLOUD_CATALOG.some((p) => p.id === provider) &&
-    !['llamacpp-server', 'automatic1111', 'sdcpp-server'].includes(provider)
-  )
-}
 export function cloudChoices(cloud: CloudDraft) {
   return [
     ...CLOUD_CATALOG.map((p) => ({ ...p, saved: cloud.providers.find((v) => v.provider === p.id) })),

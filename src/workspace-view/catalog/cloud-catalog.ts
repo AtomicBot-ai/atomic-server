@@ -23,3 +23,11 @@ export const CLOUD_CATALOG = [
   { id: 'sdcpp-server', name: 'stable-diffusion.cpp server', url: '', icon: '[S]' },
   { id: 'azure', name: 'Azure', url: '', icon: '[A]' },
 ] as const
+
+/** Local OpenAI-compatible servers. They are in the catalog and do not ask for an API key. */
+const LOCAL_SERVERS = new Set<string>(['llamacpp-server', 'automatic1111', 'sdcpp-server'])
+
+/** A catalog provider needs a key. An unknown id, including a custom endpoint, does not. */
+export function cloudNeedsKey(provider: string): boolean {
+  return CLOUD_CATALOG.some((entry) => entry.id === provider) && !LOCAL_SERVERS.has(provider)
+}
