@@ -3,11 +3,11 @@
   Install a released `atc` (a single binary) from GitHub Releases on Windows. Adapted from atomic-agent.
 
 .EXAMPLE
-  irm https://github.com/AtomicBot-ai/eye-cli/releases/latest/download/install.ps1 | iex
+  irm https://github.com/AtomicBot-ai/atomic-server/releases/latest/download/install.ps1 | iex
 
 .NOTES
   Environment overrides (mirror install.sh):
-    ATC_REPO           owner/repo   (default: AtomicBot-ai/eye-cli)
+    ATC_REPO           owner/repo   (default: AtomicBot-ai/atomic-server)
     ATC_VERSION        v0.1.0       (optional: pin a tag; default: latest)
     ATC_INSTALL_DIR    path         (default: %LOCALAPPDATA%\atc)
     ATC_NO_PATH        1            (optional: skip the user PATH update)
@@ -45,7 +45,7 @@ function Get-Triple {
 }
 
 function Install-Atc {
-  $Repo = if ($env:ATC_REPO) { $env:ATC_REPO } else { "AtomicBot-ai/eye-cli" }
+  $Repo = if ($env:ATC_REPO) { $env:ATC_REPO } else { "AtomicBot-ai/atomic-server" }
   $Version = $env:ATC_VERSION
   $InstallDir = if ($env:ATC_INSTALL_DIR) { $env:ATC_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "atc" }
   $Triple = Get-Triple

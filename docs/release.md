@@ -4,6 +4,24 @@ One command tags a release; the pushed tag builds every binary and the Linux pac
 publishes a GitHub release with the installers as assets, and then brings the apt/dnf repository
 (`https://atc-packages.fsn1.your-objectstorage.com`) and the AUR package `atc-bin` up to it. A published version is never replaced.
 
+## Repository rename
+
+Source and releases use `AtomicBot-ai/atomic-server` (see the
+[rename decision](decisions/2026-10-29-rename-the-repository-to-atomic-server.md)). For the transition:
+
+1. Let active release runs finish, then rename the existing GitHub repository from `eye-cli` to
+   `atomic-server` in its settings. Do not create a replacement repository.
+2. Update local clones with `git remote set-url origin git@github.com:AtomicBot-ai/atomic-server.git`.
+   Check external integrations and Actions or reusable workflow callers that name the old repository;
+   GitHub does not redirect those workflow references.
+3. Land the address changes and run `npm run verify` before publishing the next release. Verify that
+   both old and new release API/download URLs work, an older installed `atc` can update, and Linux
+   package and AUR publication succeeds.
+
+Never reuse `AtomicBot-ai/eye-cli`: released binaries, installers and old-tag publishing scripts still
+use that address and depend on GitHub's redirect. Keep published assets unchanged. The command, data
+folder, signing identities and apt/dnf hosting URL do not change with the repository name.
+
 ## The command
 
 ```bash
@@ -46,7 +64,7 @@ branch. One run at a time (`concurrency: release`):
    and checks the signatures. See [Linux packages](#linux-packages-and-the-repository).
 7. **draft** — names the assets, writes `SHA256SUMS` **after** signing (over the binaries, the packages,
    the installers and the license files), attests build provenance for every binary and package (`gh
-   attestation verify <file> -R AtomicBot-ai/eye-cli` checks it), attaches `LICENSE`, `NOTICE`,
+   attestation verify <file> -R AtomicBot-ai/atomic-server` checks it), attaches `LICENSE`, `NOTICE`,
    `THIRD_PARTY_NOTICES.md`, and creates a draft release.
 8. **smoke** — on each native runner: downloads the draft's assets, serves them on loopback, installs with
    the real installer (`ATC_DOWNLOAD_BASE`), checks `--version`, starts, queries and stops a server, and

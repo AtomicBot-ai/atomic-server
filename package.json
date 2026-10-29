@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AtomicBot-ai/eye-cli.git"
+    "url": "https://github.com/AtomicBot-ai/atomic-server.git"
   },
   "private": true,
   "type": "module",

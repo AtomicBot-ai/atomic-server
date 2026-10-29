@@ -3,7 +3,7 @@
 import { AtcError } from '../errors/index.js'
 import { isNewer, parseSemver } from './semver.js'
 
-export const ATC_REPO = 'AtomicBot-ai/eye-cli'
+export const ATC_REPO = 'AtomicBot-ai/atomic-server'
 
 export interface ReleaseInfo {
   version: string

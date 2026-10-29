@@ -32,7 +32,7 @@ import {
 } from './linux-packaging.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
-const REPO = 'AtomicBot-ai/eye-cli'
+const REPO = 'AtomicBot-ai/atomic-server'
 const BASE_URL = REPOSITORY.baseUrl
 const PACKAGE_FILE = /^atc_.+\.(deb|rpm)$/
 

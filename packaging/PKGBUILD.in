@@ -1,6 +1,6 @@
 # Maintainer: Atomic Chat <support@atomic.chat>
 #
-# Generated from packaging/PKGBUILD.in in https://github.com/AtomicBot-ai/eye-cli by the release
+# Generated from packaging/PKGBUILD.in in https://github.com/AtomicBot-ai/atomic-server by the release
 # workflow (scripts/linux-packages.mjs pkgbuild); change the template there, not this copy.
 
 pkgname=atc-bin
@@ -9,7 +9,7 @@ _version=@VERSION@
 pkgrel=1
 pkgdesc='Atomic Server: install an inference engine, pull a model, serve it over an OpenAI-compatible API (https://atomic.chat)'
 arch=('x86_64' 'aarch64')
-url='https://github.com/AtomicBot-ai/eye-cli'
+url='https://github.com/AtomicBot-ai/atomic-server'
 license=('Apache-2.0')
 depends=('glibc')
 # The server finds it on PATH for remote access; without it, the terminal UI and the web say how to install it.
