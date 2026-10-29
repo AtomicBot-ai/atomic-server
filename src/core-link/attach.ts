@@ -71,9 +71,13 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
   } catch (error) {
     if (!(error instanceof AtomicCoreError)) throw error
     if (error.code === 'CORE_PROTOCOL_MISMATCH') {
-      // Another atc build left its server running (an update replaced the binary under it).
+      // Another atc build left its server running only when daemon.json names that same instance.
       const outdated = await findOutdatedOwner(paths)
-      if (!outdated) throw error
+      if (!outdated) {
+        const state = await inspectLock(layout)
+        if (state.kind !== 'owned') throw error
+        throw foreignCoreError(state.record.pid, state.record.version)
+      }
       if (!options.launch) throw outdatedError(outdated)
       log.info(`replacing the server of another build (core ${outdated.lock.version})`)
       await stopOutdatedOwner({ paths, owner: outdated, force: false, kill: false, now: () => new Date() })
@@ -102,14 +106,7 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
     DAEMON_RECORD_TIMEOUT_MS
   )
   if (!record) {
-    throw new AtcError(
-      'ATC_DAEMON_FOREIGN',
-      'The data folder is owned by a core that is not Atomic Server.',
-      {
-        details: `pid ${owner.record.pid}, core ${owner.record.version} — probably \`atomic-chat-core\`'s own CLI`,
-        hint: 'stop it (`atomic-chat-core shutdown`) or use a separate --data-folder',
-      }
-    )
+    throw foreignCoreError(owner.record.pid, owner.record.version)
   }
   return new HttpCoreLink({
     endpoint: {
@@ -122,6 +119,13 @@ export async function attachCore(options: AttachOptions): Promise<CoreLink> {
     events: new SseEvents(owner.client, { log: (m) => log.debug(m) }),
     pid: options.pid,
     log: (m) => log.debug(m),
+  })
+}
+
+function foreignCoreError(pid: number, version: string): AtcError {
+  return new AtcError('ATC_DAEMON_FOREIGN', 'The data folder is owned by a core that is not Atomic Server.', {
+    details: `pid ${pid}, core ${version} — probably \`atomic-chat-core\`'s own CLI`,
+    hint: 'stop it (`atomic-chat-core shutdown`) or use a separate --data-folder',
   })
 }
 

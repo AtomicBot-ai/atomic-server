@@ -2,6 +2,7 @@
 
 import { hostname, userInfo } from 'node:os'
 import type { AtcIo } from '../io.js'
+import type { ExecFn } from './exec.js'
 import { findOnPath } from './exec.js'
 
 export interface HostFacts {
@@ -66,4 +67,26 @@ export function nodeHostFacts(io: AtcIo): HostFacts {
     hostname: hostname(),
     onPath: (name) => findOnPath(name, io.env, process.platform) !== undefined,
   })
+}
+
+const ELEVATION_PROBE =
+  "[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)"
+
+/** True only when Windows PowerShell reports the process is in the Administrators role. */
+export async function probeElevatedWindows(exec: ExecFn): Promise<boolean> {
+  const result = await exec('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ELEVATION_PROBE], {
+    timeoutMs: 20_000,
+  })
+  return result.code === 0 && !result.timedOut && !result.error && result.stdout.trim().toLowerCase() === 'true'
+}
+
+/** Copy with Windows elevation filled in. A known value, and every other platform, is unchanged. */
+export async function probedFacts(facts: HostFacts, exec: ExecFn): Promise<HostFacts> {
+  if (facts.platform !== 'win32' || facts.isElevatedWindows !== null) return facts
+  return { ...facts, isElevatedWindows: await probeElevatedWindows(exec) }
+}
+
+/** `--system` needs an elevated Windows token, or root elsewhere. Unknown elevation denies. */
+export function systemInstallDenied(facts: HostFacts): boolean {
+  return facts.platform === 'win32' ? facts.isElevatedWindows !== true : !facts.isRoot
 }

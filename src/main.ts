@@ -14,6 +14,7 @@ import {
   resolveCommand,
   splitGlobalFlags,
   EXIT,
+  releaseCommandLease,
 } from './cli/index.js'
 import type { ContextDeps } from './cli/index.js'
 import { ROOT } from './commands/index.js'
@@ -63,9 +64,14 @@ export async function runCli(argv: readonly string[], io: AtcIo, deps: RunCliDep
       io.stdout(help)
       return EXIT.USAGE
     }
-    ctx = createContext({ ...deps, io, flags: globals, root })
+    const leaseName = ['atc', ...invocation.path].join(' ')
+    ctx = createContext({ ...deps, io, flags: globals, root, clientName: leaseName })
     removeFatal = io.catchFatal?.(ctx.errors)
-    return await invocation.spec.run(invocation, ctx)
+    try {
+      return await invocation.spec.run(invocation, ctx)
+    } finally {
+      await releaseCommandLease()
+    }
   } catch (e) {
     captureFailure(ctx?.errors, e, {
       component: tui || resolved.spec.name === 'tui' ? 'tui' : 'cli',

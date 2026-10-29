@@ -51,8 +51,16 @@ export function sanitized(value: unknown): unknown {
             key
           )
       )
-      .map(([key, item]) => [key, sanitized(item)])
+      .map(([key, item]) => [key, key === 'custom_headers' ? customHeaders(item) : sanitized(item)])
   )
+}
+
+function customHeaders(value: unknown): unknown {
+  if (!Array.isArray(value)) return sanitized(value)
+  return value.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item) || !('header' in item)) return {}
+    return typeof item.header === 'string' ? { header: item.header } : {}
+  })
 }
 
 function validateField(field: WorkspaceField, value: unknown, path: string): void {

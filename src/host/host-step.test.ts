@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -162,5 +162,117 @@ describe('HostStepExecutor', () => {
     })
     expect(await real.executor.checkPendingResults()).toBe(1)
     expect(real.posted[0]?.[1]).toMatchObject({ step_id: 'step-1', outcome: 'declined' })
+  })
+
+  it('posts a ran step again without running the elevator a second time', async () => {
+    const runs: string[] = []
+    let failPost = true
+    const posted: string[] = []
+    const elevator: Elevator = {
+      select: () => 'root',
+      run: async () => {
+        runs.push('run')
+        return { kind: 'result', result: { ...completed, outcome: 'failed' } }
+      },
+    }
+
+    const journal = new HostStepJournal(join(dir, 'retry-ran', 'journal.json'))
+    const custom = new HostStepExecutor({
+      hostStepsDir: join(dir, 'retry-ran'),
+      journal,
+      dataFolder: '/d',
+      instanceId: 'me',
+      context,
+      elevator,
+      post: async () => {
+        if (failPost) {
+          failPost = false
+          throw new Error('post failed')
+        }
+        posted.push('ok')
+      },
+      log: createLogger(() => {}, { level: 'silent' }),
+      newId: () => 'receipt-2',
+      now: () => 5,
+      readResult: async () => undefined,
+    })
+    await expect(custom.handle(operation)).rejects.toThrow('post failed')
+    expect(runs).toEqual(['run'])
+    expect(await custom.handle(operation)).toBe('posted')
+    expect(runs).toEqual(['run'])
+    expect(posted).toEqual(['ok'])
+  })
+
+  it('posts a requested step from its result file without running the elevator', async () => {
+    const runs: string[] = []
+    const journal = new HostStepJournal(join(dir, 'requested', 'journal.json'))
+    const requestPath = join(dir, 'requested', 'step-1.request.json')
+    await journal.upsert({
+      operation_id: 'op-1',
+      step_id: 'step-1',
+      step,
+      request_path: requestPath,
+      state: 'requested',
+      updated_at: 1,
+    })
+    const executor = new HostStepExecutor({
+      hostStepsDir: join(dir, 'requested'),
+      journal,
+      dataFolder: '/d',
+      instanceId: 'me',
+      context,
+      elevator: {
+        select: () => 'root',
+        run: async () => {
+          runs.push('run')
+          return { kind: 'result', result: completed }
+        },
+      },
+      post: async () => undefined,
+      log: createLogger(() => {}, { level: 'silent' }),
+      newId: () => 'receipt-3',
+      now: () => 5,
+      readResult: async () => completed,
+    })
+    expect(await executor.handle(operation)).toBe('posted')
+    expect(runs).toEqual([])
+  })
+
+  it('ignores a result file whose step id does not match the request', async () => {
+    const folder = join(dir, 'mismatch')
+    mkdirSync(folder, { recursive: true })
+    const requestPath = join(folder, 'step-1.request.json')
+    await writeStepReport(requestPath, { ...completed, step_id: 'other' })
+    expect(await readResultFile(requestPath)).toBeUndefined()
+  })
+
+  it('does not post again when the poll already posted during the elevator', async () => {
+    const posts: string[] = []
+    const journal = new HostStepJournal(join(dir, 'race', 'journal.json'))
+    const holder: { executor?: HostStepExecutor } = {}
+    holder.executor = new HostStepExecutor({
+      hostStepsDir: join(dir, 'race'),
+      journal,
+      dataFolder: '/d',
+      instanceId: 'me',
+      context,
+      elevator: {
+        select: () => 'root',
+        run: async () => {
+          await holder.executor!.checkPendingResults()
+          return { kind: 'result', result: completed }
+        },
+      },
+      post: async () => {
+        posts.push('posted')
+      },
+      log: createLogger(() => {}, { level: 'silent' }),
+      newId: () => 'receipt-race',
+      now: () => 5,
+      readResult: async () => completed,
+    })
+    expect(await holder.executor.handle(operation)).toBe('posted')
+    expect(posts).toEqual(['posted'])
+    expect((await journal.load())[0]?.state).toBe('posted')
   })
 })

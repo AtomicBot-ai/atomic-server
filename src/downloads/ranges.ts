@@ -6,9 +6,9 @@
  * the first range with a full body gets the download over one stream instead.
  */
 
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { DOWNLOAD_CANCELLED, diskError, isFinalError, sidecars } from './local.js'
+import { DOWNLOAD_CANCELLED, diskError, isFinalError, openSidecar, refuseSidecarWrite, sidecars } from './local.js'
 import { MAX_STREAM_RETRIES, RETRY_RESET_PROGRESS_BYTES, retryDelayMs } from './protocol.js'
 import { plainError, requestWithRetry } from './request.js'
 import type { FileJob } from './request.js'
@@ -69,6 +69,7 @@ export async function readRangeState(savePath: string, url: string, size: number
 
 async function record(savePath: string, state: RangeState): Promise<void> {
   const s = sidecars(savePath)
+  await refuseSidecarWrite(s.rangesNext)
   await writeFile(s.rangesNext, JSON.stringify(state)).catch((e) => {
     throw diskError(e)
   })
@@ -96,6 +97,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
     if (fresh) await rm(s.tmp, { force: true })
   }
   await rm(s.rangesNext, { force: true })
+  await refuseSidecarWrite(s.url)
   await writeFile(s.url, job.identity).catch((e) => {
     throw diskError(e)
   })
@@ -105,7 +107,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
   const pending = ranges.filter((r) => r.next <= r.end)
   if (!pending.length) return { kind: 'done' }
 
-  const handle = await open(s.tmp, fresh ? 'w+' : 'r+').catch((e) => {
+  const handle = await openSidecar(s.tmp, fresh ? 'w+' : 'r+').catch((e) => {
     throw diskError(e)
   })
   const inner = new AbortController()

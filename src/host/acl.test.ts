@@ -1,6 +1,6 @@
 import { judgeWindowsAcl } from '@atomic-chat/core/host'
 import type { WindowsAcl } from '@atomic-chat/core/host'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { icaclsPath, overlayWindowsEnv, ownerOnlyAclArgs, restrictToOwner } from './acl.js'
 import type { ExecFn } from './exec.js'
 
@@ -105,15 +105,28 @@ describe('owner-only folder ACL', () => {
       return { result: granted ?? (await check), calls }
     }
 
-    // A cold Windows PowerShell takes seconds (past the server's start budget on windows-11-arm); the
-    // grants are what the keys need before they are written, so only they are waited for.
-    it('returns after the grants and reports the read-back later', async () => {
-      let answer: (value: Awaited<ReturnType<ExecFn>>) => void = () => undefined
+    it('waits for the read-back and returns the same result it reports', async () => {
+      const reported: Array<string | undefined> = []
+      const granted = await restrictToOwner(dir, {
+        platform: 'win32',
+        user: 'HOST\\alice',
+        exec: async (command) =>
+          command.endsWith('powershell.exe')
+            ? { code: 0, stdout: JSON.stringify(owned), stderr: '', timedOut: false }
+            : { code: 0, stdout: '', stderr: '', timedOut: false },
+        env: {},
+        checked: (problem) => reported.push(problem),
+      })
+      expect(granted).toBeUndefined()
+      expect(reported).toEqual([undefined])
+    })
+
+    it('returns a read-back problem instead of only reporting it later', async () => {
+      const reported: Array<string | undefined> = []
       const exec: ExecFn = async (command) =>
         command.endsWith('powershell.exe')
-          ? new Promise((resolve) => (answer = resolve))
+          ? { code: 1, stdout: '', stderr: 'acl unreadable', timedOut: false }
           : { code: 0, stdout: '', stderr: '', timedOut: false }
-      const reported: Array<string | undefined> = []
       const granted = await restrictToOwner(dir, {
         platform: 'win32',
         user: 'HOST\\alice',
@@ -121,10 +134,8 @@ describe('owner-only folder ACL', () => {
         env: {},
         checked: (problem) => reported.push(problem),
       })
-      expect(granted).toBeUndefined()
-      expect(reported).toEqual([])
-      answer({ code: 0, stdout: JSON.stringify(owned), stderr: '', timedOut: false })
-      await vi.waitFor(() => expect(reported).toEqual([undefined]))
+      expect(typeof granted).toBe('string')
+      expect(reported).toEqual([granted])
     })
 
     it('grants by icacls, then reads the ACL with PowerShell by its full path and the inherited env', async () => {

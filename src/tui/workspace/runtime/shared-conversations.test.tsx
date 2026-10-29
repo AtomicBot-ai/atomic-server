@@ -54,7 +54,7 @@ it('shows chats and turns another client saves, keeping the draft, and a deletio
     { role: 'user', content: 'Reply with OK.' },
     { role: 'assistant', content: 'OK from the Web' },
   ]
-  await t.web.save(chat)
+  await t.web.save(chat, 0)
   await vi.waitFor(() => expect(t.latest.current.history.map((c) => c.title)).toEqual(['From the Web']), soon)
   // Opened here (`history:` marks what it loaded).
   markSynced(t.controller, chat)
@@ -64,7 +64,7 @@ it('shows chats and turns another client saves, keeping the draft, and a deletio
     { role: 'user' as const, content: 'Reply with LIVE-99.' },
     { role: 'assistant' as const, content: 'LIVE-99 acknowledged' },
   ]
-  await t.web.save({ ...chat, title: 'Renamed in the Web', messages: reply })
+  await t.web.save({ ...chat, title: 'Renamed in the Web', messages: reply }, chat.revision ?? 0)
   await vi.waitFor(() => expect(t.latest.current.messages).toEqual(reply), soon)
   expect(t.latest.current).toMatchObject({
     conversation: { id: chat.id, title: 'Renamed in the Web' },
@@ -81,7 +81,7 @@ it('keeps a reply this terminal has not saved yet over an older saved copy', asy
   const t = await mount({ ...createWorkspace('chat'), setupComplete: true })
   const chat = { ...t.web.create('', 'local-model', ''), title: 'Mine' }
   chat.messages = [{ role: 'user', content: 'Question' }]
-  await t.web.save(chat)
+  await t.web.save(chat, 0)
   markSynced(t.controller, chat)
   const answered = [...chat.messages, { role: 'assistant' as const, content: 'Not saved yet' }]
   t.latest.current = { ...t.latest.current, conversation: chat, messages: answered }

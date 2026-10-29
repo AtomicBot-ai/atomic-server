@@ -154,6 +154,23 @@ describe('applyUpdate', () => {
     await expect(applyUpdate(d)).rejects.toThrow('not signed by team ATOMIC')
     expect(d.f.files.get(BIN)).toBe('old')
   })
+
+  it('refuses when the signature probe cannot run, leaving the installed binary', async () => {
+    const d = deps({
+      platform: 'darwin',
+      arch: 'arm64',
+      builtFor: 'aarch64-apple-darwin',
+      fetch: release({
+        assets: ['atc-0.2.0-aarch64-apple-darwin', 'SHA256SUMS'],
+        sums: `${HASH}  atc-0.2.0-aarch64-apple-darwin\n`,
+      }) as typeof fetch,
+      exec: async (_command, args) =>
+        args[0] === '--version' ? ok({ stdout: '0.2.0\n' }) : ok({ code: null, error: 'ENOENT' }),
+    })
+    await expect(applyUpdate(d)).rejects.toThrow('could not be read')
+    expect(d.f.files.get(BIN)).toBe('old')
+    expect(only(d)).toEqual([BIN])
+  })
 })
 
 describe('executeReplace on Windows', () => {

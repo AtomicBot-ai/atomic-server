@@ -25,6 +25,8 @@ export interface ExecOptions {
   signal?: AbortSignal
   /** `inherit` lets a privileged helper prompt on the terminal. */
   stdio?: 'pipe' | 'inherit'
+  /** Kill the process tree on timeout, not only the direct child. */
+  killTree?: boolean
 }
 
 export type ExecFn = (command: string, args: readonly string[], options?: ExecOptions) => Promise<ExecResult>
@@ -37,6 +39,7 @@ export const execCommand: ExecFn = (command, args, options = {}) =>
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
     const cap = options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT
     const inherit = options.stdio === 'inherit'
+    const detached = options.killTree === true && !inherit
     let stdout = ''
     let stderr = ''
     let timedOut = false
@@ -50,13 +53,20 @@ export const execCommand: ExecFn = (command, args, options = {}) =>
     const child = spawn(command, [...args], {
       stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
+      detached,
       ...(options.env ? { env: options.env } : {}),
       ...(options.cwd ? { cwd: options.cwd } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
     })
     const timer = setTimeout(() => {
       timedOut = true
-      child.kill('SIGKILL')
+      void killTimedOut(child.pid, process.platform, execCommand, detached).finally(() => {
+        try {
+          child.kill('SIGKILL')
+        } catch {
+          // already gone
+        }
+      })
     }, timeoutMs)
     const collect = (chunk: Buffer, which: 'out' | 'err') => {
       const text = chunk.toString()
@@ -68,6 +78,42 @@ export const execCommand: ExecFn = (command, args, options = {}) =>
     child.once('error', (error) => done({ code: null, stdout, stderr, timedOut, error: error.message }))
     child.once('close', (code) => done({ code: timedOut ? null : code, stdout, stderr, timedOut }))
   })
+
+/**
+ * End a timed-out child and, when it was started detached, its process group. Windows uses
+ * `taskkill /T /F`. Posix detached children are group leaders, so the signal goes to `-pid`.
+ */
+export async function killTimedOut(
+  pid: number | undefined,
+  platform: NodeJS.Platform,
+  exec: ExecFn,
+  detached = false
+): Promise<void> {
+  if (pid === undefined) return
+  if (platform === 'win32') {
+    await exec('taskkill', ['/PID', String(pid), '/T', '/F'], { timeoutMs: 10_000 })
+    return
+  }
+  if (detached) {
+    try {
+      process.kill(-pid, 'SIGKILL')
+      return
+    } catch {
+      try {
+        process.kill(pid, 'SIGKILL')
+      } catch {
+        // already gone
+      }
+    }
+    return
+  }
+  try {
+    process.kill(pid, 'SIGKILL')
+  } catch {
+    // already gone
+  }
+  await exec('pkill', ['-KILL', '-P', String(pid)], { timeoutMs: 10_000 })
+}
 
 /** Whether `name` resolves on PATH, without spawning it. Pure given `env` and `platform`. */
 export function findOnPath(

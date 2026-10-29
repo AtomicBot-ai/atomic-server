@@ -51,7 +51,7 @@ export async function waitForRelease(
   return false
 }
 
-/** The owner when it is a ready CLI-scope core of another version than the one embedded here. */
+/** A ready CLI-scope core of another version, only when daemon.json names that same instance. */
 export async function findOutdatedOwner(
   paths: Pick<AtcPaths, 'layout' | 'daemonRecord'>
 ): Promise<OutdatedOwner | undefined> {
@@ -59,7 +59,8 @@ export async function findOutdatedOwner(
   if (state.kind !== 'owned' || state.record.state !== 'ready') return undefined
   if (state.record.owner_scope === 'app' || state.record.version === CORE_VERSION) return undefined
   const record = await readDaemonRecord(paths.daemonRecord)
-  return { lock: state.record, record: record?.instance_id === state.record.instance_id ? record : undefined }
+  if (!record || record.instance_id !== state.record.instance_id) return undefined
+  return { lock: state.record, record }
 }
 
 export function outdatedError(owner: OutdatedOwner): AtcError {

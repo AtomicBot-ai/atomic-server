@@ -6,6 +6,7 @@
  * while a person runs the manual command — is repaired on the next start rather than repeated.
  */
 
+import { randomUUID } from 'node:crypto'
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { resultPathFor } from '@atomic-chat/core/host'
@@ -24,6 +25,7 @@ import type {
   ManagedHostReceipt,
   ManagedHostStep,
 } from './managed-types.js'
+import { acceptedResult, recoverHandledStep, recoverPolledStep } from './host-step-recover.js'
 
 export type JournalState = 'requested' | 'pending-manual' | 'ran' | 'posted'
 
@@ -40,6 +42,8 @@ export interface HostStepJournalEntry {
 }
 
 export class HostStepJournal {
+  private tail: Promise<void> = Promise.resolve()
+
   constructor(private readonly path: string) {}
 
   async load(): Promise<HostStepJournalEntry[]> {
@@ -52,12 +56,33 @@ export class HostStepJournal {
   }
 
   async upsert(entry: HostStepJournalEntry): Promise<void> {
+    const run = this.tail.then(() => this.write(entry))
+    this.tail = run.catch(() => undefined)
+    return run
+  }
+
+  private async write(entry: HostStepJournalEntry): Promise<void> {
     const entries = (await this.load()).filter((e) => e.step_id !== entry.step_id)
     entries.push(entry)
     await mkdir(join(this.path, '..'), { recursive: true })
-    const tmp = `${this.path}.tmp`
+    const tmp = `${this.path}.${randomUUID()}.tmp`
     await writeFile(tmp, `${JSON.stringify(entries, null, 2)}\n`)
     await rename(tmp, this.path)
+  }
+
+  /** False when a queued update already posted this step: do not write over that or send again. */
+  async commitUnlessPosted(entry: HostStepJournalEntry, before?: () => Promise<void>): Promise<boolean> {
+    let wrote = false
+    const run = this.tail.then(async () => {
+      const current = (await this.load()).find((e) => e.step_id === entry.step_id)
+      if (current?.state === 'posted') return
+      if (before) await before()
+      await this.write(entry)
+      wrote = true
+    })
+    this.tail = run.catch(() => undefined)
+    await run
+    return wrote
   }
 }
 
@@ -119,8 +144,20 @@ export class HostStepExecutor {
     const step = operation.pending_host_step
     if (!step || operation.instance_id !== this.deps.instanceId) return 'ignored'
     const existing = (await this.deps.journal.load()).find((e) => e.step_id === step.step_id)
-    if (existing && existing.state !== 'requested')
-      return existing.state === 'pending-manual' ? 'pending' : 'duplicate'
+    const found =
+      existing?.state === 'requested'
+        ? acceptedResult(
+            existing.request_path,
+            await (this.deps.readResult ?? readResultFile)(existing.request_path)
+          )
+        : undefined
+    const recovery = recoverHandledStep(existing, found)
+    if (recovery.action === 'duplicate') return 'duplicate'
+    if (recovery.action === 'pending') return 'pending'
+    if (recovery.action === 'post') {
+      await this.post(existing!, recovery.outcome, recovery.logTail)
+      return 'posted'
+    }
     const problem = validateHostStep(step, operation)
     if (problem) {
       this.deps.log.warn(`host step ${step.step_id} refused: ${problem}`)
@@ -168,12 +205,15 @@ export class HostStepExecutor {
       this.deps.log.warn(`host step ${step.step_id} needs elevation: ${outcome.instructions}`)
       return 'pending'
     }
-    await this.deps.journal.upsert({
-      ...base,
-      state: 'ran',
-      outcome: outcome.result.outcome,
-      updated_at: this.now(),
-    })
+    if (
+      !(await this.deps.journal.commitUnlessPosted({
+        ...base,
+        state: 'ran',
+        outcome: outcome.result.outcome,
+        updated_at: this.now(),
+      }))
+    )
+      return 'posted'
     await this.post(base, outcome.result.outcome, outcome.result.log_tail)
     return 'posted'
   }
@@ -182,10 +222,16 @@ export class HostStepExecutor {
   async checkPendingResults(): Promise<number> {
     let posted = 0
     for (const entry of await this.deps.journal.load()) {
-      if (entry.state !== 'pending-manual') continue
-      const result = await (this.deps.readResult ?? readResultFile)(entry.request_path)
-      if (!result) continue
-      await this.post(entry, result.outcome, result.log_tail)
+      const result =
+        entry.state === 'ran'
+          ? undefined
+          : acceptedResult(
+              entry.request_path,
+              await (this.deps.readResult ?? readResultFile)(entry.request_path)
+            )
+      const recovery = recoverPolledStep(entry, result)
+      if (!recovery) continue
+      await this.post(entry, recovery.outcome, recovery.logTail)
       posted += 1
     }
     return posted
@@ -200,16 +246,18 @@ export class HostStepExecutor {
     outcome: HostStepOutcomeKind,
     logTail?: string
   ): Promise<void> {
-    await this.deps.post(entry.operation_id, receiptFor(entry.step, outcome, this.deps.newId(), logTail))
-    await this.deps.journal.upsert({
-      operation_id: entry.operation_id,
-      step_id: entry.step_id,
-      step: entry.step,
-      request_path: entry.request_path,
-      state: 'posted',
-      outcome,
-      updated_at: this.now(),
-    })
+    await this.deps.journal.commitUnlessPosted(
+      {
+        operation_id: entry.operation_id,
+        step_id: entry.step_id,
+        step: entry.step,
+        request_path: entry.request_path,
+        state: 'posted',
+        outcome,
+        updated_at: this.now(),
+      },
+      () => this.deps.post(entry.operation_id, receiptFor(entry.step, outcome, this.deps.newId(), logTail))
+    )
   }
 }
 
@@ -232,7 +280,9 @@ export function waitingHostSteps(
 export async function readResultFile(requestPath: string): Promise<HostStepResultFile | undefined> {
   try {
     const path = resultPathFor(requestPath)
-    return path ? (JSON.parse(await readFile(path, 'utf8')) as HostStepResultFile) : undefined
+    if (!path) return undefined
+    const result = JSON.parse(await readFile(path, 'utf8')) as HostStepResultFile
+    return acceptedResult(requestPath, result)
   } catch {
     return undefined
   }

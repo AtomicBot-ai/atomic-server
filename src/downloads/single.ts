@@ -5,10 +5,10 @@
  * progress), restart from 0 when the server cannot resume.
  */
 
-import { mkdir, open, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { DOWNLOAD_CANCELLED, diskError, isFinalError, sidecars } from './local.js'
+import { DOWNLOAD_CANCELLED, diskError, isFinalError, openSidecar, refuseSidecarWrite, sidecars } from './local.js'
 import {
   DownloadRequestError,
   MAX_STREAM_RETRIES,
@@ -48,6 +48,7 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   }
   await rm(s.ranges, { force: true })
   await rm(s.rangesNext, { force: true })
+  await refuseSidecarWrite(s.url)
   await writeFile(s.url, job.identity).catch((e) => {
     throw diskError(e)
   })
@@ -67,11 +68,13 @@ export async function downloadSingle(job: FileJob, initial?: Response): Promise<
   }
   // Read-write with explicit positions, not append: Windows refuses `truncate` on an append handle,
   // and a server that cannot resume needs truncate(0) with the next byte written at 0.
-  if (from === 0)
+  if (from === 0) {
+    await refuseSidecarWrite(s.tmp)
     await writeFile(s.tmp, new Uint8Array()).catch((e) => {
       throw diskError(e)
     })
-  const handle = await open(s.tmp, 'r+').catch((e) => {
+  }
+  const handle = await openSidecar(s.tmp, 'r+').catch((e) => {
     throw diskError(e)
   })
   let written = from

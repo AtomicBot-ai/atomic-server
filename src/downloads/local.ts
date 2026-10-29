@@ -1,7 +1,9 @@
 // Lifted from atomic-chat-core/src/downloads/downloader.ts @ 8a38521 (v0.17.0); adapted: the filesystem and timing helpers of the downloader, in their own file.
 /** Filesystem and timing helpers of the downloader: containment, free space, sleep, sidecar names. */
 
-import { realpath, statfs } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { lstat, open, realpath, statfs } from 'node:fs/promises'
+import type { FileHandle } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { diskErrToString } from './disk.js'
 import { sidecarPath } from './protocol.js'
@@ -75,4 +77,35 @@ export async function canonicalizeExistingPrefix(path: string): Promise<string> 
 export function isInside(child: string, parent: string): boolean {
   const rel = relative(parent, child)
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+}
+
+async function sidecarKind(path: string): Promise<'absent' | 'file' | 'symlink' | 'other'> {
+  try {
+    const st = await lstat(path)
+    if (st.isSymbolicLink()) return 'symlink'
+    return st.isFile() ? 'file' : 'other'
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'absent'
+    throw error
+  }
+}
+
+function refuse(path: string, kind: 'symlink' | 'other'): never {
+  throw new Error(
+    kind === 'symlink' ? 'Refusing to write through a symlink: ' + path : 'Refusing to write through a non-file: ' + path
+  )
+}
+
+/** Open a sidecar without following a symlink, creating a new `w+` file exclusively. */
+export async function openSidecar(path: string, flags: 'w+' | 'r+' | 'a'): Promise<FileHandle> {
+  const kind = await sidecarKind(path)
+  if (kind === 'symlink' || kind === 'other') refuse(path, kind)
+  if (kind === 'absent' && flags === 'w+') return open(path, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR)
+  return open(path, flags)
+}
+
+/** `writeFile` of `.url` and `.ranges.next` must not follow a symlink either. */
+export async function refuseSidecarWrite(path: string): Promise<void> {
+  const kind = await sidecarKind(path)
+  if (kind === 'symlink' || kind === 'other') refuse(path, kind)
 }

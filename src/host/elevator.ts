@@ -8,6 +8,7 @@
  * the result file and exits. The unprivileged daemon turns the result into the receipt.
  */
 
+import { basename } from 'node:path'
 import type { HostStepRequest, HostStepResult } from '@atomic-chat/core/host'
 import type { ExecFn } from './exec.js'
 
@@ -72,14 +73,19 @@ export function manualInstructions(
   requestPath: string,
   platform: NodeJS.Platform
 ): string {
+  const quote = platform === 'win32' ? powershellQuote : shellQuote
   const self = selfCommand.map(quote).join(' ')
   if (platform === 'win32')
     return `From an elevated (Administrator) PowerShell:\n  ${self} host-step exec ${quote(requestPath)}`
   return `sudo ${self} host-step exec ${quote(requestPath)}`
 }
 
-function quote(arg: string): string {
-  return /[\s"']/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg
+export function shellQuote(arg: string): string {
+  return `'${arg.replace(/'/g, `'\\''`)}'`
+}
+
+function powershellQuote(arg: string): string {
+  return `'${arg.replace(/'/g, "''")}'`
 }
 
 export const ELEVATED_STEP_TIMEOUT_MS = 30 * 60_000
@@ -139,11 +145,13 @@ export function createElevator(
       const line = elevatedCommand(strategy, deps.selfCommand, requestPath, deps.env ?? {})
       const result = await deps.exec(line.command, line.args, {
         timeoutMs: ELEVATED_STEP_TIMEOUT_MS,
+        killTree: true,
         ...(line.interactive ? { stdio: 'inherit' as const } : {}),
         ...(line.env ? { env: line.env } : {}),
       })
       const file = await deps.readResult(requestPath)
-      if (file) return { kind: 'result', result: file }
+      const stepId = basename(requestPath).replace(/\.request\.json$/, '')
+      if (file?.step_id === stepId) return { kind: 'result', result: file }
       // No result file: the helper never ran (a declined prompt) or could not write one.
       return {
         kind: 'result',

@@ -10,7 +10,7 @@
 import type { EnvironmentOperation } from '@atomic-chat/core/contracts'
 import type { CommandContext } from '../../cli/index.js'
 import type { HostStepJournalEntry } from '../../host/index.js'
-import { HostStepJournal, readResultFile, writeStepReport } from '../../host/index.js'
+import { HostStepJournal, probedFacts, readResultFile, writeStepReport } from '../../host/index.js'
 
 /** How long the command waits for the daemon to journal a step it may hand over. */
 const JOURNAL_WAIT_MS = 5000
@@ -35,7 +35,7 @@ export function terminalHostSteps(
   const run = async (op: EnvironmentOperation, stepId: string) => {
     const entry = await manual(stepId)
     if (!entry) return
-    const strategy = ctx.host.elevator.select({ ...ctx.host.facts, inDaemon: false })
+    const strategy = ctx.host.elevator.select({ ...(await probedFacts(ctx.host.facts, ctx.host.exec)), inDaemon: false })
     if (strategy !== 'sudo-tty' || ctx.flags.json) {
       if (ctx.flags.json)
         ctx.io.stdout(

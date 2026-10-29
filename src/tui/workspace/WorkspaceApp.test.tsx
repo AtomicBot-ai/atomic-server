@@ -116,9 +116,9 @@ describe('working terminal workspace', () => {
     recent.messages = [{ role: 'assistant', content: 'The latest response' }]
     const clock = vi.spyOn(Date, 'now').mockReturnValue(1000)
     try {
-      await history.save(older)
+      await history.save(older, 0)
       clock.mockReturnValue(2000)
-      await history.save(recent)
+      await history.save(recent, 0)
     } finally {
       clock.mockRestore()
     }

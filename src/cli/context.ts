@@ -57,6 +57,8 @@ export interface ContextDeps {
   now?: () => Date
   signal?: AbortSignal
   pid?: number
+  /** Registered with the core for the life of a mutating command, for example `atc models pull`. */
+  clientName?: string
 }
 
 export interface CommandContext {
@@ -76,6 +78,8 @@ export interface CommandContext {
   now: () => Date
   signal: AbortSignal
   pid: number
+  /** The name held by `holdCommandLease`, the same string passed to attach. */
+  leaseName: string
   root: CommandSpec
 }
 
@@ -86,6 +90,7 @@ export function createContext(deps: ContextDeps): CommandContext {
   const paths = deps.paths ?? resolveAtcPaths(nodeDataFolderEnv(io.env), flags.dataFolder, io.cwd)
   const host = deps.host ?? nodeHostServices(io)
   const pid = deps.pid ?? process.pid
+  const clientName = deps.clientName ?? 'atc'
   let config: Promise<ResolvedConfig> | undefined
   const loadConfig =
     deps.loadConfig ??
@@ -100,7 +105,7 @@ export function createContext(deps: ContextDeps): CommandContext {
       attachCore({
         paths,
         launch: options.launch === true,
-        clientName: 'atc',
+        clientName,
         pid,
         log: options.log ?? log,
         spawnDaemon: async () => {
@@ -156,5 +161,6 @@ export function createContext(deps: ContextDeps): CommandContext {
     signal: deps.signal ?? new AbortController().signal,
     pid,
     root: deps.root ?? { name: 'atc', summary: 'atc' },
+    leaseName: clientName,
   }
 }
