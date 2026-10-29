@@ -2,6 +2,7 @@ dist/
 coverage/
 node_modules/
 .core/
+.claude/worktrees/
 packages/admin-ui/dist/
 test/fixtures/
 *.md

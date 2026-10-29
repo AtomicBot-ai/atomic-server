@@ -8,7 +8,14 @@
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { DOWNLOAD_CANCELLED, diskError, isFinalError, openSidecar, refuseSidecarWrite, sidecars } from './local.js'
+import {
+  DOWNLOAD_CANCELLED,
+  diskError,
+  isFinalError,
+  openSidecar,
+  refuseSidecarWrite,
+  sidecars,
+} from './local.js'
 import {
   DownloadRequestError,
   MAX_STREAM_RETRIES,

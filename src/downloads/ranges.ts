@@ -8,7 +8,14 @@
 
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { DOWNLOAD_CANCELLED, diskError, isFinalError, openSidecar, refuseSidecarWrite, sidecars } from './local.js'
+import {
+  DOWNLOAD_CANCELLED,
+  diskError,
+  isFinalError,
+  openSidecar,
+  refuseSidecarWrite,
+  sidecars,
+} from './local.js'
 import { MAX_STREAM_RETRIES, RETRY_RESET_PROGRESS_BYTES, retryDelayMs } from './protocol.js'
 import { plainError, requestWithRetry } from './request.js'
 import type { FileJob } from './request.js'

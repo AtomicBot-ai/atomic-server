@@ -52,8 +52,6 @@ describe('proxyAllowed', () => {
   })
 })
 
-
-
 const servers: Array<() => Promise<void>> = []
 afterEach(async () => {
   for (const close of servers.splice(0).reverse()) await close()

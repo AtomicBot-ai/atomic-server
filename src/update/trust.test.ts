@@ -30,7 +30,12 @@ describe('trustDowngrade', () => {
     ['unsigned replacing signed', signed('CN=Atomic'), unsigned, 'not signed by CN=Atomic'],
     ['signed replacing unsigned', unsigned, signed('CN=Atomic'), undefined],
     ['unsigned replacing unsigned (Linux)', unsigned, unsigned, undefined],
-    ['invalid Authenticode still pins its subject', signed('CN=Atomic', false), unsigned, 'not signed by CN=Atomic'],
+    [
+      'invalid Authenticode still pins its subject',
+      signed('CN=Atomic', false),
+      unsigned,
+      'not signed by CN=Atomic',
+    ],
   ] as const)('%s', (_name, current, next, reason) => {
     const why = trustDowngrade(current, next)
     if (reason === undefined) expect(why).toBeUndefined()
@@ -102,8 +107,7 @@ describe('trustOf', () => {
 
   it('treats an Authenticode probe that did not run, or empty output, as unreadable', async () => {
     const unread = { kind: 'authenticode' as const, valid: false, probeFailed: true }
-    const probe = async (over: Partial<ExecResult>) =>
-      trustOf('win32', 'C:\\atc.exe', async () => ok(over))
+    const probe = async (over: Partial<ExecResult>) => trustOf('win32', 'C:\\atc.exe', async () => ok(over))
     expect(await probe({ code: null, error: 'ENOENT' })).toEqual(unread)
     expect(await probe({ timedOut: true })).toEqual(unread)
     expect(await probe({ stdout: '' })).toEqual(unread)

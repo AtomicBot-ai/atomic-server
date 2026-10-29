@@ -20,7 +20,12 @@ describe('restrictDataFolder', () => {
       exec: async () => ({ code: 1, stdout: '', stderr: 'Access is denied.', timedOut: false }),
     } as unknown as HostServices
     await expect(
-      restrictDataFolder(dir, host, { USERDOMAIN: 'HOST' }, createLogger(() => undefined, { level: 'error' }))
+      restrictDataFolder(
+        dir,
+        host,
+        { USERDOMAIN: 'HOST' },
+        createLogger(() => undefined, { level: 'error' })
+      )
     ).rejects.toMatchObject({
       code: 'ATC_DAEMON_START_FAILED',
       message: 'Could not restrict the data folder to this user.',

@@ -70,14 +70,20 @@ export function nodeHostFacts(io: AtcIo): HostFacts {
 }
 
 const ELEVATION_PROBE =
-  "[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)"
+  '[Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)'
 
 /** True only when Windows PowerShell reports the process is in the Administrators role. */
 export async function probeElevatedWindows(exec: ExecFn): Promise<boolean> {
-  const result = await exec('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ELEVATION_PROBE], {
-    timeoutMs: 20_000,
-  })
-  return result.code === 0 && !result.timedOut && !result.error && result.stdout.trim().toLowerCase() === 'true'
+  const result = await exec(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-Command', ELEVATION_PROBE],
+    {
+      timeoutMs: 20_000,
+    }
+  )
+  return (
+    result.code === 0 && !result.timedOut && !result.error && result.stdout.trim().toLowerCase() === 'true'
+  )
 }
 
 /** Copy with Windows elevation filled in. A known value, and every other platform, is unchanged. */

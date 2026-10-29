@@ -35,7 +35,10 @@ export function terminalHostSteps(
   const run = async (op: EnvironmentOperation, stepId: string) => {
     const entry = await manual(stepId)
     if (!entry) return
-    const strategy = ctx.host.elevator.select({ ...(await probedFacts(ctx.host.facts, ctx.host.exec)), inDaemon: false })
+    const strategy = ctx.host.elevator.select({
+      ...(await probedFacts(ctx.host.facts, ctx.host.exec)),
+      inDaemon: false,
+    })
     if (strategy !== 'sudo-tty' || ctx.flags.json) {
       if (ctx.flags.json)
         ctx.io.stdout(
