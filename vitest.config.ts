@@ -30,6 +30,8 @@ export default defineConfig({
           environment: 'node',
           setupFiles: ['test/setup.ts'],
           testTimeout: 120_000,
+          // Cleanup can await two bounded CLI commands on a cold Windows runner.
+          hookTimeout: 120_000,
         },
       },
       {
