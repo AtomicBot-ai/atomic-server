@@ -19,7 +19,8 @@ import { HttpCoreLink } from './link.js'
 import { findOutdatedOwner, outdatedError, stopOutdatedOwner } from './stale-owner.js'
 import type { CoreLink } from './link.js'
 
-export const DAEMON_START_TIMEOUT_MS = 20_000
+// The server checks owner-only permissions before creating the core; cold Windows arm64 exceeds 20 s.
+export const DAEMON_START_TIMEOUT_MS = 60_000
 /** The lock goes `ready` inside the core; the `starting` record follows right after (slow runners: seconds). */
 export const DAEMON_RECORD_TIMEOUT_MS = 20_000
 /** From `starting` to `ready`: the hardware probe (PowerShell on Windows) and the admin listener. */

@@ -30,7 +30,9 @@ export async function trustOf(platform: NodeJS.Platform, path: string, exec: Exe
   }
   if (platform === 'win32') {
     const literal = path.replace(/'/g, "''")
-    const script = `$s = Get-AuthenticodeSignature -LiteralPath '${literal}'; $s.Status; $s.SignerCertificate.Subject`
+    // A parent pwsh session can pass its PowerShell 7 module path to Windows PowerShell.
+    // Import the built-in security module explicitly so signature lookup never depends on that path.
+    const script = `Import-Module "$PSHOME\\Modules\\Microsoft.PowerShell.Security\\Microsoft.PowerShell.Security.psd1" -ErrorAction Stop; $s = Get-AuthenticodeSignature -LiteralPath '${literal}' -ErrorAction Stop; $s.Status; $s.SignerCertificate.Subject`
     const r = await exec('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
       timeoutMs: CODESIGN_TIMEOUT_MS,
     })

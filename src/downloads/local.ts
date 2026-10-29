@@ -92,7 +92,9 @@ async function sidecarKind(path: string): Promise<'absent' | 'file' | 'symlink' 
 
 function refuse(path: string, kind: 'symlink' | 'other'): never {
   throw new Error(
-    kind === 'symlink' ? 'Refusing to write through a symlink: ' + path : 'Refusing to write through a non-file: ' + path
+    kind === 'symlink'
+      ? 'Refusing to write through a symlink: ' + path
+      : 'Refusing to write through a non-file: ' + path
   )
 }
 
@@ -100,7 +102,8 @@ function refuse(path: string, kind: 'symlink' | 'other'): never {
 export async function openSidecar(path: string, flags: 'w+' | 'r+' | 'a'): Promise<FileHandle> {
   const kind = await sidecarKind(path)
   if (kind === 'symlink' || kind === 'other') refuse(path, kind)
-  if (kind === 'absent' && flags === 'w+') return open(path, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR)
+  if (kind === 'absent' && flags === 'w+')
+    return open(path, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR)
   return open(path, flags)
 }
 

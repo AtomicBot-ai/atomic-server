@@ -43,12 +43,10 @@ export function bootLoader(
   defaultEngine: string
 ): BootDeps['loadModel'] {
   return async (model) => {
-    const [rows, list] = await Promise.all([
-      execute('models.installed', {}) as Promise<Array<InstalledRow & { id: string }>>,
-      execute('engines.list', {}) as Promise<{ engines?: EngineListing[] }>,
-    ])
+    const rows = (await execute('models.installed', {})) as Array<InstalledRow & { id: string }>
     const row = rows.find((r) => r.id === model)
     if (!row) throw new Error(`${model} is not installed`)
+    const list = (await execute('engines.list', {})) as { engines?: EngineListing[] }
     const provider = bootProvider(row, defaultEngine, list.engines ?? [])
     await execute('models.load', { provider, model_id: model })
   }

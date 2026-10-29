@@ -103,7 +103,7 @@ and its token stay behind both, mirroring the desktop app's Rust bridge.
    --control-port 0 [--no-admin] [--admin-port N] …` detached, `windowsHide`, stdin ignored, stdout and
    stderr to `atc/logs/daemon.out.log`, overwritten (a file, never a pipe the parent could close), then
    `unref`. The server writes and rotates `daemon.log` itself, so that file has one writer.
-   If someone is already starting, just wait. Readiness is the core's lock: `waitForPublishedOwner`, 20 s.
+   If someone is already starting, just wait. Readiness is the core's lock: `waitForPublishedOwner`, 60 s, including the server's owner-only permission checks before the core starts.
 4. Attach again, then read `atc/run/daemon.json`. Missing, or an `instance_id` that differs from the lock →
    `ATC_DAEMON_FOREIGN`: the owner is a core that is not an `atc` daemon (typically the core's own CLI
    daemon on the same folder, which has no admin and no host-step loop).

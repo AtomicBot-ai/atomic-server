@@ -82,10 +82,12 @@ describe('createElevator', () => {
   })
 
   it('quotes a manual command so the shell cannot expand it', () => {
-    expect(manualInstructions(['/bin/atc'], "/tmp/a$(whoami) b", 'linux')).toBe(
+    expect(manualInstructions(['/bin/atc'], '/tmp/a$(whoami) b', 'linux')).toBe(
       "sudo '/bin/atc' host-step exec '/tmp/a$(whoami) b'"
     )
-    expect(manualInstructions(['/bin/atc'], "/tmp/a'b", 'linux')).toBe("sudo '/bin/atc' host-step exec '/tmp/a'\\''b'")
+    expect(manualInstructions(['/bin/atc'], "/tmp/a'b", 'linux')).toBe(
+      "sudo '/bin/atc' host-step exec '/tmp/a'\\''b'"
+    )
     expect(manualInstructions(['C:\\atc.exe'], 'C:\\a b', 'win32')).toContain("'C:\\a b'")
   })
 

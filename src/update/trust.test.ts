@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import type { ExecResult } from '../host/index.js'
+import { describe, expect, it, vi } from 'vitest'
+import type { ExecFn, ExecResult } from '../host/index.js'
 import { trustDowngrade, trustOf } from './trust.js'
 import type { Trust } from './trust.js'
 
@@ -30,7 +30,12 @@ describe('trustDowngrade', () => {
     ['unsigned replacing signed', signed('CN=Atomic'), unsigned, 'not signed by CN=Atomic'],
     ['signed replacing unsigned', unsigned, signed('CN=Atomic'), undefined],
     ['unsigned replacing unsigned (Linux)', unsigned, unsigned, undefined],
-    ['invalid Authenticode still pins its subject', signed('CN=Atomic', false), unsigned, 'not signed by CN=Atomic'],
+    [
+      'invalid Authenticode still pins its subject',
+      signed('CN=Atomic', false),
+      unsigned,
+      'not signed by CN=Atomic',
+    ],
   ] as const)('%s', (_name, current, next, reason) => {
     const why = trustDowngrade(current, next)
     if (reason === undefined) expect(why).toBeUndefined()
@@ -90,6 +95,21 @@ describe('trustOf', () => {
     ).toEqual(trust)
   })
 
+  it('uses the built-in Windows security module and quotes a literal binary path', async () => {
+    const exec = vi.fn<ExecFn>(async () => ok({ stdout: 'NotSigned\r\n' }))
+    expect(await trustOf('win32', "C:\\Alice's folder\\atc.exe", exec)).toEqual({ kind: 'unsigned' })
+    const [command, args, options] = exec.mock.calls[0]!
+    expect(command).toBe('powershell.exe')
+    expect(args.slice(0, 3)).toEqual(['-NoProfile', '-NonInteractive', '-Command'])
+    expect(args[3]).toContain(
+      'Import-Module "$PSHOME\\Modules\\Microsoft.PowerShell.Security\\Microsoft.PowerShell.Security.psd1" -ErrorAction Stop;'
+    )
+    expect(args[3]).toContain(
+      "Get-AuthenticodeSignature -LiteralPath 'C:\\Alice''s folder\\atc.exe' -ErrorAction Stop"
+    )
+    expect(options?.timeoutMs).toBe(20_000)
+  })
+
   it('treats a codesign probe that did not run as unreadable', async () => {
     const failed = ok({ code: null, error: 'ENOENT' })
     const timedOut = ok({ timedOut: true })
@@ -102,8 +122,7 @@ describe('trustOf', () => {
 
   it('treats an Authenticode probe that did not run, or empty output, as unreadable', async () => {
     const unread = { kind: 'authenticode' as const, valid: false, probeFailed: true }
-    const probe = async (over: Partial<ExecResult>) =>
-      trustOf('win32', 'C:\\atc.exe', async () => ok(over))
+    const probe = async (over: Partial<ExecResult>) => trustOf('win32', 'C:\\atc.exe', async () => ok(over))
     expect(await probe({ code: null, error: 'ENOENT' })).toEqual(unread)
     expect(await probe({ timedOut: true })).toEqual(unread)
     expect(await probe({ stdout: '' })).toEqual(unread)

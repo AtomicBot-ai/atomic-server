@@ -1,5 +1,5 @@
 /** Wizard navigation and engine/model switching through real Ink, config and the workspace service. */
-import { act, createElement } from 'react'
+import { createElement } from 'react'
 import { writeFileSync } from 'node:fs'
 import { render } from 'ink'
 import { afterEach, expect, it } from 'vitest'
@@ -238,17 +238,17 @@ it('navigates to the last of twenty workspace skills in a compact Tools popup', 
     }
   })
   await t.sees('How can I help you today?')
-  await act(async () => {
-    t.terminal.stdout.resize(54, 24)
-  })
+  t.terminal.stdout.resize(54, 24)
+  await t.ui.waitUntilRenderFlush()
   await t.click('Tools ▾')
   await t.sees('Assistant, skills & tools')
-  // Flush input-listener effects between events, including those triggered by a viewport update.
-  await act(async () => {})
+  // The popup opens before features.get resolves; navigate only after its skills arrive.
+  await t.sees('test-skill-00')
+  // Ink owns the renderer: wait for its commit and passive effects before the next key.
+  await t.ui.waitUntilRenderFlush()
   for (let i = 0; i < 21; i++) {
-    await act(async () => {
-      t.terminal.stdin.press('\u001b[B')
-    })
+    t.terminal.stdin.press('\u001b[B')
+    await t.ui.waitUntilRenderFlush()
   }
   await t.sees('test-skill-19')
   t.terminal.stdin.press('\r')

@@ -37,7 +37,6 @@ describe('findOnPath', () => {
 
 describe('killTimedOut', () => {
   it('asks taskkill to end the tree on Windows', async () => {
-
     const calls: string[][] = []
     await killTimedOut(
       42,
@@ -60,7 +59,12 @@ describe('killTimedOut', () => {
       return true
     }) as typeof process.kill
     try {
-      await killTimedOut(42, 'linux', async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }), true)
+      await killTimedOut(
+        42,
+        'linux',
+        async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }),
+        true
+      )
     } finally {
       process.kill = original
     }

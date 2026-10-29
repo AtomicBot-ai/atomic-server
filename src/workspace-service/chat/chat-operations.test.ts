@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { AtcError } from '../../errors/index.js'
 import { chatOperation } from './chat-operations.js'
 import { NOT_CORE } from '../not-core.js'
 
@@ -51,15 +52,33 @@ describe('chat operations', () => {
   })
 })
 
-it('refuses replacing messages while a response is active in another client', async () => {
+it('saves messages with the expected revision while another client is generating', async () => {
   const { chats, history, parts: p } = parts()
   chats.running.mockReturnValue([{ id: 'job', conversation_id: 'c1', state: 'generating' }])
+  const chat = { id: 'c1', revision: 3, messages: [{ role: 'user', content: 'replacement' }] }
+  await expect(chatOperation(p, 'history.save', { chat, expected_revision: 4 })).resolves.toEqual({
+    saved: true,
+    chat,
+  })
+  expect(history.save).toHaveBeenCalledWith(chat, 4)
+})
+
+it('uses the loaded revision when an expected revision is not supplied', async () => {
+  const { history, parts: p } = parts()
+  const chat = { id: 'c1', revision: 3, messages: [] }
+  await chatOperation(p, 'history.save', { chat })
+  expect(history.save).toHaveBeenCalledWith(chat, 3)
+})
+
+it('passes a stale revision conflict back to the client', async () => {
+  const { history, parts: p } = parts()
+  const conflict = new AtcError('ATC_USAGE', 'This conversation changed in another client.')
+  history.save.mockRejectedValueOnce(conflict)
   await expect(
     chatOperation(p, 'history.save', {
-      chat: { id: 'c1', messages: [{ role: 'user', content: 'replacement' }] },
+      chat: { id: 'c1', revision: 2, messages: [] },
     })
-  ).rejects.toThrow('active request')
-  expect(history.save).not.toHaveBeenCalled()
+  ).rejects.toBe(conflict)
 })
 
 it('allows a metadata-only edit while a response is active', async () => {

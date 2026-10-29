@@ -44,11 +44,11 @@ describe('hostFacts', () => {
 })
 
 describe('Windows elevation', () => {
-  const answered = (stdout: string, over: { code?: number | null; error?: string; timedOut?: boolean } = {}) =>
+  const answered =
+    (stdout: string, over: { code?: number | null; error?: string; timedOut?: boolean } = {}) =>
     async () => ({ code: 0, stdout, stderr: '', timedOut: false, ...over })
 
   it('trusts only a successful True from the elevation probe', async () => {
-
     expect(await probeElevatedWindows(answered('True\r\n'))).toBe(true)
     expect(await probeElevatedWindows(answered('False'))).toBe(false)
     expect(await probeElevatedWindows(answered('True', { code: null, error: 'ENOENT' }))).toBe(false)
@@ -56,7 +56,6 @@ describe('Windows elevation', () => {
   })
 
   it('denies a system install when Windows elevation is unknown or false', async () => {
-
     const win = hostFacts({ ...base, platform: 'win32', euid: null })
     expect(systemInstallDenied(win)).toBe(true)
     expect(systemInstallDenied({ ...win, isElevatedWindows: false })).toBe(true)

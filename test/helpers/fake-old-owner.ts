@@ -49,6 +49,7 @@ export async function fakeOldOwner(
         res.end(
           JSON.stringify({
             instance_id: options.snapshotInstanceId ?? instanceId,
+            owner_scope: 'cli',
             protocol: options.protocol ?? 2,
             version: options.version ?? '0.0.1',
             pid: process.pid,
