@@ -4,7 +4,8 @@
  */
 import { existsSync } from 'node:fs'
 import { inspectLock } from '@atomic-chat/core/host'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { AtcError } from '../../src/errors/index.js'
 import type { ServiceManager, ServiceOptions, ServiceState } from '../../src/host/index.js'
 import { hostFacts } from '../../src/host/index.js'
 import { recordingIo } from '../../src/io.js'
@@ -117,10 +118,62 @@ describe('atc service', () => {
     const s = run()
     for (const action of ['start', 'stop', 'restart', 'uninstall']) {
       const r = await s.exec(['service', action])
-      expect(JSON.parse(r.err)).toMatchObject({ error: { code: 'ATC_SERVICE_FAILED' } })
+      expect(r.code).toBe(1)
+      expect(JSON.parse(r.err)).toMatchObject({ error: { code: 'ATC_SERVICE_NOT_INSTALLED' } })
     }
     expect(s.calls).toEqual([])
   })
+
+  it.each(['start', 'stop', 'restart', 'uninstall'])(
+    'keeps an absent service local when %s is refused, including a custom name',
+    async (action) => {
+      const request = vi.fn<typeof fetch>(async () => new Response('{}'))
+      const { manager, calls } = recordingManager('task')
+      t = testRun({
+        running: true,
+        io: {
+          env: { ATC_SENTRY_DSN: 'https://abc@o1.ingest.sentry.io/42' },
+          fetch: request,
+        },
+        deps: { host: fakeHost({ services: manager, facts: facts({ platform: 'win32' }) }) },
+      })
+      expect(await t.run(['service', action, '--name', 'custom', '--json'])).toBe(1)
+      expect(JSON.parse(t.io.err.join(''))).toMatchObject({
+        error: {
+          code: 'ATC_SERVICE_NOT_INSTALLED',
+          message: 'The service "custom" is not installed.',
+          hint: expect.stringContaining('--name custom'),
+        },
+      })
+      expect(request).not.toHaveBeenCalled()
+      expect(calls).toEqual([])
+      expect(t.link.shutdowns).toBe(0)
+    }
+  )
+
+  it.each(['status', 'start', 'stop', 'restart', 'uninstall'])(
+    'reports a failed status query during %s without controlling the service',
+    async (action) => {
+      const request = vi.fn<typeof fetch>(async () => new Response('{}'))
+      const { manager, calls } = recordingManager('task')
+      manager.status = async () => {
+        throw new AtcError('ATC_SERVICE_FAILED', 'Cannot query task.')
+      }
+      t = testRun({
+        running: true,
+        io: {
+          env: { ATC_SENTRY_DSN: 'https://abc@o1.ingest.sentry.io/42' },
+          fetch: request,
+        },
+        deps: { host: fakeHost({ services: manager, facts: facts({ platform: 'win32' }) }) },
+      })
+      expect(await t.run(['service', action, '--json'])).toBe(1)
+      expect(JSON.parse(t.io.err.join(''))).toMatchObject({ error: { code: 'ATC_SERVICE_FAILED' } })
+      expect(request).toHaveBeenCalledTimes(1)
+      expect(calls).toEqual([])
+      expect(t.link.shutdowns).toBe(0)
+    }
+  )
 
   it('reports status, controls the installed service and removes it', async () => {
     const s = run()

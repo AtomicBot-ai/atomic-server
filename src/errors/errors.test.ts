@@ -7,6 +7,7 @@ describe('errors', () => {
     expect(exitCodeFor(new AtcError('ATC_USAGE', 'x'))).toBe(2)
     expect(exitCodeFor(new AtcError('ATC_NOT_IMPLEMENTED', 'x'))).toBe(3)
     expect(exitCodeFor(new AtcError('ATC_CONFIG_INVALID', 'x'))).toBe(1)
+    expect(exitCodeFor(new AtcError('ATC_SERVICE_NOT_INSTALLED', 'x'))).toBe(1)
     expect(exitCodeFor(new AtomicCoreError('CORE_NOT_RUNNING', 'x'))).toBe(1)
     expect(exitCodeFor(new Error('x'))).toBe(1)
   })

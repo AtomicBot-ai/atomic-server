@@ -138,8 +138,9 @@ describe('status probes', () => {
     ['linux', result({ error: 'ENOENT' }), null],
     ['darwin', result({ stdout: 'gui/501/ai.atomic.atc = {\n\tstate = running\n' }), true],
     ['darwin', result({ stdout: '\tstate = not running\n' }), false],
-    ['win32', result({ stdout: 'TaskName: \\atc\nStatus:   Running\n' }), true],
-    ['win32', result({ stdout: 'TaskName: \\atc\nStatus:   Ready\n' }), false],
+    ['win32', result({ stdout: '4\r\n' }), true],
+    ['win32', result({ stdout: '3\r\n' }), false],
+    ['win32', result({ stdout: '0\r\n' }), null],
   ] as const)('%s reads %j as running=%s', (platform, r, running) => {
     expect(statusProbe(platform, o, env).running(r)).toBe(running)
   })
@@ -196,8 +197,28 @@ describe('the runner', () => {
   })
 
   it('knows a Windows task is installed from the query, not from a file', async () => {
-    const f = fakes({ 'schtasks /Query /TN atc /FO LIST': result({ code: 1, stderr: 'ERROR: not found' }) })
-    const manager = createServiceManager({ platform: 'win32', env, ...f })
+    const manager = createServiceManager({
+      platform: 'win32',
+      env,
+      ...fakes(),
+      exec: async () => result({ stdout: 'missing\r\n' }),
+    })
     expect(await manager.status(o)).toEqual({ installed: false, running: false, definition: 'schtasks:atc' })
+  })
+
+  it.each([
+    ['access denied', result({ code: 1, stderr: 'Access is denied. (0x80070005)' })],
+    ['spawn failure', result({ code: null, error: 'ENOENT' })],
+    ['timeout', result({ code: null, timedOut: true })],
+    ['partial output before failure', result({ code: 1, stdout: 'missing\n' })],
+    ['malformed response', result({ stdout: 'unexpected' })],
+  ])('does not call a Windows task absent on %s', async (_name, response) => {
+    const manager = createServiceManager({
+      platform: 'win32',
+      env,
+      ...fakes(),
+      exec: async () => response,
+    })
+    await expect(manager.status(o)).rejects.toMatchObject({ code: 'ATC_SERVICE_FAILED' })
   })
 })
