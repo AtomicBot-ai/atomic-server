@@ -13,6 +13,7 @@ import {
   systemdUnit,
 } from './service-manager.js'
 import type { ServiceEnv, ServiceManager, ServiceOptions, ServiceState } from './service-manager.js'
+import { readTaskStatus, taskStatusProbe } from './service-task-status.js'
 
 export type ServiceStep =
   | { kind: 'write'; path: string; content: string; encoding?: 'utf8' | 'utf16le' }
@@ -118,9 +119,8 @@ export function statusProbe(
       running: (r) => (r.error ? null : r.code === 0 && /\bstate = running\b/.test(r.stdout)),
     }
   return {
-    command: 'schtasks',
-    args: ['/Query', '/TN', o.name, '/FO', 'LIST'],
-    running: (r) => (r.error ? null : r.code === 0 && /:\s*Running\s*$/im.test(r.stdout)),
+    ...taskStatusProbe(o.name, env),
+    running: (r) => readTaskStatus(r).running,
   }
 }
 
@@ -172,7 +172,8 @@ export function createServiceManager(deps: ServiceManagerDeps): ServiceManager {
       const definition = servicePathFor(platform, o, env.home)
       const probe = statusProbe(platform, o, env)
       const r = await deps.exec(probe.command, probe.args, { timeoutMs: SERVICE_EXEC_TIMEOUT_MS })
-      const installed = kind === 'task' ? !r.error && r.code === 0 : await deps.files.exists(definition)
+      if (kind === 'task') return { ...readTaskStatus(r), definition }
+      const installed = await deps.files.exists(definition)
       return { installed, running: installed ? probe.running(r) : false, definition }
     },
   }

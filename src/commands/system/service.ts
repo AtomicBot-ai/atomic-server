@@ -53,8 +53,8 @@ async function requirePrivileges(o: ServiceOptions, ctx: CommandContext): Promis
 async function requireInstalled(o: ServiceOptions, ctx: CommandContext): Promise<void> {
   const state = await ctx.host.services.status(o)
   if (!state.installed)
-    throw new AtcError('ATC_SERVICE_FAILED', `The service "${o.name}" is not installed.`, {
-      hint: `install it with \`atc service install${o.system ? ' --system' : ''}\``,
+    throw new AtcError('ATC_SERVICE_NOT_INSTALLED', `The service "${o.name}" is not installed.`, {
+      hint: `install it with \`atc service install${o.system ? ' --system' : ''}${o.name !== 'atc' ? ` --name ${o.name}` : ''}\``,
     })
 }
 

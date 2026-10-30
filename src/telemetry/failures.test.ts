@@ -7,6 +7,8 @@ const context = { component: 'cli', operation: 'update' }
 describe('failure ownership and privacy', () => {
   it.each([
     [new AtcError('ATC_USAGE', 'bad input'), true],
+    [new AtcError('ATC_SERVICE_NOT_INSTALLED', 'absent service'), true],
+    [new AtcError('ATC_SERVICE_FAILED', 'service manager failed'), false],
     [new AtcError('ATC_CHECKSUM_MISMATCH', 'corrupt release'), false],
     [new AtcError('ATC_CONFIG_MIGRATION_FAILED', 'missing migration'), false],
     [new AtomicCoreError('CORE_NOT_RUNNING', 'gone'), true],
