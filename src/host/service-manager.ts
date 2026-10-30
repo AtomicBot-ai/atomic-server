@@ -1,7 +1,7 @@
 /**
  * Running the server as an OS service: what each service manager is given. A systemd unit and a
  * launchd job run `atc start --foreground`, which stops gracefully on SIGTERM; a Windows scheduled
- * task does the same at logon (or at boot as SYSTEM), with no time limit and restarts on failure.
+ * task supervises the same command at logon (or at boot as SYSTEM), with no time limit.
  * All three restart the server only when it fails: `atc stop` exits 0, so the server stays stopped.
  * The plans that install them are in `service-plans.ts`; this file is the definitions themselves.
  */
@@ -27,6 +27,8 @@ export interface ServiceEnv {
   uid: number | null
   /** `DOMAIN\user` for a Windows logon trigger. */
   windowsUser: string
+  /** Trusted Windows PowerShell executable, resolved from the host SystemRoot. */
+  windowsPowerShell?: string
 }
 
 export interface ServiceState {
@@ -125,14 +127,45 @@ export function windowsArg(arg: string): string {
   return `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1')}"`
 }
 
+/** Task Scheduler retries launch failures only; supervise the foreground server's exit ourselves. */
+export function windowsServiceScript(o: ServiceOptions): string {
+  const [program = '', ...rest] = o.command
+  const literal = (text: string) => `'${text.replace(/'/g, "''")}'`
+  const args = [...rest, ...serverArgs(o)].map(windowsArg).join(' ')
+  return [
+    '$exitCode = 1;',
+    'for ($attempt = 0; $attempt -le 999; $attempt++) {',
+    '$child = [System.Diagnostics.Process]::new();',
+    'try {',
+    `$child.StartInfo.FileName = ${literal(program)};`,
+    `$child.StartInfo.Arguments = ${literal(args)};`,
+    '$child.StartInfo.UseShellExecute = $false;',
+    '$child.StartInfo.CreateNoWindow = $true;',
+    '[void]$child.Start();',
+    '$child.WaitForExit();',
+    '$exitCode = $child.ExitCode;',
+    '} catch { [Console]::Error.WriteLine($_.Exception.Message); $exitCode = 1; }',
+    'finally { $child.Dispose(); }',
+    'if ($exitCode -eq 0) { exit 0; }',
+    'if ($attempt -lt 999) { [System.Threading.Thread]::Sleep(5000); }',
+    '}',
+    'exit 1;',
+  ].join(' ')
+}
+
 /**
  * A Task Scheduler definition (registered with `schtasks /Create /XML`). The XML route is the only
- * one that sets what a server needs: no 72-hour execution limit, a restart on failure, and starting
+ * one that sets what a server needs: no 72-hour execution limit, launch retries, and starting
  * on battery. A per-user task runs at that user's logon; a system task runs at boot as SYSTEM.
  */
-export function scheduledTaskXml(o: ServiceOptions, env: Pick<ServiceEnv, 'windowsUser'>): string {
-  const [program = '', ...rest] = o.command
-  const args = [...rest, ...serverArgs(o)].map(windowsArg).join(' ')
+export function scheduledTaskXml(
+  o: ServiceOptions,
+  env: Pick<ServiceEnv, 'windowsUser' | 'windowsPowerShell'>
+): string {
+  const program = env.windowsPowerShell ?? 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+  const args = ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', windowsServiceScript(o)]
+    .map(windowsArg)
+    .join(' ')
   const trigger = o.system
     ? ['    <BootTrigger><Enabled>true</Enabled></BootTrigger>']
     : [

@@ -7,6 +7,7 @@ import {
   systemdUnit,
   systemdWord,
   windowsArg,
+  windowsServiceScript,
 } from './service-manager.js'
 import type { ServiceOptions } from './service-manager.js'
 
@@ -96,39 +97,62 @@ describe('Task Scheduler', () => {
   it('renders a logon task with no time limit and restarts on failure', () => {
     expect(scheduledTaskXml({ ...o, command: ['C:\\Program Files\\atc\\atc.exe'] }, env))
       .toMatchInlineSnapshot(`
-      "<?xml version="1.0" encoding="UTF-16"?>
-      <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-        <RegistrationInfo><Description>Atomic Chat server (atc)</Description></RegistrationInfo>
-        <Triggers>
-          <LogonTrigger>
-            <Enabled>true</Enabled>
-            <UserId>HOST\\u</UserId>
-          </LogonTrigger>
-        </Triggers>
-        <Principals>
-          <Principal id="Author">
-            <UserId>HOST\\u</UserId>
-            <LogonType>InteractiveToken</LogonType>
-            <RunLevel>LeastPrivilege</RunLevel>
-          </Principal>
-        </Principals>
-        <Settings>
-          <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
-          <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-          <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-          <StartWhenAvailable>true</StartWhenAvailable>
-          <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-          <RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure>
-        </Settings>
-        <Actions Context="Author">
-          <Exec>
-            <Command>C:\\Program Files\\atc\\atc.exe</Command>
-            <Arguments>start --foreground --data-folder &quot;/srv/atc data&quot;</Arguments>
-          </Exec>
-        </Actions>
-      </Task>
-      "
-    `)
+        "<?xml version="1.0" encoding="UTF-16"?>
+        <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+          <RegistrationInfo><Description>Atomic Chat server (atc)</Description></RegistrationInfo>
+          <Triggers>
+            <LogonTrigger>
+              <Enabled>true</Enabled>
+              <UserId>HOST\\u</UserId>
+            </LogonTrigger>
+          </Triggers>
+          <Principals>
+            <Principal id="Author">
+              <UserId>HOST\\u</UserId>
+              <LogonType>InteractiveToken</LogonType>
+              <RunLevel>LeastPrivilege</RunLevel>
+            </Principal>
+          </Principals>
+          <Settings>
+            <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+            <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+            <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+            <StartWhenAvailable>true</StartWhenAvailable>
+            <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+            <RestartOnFailure><Interval>PT1M</Interval><Count>999</Count></RestartOnFailure>
+          </Settings>
+          <Actions Context="Author">
+            <Exec>
+              <Command>C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Command>
+              <Arguments>-NoLogo -NoProfile -NonInteractive -Command &quot;$exitCode = 1; for ($attempt = 0; $attempt -le 999; $attempt++) { $child = [System.Diagnostics.Process]::new(); try { $child.StartInfo.FileName = &apos;C:\\Program Files\\atc\\atc.exe&apos;; $child.StartInfo.Arguments = &apos;start --foreground --data-folder \\&quot;/srv/atc data\\&quot;&apos;; $child.StartInfo.UseShellExecute = $false; $child.StartInfo.CreateNoWindow = $true; [void]$child.Start(); $child.WaitForExit(); $exitCode = $child.ExitCode; } catch { [Console]::Error.WriteLine($_.Exception.Message); $exitCode = 1; } finally { $child.Dispose(); } if ($exitCode -eq 0) { exit 0; } if ($attempt -lt 999) { [System.Threading.Thread]::Sleep(5000); } } exit 1;&quot;</Arguments>
+            </Exec>
+          </Actions>
+        </Task>
+        "
+      `)
+  })
+
+  it('quotes native arguments and PowerShell literals independently for the supervisor', () => {
+    const script = windowsServiceScript({
+      ...o,
+      command: ["C:\\O'Brien\\node.exe", "C:\\cli's app\\bin.js"],
+      dataFolder: "D:\\User's data & models",
+    })
+    expect(script).toContain("$child.StartInfo.FileName = 'C:\\O''Brien\\node.exe';")
+    expect(script).toContain(
+      `$child.StartInfo.Arguments = '"C:\\cli''s app\\bin.js" start --foreground --data-folder "D:\\User''s data & models"';`
+    )
+    expect(script).toContain('$child.WaitForExit();')
+    expect(script).toContain('if ($exitCode -eq 0) { exit 0; }')
+    expect(script).toContain('[System.Threading.Thread]::Sleep(5000);')
+  })
+
+  it('uses the host Windows directory instead of searching PATH for the supervisor', () => {
+    const xml = scheduledTaskXml(o, {
+      ...env,
+      windowsPowerShell: 'D:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+    })
+    expect(xml).toContain('<Command>D:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Command>')
   })
 
   it('renders a boot task as SYSTEM', () => {

@@ -4,26 +4,21 @@
  * (`api.autoStart`) and says in its log what `models.autoLoad` could not load; `models catalog
  * --engine` narrows the catalog instead of crashing. No engine or model is downloaded here.
  */
-import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import type { Server } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, describe, expect, it } from 'vitest'
-import { ATC } from '../helpers/binary.js'
+import { runAtcAsync } from '../helpers/async-binary.js'
 
 const dataFolder = join(mkdtempSync(join(tmpdir(), 'atc-e2e-fixes-')), 'data')
 
-function atc(...args: string[]) {
-  const [exe, ...prefix] = ATC
-  const res = spawnSync(exe as string, [...prefix, ...args, '--data-folder', dataFolder], {
-    encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1', ATC_API_AUTO_START: undefined } as NodeJS.ProcessEnv,
-    timeout: 90_000,
+const atc = (...args: string[]) =>
+  runAtcAsync([...args, '--data-folder', dataFolder], {
+    env: { ...process.env, ATC_API_AUTO_START: undefined },
+    timeoutMs: 90_000,
   })
-  return { code: res.status, out: res.stdout, err: res.stderr }
-}
 const json = <T>(text: string): T => JSON.parse(text) as T
 
 let held: Server | undefined
@@ -31,8 +26,8 @@ afterEach(() => {
   held?.close()
   held = undefined
 })
-afterAll(() => {
-  atc('stop', '--force', '--kill')
+afterAll(async () => {
+  await atc('stop', '--force', '--kill')
   rmSync(join(dataFolder, '..'), { recursive: true, force: true })
 })
 
@@ -43,46 +38,46 @@ const hold = () =>
     held.listen(0, '0.0.0.0', () => resolve((held!.address() as { port: number }).port))
   })
 
-describe('a port another program holds', () => {
+describe('a port another program holds', async () => {
   it('is busy to doctor and refused by api start, on the wildcard address too', async () => {
     const port = await hold()
-    expect(atc('config', 'set', 'api.port', String(port)).code).toBe(0)
-    expect(atc('config', 'set', 'admin.port', '0').code).toBe(0)
-    const doctor = atc('doctor')
+    expect((await atc('config', 'set', 'api.port', String(port))).code).toBe(0)
+    expect((await atc('config', 'set', 'admin.port', '0')).code).toBe(0)
+    const doctor = await atc('doctor')
     expect(doctor.out).toMatch(new RegExp(`${port} in use by another program`))
-    const start = atc('api', 'start')
+    const start = await atc('api', 'start')
     expect(start.code).toBe(1)
     expect(start.err).toContain('ATC_PORT_BUSY')
     expect(start.err).toContain(`Port ${port}`)
-    expect(atc('stop').code).toBe(0)
+    expect((await atc('stop')).code).toBe(0)
   })
 })
 
-describe('the server once it is ready', () => {
-  it('starts the API by default, keeps it down on api.autoStart=false, and logs an autoLoad it cannot do', () => {
-    expect(atc('config', 'set', 'api.port', '0').code).toBe(0)
-    expect(atc('config', 'set', 'models.autoLoad', 'no-such-model').code).toBe(0)
-    const started = atc('start', '--json')
+describe('the server once it is ready', async () => {
+  it('starts the API by default, keeps it down on api.autoStart=false, and logs an autoLoad it cannot do', async () => {
+    expect((await atc('config', 'set', 'api.port', '0')).code).toBe(0)
+    expect((await atc('config', 'set', 'models.autoLoad', 'no-such-model')).code).toBe(0)
+    const started = await atc('start', '--json')
     expect(started.code).toBe(0)
     expect(json<{ api: { running: boolean } }>(started.out).api.running).toBe(true)
     // The API comes up before the ready record; the model loads after it, so the log line may follow.
     const deadline = Date.now() + 15_000
-    let log = atc('logs').out
+    let log = (await atc('logs')).out
     while (!log.includes('models.autoLoad') && Date.now() < deadline) {
-      spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 500)'])
-      log = atc('logs').out
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      log = (await atc('logs')).out
     }
     expect(log).toContain('API started (api.autoStart)')
     expect(log).toContain('no-such-model not loaded (models.autoLoad)')
-    expect(atc('config', 'set', 'api.autoStart', 'false').code).toBe(0)
-    const restarted = atc('restart', '--json')
+    expect((await atc('config', 'set', 'api.autoStart', 'false')).code).toBe(0)
+    const restarted = await atc('restart', '--json')
     expect(json<{ api: { running: boolean } }>(restarted.out).api.running).toBe(false)
-    expect(atc('stop').code).toBe(0)
+    expect((await atc('stop')).code).toBe(0)
   })
 })
 
-describe('models catalog --engine', () => {
-  it('narrows the catalog to what the engine runs and refuses an unknown engine', () => {
+describe('models catalog --engine', async () => {
+  it('narrows the catalog to what the engine runs and refuses an unknown engine', async () => {
     mkdirSync(join(dataFolder, 'atc', 'cache'), { recursive: true })
     writeFileSync(
       join(dataFolder, 'atc', 'cache', 'workspace-staff-picks.json'),
@@ -96,20 +91,20 @@ describe('models catalog --engine', () => {
         },
       })
     )
-    const mlx = atc('models', 'catalog', '--engine', 'mlx', '--json')
+    const mlx = await atc('models', 'catalog', '--engine', 'mlx', '--json')
     expect(mlx.code).toBe(process.platform === 'darwin' && process.arch === 'arm64' ? 0 : 2)
     if (mlx.code === 0)
       expect(json<{ result: { rows: { id: string }[] } }>(mlx.out).result.rows.map((r) => r.id)).toEqual([
         'fixture/two-MLX',
       ])
-    const gguf = atc('models', 'catalog', '--engine', 'llamacpp-upstream', '--json')
+    const gguf = await atc('models', 'catalog', '--engine', 'llamacpp-upstream', '--json')
     expect(gguf.code).toBe(0)
     expect(json<{ result: { rows: { id: string }[] } }>(gguf.out).result.rows.map((r) => r.id)).toEqual([
       'fixture/one-GGUF',
     ])
-    const bogus = atc('models', 'catalog', '--engine', 'bogus')
+    const bogus = await atc('models', 'catalog', '--engine', 'bogus')
     expect(bogus.code).toBe(2)
     expect(bogus.err).not.toContain('ATC_INTERNAL')
-    expect(atc('stop').code).toBe(0)
+    expect((await atc('stop')).code).toBe(0)
   })
 })

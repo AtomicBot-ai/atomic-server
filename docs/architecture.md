@@ -44,7 +44,7 @@ is the OS service manager (`atc service`) or the container runtime.
 | --- | --- | --- | --- |
 | Linux | systemd user unit, `~/.config/systemd/user/<name>.service`; `loginctl enable-linger` keeps it after logout | `/etc/systemd/system/<name>.service`, `User=` from `--user` (default `SUDO_USER`) | `Restart=on-failure`, 5 s |
 | macOS | LaunchAgent in `gui/<uid>` | LaunchDaemon, `UserName` from `--user` | `KeepAlive { SuccessfulExit: false }`, 5 s |
-| Windows | scheduled task at the user's logon | scheduled task at boot as SYSTEM | `RestartOnFailure` every minute; no 72 h execution limit |
+| Windows | scheduled task at the user's logon | scheduled task at boot as SYSTEM | PowerShell waits for the foreground child; retry nonzero exits after 5 s, stop on exit 0; no 72 h limit |
 
 All three restart only after a failure. `atc stop` exits 0, so the server stays stopped until
 `atc service start`, the next boot or logon. systemd and launchd stop with SIGTERM, which the server
@@ -53,6 +53,13 @@ Windows stops the server through its control API first. `install` stops a server
 the same folder, so the service can take the lock. A system-wide service runs as another account than
 the one that installs it, so the data folder is passed explicitly and printed. ADR 2026-10-09 "Run the
 server under the OS service manager".
+
+On Windows, `RestartOnFailure` retries launch failures rather than supervising a process that started
+and then crashed. The task therefore runs a small inline PowerShell supervisor that waits for one
+foreground server at a time, retries nonzero exits up to 999 times, and exits on a clean stop. It uses
+.NET process APIs and the host's Windows PowerShell path, with no script file or shell expansion of
+server arguments. Re-run `atc service install` with the existing scope, name and data folder after
+upgrading an older Windows task definition to apply this supervisor.
 
 ## The data folder
 

@@ -7,11 +7,6 @@ on:
   workflow_dispatch:
   # `release.yml` runs these same gates before it builds anything.
   workflow_call:
-    inputs:
-      release_029_exception:
-        description: 'Owner-approved v0.2.9 Windows arm64 document-test/reporting exception'
-        type: boolean
-        default: false
 
 jobs:
   gate:
@@ -89,12 +84,6 @@ jobs:
       - run: npm run build
       - run: npm run build:bin
       - run: npm run test:e2e
-        if: ${{ !(inputs.release_029_exception && matrix.os == 'windows-11-arm') }}
-      - name: Windows arm64 E2E (v0.2.9 exception)
-        if: inputs.release_029_exception && matrix.os == 'windows-11-arm'
-        run: >-
-          npm run test:e2e -- --exclude test/e2e/workspace-documents.test.ts
-          --dangerouslyIgnoreUnhandledErrors --reporter=default --reporter=./scripts/release-029-reporter.mjs
       - run: npm run test:installers
       # The web admin in headless Chromium: the binary rebuilt with the built SPA inside. Two runners cover
       # it; the admin is the same page on every OS and Playwright ships no browser for some of the others.
@@ -105,14 +94,14 @@ jobs:
           npm run build:bin
           npx playwright install ${{ matrix.os == 'ubuntu-latest' && '--with-deps' || '' }} chromium
           npm run test:e2e:web
-      # The real service manager of the runner: installs, crashes and removes a service. systemd on
-      # Linux is the supported path; a launchd agent and a logon task depend on the runner having an
-      # interactive session, so they report but do not fail the build until proven there.
+      # The real service manager: installs, crashes and removes a service. Linux and Windows must
+      # recover the server after a crash. A launchd agent still depends on an interactive GUI session,
+      # so the macOS runner reports that result without making it a gate.
       - name: e2e under the OS service manager
         run: npx vitest run --project e2e test/e2e/service.test.ts
         env:
           ATC_E2E_SERVICE: '1'
-        continue-on-error: ${{ !startsWith(matrix.os, 'ubuntu') }}
+        continue-on-error: ${{ startsWith(matrix.os, 'macos') }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: atc-${{ matrix.os }}

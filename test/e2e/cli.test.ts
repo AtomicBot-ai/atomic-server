@@ -2,7 +2,7 @@
  * The compiled program end to end: `dist/bin/atc-*` when built, otherwise `node dist/bin.js`
  * (`npm run build`). A real daemon is started in a temporary folder and stopped again.
  */
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -11,66 +11,57 @@ import { judgeWindowsAcl, readWindowsAcl } from '@atomic-chat/core/host'
 import { afterAll, describe, expect, it } from 'vitest'
 import { overlayWindowsEnv } from '../../src/host/index.js'
 import { ATC, ROOT } from '../helpers/binary.js'
+import { runAtcAsync, runProcess } from '../helpers/async-binary.js'
 
 const command = [...ATC]
 const dataFolder = join(mkdtempSync(join(tmpdir(), 'atc-e2e-')), 'data')
 
-function atc(...args: string[]) {
-  const [exe, ...prefix] = command
-  const res = spawnSync(exe as string, [...prefix, ...args, '--data-folder', dataFolder], {
-    encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1' },
-    timeout: 60_000,
-  })
-  return { code: res.status, out: res.stdout, err: res.stderr }
-}
+const atc = (...args: string[]) => runAtcAsync([...args, '--data-folder', dataFolder])
 
-afterAll(() => {
-  atc('stop', '--force', '--kill')
+afterAll(async () => {
+  await atc('stop', '--force', '--kill')
   rmSync(join(dataFolder, '..'), { recursive: true, force: true })
 })
 
-describe(`atc (${command.join(' ')})`, () => {
-  it('reports its version and help', () => {
-    const version = atc('version', '--json')
+describe(`atc (${command.join(' ')})`, async () => {
+  it('reports its version and help', async () => {
+    const version = await atc('version', '--json')
     expect(version.code).toBe(0)
     expect(JSON.parse(version.out)).toMatchObject({ atc: expect.any(String), core: CORE_VERSION })
-    expect(atc('--help').out).toContain('Usage: atc <command>')
-    expect(atc('').code).toBe(2)
+    expect((await atc('--help')).out).toContain('Usage: atc <command>')
+    expect((await atc('')).code).toBe(2)
   })
 
-  it('rejects unknown commands and malformed operation inputs', () => {
-    expect(atc('bogus').code).toBe(2)
-    const stub = atc('control', 'call', 'api.start', '--input', '[]', '--json')
+  it('rejects unknown commands and malformed operation inputs', async () => {
+    expect((await atc('bogus')).code).toBe(2)
+    const stub = await atc('control', 'call', 'api.start', '--input', '[]', '--json')
     expect(stub.code).toBe(2)
     expect(JSON.parse(stub.err)).toMatchObject({ error: { code: 'ATC_USAGE' } })
   })
 
   it('starts a daemon, serves and stops its public API, then stops the owner', async () => {
-    const start = atc('start', '--admin-port', '0', '--json')
+    const start = await atc('start', '--admin-port', '0', '--json')
     expect(start.code, start.err).toBe(0)
     expect(JSON.parse(start.out)).toMatchObject({ started: true, running: true, core_version: CORE_VERSION })
-    const status = atc('status', '--json')
+    const status = await atc('status', '--json')
     expect(status.code).toBe(0)
     const body = JSON.parse(status.out) as { running: boolean; admin_url: string | null }
     expect(body.running).toBe(true)
     expect(body.admin_url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/)
-    const admin = atc('admin', 'status', '--json')
+    const admin = await atc('admin', 'status', '--json')
     expect(JSON.parse(admin.out)).toMatchObject({ running: true, admin_url: body.admin_url })
-    const operations = atc('control', 'list', '--json')
+    const operations = await atc('control', 'list', '--json')
     expect(operations.code, operations.err).toBe(0)
     expect(JSON.parse(operations.out).operations).toContainEqual(
       expect.objectContaining({ name: 'models.plan' })
     )
-    const manual = atc('setup', 'manual', '--json')
+    const manual = await atc('setup', 'manual', '--json')
     expect(manual.code, manual.err).toBe(0)
-    const watch = atc('control', 'watch', '--count', '1')
+    const watch = await atc('control', 'watch', '--count', '1')
     expect(watch.code, watch.err).toBe(0)
     expect(JSON.parse(watch.out).snapshot.setup).toMatchObject({ mode: 'manual' })
-    const [mcpExe, ...mcpPrefix] = command
-    const mcp = spawnSync(mcpExe!, [...mcpPrefix, 'mcp', '--data-folder', dataFolder], {
-      encoding: 'utf8',
-      timeout: 10000,
+    const mcp = await runAtcAsync(['mcp', '--data-folder', dataFolder], {
+      timeoutMs: 10000,
       input:
         [
           { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
@@ -79,18 +70,18 @@ describe(`atc (${command.join(' ')})`, () => {
           .map((v) => JSON.stringify(v))
           .join('\n') + '\n',
     })
-    expect(mcp.status, mcp.stderr).toBe(0)
-    const replies = mcp.stdout
+    expect(mcp.code, mcp.err).toBe(0)
+    const replies = mcp.out
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line))
     expect(replies.find((r) => r.id === 2).result.tools).toContainEqual(
       expect.objectContaining({ name: 'api_ping' })
     )
-    const again = atc('start', '--json')
+    const again = await atc('start', '--json')
     expect(JSON.parse(again.out)).toMatchObject({ started: false })
-    expect(atc('config', 'set', 'api.port', '0').code).toBe(0)
-    const api = atc('api', 'start', '--json')
+    expect((await atc('config', 'set', 'api.port', '0')).code).toBe(0)
+    const api = await atc('api', 'start', '--json')
     expect(api.code, api.err).toBe(0)
     const endpoint = JSON.parse(api.out) as {
       port: number
@@ -105,16 +96,16 @@ describe(`atc (${command.join(' ')})`, () => {
     const key = (JSON.parse(readFileSync(endpoint.keys_file, 'utf8')) as { keys: Array<{ token: string }> })
       .keys[0]!
     expect((await fetch(url, { headers: { authorization: `Bearer ${key.token}` } })).status).toBe(200)
-    expect(atc('api', 'stop', '--json').code).toBe(0)
-    expect(JSON.parse(atc('api', 'status', '--json').out).running).toBe(false)
-    expect(JSON.parse(atc('status', '--json').out).running).toBe(true)
-    const stop = atc('stop', '--json')
+    expect((await atc('api', 'stop', '--json')).code).toBe(0)
+    expect(JSON.parse((await atc('api', 'status', '--json')).out).running).toBe(false)
+    expect(JSON.parse((await atc('status', '--json')).out).running).toBe(true)
+    const stop = await atc('stop', '--json')
     expect(stop.code, stop.err).toBe(0)
-    expect(JSON.parse(atc('status', '--json').out)).toMatchObject({ running: false })
+    expect(JSON.parse((await atc('status', '--json')).out)).toMatchObject({ running: false })
   })
 
-  it('replaces a server another build left running: status says so, restart and stop reach it', (t) => {
-    const start = atc('start', '--no-admin', '--json')
+  it('replaces a server another build left running: status says so, restart and stop reach it', async (t) => {
+    const start = await atc('start', '--no-admin', '--json')
     expect(start.code, start.err).toBe(0)
     // What an update leaves behind: the server's lock names another core version.
     const lockPath = join(dataFolder, 'atomic-core', 'instance.lock')
@@ -123,22 +114,22 @@ describe(`atc (${command.join(' ')})`, () => {
       writeFileSync(lockPath, JSON.stringify({ ...lock, version: '0.0.1' }))
     } catch (error) {
       // Windows may refuse to write a file the owner holds open; the contract test covers the logic.
-      atc('stop', '--force', '--kill')
+      await atc('stop', '--force', '--kill')
       t.skip(`cannot rewrite a held lock here: ${String(error)}`)
     }
-    const status = atc('status', '--json')
+    const status = await atc('status', '--json')
     expect(status.code, status.err).toBe(0)
     expect(JSON.parse(status.out)).toMatchObject({ running: true, outdated: true, core_version: '0.0.1' })
     // restart starts with the configured admin port; the default may be taken on a dev machine.
-    expect(atc('config', 'set', 'admin.port', '0').code).toBe(0)
-    const restart = atc('restart', '--json')
+    expect((await atc('config', 'set', 'admin.port', '0')).code).toBe(0)
+    const restart = await atc('restart', '--json')
     expect(restart.code, restart.err).toBe(0)
     const after = JSON.parse(restart.out) as { started: boolean; stopped: boolean; instance_id: string }
     expect(after).toMatchObject({ started: true, stopped: true })
     expect(after.instance_id).not.toBe(lock['instance_id'])
-    expect(JSON.parse(atc('status', '--json').out)).toMatchObject({ running: true })
-    expect(JSON.parse(atc('status', '--json').out).outdated).toBeUndefined()
-    expect(atc('stop', '--json').code).toBe(0)
+    expect(JSON.parse((await atc('status', '--json')).out)).toMatchObject({ running: true })
+    expect(JSON.parse((await atc('status', '--json')).out).outdated).toBeUndefined()
+    expect((await atc('stop', '--json')).code).toBe(0)
   })
 
   it.skipIf(process.platform === 'win32')(
@@ -180,11 +171,8 @@ describe(`atc (${command.join(' ')})`, () => {
       )
       // The ready line on stdout says the server owns the folder.
       await new Promise<void>((resolve) => child.stdout!.once('data', () => resolve()))
-      const [exe2, ...prefix2] = command
-      const running = spawnSync(exe2 as string, [...prefix2, 'status', '--json', '--data-folder', folder], {
-        encoding: 'utf8',
-      })
-      expect(JSON.parse(running.stdout)).toMatchObject({ running: true })
+      const running = await runAtcAsync(['status', '--json', '--data-folder', folder])
+      expect(JSON.parse(running.out)).toMatchObject({ running: true })
       child.kill('SIGTERM')
       expect(await exited).toEqual({ code: 0, signal: null })
       expect(existsSync(join(folder, 'atomic-core', 'instance.lock'))).toBe(false)
@@ -194,15 +182,12 @@ describe(`atc (${command.join(' ')})`, () => {
 
   it('keeps its own log: `atc logs` shows it, `atc logs -f` follows it live', async () => {
     const folder = join(dataFolder, '..', 'logs')
-    const run = (...args: string[]) => {
-      const [exe, ...prefix] = command
-      return spawnSync(exe as string, [...prefix, ...args, '--data-folder', folder], { encoding: 'utf8' })
-    }
-    expect(run('config', 'set', 'admin.port', '0').status).toBe(0)
-    expect(run('start', '--json').status).toBe(0)
-    const logs = run('logs', '--json')
-    expect(logs.status).toBe(0)
-    expect((JSON.parse(logs.stdout) as { lines: string[] }).lines.join('\n')).toContain('daemon ready')
+    const run = (...args: string[]) => runAtcAsync([...args, '--data-folder', folder])
+    expect((await run('config', 'set', 'admin.port', '0')).code).toBe(0)
+    expect((await run('start', '--json')).code).toBe(0)
+    const logs = await run('logs', '--json')
+    expect(logs.code).toBe(0)
+    expect((JSON.parse(logs.out) as { lines: string[] }).lines.join('\n')).toContain('daemon ready')
     const [exe, ...prefix] = command
     const follower = spawn(exe as string, [...prefix, 'logs', '-f', '-n', '1', '--data-folder', folder], {
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -210,7 +195,7 @@ describe(`atc (${command.join(' ')})`, () => {
     let seen = ''
     follower.stdout!.on('data', (chunk: Buffer) => (seen += chunk.toString()))
     await new Promise((r) => setTimeout(r, 1000))
-    expect(run('stop').status).toBe(0)
+    expect((await run('stop')).code).toBe(0)
     const deadline = Date.now() + 10_000
     while (!seen.includes('core stopped') && Date.now() < deadline)
       await new Promise((r) => setTimeout(r, 100))
@@ -224,50 +209,50 @@ describe(`atc (${command.join(' ')})`, () => {
       // Inside the checkout the folder would inherit BUILTIN\\Users from the drive.
       const folder = join(ROOT, '.e2e-acl', 'data')
       try {
-        const [exe, ...prefix] = command
-        const run = (...args: string[]) =>
-          spawnSync(exe as string, [...prefix, ...args, '--data-folder', folder], { encoding: 'utf8' })
-        expect(run('config', 'set', 'admin.port', '0').status).toBe(0)
-        expect(run('start', '--no-admin').status).toBe(0)
-        const icacls = (...path: string[]) =>
-          spawnSync('icacls', [join(folder, 'atc', ...path)], { encoding: 'utf8' }).stdout
-        const acl = icacls('client-keys.json')
+        const run = (...args: string[]) => runAtcAsync([...args, '--data-folder', folder])
+        expect((await run('config', 'set', 'admin.port', '0')).code).toBe(0)
+        expect((await run('start', '--no-admin')).code).toBe(0)
+        const icacls = (...path: string[]) => runProcess('icacls', [join(folder, 'atc', ...path)])
+        const acl = (await icacls('client-keys.json')).out
         // Where the open entry comes from (the folder, or only this file), and what the server logged.
-        const why = () =>
-          [acl, icacls(), icacls('config.json'), icacls('logs'), run('logs', '-n', '50').stdout].join('\n')
-        expect(acl, why()).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
+        const why = async () =>
+          [
+            acl,
+            (await icacls()).out,
+            (await icacls('config.json')).out,
+            (await icacls('logs')).out,
+            (await run('logs', '-n', '50')).out,
+          ].join('\n')
+        expect(acl, await why()).not.toMatch(/BUILTIN\\Users|Everyone|Authenticated Users/i)
         expect(acl.toLowerCase()).toContain((process.env['USERNAME'] ?? '').toLowerCase())
         // The server accepted the folder, and the core's executor would trust it as well. The server
         // reads the folder back after it started (a cold PowerShell takes seconds), so wait for it.
         let log = ''
         for (const deadline = Date.now() + 90_000; Date.now() < deadline;) {
-          log = run('logs', '-n', '50').stdout
+          log = (await run('logs', '-n', '50')).out
           if (/restricted .+ to this user|could not restrict/.test(log)) break
           await new Promise((r) => setTimeout(r, 500))
         }
-        expect(log, why()).toMatch(/restricted .+ to this user/)
-        expect(log, why()).not.toContain('could not restrict')
+        expect(log, await why()).toMatch(/restricted .+ to this user/)
+        expect(log, await why()).not.toContain('could not restrict')
         const dir = join(folder, 'atc')
         const read = await readWindowsAcl(dir, {
           exec: async (exe, args, options) => {
-            const r = spawnSync(exe, args, {
-              encoding: 'utf8',
-              env: overlayWindowsEnv(process.env, options?.env),
-            })
-            return { code: r.status, stdout: r.stdout, stderr: r.stderr }
+            const r = await runProcess(exe, args, { env: overlayWindowsEnv(process.env, options?.env) })
+            return { code: r.code, stdout: r.out, stderr: r.err }
           },
         })
         expect(judgeWindowsAcl(read, dir, 'directory'), JSON.stringify(read)).toBeNull()
-        run('stop', '--force', '--kill')
       } finally {
+        await runAtcAsync(['stop', '--force', '--kill', '--data-folder', folder])
         rmSync(join(ROOT, '.e2e-acl'), { recursive: true, force: true })
       }
     },
     180_000
   )
 
-  it('prints a completion script', () => {
-    const bash = atc('completion', 'bash')
+  it('prints a completion script', async () => {
+    const bash = await atc('completion', 'bash')
     expect(bash.code).toBe(0)
     expect(bash.out).toContain('complete -F _atc atc')
   })
