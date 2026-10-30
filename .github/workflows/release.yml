@@ -138,7 +138,7 @@ jobs:
       # The e2e runs on this runner's native binary — the file uploaded below, not a rebuild.
       - run: npm run build
       - run: npm run test:e2e
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: built-${{ matrix.runner }}
           path: dist/bin/atc-*
@@ -204,7 +204,7 @@ jobs:
             echo "$out"
             case "$out" in *'signatures OK'*) ;; *) echo "::error::$rpm is not signed by the packages key"; exit 1 ;; esac
           done
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages
           path: dist/pkg/atc_*
@@ -238,7 +238,7 @@ jobs:
           NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
           NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
         run: scripts/notarize-mac-binary.sh dist/bin/atc-*-apple-darwin
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-macos
           path: dist/bin/atc-*
@@ -261,7 +261,7 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
           SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
         run: ./scripts/sign-windows-binary.ps1 (Get-ChildItem dist/bin/atc-*.exe).FullName
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-windows
           path: dist/bin/atc-*
