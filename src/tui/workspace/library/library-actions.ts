@@ -152,19 +152,20 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       const plan = record(
         await c.runtime.execute('category' in request ? 'artifacts.plan' : 'models.plan', request)
       )
+      const blockers = plan['blockers']
+      const blocked =
+        Array.isArray(blockers) && blockers.length
+          ? blockers.map((b) => (typeof b === 'string' ? b : String(record(b)['message'] ?? b))).join(' ')
+          : ''
       patch({
         libraryPlan: plan,
         libraryRequest: request,
         overlay: null,
-        focus: 'library-install',
-        message: '',
+        focus: blocked ? s.focus : 'library-install',
+        message: blocked,
         busy: false,
       })
-      const blockers = plan['blockers']
-      if (Array.isArray(blockers) && blockers.length)
-        throw new Error(
-          blockers.map((b) => (typeof b === 'string' ? b : String(record(b)['message'] ?? b))).join(' ')
-        )
+      if (blocked) return true
       return await libraryAction('library-install', ctx)
     } finally {
       patch({ busy: false })

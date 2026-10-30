@@ -14,12 +14,13 @@ const rows = [
 function fixture() {
   let s: WorkspaceState = { ...createWorkspace('welcome'), firstRun: 'media' }
   let failed = ''
+  let blockers: string[] = []
   const execute = vi.fn(async (op: string, input: Record<string, unknown> = {}) => {
     if (op === 'models.catalog') {
       if (input['category'] === failed) throw new Error('Catalog unavailable')
       return { rows: rows.filter((row) => row.category === input['category']) }
     }
-    if (op === 'artifacts.plan') return { digest: 'media', blockers: [], model_id: input['model_id'] }
+    if (op === 'artifacts.plan') return { digest: 'media', blockers, model_id: input['model_id'] }
     if (op === 'artifacts.install')
       s = {
         ...s,
@@ -56,6 +57,9 @@ function fixture() {
     get: () => s,
     fail: (category: string) => {
       failed = category
+    },
+    block: (reasons: string[]) => {
+      blockers = reasons
     },
     action: (id: string) => activate(id, ctx),
   }
@@ -101,6 +105,21 @@ it('uses the desktop image/video cards without extra model menus, queues each mo
   })
   frame = workspaceFrame(t.get(), 120, 36, 0)
   expect(frame.targets.some((target) => target.id === 'media-queue:1')).toBe(true)
+})
+it('does not throw when a media plan has compatibility blockers during onboarding', async () => {
+  const t = fixture()
+  await loadSetupMedia(t.ctx)
+  t.block(['Not enough free disk space.'])
+  await t.action('media-queue:0')
+  expect(t.execute).toHaveBeenCalledWith('artifacts.plan', { category: 'image', model_id: 'image-a' })
+  expect(t.execute).not.toHaveBeenCalledWith('artifacts.install', expect.anything())
+  expect(t.get()).toMatchObject({
+    page: 'welcome',
+    firstRun: 'media',
+    focus: 'media-queue:0',
+    busy: false,
+    message: 'Not enough free disk space.',
+  })
 })
 it('keeps a working category when the other fails and recovers without resetting its selection', async () => {
   const t = fixture()

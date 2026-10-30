@@ -57,6 +57,43 @@ it('starts a selected media download automatically after compatibility checks', 
   expect(state).toMatchObject({ libraryView: 'downloads', overlay: null, busy: false })
 })
 
+it('does not throw when a media plan has compatibility blockers', async () => {
+  let state = { ...createWorkspace('models'), setupComplete: true }
+  const execute = vi.fn(async (name: string) =>
+    name === 'models.catalog'
+      ? { rows: [{ id: 'flux', name: 'Flux', category: 'image', description: 'Image model', source: {} }] }
+      : name === 'artifacts.plan'
+        ? {
+            digest: 'review-digest',
+            total_download_bytes: 1024,
+            blockers: ['Not enough free disk space.'],
+          }
+        : { id: 'install' }
+  )
+  const ctx: ActionContext = {
+    get: () => state,
+    update: (fn) => {
+      state = fn(state)
+    },
+    controller: { runtime: { execute, snapshot: async () => null } } as unknown as WorkspaceController,
+    send: vi.fn(),
+    cancel: vi.fn(),
+    copy: vi.fn(),
+  }
+  state.libraryView = 'catalog'
+  await activate('category:image', ctx)
+  await activate('library-row:0', ctx)
+  expect(execute).toHaveBeenCalledWith('artifacts.plan', { category: 'image', model_id: 'flux' })
+  expect(execute.mock.calls.filter(([name]) => name === 'artifacts.install')).toHaveLength(0)
+  expect(state).toMatchObject({
+    libraryView: 'catalog',
+    overlay: null,
+    busy: false,
+    focus: 'library-row:0',
+    message: 'Not enough free disk space.',
+  })
+})
+
 it('renders and activates the same filtered download row while retaining completed jobs after active downloads', async () => {
   const { workspaceFrame } = await import('../frame.js')
   const { workspaceInput } = await import('../input.js')
