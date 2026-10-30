@@ -55,14 +55,21 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
     source: Record<string, unknown>,
     path: string,
     repo = String(r['repo']),
-    revision = String(r['revision'] ?? 'main')
+    revision = r['revision']
   ) => {
     const file = filePath(source['filename'] ?? source['path']),
-      repoId = String(source['repo'] ?? repo)
+      repoId = String(source['repo'] ?? repo),
+      pinnedRevision = source['revision'] === undefined ? revision : source['revision']
     if (!looksLikeHfRepo(repoId)) throw new Error('Invalid catalog repository.')
+    if (
+      ['image', 'video'].includes(category) &&
+      pinnedRevision !== undefined &&
+      (typeof pinnedRevision !== 'string' || !/^[0-9a-f]{40}$/.test(pinnedRevision))
+    )
+      throw new Error('Invalid catalog revision: use a full Hugging Face commit SHA.')
     const save_path = `${root}/${filePath(path)}`
     files.push({
-      url: `https://huggingface.co/${repoId}/resolve/${encodeURIComponent(revision)}/${file.split('/').map(encodeURIComponent).join('/')}`,
+      url: `https://huggingface.co/${repoId}/resolve/${encodeURIComponent(String(pinnedRevision ?? 'main'))}/${file.split('/').map(encodeURIComponent).join('/')}`,
       save_path,
       size: Number(source['bytes']) || null,
       sha256: typeof source['sha256'] === 'string' ? source['sha256'] : null,
@@ -82,7 +89,12 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
     if (!choice) throw new Error('Choose an available quantization.')
     model_id = `${row.id}:${String(choice['id'])}`
     const paths: Record<string, unknown> = {
-      diffusionModel: add(choice, `transformer/${String(choice['filename'])}`, String(transformer['repo'])),
+      diffusionModel: add(
+        choice,
+        `transformer/${String(choice['filename'])}`,
+        String(transformer['repo']),
+        transformer['revision']
+      ),
     }
     for (const [catalogKey, field] of [
       ['vae', 'vae'],
