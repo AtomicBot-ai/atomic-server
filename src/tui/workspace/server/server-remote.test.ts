@@ -69,4 +69,22 @@ describe('the remote access screen while the server has no cloudflared', () => {
     expect(await remoteAction('remote-setup-copy', ctx)).toBe(true)
     expect(copy).toHaveBeenCalledWith('brew install cloudflared\natc restart')
   })
+
+  it('does not throw when starting remote access while the API is stopped', async () => {
+    let current = state({ state: 'off', canStart: false, canStop: false, blockReason: 'server_stopped' })
+    const execute = vi.fn()
+    const ctx = {
+      get: () => current,
+      update: (fn: (v: WorkspaceState) => WorkspaceState) => {
+        current = fn(current)
+      },
+      controller: { runtime: { execute } },
+    } as unknown as ActionContext
+    expect(await remoteAction('remote-toggle', ctx)).toBe(true)
+    expect(execute).not.toHaveBeenCalled()
+    expect(current).toMatchObject({
+      busy: false,
+      message: 'Start the API before remote access.',
+    })
+  })
 })
