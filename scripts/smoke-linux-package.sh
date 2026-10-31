@@ -8,6 +8,9 @@
 #   smoke-linux-package.sh pacman <version> <directory with the PKGBUILD>
 set -eu
 
+# These checks run shipped binaries; keep CI runs out of production telemetry.
+export DO_NOT_TRACK=1
+
 manager=$1
 version=$2
 input=$3
