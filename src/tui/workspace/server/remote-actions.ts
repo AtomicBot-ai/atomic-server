@@ -16,11 +16,13 @@ export async function remoteAction(id: string, ctx: ActionContext): Promise<bool
     return true
   }
   if (s.busy) return true
+  if (id === 'remote-toggle' && !s.remote['canStart'] && !s.remote['canStop']) {
+    ctx.update((v) => ({ ...v, busy: false, message: 'Start the API before remote access.' }))
+    return true
+  }
   ctx.update((v) => ({ ...v, busy: true, message: '' }))
   try {
     if (id === 'remote-toggle') {
-      if (!s.remote['canStart'] && !s.remote['canStop'])
-        throw new Error('Start the API before remote access.')
       if (!s.remote['canStop'] && !s.workspace?.keys.length)
         await c.runtime.execute('keys.create', { name: 'Remote clients' })
       await c.runtime.execute(
