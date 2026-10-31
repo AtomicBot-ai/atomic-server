@@ -69,7 +69,7 @@ jobs:
       matrix:
         # The arm64 Linux and Windows binaries are released too, so they are proven on native arm
         # runners, not only cross-compiled.
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, windows-2022, windows-11-arm]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-2022, windows-11-arm]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -88,7 +88,7 @@ jobs:
       # The web admin in headless Chromium: the binary rebuilt with the built SPA inside. Two runners cover
       # it; the admin is the same page on every OS and Playwright ships no browser for some of the others.
       - name: web e2e (Playwright)
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-14'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-15'
         run: |
           npm run build:ui
           npm run build:bin
