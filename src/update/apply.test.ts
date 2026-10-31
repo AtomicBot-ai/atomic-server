@@ -1,5 +1,5 @@
 import { basename, dirname, join, sep } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ExecResult } from '../host/index.js'
 import { applyUpdate, executeReplace } from './apply.js'
 import type { ApplyDeps, UpdateFiles } from './apply.js'
@@ -114,8 +114,27 @@ describe('applyUpdate', () => {
   })
 
   it.each([
-    ['running from source', { builtFor: undefined }, 'runs from source'],
-    ['a package installed it', { installSource: 'deb' }, 'installed by the deb package'],
+    ['source', { builtFor: undefined }, 'use a released binary'],
+    ['deb', { installSource: 'deb' }, 'sudo apt update'],
+    ['rpm', { installSource: 'rpm' }, 'sudo dnf upgrade atc'],
+    ['aur', { installSource: 'aur' }, 'yay -Syu atc-bin'],
+  ] as const)(
+    'returns an expected refusal for a %s install without fetching or changing files',
+    async (_kind, over, hint) => {
+      const fetch = vi.fn()
+      const d = deps({ ...over, fetch })
+      await expect(applyUpdate(d)).rejects.toMatchObject({
+        code: 'ATC_UPDATE_UNSUPPORTED',
+        hint: expect.stringContaining(hint),
+      })
+      expect(fetch).not.toHaveBeenCalled()
+      expect(d.f.ops).toEqual([])
+      expect(d.f.files.get(BIN)).toBe('old')
+      expect(only(d)).toEqual([BIN])
+    }
+  )
+
+  it.each([
     [
       'no asset for this machine',
       { fetch: release({ assets: ['SHA256SUMS'] }) as typeof fetch },

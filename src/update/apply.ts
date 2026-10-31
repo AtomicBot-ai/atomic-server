@@ -88,7 +88,7 @@ export async function applyUpdate(
 ): Promise<ApplyResult> {
   if (!deps.builtFor)
     throw new AtcError(
-      'ATC_UPDATE_FAILED',
+      'ATC_UPDATE_UNSUPPORTED',
       'This atc runs from source; it updates with git, not from a release.',
       {
         hint: 'use a released binary (the installer) to get updates with `atc update`',
@@ -96,7 +96,7 @@ export async function applyUpdate(
     )
   if (deps.installSource)
     throw new AtcError(
-      'ATC_UPDATE_FAILED',
+      'ATC_UPDATE_UNSUPPORTED',
       `This atc was installed by ${installLabel(deps.installSource)}; its package manager updates it.`,
       { hint: packageUpgradeHint(deps.installSource) }
     )
