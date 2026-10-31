@@ -41,6 +41,7 @@ export class ModelSetups {
   private readonly runs = new Map<string, Run>()
   private readonly installEngine
   private readonly writes = new SerialWork()
+  private readonly modelWork = new SerialWork()
   constructor(private readonly deps: ModelSetupsDeps) {
     this.installEngine = setupEngineInstaller(deps)
     this.dir = join(deps.paths.atcDir, 'model-setups')
@@ -149,24 +150,26 @@ export class ModelSetups {
         )
       const blocker = reviewed.plan.blockers[0]
       if (blocker) throw new AtcError('ATC_USAGE', blocker.message)
-      // One writer per model: its files have one path, whichever request asked for them.
-      const active = await this.activeFor(reviewed.plan.model_id)
-      if (active) return active
-      const setupId = (this.deps.newId ?? randomUUID)()
-      const now = Date.now()
-      const record: ModelSetup = {
-        setup_id: setupId,
-        request_id: requestId,
-        stage: 'queued',
-        request,
-        plan: reviewed.plan,
-        task_ids: setupTaskIds(setupId, reviewed.plan),
-        created_at: now,
-        updated_at: now,
-      }
-      await writeDocument(this.path(setupId), record)
-      this.launch(setupId)
-      return record
+      // Check and claim the shared files together, even when request IDs differ.
+      return this.modelWork.run(reviewed.plan.model_id, async () => {
+        const active = await this.activeFor(reviewed.plan.model_id)
+        if (active) return active
+        const setupId = (this.deps.newId ?? randomUUID)()
+        const now = Date.now()
+        const record: ModelSetup = {
+          setup_id: setupId,
+          request_id: requestId,
+          stage: 'queued',
+          request,
+          plan: reviewed.plan,
+          task_ids: setupTaskIds(setupId, reviewed.plan),
+          created_at: now,
+          updated_at: now,
+        }
+        await writeDocument(this.path(setupId), record)
+        this.launch(setupId)
+        return record
+      })
     })
   }
 
@@ -179,19 +182,22 @@ export class ModelSetups {
     // A cancelled run still releasing its files must end before a new one opens them.
     const previous = this.runs.get(id)
     if (previous?.controller.signal.aborted) await previous.done
-    return this.writes.run(id, async () => {
-      const record = await this.get(id)
-      if (this.runs.has(id) || !RESUMABLE.includes(record.stage)) return record
-      // One writer per model, as in install: its files have one path, whichever setup asked for them.
-      const active = await this.activeFor(record.plan.model_id)
-      if (active)
-        throw new AtcError('ATC_USAGE', `Setup ${active.setup_id} is installing this model now.`, {
-          hint: 'Wait for it, or cancel it before resuming this one.',
-        })
-      const next = await this.commit(id, { stage: 'queued' }, true)
-      this.launch(id)
-      return next
-    })
+    const { plan } = await this.get(id)
+    return this.modelWork.run(plan.model_id, () =>
+      this.writes.run(id, async () => {
+        const record = await this.get(id)
+        if (this.runs.has(id) || !RESUMABLE.includes(record.stage)) return record
+        // One writer per model, as in install: its files have one path, whichever setup asked for them.
+        const active = await this.activeFor(record.plan.model_id)
+        if (active)
+          throw new AtcError('ATC_USAGE', `Setup ${active.setup_id} is installing this model now.`, {
+            hint: 'Wait for it, or cancel it before resuming this one.',
+          })
+        const next = await this.commit(id, { stage: 'queued' }, true)
+        this.launch(id)
+        return next
+      })
+    )
   }
 
   /** Stop a setup; downloaded bytes stay for `resume`. */
@@ -213,12 +219,19 @@ export class ModelSetups {
   }
 
   async remove(id: string, cleanup: (job: ModelSetup) => Promise<void>) {
-    await this.cancel(id)
-    return this.writes.run(id, async () => {
-      if (this.runs.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
-      await cleanup(await this.get(id))
-      await rm(this.path(id), { force: true })
-      return { removed: true, id }
+    const { plan } = await this.get(id)
+    // Cleanup owns the same files as install/resume; wait for the run without holding its write queue.
+    return this.modelWork.run(plan.model_id, async () => {
+      const active = await this.activeFor(plan.model_id)
+      if (active && active.setup_id !== id)
+        throw new AtcError('ATC_USAGE', `Pause setup ${active.setup_id} before removing this model.`)
+      await this.cancel(id)
+      return this.writes.run(id, async () => {
+        if (this.runs.has(id)) throw new AtcError('ATC_USAGE', 'Pause this download before removing it.')
+        await cleanup(await this.get(id))
+        await rm(this.path(id), { force: true })
+        return { removed: true, id }
+      })
     })
   }
 
