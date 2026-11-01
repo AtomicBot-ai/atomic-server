@@ -67,7 +67,16 @@ async function hfJson(url: string, repository: string, o: HubOptions): Promise<u
         hint: `accept the model's terms on ${HF_HUB}/${repository}, then set HF_TOKEN in the server's environment and restart it`,
       }
     )
-  if (!response.ok) throw new Error(`Hugging Face answered ${response.status} for ${url}`)
+  if (response.status === 404)
+    throw new AtcError('ATC_USAGE', `Hugging Face did not find the requested resource in ${repository}.`, {
+      details: 'HTTP 404',
+      hint: 'check the repository, revision and required model files',
+    })
+  if (!response.ok)
+    throw Object.assign(new Error(`Hugging Face answered ${response.status} for ${url}`), {
+      // Retain the HTTP status after boundary reporting removes the private URL and message.
+      code: `HF_HTTP_${response.status}`,
+    })
   return response.json()
 }
 
@@ -174,6 +183,10 @@ export async function fetchHfRevision(
     size: s.lfs?.size ?? s.size ?? 0,
     sha256: s.lfs?.sha256 ?? null,
   }))
+  if (!files.some((file) => file.path === 'config.json'))
+    throw new AtcError('ATC_USAGE', `${repository} has no config.json at revision ${sha}.`, {
+      hint: 'choose a Transformers checkpoint with config.json to check managed-engine compatibility',
+    })
   const resolve = (path: string) => resolveUrl(repository, sha, path, hub)
   const weightNames = await readWeightNames(files, resolve, o)
   return {

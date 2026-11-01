@@ -95,6 +95,37 @@ describe('fetchHfRevision', () => {
     expect(server.requests.some((r) => r.path.includes('hf_quant_config.json'))).toBe(false)
   })
 
+  it('refuses a repository without config.json before probing any model files', async () => {
+    serve()
+    const tree = listing(false)
+    tree.siblings = tree.siblings.filter((file) => file.rfilename !== 'config.json')
+    server.files.set(`/api/models/${REPO}/revision/main?blobs=true&files_metadata=true`, {
+      body: Buffer.from(JSON.stringify(tree)),
+    })
+    await expect(fetchHfRevision(REPO, undefined, { fetch, hub })).rejects.toMatchObject({
+      code: 'ATC_USAGE',
+      message: expect.stringContaining('config.json'),
+    })
+    expect(server.requests).toHaveLength(1)
+  })
+
+  it.each(['listing', 'config.json', 'hf_quant_config.json'])(
+    'returns a typed refusal when the %s request answers 404',
+    async (resource) => {
+      serve({ quant: true })
+      const path =
+        resource === 'listing'
+          ? `/api/models/${REPO}/revision/main?blobs=true&files_metadata=true`
+          : `/${REPO}/resolve/${SHA}/${resource}`
+      server.files.delete(path)
+      await expect(fetchHfRevision(REPO, undefined, { fetch, hub })).rejects.toMatchObject({
+        code: 'ATC_USAGE',
+        details: 'HTTP 404',
+        hint: expect.stringContaining('revision'),
+      })
+    }
+  )
+
   it('reads the tensor names from the weight headers with ranges only, folding numeric segments', async () => {
     serve()
     const meta = await fetchHfRevision(REPO, undefined, { fetch, hub })
