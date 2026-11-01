@@ -3,6 +3,7 @@ import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { fieldValue, operationFields } from './operation-model.js'
 import { computeRowWindow } from '../../row-window.js'
+import { audioDetails, loadedAudioModel } from '../../../workspace-view/index.js'
 export function drawOperationPanel(
   c: Canvas,
   s: WorkspaceState,
@@ -39,7 +40,13 @@ export function drawOperationPanel(
   )
   button(c, 'operation-back', x + Math.max(28, width - 12), y, 'Back', 'Return to workspace', focus)
   if (!op) return
-  if (op.name === 'api.inspector' || op.effect === 'load' || op.effect === 'interrupt')
+  // The notice a model's license asks for stays beside the model while it is used.
+  const notice =
+    op.group === 'audio'
+      ? audioDetails(s.workspace?.setups, loadedAudioModel(s.workspace)?.model)?.attribution
+      : null
+  if (notice) text(c, x, y + 1, notice, COLORS.muted, width)
+  else if (op.name === 'api.inspector' || op.effect === 'load' || op.effect === 'interrupt')
     text(c, x, y + 1, op.description, COLORS.muted, width)
   const fields = operationFields(op),
     resultView = s.focus === 'operation-output' || s.edit === 'operation-output'

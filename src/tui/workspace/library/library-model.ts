@@ -7,7 +7,7 @@ export interface LibraryRow {
   source?: Record<string, unknown>
 }
 export type LibraryView = 'installed' | 'catalog' | 'engines' | 'downloads' | 'cloud' | 'endpoint'
-export const CATEGORIES = ['text', 'image', 'video', 'embedding', 'decision'] as const
+export const CATEGORIES = ['text', 'image', 'video', 'audio', 'embedding', 'decision'] as const
 export const record = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
 export function libraryRows(value: unknown, kind: LibraryView): LibraryRow[] {

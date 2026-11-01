@@ -23,6 +23,12 @@ describe('engineModels', () => {
     expect(ids(engineModels(image, 'llamacpp-upstream', 'video'))).toEqual([])
   })
 
+  it('offers audio models on the engine the catalog names', () => {
+    const audio = [{ id: 'moss', source: { engines: ['audio-cpp'] } }]
+    expect(ids(engineModels(audio, 'audio-cpp', 'audio'))).toEqual(['moss'])
+    expect(ids(engineModels(audio, 'sd-cpp', 'audio'))).toEqual([])
+  })
+
   it('matches other workloads on their engine, defaulting by category', () => {
     const embedding = [
       { id: 'default', source: {} },

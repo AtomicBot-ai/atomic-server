@@ -64,6 +64,7 @@ export const PLAYGROUND_TASKS = [
   { id: 'chat', label: 'Chat' },
   { id: 'image', label: 'Images' },
   { id: 'video', label: 'Videos' },
+  { id: 'audio', label: 'Audio' },
 ] as const
 
 /** Human labels; stable dotted paths remain the configuration wire format. */

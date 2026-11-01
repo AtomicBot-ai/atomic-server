@@ -8,6 +8,7 @@ export * from './client-reports.js'
 export * from './events.js'
 export * from './routes.js'
 
+export * from './audio.js'
 export * from './workspace.js'
 export * from './remote-access.js'
 export * from './workspace-operations.js'

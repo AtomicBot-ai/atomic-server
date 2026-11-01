@@ -7,6 +7,7 @@ import type { RecordValue } from '../types'
 import { useDialog } from '../useDialog'
 import { modelCategory, modelId } from '../library/catalog/catalog-models'
 import { describeError } from '@/services/admin-api'
+import { attributionOf } from '@view'
 
 export function MediaModelPicker({
   workspace,
@@ -72,15 +73,14 @@ export function MediaModelPicker({
             {error} <Action onClick={() => setRevision((v) => v + 1)}>Retry</Action>
           </p>
         )}
-        {!loading && !error && !models.length && (
-          <p>No {task === 'image' ? 'image' : 'video'} models downloaded.</p>
-        )}
+        {!loading && !error && !models.length && <p>No {task} models downloaded.</p>}
         <div className="media-model-list">
           {models.map((model) => (
             <div key={text(model.id)}>
               <span>
                 <strong>{text(model.name ?? record(model.plan).name, modelId(model))}</strong>
                 <small>{current === modelId(model) ? 'Loaded' : 'Downloaded'}</small>
+                {attributionOf(model) && <small>{attributionOf(model)}</small>}
               </span>
               <Action
                 primary

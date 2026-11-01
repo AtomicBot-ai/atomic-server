@@ -1,6 +1,7 @@
 import type { WorkspaceState } from '../state.js'
 import { record } from './library-model.js'
 import type { LibraryRow } from './library-model.js'
+import { AUDIO_ENGINE_ID } from '../../../contract/index.js'
 import { catalogModelMatches, localModelStatus } from '../../../workspace-view/index.js'
 
 function matches(job: Record<string, unknown>, id: string) {
@@ -33,7 +34,7 @@ export function modelInstalled(s: WorkspaceState, id: string) {
     jobs.some(
       (job) =>
         job['stage'] === 'ready' &&
-        ['image', 'video', 'embedding', 'decision'].includes(String(record(job['plan'])['category']))
+        ['image', 'video', 'audio', 'embedding', 'decision'].includes(String(record(job['plan'])['category']))
     )
   )
 }
@@ -41,18 +42,20 @@ export function modelInstalled(s: WorkspaceState, id: string) {
 export function catalogDeviceStatus(s: WorkspaceState, model: LibraryRow) {
   const category = model.category || s.libraryCategory
   const kind = category === 'text' ? 'chat' : ['image', 'video'].includes(category) ? 'image-video' : category
-  if (!['chat', 'image-video', 'embedding', 'decision'].includes(kind)) return ''
+  if (!['chat', 'image-video', 'audio', 'embedding', 'decision'].includes(kind)) return ''
   const source = model.source ?? {}
   const fallback = String(
     source['engine'] ??
       source['provider'] ??
       (kind === 'image-video'
         ? 'sd-cpp'
-        : source['format'] === 'mlx'
-          ? 'mlx'
-          : /prism|bonsai/i.test(model.id)
-            ? 'atomic-prism'
-            : 'llamacpp-upstream')
+        : kind === 'audio'
+          ? AUDIO_ENGINE_ID
+          : source['format'] === 'mlx'
+            ? 'mlx'
+            : /prism|bonsai/i.test(model.id)
+              ? 'atomic-prism'
+              : 'llamacpp-upstream')
   )
   const providers = (values: string[]) =>
     values.filter(
@@ -83,7 +86,7 @@ export function catalogDeviceStatus(s: WorkspaceState, model: LibraryRow) {
     s.workspace,
     candidates.map((candidate) => ({
       ...candidate,
-      kind: kind as 'chat' | 'image-video' | 'embedding' | 'decision',
+      kind: kind as 'chat' | 'image-video' | 'audio' | 'embedding' | 'decision',
     })),
     modelInstalled(s, model.id)
   )

@@ -11,6 +11,7 @@ import { Settings } from './server/settings/Settings'
 import { Catalog } from './library/catalog/Catalog'
 import { Chat } from './chat/Chat'
 import { Media } from './media/Media'
+import { AudioStudio } from './media/AudioStudio'
 import { CommandDock } from './CommandDock'
 import { SetupWizard } from './setup/SetupWizard'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
@@ -215,6 +216,8 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
                 trySkill={trySkill}
                 onSkillStarted={() => setTrySkill(null)}
               />
+            ) : task === 'audio' ? (
+              <AudioStudio workspace={workspace} onCatalog={() => models()} />
             ) : (
               <Media
                 key={task}

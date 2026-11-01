@@ -8,6 +8,8 @@ import { modelIdPath, object, segment } from './validation.js'
 import { managedEngineOperation } from './engines/managed-engines.js'
 import { engineSettingsSchema } from './settings.js'
 import { orderEngines, settingValuesError } from '../workspace-view/index.js'
+import { AUDIO_ENGINE_ID } from '../contract/index.js'
+import { audioRequest, requireAudioCore } from './audio/audio-core.js'
 export { NOT_CORE } from './not-core.js'
 export async function coreOperation(
   link: CoreLink,
@@ -58,6 +60,7 @@ export async function coreOperation(
       const engine = String(input['engine'])
       const kind = engineKind(engine)
       if (kind === 'managed') return link.environments.list()
+      if (engine === AUDIO_ENGINE_ID) await requireAudioCore(link)
       return post(
         kind === 'engine-build'
           ? `/engine-builds/${segment(engine)}/catalog`
@@ -183,6 +186,28 @@ export async function coreOperation(
       return post('/decision/decide', request)
     case 'media.router.run':
       return post('/decision/score', request)
+    case 'audio.status':
+      return audioRequest(link, 'GET', '/audio/status')
+    case 'audio.capabilities':
+      return audioRequest(link, 'GET', '/audio/capabilities')
+    case 'audio.files':
+      return audioRequest(link, 'GET', '/audio/model-files')
+    case 'audio.gallery':
+      return audioRequest(link, 'GET', '/audio/gallery?offset=0&limit=100')
+    case 'audio.configure':
+      return audioRequest(link, 'PUT', '/audio/config', request)
+    case 'audio.load':
+      return audioRequest(link, 'POST', '/audio/model/load', request)
+    case 'audio.unload':
+      return audioRequest(link, 'POST', '/audio/model/unload', {})
+    case 'audio.generate':
+      return audioRequest(link, 'POST', '/audio/jobs', { mode: input['mode'], request })
+    case 'audio.job':
+      return audioRequest(link, 'GET', `/audio/jobs/${id()}`)
+    case 'audio.cancel':
+      return audioRequest(link, 'POST', `/audio/jobs/${id()}/cancel`, {})
+    case 'audio.delete':
+      return audioRequest(link, 'DELETE', `/audio/gallery/${id()}`)
     default:
       return managedEngineOperation(link, name, input)
   }

@@ -1,6 +1,7 @@
 import { record, rows, text } from '../types'
 import type { Execute } from '../types'
 import { catalogCards } from '../library/catalog/catalog-data'
+import { modelProviders } from '../library/catalog/catalog-models'
 import { engineFamily } from '@view'
 import type { RecordValue } from '../types'
 
@@ -33,6 +34,7 @@ export function engineModels(models: RecordValue[], engine: string, category: st
       return ['safetensors', 'Foundry Local', 'LiteRT-LM'].includes(text(model.format))
     if (category === 'text') return (source.format === 'mlx') === (engine === 'mlx')
     if (category === 'image' || category === 'video') return engine === 'sd-cpp'
+    if (category === 'audio') return modelProviders(model).includes(engine)
     return engine === text(source.engine, category === 'decision' ? 'llamacpp' : 'llamacpp-upstream')
   })
 }

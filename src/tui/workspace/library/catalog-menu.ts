@@ -4,11 +4,13 @@ import { button, COLORS, text } from '../draw/canvas.js'
 import { panel } from '../draw/cards.js'
 import type { WorkspaceState } from '../state.js'
 import { CATEGORIES } from './library-model.js'
+import { catalogCategories } from '../../../workspace-view/index.js'
 import { computeRowWindow } from '../../row-window.js'
 export const CATEGORY_NAMES: Record<string, string> = {
   text: 'Text',
   image: 'Images',
   video: 'Video',
+  audio: 'Audio',
   embedding: 'Embeddings',
   decision: 'Decisions',
 }
@@ -34,7 +36,7 @@ export function catalogMenuItems(s: WorkspaceState) {
     )
   }
   if (s.catalogMenu === 'category')
-    return CATEGORIES.map((category) => ({
+    return catalogCategories(CATEGORIES, s.workspace).map((category) => ({
       id: `category:${category}`,
       label: CATEGORY_NAMES[category]!,
       selected: s.libraryCategory === category,

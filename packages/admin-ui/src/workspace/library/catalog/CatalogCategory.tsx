@@ -1,5 +1,5 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/hub/HubCategorySelect.tsx @ 807b4d9; adapted: existing accessible listbox and supported catalog categories.
-import { GitBranch, Image, MessageSquare, Network, Video } from 'lucide-react'
+import { AudioLines, GitBranch, Image, MessageSquare, Network, Video } from 'lucide-react'
 import { DetailPicker } from '../../server/DetailPicker'
 import './catalog-category.css'
 
@@ -23,6 +23,12 @@ const choices = [
     detail: 'Generate short videos',
   },
   {
+    id: 'audio',
+    name: 'Audio',
+    icon: <AudioLines size={16} aria-hidden="true" />,
+    detail: 'Generate speech, music and sound effects',
+  },
+  {
     id: 'embedding',
     name: 'Embeddings',
     icon: <Network size={16} aria-hidden="true" />,
@@ -40,17 +46,20 @@ export function CatalogCategory({
   value,
   onChange,
   onFocus,
+  audio = false,
 }: {
   value: string
   onChange: (value: string) => void
   onFocus: () => void
+  /** A core without audio has no such models to offer. */
+  audio?: boolean
 }) {
   return (
     <div className="hub-category" onFocus={onFocus}>
       <DetailPicker
         label="Model category"
         value={value}
-        choices={choices}
+        choices={choices.filter((choice) => audio || choice.id !== 'audio')}
         placeholder="Choose model type"
         onChange={onChange}
       />

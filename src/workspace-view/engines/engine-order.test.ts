@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { engineFamily, engineName, orderEngines } from './engine-order.js'
+import { engineFamily, engineHasSettings, engineName, engineTaskNote, orderEngines } from './engine-order.js'
 
 describe('engine order and names', () => {
   it('puts llama.cpp first, then MLX, the managed engines as the desktop app does, then Foundry Local and LiteRT-LM', () => {
@@ -55,4 +55,22 @@ describe('engineFamily', () => {
     ['mlx', 'build'],
     ['something-new', 'build'],
   ])('%s is %s, by the core’s kinds', (id, family) => expect(engineFamily(id)).toBe(family))
+})
+
+describe('engines that take their settings with each task', () => {
+  it.each(['sd-cpp', 'audio-cpp'])('%s has no provider settings, and says so', (engine) => {
+    expect(engineHasSettings(engine)).toBe(false)
+    expect(engineTaskNote(engine)).toBeTruthy()
+  })
+
+  it('leaves every other engine its settings', () => {
+    expect(engineHasSettings('llamacpp-upstream')).toBe(true)
+    expect(engineTaskNote('llamacpp-upstream')).toBeUndefined()
+  })
+
+  it('names audio.cpp, and treats it as an engine of builds beside sd.cpp', () => {
+    expect(engineName('audio-cpp')).toBe('audio.cpp')
+    expect(engineFamily('audio-cpp')).toBe('build')
+    expect(orderEngines(['mlx', 'sd-cpp', 'audio-cpp'])).toEqual(['mlx', 'sd-cpp', 'audio-cpp'])
+  })
 })

@@ -8,6 +8,7 @@ import { FOUNDRY_OPERATIONS } from './operations/foundry.js'
 import { LITERT_OPERATIONS } from './operations/litert.js'
 import { PLAYGROUND_OPERATIONS } from './operations/playground.js'
 import { MEDIA_OPERATIONS } from './operations/media.js'
+import { AUDIO_OPERATIONS } from './operations/audio.js'
 /** One registry for the TUI, web admin, CLI and MCP. Files follow the workspace sections. */
 export const WORKSPACE_OPERATIONS = [
   ...SERVER_OPERATIONS,
@@ -20,4 +21,5 @@ export const WORKSPACE_OPERATIONS = [
   ...ENGINE_OPERATIONS,
   ...PLAYGROUND_OPERATIONS,
   ...MEDIA_OPERATIONS,
+  ...AUDIO_OPERATIONS,
 ] as const

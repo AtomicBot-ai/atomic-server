@@ -4,6 +4,8 @@ import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import type { DownloadItem } from '../../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
 import { object } from '../validation.js'
+import type { AudioPlanDetails } from '../../contract/index.js'
+import { audioPlan } from './audio-plan.js'
 export interface ArtifactPlan {
   digest: string
   category: string
@@ -13,6 +15,8 @@ export interface ArtifactPlan {
   files: DownloadItem[]
   total_download_bytes: number
   load: Record<string, unknown>
+  /** An audio model: the form and notice clients draw from the catalog, kept beside the load. */
+  audio?: AudioPlanDetails
   created_at: number
 }
 export interface ArtifactJob {
@@ -43,7 +47,26 @@ export function destinationOf(plan: Pick<ArtifactPlan, 'category' | 'model_id' |
   const first = plan.files[0]?.save_path
   return first ? first.split('/').slice(0, 3).join('/') : `${plan.category}:${plan.model_id.split(':')[0]}`
 }
+/** The plan's digest covers everything but when it was made. */
+function sealed(plan: Omit<ArtifactPlan, 'digest' | 'created_at'>): ArtifactPlan {
+  return {
+    ...plan,
+    digest: createHash('sha256').update(JSON.stringify(plan)).digest('hex'),
+    created_at: Date.now(),
+  }
+}
 export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string): ArtifactPlan {
+  if (row.category === 'audio') {
+    const { files, load, ...audio } = audioPlan(row, quant)
+    return sealed({
+      ...audio,
+      category: row.category,
+      name: row.name,
+      files,
+      total_download_bytes: files.reduce((sum, f) => sum + (f.size ?? 0), 0),
+      load: { ...load },
+    })
+  }
   const r = row.source,
     files: DownloadItem[] = [],
     category = row.category,
@@ -182,7 +205,7 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
       load = { ...load, pooling: r['pooling'] ?? '', image_max_tokens: r['image_max_tokens'] ?? 0 }
     engine = String(r['engine'] ?? (category === 'decision' ? 'llamacpp' : 'llamacpp-upstream'))
   }
-  const plan = {
+  return sealed({
     category,
     model_id,
     name: row.name,
@@ -190,10 +213,5 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
     files,
     total_download_bytes: files.reduce((sum, f) => sum + (f.size ?? 0), 0),
     load,
-  }
-  return {
-    ...plan,
-    digest: createHash('sha256').update(JSON.stringify(plan)).digest('hex'),
-    created_at: Date.now(),
-  }
+  })
 }

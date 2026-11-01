@@ -1,10 +1,10 @@
 import {
   LIBRARY_SECTIONS,
-  PLAYGROUND_TASKS,
   SERVER_NAVIGATION,
   SETTINGS_SECTIONS,
   SETTINGS_WORKSPACE_SECTIONS,
 } from '../../../contract/index.js'
+import { playgroundTasks } from '../../../workspace-view/index.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, textWidth } from '../draw/canvas.js'
 import type { Page, WorkspaceState } from '../state.js'
@@ -22,9 +22,9 @@ export function serverSection(s: WorkspaceState): string {
   return s.serverView
 }
 export function playgroundTask(s: WorkspaceState): string {
-  return s.page === 'tools' && s.operationReturn === 'chat' && s.operation.startsWith('media.')
-    ? (s.operation.split('.')[1] ?? 'chat')
-    : 'chat'
+  if (s.page !== 'tools' || s.operationReturn !== 'chat') return 'chat'
+  if (s.operation.startsWith('audio.')) return 'audio'
+  return s.operation.startsWith('media.') ? (s.operation.split('.')[1] ?? 'chat') : 'chat'
 }
 export const SERVER_PAGES: Record<string, Page> = {
   overview: 'server',
@@ -48,7 +48,7 @@ export function drawSections(
   const page = workspacePage(s)
   const items =
     page === 'chat'
-      ? PLAYGROUND_TASKS
+      ? playgroundTasks(s.workspace)
       : page === 'server'
         ? SERVER_NAVIGATION
         : page === 'access'
@@ -124,7 +124,7 @@ export function sectionMenu(s: WorkspaceState) {
           ? LIBRARY_SECTIONS
           : page === 'access'
             ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
-            : PLAYGROUND_TASKS,
+            : playgroundTasks(s.workspace),
     prefix:
       page === 'server'
         ? 'server-section'

@@ -22,7 +22,7 @@ export function catalogStatus(
     (row) => modelCategory(row) === category && matches(modelId(row), row.repository)
   )
   const kind = category === 'text' ? 'chat' : ['image', 'video'].includes(category) ? 'image-video' : category
-  if (!['chat', 'image-video', 'embedding', 'decision'].includes(kind)) return ''
+  if (!['chat', 'image-video', 'audio', 'embedding', 'decision'].includes(kind)) return ''
   const declared = modelProviders(model)
   const fallback = declared.length
     ? declared
@@ -55,7 +55,7 @@ export function catalogStatus(
     snapshot,
     candidates.map((candidate) => ({
       ...candidate,
-      kind: kind as 'chat' | 'image-video' | 'embedding' | 'decision',
+      kind: kind as 'chat' | 'image-video' | 'audio' | 'embedding' | 'decision',
     })),
     files.length > 0
   )

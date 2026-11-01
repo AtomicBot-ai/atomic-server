@@ -28,6 +28,37 @@ describe('fresh workload readiness', () => {
     ).resolves.toEqual({ task: 'image', job_id: 'verification-id' })
     expect(link.calls.at(-1)?.path).toBe('/diffusion/jobs/verification-id')
   })
+  it.each([
+    ['speech', { text: 'Ready.' }],
+    ['effects', { text: 'A short soft click.', durationSec: 1 }],
+  ])('verifies a loaded %s model with a real, short clip', async (mode, request) => {
+    const link = fakeCoreLink()
+    link.responses['POST /audio/jobs'] = { id: 'clip', state: 'queued' }
+    link.responses['GET /audio/jobs/clip'] = { job: { id: 'clip', state: 'completed' } }
+    await expect(
+      verifyWorkload(link, defaultConfig(), new ClientKeys('/unused'), fetch, [
+        {
+          id: 'audio',
+          provider: 'audio-cpp',
+          model: 'a:q8',
+          kind: 'audio',
+          state: 'loaded',
+          details: { model: { loaded: { mode } } },
+        },
+      ])
+    ).resolves.toEqual({ task: 'audio', job_id: 'clip' })
+    expect(link.calls[0]).toMatchObject({ path: '/audio/jobs', body: { mode, request } })
+  })
+  it("fails the verification of an audio model with the job's own words", async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /audio/jobs'] = { id: 'clip', state: 'queued' }
+    link.responses['GET /audio/jobs/clip'] = { job: { state: 'failed', error: { message: 'No voice.' } } }
+    await expect(
+      verifyWorkload(link, defaultConfig(), new ClientKeys('/unused'), fetch, [
+        { id: 'audio', provider: 'audio-cpp', model: 'a', kind: 'audio', state: 'loaded', details: {} },
+      ])
+    ).rejects.toThrow('No voice.')
+  })
   it('installs the selected GGUF engine before the first model load', async () => {
     const link = fakeCoreLink()
     link.request = async <T>(method: string, path: string, body?: unknown) => {

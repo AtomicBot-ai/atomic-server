@@ -1,6 +1,6 @@
 import { isVariantFormat, variantNext } from './catalog-variants.js'
 import { downloadCardHeight, drawDownloadCard } from '../setup/download-card.js'
-import { downloadRows, downloadOwner, downloadStopped } from '../../../workspace-view/index.js'
+import { attributionOf, downloadRows, downloadOwner, downloadStopped } from '../../../workspace-view/index.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text, wrap, rule } from '../draw/canvas.js'
 import { fieldControl, scrollTrack } from '../draw/controls.js'
@@ -81,7 +81,7 @@ export function drawCatalogBrowser(
   }
   const start = toolbarY + (s.libraryCategory === 'text' && !compact ? 4 : 2),
     indices = catalogIndexes(s)
-  const media = ['image', 'video'].includes(s.libraryCategory),
+  const media = ['image', 'video', 'audio'].includes(s.libraryCategory),
     rowHeight = media ? 4 : 2
   const openIndex = indices.findIndex((index) => s.libraryRows[index]?.id === s.catalogOpen)
   const detailHeight =
@@ -114,9 +114,17 @@ export function drawCatalogBrowser(
           0,
           s.libraryCategory === 'text' ? catalogColumns(width)[0]!.width - 3 : width - 15
         ),
-        icon: media ? (model.category === 'video' ? '[>]' : '[#]') : open ? 'v' : '>',
+        icon: media
+          ? model.category === 'video'
+            ? '[>]'
+            : model.category === 'audio'
+              ? '[~]'
+              : '[#]'
+          : open
+            ? 'v'
+            : '>',
         detail: media
-          ? `${status ? status + ' · ' : ''}${String(model.source?.['developer'] ?? model.description ?? model.id)}`
+          ? `${status ? status + ' · ' : ''}${attributionOf(model) || String(model.source?.['developer'] ?? model.description ?? model.id)}`
           : model.description || model.id,
         focus,
         selected: open,

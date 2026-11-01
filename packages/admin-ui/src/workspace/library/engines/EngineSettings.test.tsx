@@ -25,6 +25,35 @@ const GPUS = [
   },
 ]
 
+describe('audio.cpp in the admin', () => {
+  const engine = {
+    engine: 'audio-cpp',
+    kind: 'engine-build',
+    builds: [{ version: 'v0.9.3', variant: 'macos-arm64', active: true, removable: true }],
+    active: { version: 'v0.9.3', variant: 'macos-arm64' },
+    active_choice: 'core',
+  }
+
+  it('offers builds and asks for no settings: they go with each task', async () => {
+    const { workspace, execute } = workspaceFixture({ 'engines.list': { engines: [engine] } })
+    render(<EngineSettings provider="audio-cpp" workspace={workspace} onClose={() => {}} />)
+    expect(await screen.findByText('v0.9.3')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'audio.cpp' })).toBeInTheDocument()
+    expect(screen.getByText('Generation settings are sent with each audio task.')).toBeInTheDocument()
+    expect(execute).not.toHaveBeenCalledWith('settings.get', expect.anything())
+    expect(execute).not.toHaveBeenCalledWith('settings.schema', expect.anything())
+  })
+
+  it('installs through the engine queue', async () => {
+    const { workspace, execute } = workspaceFixture({
+      'engines.list': { engines: [{ ...engine, builds: [], active: null }] },
+    })
+    render(<EngineSettings provider="audio-cpp" workspace={workspace} onClose={() => {}} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Install engine' }))
+    expect(execute).toHaveBeenCalledWith('engines.enqueue', { engine: 'audio-cpp' })
+  })
+})
+
 describe('engine settings in the admin', () => {
   it('picks the card for vLLM among the environment’s two cards, with name, compute capability and memory', async () => {
     const { workspace } = workspaceFixture({

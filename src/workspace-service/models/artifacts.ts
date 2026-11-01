@@ -15,6 +15,7 @@ import { mlxPlan } from './mlx-plan.js'
 import { SerialWork } from '../serial.js'
 import { downloadProxy } from './download-proxy.js'
 import { captureFailure } from '../../telemetry/index.js'
+import { audioRequest, requireAudioCore } from '../audio/audio-core.js'
 interface Worker {
   cancelled: boolean
   done: Promise<void>
@@ -71,6 +72,7 @@ export class ArtifactService {
             }
           : undefined)
     if (!row) throw new AtcError('ATC_USAGE', 'Choose a model from the current catalog.')
+    if (category === 'audio') await requireAudioCore(this.options.link)
     const plan =
       category === 'text'
         ? await mlxPlan(row, this.options.paths.dataFolder, this.request, !curated)
@@ -261,6 +263,7 @@ export class ArtifactService {
       await link.request('PUT', '/diffusion/config', { dataFolder: this.options.paths.dataFolder })
       return link.request('POST', '/diffusion/model/load', job.plan.load)
     }
+    if (job.plan.category === 'audio') return audioRequest(link, 'POST', '/audio/model/load', job.plan.load)
     await link.request('PUT', `/${job.plan.category}/config`, job.plan.load)
     return link.request('POST', `/${job.plan.category}/load`, {})
   }

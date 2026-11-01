@@ -17,6 +17,7 @@ import { withRemoteSetup } from './remote-setup.js'
 import { cloudOperation } from './cloud/cloud-connections.js'
 import { modelOperation } from './models/model-operations.js'
 import { WorkspaceCatalog } from './models/catalog.js'
+import { withAudioDuration } from './audio/audio-duration.js'
 import { downloadProxy } from './models/download-proxy.js'
 import { FoundryAccelerators } from './foundry/foundry.js'
 import { foundryOperation } from './foundry/foundry-operations.js'
@@ -56,7 +57,7 @@ export class WorkspaceService {
     this.history = new ChatHistory(options.paths.atcDir)
     this.chats = new ChatJobs(options, this.keys, this.history, (body) => this.features.enrich(body))
     this.request = options.fetch ?? fetch
-    this.catalog = new WorkspaceCatalog(options.paths, this.request)
+    this.catalog = new WorkspaceCatalog(options.paths, this.request, options.env?.['ATC_AUDIO_MODELS_URL'])
     this.engineDownloads = new EngineDownloads(
       options.paths.atcDir,
       options.link,
@@ -208,6 +209,8 @@ export class WorkspaceService {
     if (chat !== NOT_CORE) return chat
     if (operation === 'media.configure')
       input['request'] = { ...object(input['request']), dataFolder: paths.dataFolder }
+    if (operation === 'audio.generate')
+      input['request'] = await withAudioDuration(link, () => this.downloads.artifacts.list(), input)
     const result = await coreOperation(
       link,
       operation,
@@ -220,7 +223,10 @@ export class WorkspaceService {
     })
     if (result === NOT_CORE) throw new AtcError('ATC_USAGE', `No implementation for ${operation}.`)
     // Inference results are content, not session credentials. Keep token statistics and user JSON intact.
-    return operation.endsWith('.run') || operation.includes('.job') || operation.endsWith('.create')
+    return operation.endsWith('.run') ||
+      operation.includes('.job') ||
+      operation.endsWith('.create') ||
+      operation === 'audio.generate'
       ? result
       : withRemoteSetup(operation, sanitized(result), this.options.remoteSetup)
   }

@@ -216,7 +216,7 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
         )
         return true
       }
-      const asset = /^\/api\/workspace\/artifacts\/(image|video)\/([^/]+)$/.exec(path)
+      const asset = /^\/api\/workspace\/artifacts\/(image|video|audio)\/([^/]+)$/.exec(path)
       if (asset && (method === 'GET' || method === 'HEAD')) {
         await serveWorkspaceAsset(deps.link, req, res, asset[1]!, asset[2]!)
         return true

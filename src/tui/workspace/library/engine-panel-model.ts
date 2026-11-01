@@ -14,6 +14,7 @@ import {
   engineApproval,
   engineName,
   engineRefreshKey,
+  engineTaskNote,
   engineView,
   liveEngineState,
   updateLine,
@@ -154,7 +155,8 @@ function engineStateModel(
   }
   if (p.kind === 'build') {
     say(p.summary || 'Not installed', 'muted')
-    if (p.engine === 'sd-cpp') say('Generation settings are saved with image and video tasks.', 'muted')
+    const note = engineTaskNote(p.engine)
+    if (note) say(note, 'muted')
     if (p.buildInstalled === false)
       add('engine-install', 'Install engine', 'Install the core-recommended build')
     return end()

@@ -6,10 +6,10 @@ import { remoteAction } from '../server/remote-actions.js'
 import { serverShellAction } from '../server/server-shell-actions.js'
 import {
   WORKSPACE_OPERATIONS,
-  PLAYGROUND_TASKS,
   SETTINGS_SECTIONS,
   SETTINGS_WORKSPACE_SECTIONS,
 } from '../../../contract/index.js'
+import { playgroundTasks } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import { defaultInput, operationFields } from '../operations/operation-model.js'
 import { PAGE_FOCUS } from '../state.js'
@@ -118,7 +118,7 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
   if (id.startsWith('playground-task:')) {
     if (!s.setupComplete) return true
     const task = id.slice(16)
-    if (!PLAYGROUND_TASKS.some((v) => v.id === task)) return true
+    if (!playgroundTasks(s.workspace).some((v) => v.id === task)) return true
     if (task === 'chat') {
       ctx.update((v) => ({
         ...v,
@@ -129,6 +129,12 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
         edit: '',
         scroll: 0,
       }))
+      return true
+    }
+    // Audio has no studio here yet: its operations, on the runner they share with the rest of the server.
+    if (task === 'audio') {
+      await navigationAction('open-operation:audio.generate', ctx)
+      ctx.update((v) => ({ ...v, operationReturn: 'chat' }))
       return true
     }
     const name = `media.${task}.${task === 'image' || task === 'video' ? 'create' : 'run'}`

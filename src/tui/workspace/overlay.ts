@@ -52,7 +52,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     return
   }
   if (s.overlay === 'setup-goal') {
-    drawGoalSetup(c, focus)
+    drawGoalSetup(c, focus, s)
     return
   }
   if (s.overlay === 'install-review') {

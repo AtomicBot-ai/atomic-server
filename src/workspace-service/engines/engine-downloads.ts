@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { readdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { EngineVersionsResponse } from '@atomic-chat/core/contracts'
+import { AUDIO_ENGINE_ID } from '../../contract/index.js'
 import type { CoreLink } from '../../core-link/index.js'
 import type { ProxyConfig } from '../../downloads/index.js'
 import { AtcError } from '../../errors/index.js'
@@ -12,6 +13,7 @@ import { engineName } from '../../workspace-view/index.js'
 import { engineKind, ensureArtifactEngine, installEngine } from './engine-install.js'
 import { object } from '../validation.js'
 import { SerialWork } from '../serial.js'
+import { requireAudioCore } from '../audio/audio-core.js'
 
 interface EngineJob extends Record<string, unknown> {
   id: string
@@ -111,6 +113,8 @@ export class EngineDownloads {
       const kind = engineKind(engine)
       if (kind !== 'llamacpp' && kind !== 'engine-build')
         throw new AtcError('ATC_USAGE', 'Use the engine setup screen to review this engine installation.')
+      // A core without audio refuses before a job row exists: Downloads shows nothing for it.
+      if (engine === AUDIO_ENGINE_ID) await requireAudioCore(this.link)
       let target = object(input['target'])
       if (!Object.keys(target).length && kind === 'llamacpp') {
         const versions = await this.link.request<EngineVersionsResponse>('POST', '/engines/versions', {})

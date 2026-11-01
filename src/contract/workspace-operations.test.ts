@@ -29,6 +29,21 @@ describe('the workspace operation registry', () => {
     ])
   })
 
+  it('asks an agent for text and the mode of an audio job, and requires both', () => {
+    const generate = WORKSPACE_OPERATIONS.find((op) => op.name === 'audio.generate')!
+    expect(generate.effect).toBe('generate')
+    expect(generate.inputSchema.required).toEqual(['mode', 'request'])
+    expect(generate.inputSchema.properties['mode']!.enum).toEqual(['speech', 'music', 'effects'])
+    expect(generate.inputSchema.properties['request']!.required).toEqual(['text'])
+  })
+
+  it('offers audio models in the catalog and in reviewed downloads', () => {
+    for (const name of ['models.catalog', 'artifacts.plan'])
+      expect(
+        WORKSPACE_OPERATIONS.find((op) => op.name === name)!.inputSchema.properties['category']!.enum
+      ).toContain('audio')
+  })
+
   it('lets only reads and revealed secrets leave state alone', () => {
     for (const op of WORKSPACE_OPERATIONS.filter((op) => !op.mutates))
       expect(['read', 'secret']).toContain(op.effect)

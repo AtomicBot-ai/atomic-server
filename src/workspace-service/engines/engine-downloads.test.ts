@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { afterEach, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
@@ -259,4 +260,20 @@ it('forgets a finished install a day later while the server keeps running', asyn
   now += 25 * 60 * 60 * 1000
   expect((await queue.list()).map((j) => j.id)).not.toContain(job.id)
   expect(existsSync(join(tmp.paths.atcDir, 'engine-downloads', `${job.id}.json`))).toBe(false)
+})
+it('refuses audio.cpp on a core without audio before a job exists, so Downloads stays empty', async () => {
+  const { link, queue } = fixture()
+  link.responses['GET /audio/status'] = new AtomicCoreError(
+    'INVALID_ARGUMENT',
+    'No such control route: /audio/status'
+  )
+  await expect(queue.enqueue('audio-cpp')).rejects.toThrow("this server's core has no audio")
+  expect(await queue.list()).toEqual([])
+})
+it('queues audio.cpp as an engine of builds on a core with audio', async () => {
+  const { link, queue } = fixture()
+  link.responses['POST /engines/versions'] = { engines: [{ engine: 'audio-cpp', latest: null }] }
+  const job = await queue.enqueue('audio-cpp')
+  expect(job).toMatchObject({ engine: 'audio-cpp', name: 'audio.cpp' })
+  await vi.waitFor(() => expect(link.calls.some((c) => c.path === '/engines/audio-cpp/update')).toBe(true))
 })

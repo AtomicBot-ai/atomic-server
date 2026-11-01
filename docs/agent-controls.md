@@ -32,7 +32,8 @@ parse the human table output in an agent.
 
 `atc setup manual` records a deliberate skip. It opens the workspaces but does not mark an untested
 model as ready. Media model planning uses `artifacts.plan` / `artifacts.install`, and task parameters are
-exposed by the `media.*` operations. Engine and hardware requirements still apply.
+exposed by the `media.*` and `audio.*` operations; `audio.*` answers that the core has no audio on a core
+without it. Engine and hardware requirements still apply.
 
 ## MCP
 

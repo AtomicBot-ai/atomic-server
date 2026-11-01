@@ -103,7 +103,11 @@ describe('shared workspace structure', () => {
       within(screen.getByRole('navigation', { name: 'Playground tasks' }))
         .getAllByRole('button')
         .map((option) => option.textContent)
-    ).toEqual(PLAYGROUND_TASKS.map((item) => (item.id === 'chat' ? 'New chat' : item.label)))
+    ).toEqual(
+      PLAYGROUND_TASKS.filter((item) => item.id !== 'audio').map((item) =>
+        item.id === 'chat' ? 'New chat' : item.label
+      )
+    )
     await waitFor(() => expect(api).toHaveBeenCalledWith('history.list'))
   })
 

@@ -135,3 +135,32 @@ it('serves only Core gallery-owned media, supports byte ranges and refuses escap
   expect(rejected.status).toBe(400)
   expect(await rejected.text()).not.toContain('private-data')
 })
+
+it('serves a generated clip by its gallery id, past the first page, and refuses a file outside the gallery', async () => {
+  const { url, link, paths } = await host(),
+    root = join(paths.dataFolder, 'audios'),
+    file = join(root, 'ab12.wav'),
+    outside = join(paths.dataFolder, 'private.wav')
+  await mkdir(root, { recursive: true })
+  await writeFile(file, 'RIFF-CONTENT')
+  await writeFile(outside, 'private-data')
+  let selected = file
+  link.request = async <T>(_method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', path: string) => {
+    if (path === '/audio/status') return { outputDir: root } as T
+    return (
+      path.includes('offset=0')
+        ? { items: [{ id: 'other', path: file }], hasMore: true, total: 2 }
+        : { items: [{ id: 'ab12', path: selected }], hasMore: false, total: 2 }
+    ) as T
+  }
+  const clip = await fetch(`${url}/api/workspace/artifacts/audio/ab12`, { headers })
+  expect(clip.status).toBe(200)
+  expect(clip.headers.get('content-type')).toBe('audio/wav')
+  expect(await clip.text()).toBe('RIFF-CONTENT')
+  selected = outside
+  const rejected = await fetch(`${url}/api/workspace/artifacts/audio/ab12`, { headers })
+  expect(rejected.status).toBe(400)
+  expect(await rejected.text()).not.toContain('private-data')
+  const missing = await fetch(`${url}/api/workspace/artifacts/audio/ffff`, { headers })
+  expect(missing.status).toBe(400)
+})

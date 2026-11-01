@@ -10,7 +10,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     "Browse the curated model catalog, optionally by category and search text; refresh fetches it again. With litert-lm: conf's curated LiteRT-LM models only, each variant for this platform with the core's verdict.",
     {
       properties: {
-        category: { type: 'string', enum: ['text', 'image', 'video', 'embedding', 'decision'] },
+        category: { type: 'string', enum: ['text', 'image', 'video', 'audio', 'embedding', 'decision'] },
         query: { type: 'string' },
         refresh: { type: 'boolean' },
         engine: { type: 'string', description: "A managed engine: its descriptor's curated models" },
@@ -183,7 +183,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'Plan a catalog model download by category, model and quantization, without downloading. For text, an MLX-tagged Hub repository outside the catalog is also accepted. Its digest is what artifacts.install accepts.',
     {
       properties: {
-        category: { type: 'string', enum: ['text', 'image', 'video', 'embedding', 'decision'] },
+        category: { type: 'string', enum: ['text', 'image', 'video', 'audio', 'embedding', 'decision'] },
         model_id: { type: 'string' },
         quant: { type: 'string' },
       },

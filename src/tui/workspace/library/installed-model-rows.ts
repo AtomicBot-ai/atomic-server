@@ -1,4 +1,4 @@
-import { localModelStatus } from '../../../workspace-view/index.js'
+import { attributionOf, localModelStatus } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
 import { record } from './library-model.js'
 
@@ -25,21 +25,24 @@ export function installedModelRows(s: WorkspaceState) {
       const job = record(value),
         plan = record(job['plan'])
       const category = String(plan['category'] ?? '')
-      if (job['stage'] !== 'ready' || !['image', 'video', 'embedding', 'decision'].includes(category))
+      if (
+        job['stage'] !== 'ready' ||
+        !['image', 'video', 'audio', 'embedding', 'decision'].includes(category)
+      )
         return []
       const kind = category === 'image' || category === 'video' ? 'image-video' : category
       return [
         {
           id: `media-installed:${job['id']}`,
           remove: `media-delete:${job['id']}`,
-          name: String(plan['name'] ?? plan['model_id']),
+          name: [String(plan['name'] ?? plan['model_id']), attributionOf(job)].filter(Boolean).join(' · '),
           status: localModelStatus(
             s.workspace,
             [
               {
                 model: String(plan['model_id'] ?? ''),
                 providers: [String(plan['engine'] ?? (kind === 'image-video' ? 'sd-cpp' : ''))],
-                kind: kind as 'image-video' | 'embedding' | 'decision',
+                kind: kind as 'image-video' | 'audio' | 'embedding' | 'decision',
               },
             ],
             true

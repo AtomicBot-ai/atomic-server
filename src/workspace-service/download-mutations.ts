@@ -13,6 +13,7 @@ const writes = new Set([
   'media.load',
   'media.embedding.load',
   'media.decision.load',
+  'audio.load',
 ])
 /** File removal, installs and model loads share one queue; reads and cancellation remain responsive. */
 export class DownloadMutations {
