@@ -89,12 +89,14 @@ function PermissionDialog({
     setError('')
     try {
       if (item.id === 'notifications') {
-        if (typeof Notification === 'undefined')
-          throw new Error('Notifications are unavailable in this browser.')
-        if ((await Notification.requestPermission()) !== 'granted')
-          throw new Error(
-            'Notifications were not allowed. Change the site permission in your browser to retry.'
-          )
+        if (typeof Notification === 'undefined') {
+          setError('Notifications are unavailable in this browser.')
+          return
+        }
+        if ((await Notification.requestPermission()) !== 'granted') {
+          setError('Notifications were not allowed. Change the site permission in your browser to retry.')
+          return
+        }
       }
       granted()
     } catch (e) {
