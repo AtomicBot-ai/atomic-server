@@ -11,6 +11,7 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-01** — [Distinguish missing Hugging Face model resources from Hub outages](2026-11-01-classify-hugging-face-check-failures.md) — reject missing model metadata locally and preserve safe HTTP status codes for reportable Hub failures.
 - **2026-11-01** — [Keep optional notification refusals out of error reports](2026-11-01-keep-notification-refusals-local.md) — show expected browser permission outcomes locally and keep reporting unexpected request failures.
 - **2026-10-29** — [Order terminal selections and navigate complete popup menus](2026-10-29-terminal-selection-and-popup-navigation.md) — one selection queue, visible editor errors, complete Tools navigation, and full-ID engine compatibility.
 - **2026-10-29** — [Keep an exploratory QA ledger](2026-10-29-keep-an-exploratory-qa-ledger.md) — stable defect IDs, session journals and synthetic evidence for repeated exploratory passes.
