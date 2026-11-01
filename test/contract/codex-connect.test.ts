@@ -1,8 +1,39 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { AGENTS } from '../../src/agent-launch/index.js'
 import { testRun, fakeHost, type TestRun } from '../helpers/test-context.js'
 let t: TestRun
 afterEach(() => t?.cleanup())
 describe('Codex connection export', () => {
+  it.each(AGENTS)('keeps missing $name local on interactive connect', async (agent) => {
+    const capture = vi.fn()
+    const exec = vi.fn(async () => {
+      throw new Error('unexpected execution')
+    })
+    t = testRun({
+      io: { isTTY: { stdin: true, stdout: true, stderr: true } },
+      deps: {
+        host: fakeHost({ findOnPath: () => undefined, exec }),
+        errors: { capture, flush: async () => {}, follow: () => {} },
+      },
+    })
+    t.link.snapshotValue.server.running = true
+    t.link.snapshotValue.sessions = [
+      { model_id: 'owner/coder', provider: 'llamacpp-upstream', state: 'ready' },
+    ] as never
+    expect(await t.run(['api', 'key', 'create', 'Missing agent test', '--json'])).toBe(0)
+    const key = JSON.parse(t.io.out.join('')).result as { id: string; token: string }
+    t.io.out.length = 0
+    expect(await t.run(['connect', agent.id, '--model', 'owner/coder', '--key-id', key.id])).toBe(2)
+    expect(t.io.err.join('')).toContain(`${agent.name} is not installed on PATH`)
+    expect(t.io.err.join('')).toContain(agent.docs)
+    expect(t.io.err.join('')).not.toContain(key.token)
+    expect(t.io.out).toEqual([])
+    expect(capture).not.toHaveBeenCalled()
+    expect(exec).not.toHaveBeenCalled()
+    expect(existsSync(join(t.io.env['ATC_DATA_FOLDER']!, 'atc', 'agents'))).toBe(false)
+  })
   it.each([['/build/atc-preview'], ['/runtime/node', '/source/dist/bin.js']])(
     'exports a profile with the real launcher %s and chosen server',
     async (...selfCommand) => {
