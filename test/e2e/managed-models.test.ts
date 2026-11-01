@@ -26,6 +26,7 @@ import type { FakeManagedMachine } from '../helpers/fake-managed-machine.js'
 import { FixtureHttpServer } from '../helpers/fixture-http-server.js'
 import { HF_SHA, qwenFiles, safetensors, serveRepository } from '../helpers/hf-hub.js'
 import { waitFor } from '../helpers/wait-for.js'
+import { missingAgentHandoff } from '../helpers/missing-agent-handoff.js'
 
 const scratch = mkdtempSync(join(tmpdir(), 'atc-e2e-mm-'))
 const dataFolder = join(scratch, 'data')
@@ -241,7 +242,7 @@ describe.skipIf(process.platform === 'win32')(`a managed load (${ATC.join(' ')})
     rmSync(scratch2, { recursive: true, force: true })
   })
 
-  it('shows the stages of the load, then the public API answers from the vLLM container', async () => {
+  it('loads and serves a model, then refuses a missing agent without reporting a defect', async () => {
     const run = await run2('run', 'qwen3', '--engine', 'vllm')
     expect(run.code, run.err).toBe(0)
     expect(run.err).toMatch(/Starting the container|Initializing the engine/)
@@ -263,5 +264,19 @@ describe.skipIf(process.platform === 'win32')(`a managed load (${ATC.join(' ')})
     expect(
       ((await chat.json()) as { choices: { message: { content: string } }[] }).choices[0]?.message.content
     ).toBe('hello from vllm')
+    const created = await run2('api', 'key', 'create', 'Agent handoff', '--json')
+    expect(created.code, created.err).toBe(0)
+    const key = (JSON.parse(created.out) as { result: { id: string; token: string } }).result
+    const refused = await missingAgentHandoff(
+      [...ATC, 'connect', 'atomic-agent', '--model', 'qwen3', '--key-id', key.id, '--data-folder', data2],
+      env2,
+      scratch2
+    )
+    expect(refused.code, refused.out).toBe(2)
+    expect(refused.out).toContain('Atomic Agent is not installed on PATH')
+    expect(refused.out).toContain('[ATC_USAGE]')
+    expect(refused.out).not.toContain(key.token)
+    expect(refused.events).toEqual([])
+    expect(existsSync(join(data2, 'atc', 'agents'))).toBe(false)
   })
 })

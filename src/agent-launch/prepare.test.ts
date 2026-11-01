@@ -1,7 +1,8 @@
 import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { AGENTS } from './plan.js'
 import { prepareAgent } from './prepare.js'
 import { runAgent } from './interactive.js'
 describe('agent handoff', () => {
@@ -47,17 +48,30 @@ describe('agent handoff', () => {
       await rm(folder, { recursive: true, force: true })
     }
   })
-  it('reports missing agents without installing or changing anything', async () => {
-    await expect(
-      prepareAgent('atomic-agent', 'http://localhost:1/v1', 'm', '', {
-        folder: '/never-write',
-        cwd: '/',
-        env: {},
-        find: () => undefined,
-        exec: async () => {
-          throw new Error('unexpected')
-        },
+  it.each(AGENTS)('refuses missing $name as usage without probing or writing a profile', async (agent) => {
+    const folder = await mkdtemp(join(tmpdir(), 'atc-missing-agent-'))
+    const exec = vi.fn(async () => {
+      throw new Error('unexpected version probe')
+    })
+    const find = vi.fn<(name: string) => string | undefined>(() => undefined)
+    try {
+      await expect(
+        prepareAgent(agent.id, 'http://localhost:1/v1', 'm', 'private-key', {
+          folder,
+          cwd: '/',
+          env: {},
+          find,
+          exec,
+        })
+      ).rejects.toMatchObject({
+        code: 'ATC_USAGE',
+        message: `${agent.name} is not installed on PATH. Install it from ${agent.docs}`,
       })
-    ).rejects.toThrow('not installed on PATH')
+      expect(find.mock.calls.map((call) => call[0])).toEqual([...agent.bins])
+      expect(exec).not.toHaveBeenCalled()
+      expect(await readdir(folder)).toEqual([])
+    } finally {
+      await rm(folder, { recursive: true, force: true })
+    }
   })
 })

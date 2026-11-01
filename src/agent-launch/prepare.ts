@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ExecFn } from '../host/index.js'
+import { AtcError } from '../errors/index.js'
 import { AGENTS, agentProfile } from './plan.js'
 import type { AgentId, AgentLaunch } from './plan.js'
 export interface AgentHost {
@@ -21,7 +22,8 @@ export async function prepareAgent(
   const agent = AGENTS.find((a) => a.id === id)
   if (!agent) throw new Error('Unknown agent.')
   const command = agent.bins.map((b) => host.find(b)).find(Boolean)
-  if (!command) throw new Error(`${agent.name} is not installed on PATH. Install it from ${agent.docs}`)
+  if (!command)
+    throw new AtcError('ATC_USAGE', `${agent.name} is not installed on PATH. Install it from ${agent.docs}`)
   let major = 1
   if (id === 'opencode') {
     const version = await host.exec(command, ['--version'], { timeoutMs: 5000, env: host.env })
