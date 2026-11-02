@@ -209,11 +209,14 @@ describe('ManagedModelSetups', () => {
     const plan = await s.plan({ repository: REPO, engine: 'vllm' })
     server.files.get(`/${REPO}/resolve/${HF_SHA}/model-00001-of-00002.safetensors`)!.holdAfterBytes = 100
     await s.install({ request_id: 'r4', plan_digest: plan.digest })
-    await waitFor(async () => (await s.list()).find((j) => j.id === 'r4')?.stage === 'downloading')
+    const dir = join(root, 'Qwen', 'Qwen3.5-2B')
+    const partial = join(dir, 'model-00001-of-00002.safetensors.tmp')
+    // The stage is published before the downloader creates files: cancel only after bytes arrive.
+    await waitFor(async () => ((await stat(partial).catch(() => null))?.size ?? 0) >= 100)
     await s.cancel('r4')
     expect((await settled(s, 'r4')).stage).toBe('cancelled')
     server.release()
-    const dir = join(root, 'Qwen', 'Qwen3.5-2B')
+    expect((await stat(partial)).size).toBeGreaterThanOrEqual(100)
     expect(await readdir(dir)).not.toContain('model.yml')
   })
 
