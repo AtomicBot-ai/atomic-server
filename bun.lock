@@ -63,6 +63,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "@atomic-chat/core@0.20.7": "patches/@atomic-chat%2Fcore@0.20.7.patch",
+  },
   "packages": {
     "@adobe/css-tools": ["@adobe/css-tools@4.5.0", "", {}, "sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q=="],
 

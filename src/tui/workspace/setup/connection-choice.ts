@@ -1,4 +1,5 @@
-import { setupModelPending } from '../../../workspace-view/index.js'
+import { finishFirstRun } from './access-purpose.js'
+import { firstRunDownloadsPending } from './download-pending.js'
 import { finalSetupState } from './waiting-setup.js'
 import type { ActionContext } from '../actions.js'
 import type { Canvas } from '../draw/canvas.js'
@@ -11,6 +12,7 @@ export async function firstConnectionAction(id: string, ctx: ActionContext): Pro
     id = `first-connect:${ctx.get().finalSetup!.destination}`
   }
   if (id !== 'first-connect:endpoint' && id !== 'first-connect:agent') return false
+  if (ctx.get().busy) return true
   // Decide on the server's word, not the last poll (none at all right after the terminal opens); when the
   // server cannot say, wait: the waiting screen lets the person go on anyway.
   const workspace = leavingWait
@@ -19,15 +21,17 @@ export async function firstConnectionAction(id: string, ctx: ActionContext): Pro
         .then(() => ctx.controller.runtime.snapshot())
         .catch(() => null)
   if (workspace) ctx.update((s) => ({ ...s, workspace }))
-  if (!leavingWait && (!workspace || setupModelPending(workspace, ctx.get().model))) {
+  if (!leavingWait && (!workspace || firstRunDownloadsPending(ctx.get(), workspace))) {
     ctx.update((s) => ({
       ...s,
+      firstRun: 'connect',
+      page: 'welcome',
       finalSetup: finalSetupState(id === 'first-connect:endpoint' ? 'endpoint' : 'agent'),
       focus: 'wait-cell:0',
     }))
     return true
   }
-  await ctx.controller.runtime.execute('setup.manual')
+  await finishFirstRun(ctx)
   const endpoint = id === 'first-connect:endpoint'
   ctx.update((s) => ({
     ...s,

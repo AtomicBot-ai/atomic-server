@@ -26,7 +26,6 @@ import { adminConfigView, adminStatus } from './admin-views.js'
 import { engineOutputSink } from './engine-log.js'
 import { CrashPolicy, watchSessions } from './session-watch.js'
 import { bootLoader, bootPlan, runBoot } from './boot.js'
-import { startApi } from '../terminal-service/index.js'
 import { serverReleaseWatch } from './release-check.js'
 import { serverCloudflared } from './cloudflared.js'
 import type { ReleaseWatch } from '../update/index.js'
@@ -230,7 +229,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     const config = options.config.values
     const plan = bootPlan(config)
     const bootDeps = {
-      startApi: () => startApi(link, config, keys.current()?.[0] ?? '', { probePort: host.probePort }),
+      startApi: () => workspace.execute('api.start'),
       loadModel: bootLoader((op, input) => workspace.execute(op, input), config.engines.default),
       log,
     }

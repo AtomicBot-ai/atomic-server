@@ -1,5 +1,5 @@
 import type { WorkspaceInput, WorkspaceSnapshot } from '../../contract/index.js'
-import { inferenceReadiness } from '../../workspace-view/index.js'
+import { apiDownloadWait, inferenceReadiness } from '../../workspace-view/index.js'
 import { AtcError } from '../../errors/index.js'
 import { object } from '../validation.js'
 
@@ -8,8 +8,11 @@ export async function requireReadiness(
   input: WorkspaceInput,
   snapshot: () => Promise<WorkspaceSnapshot>
 ) {
-  // Only chat: the API serves without a model (`atc api start`, `api.autoStart`), so a Start with
-  // nothing loaded is the UIs' hint to give, not an error.
+  if (operation === 'api.start' || operation === 'api.restart') {
+    const waiting = apiDownloadWait(await snapshot())
+    if (waiting) throw new AtcError('ATC_USAGE', waiting.message)
+    return
+  }
   if (!['chat.start', 'chat.complete'].includes(operation)) return
   const request = object(input['request'])
   if (typeof request['model'] !== 'string' || !request['model'].trim())

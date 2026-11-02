@@ -52,7 +52,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   if (await libraryAction(id, ctx)) return
   if (await pickerAction(id, ctx)) return
   if (await setupAction(id, ctx)) return
-  if (!s.setupComplete && (id.startsWith('page:') || ['new', 'send', 'api-toggle'].includes(id))) return
+  if (!s.setupComplete && (id.startsWith('page:') || ['new', 'send'].includes(id))) return
   if (await apiAction(id, ctx)) return
   if (await dataAction(id, ctx)) return
   if (await agentAction(id, ctx)) return
@@ -186,8 +186,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     const api = s.base.daemon.kind === 'up' ? s.base.daemon.snapshot.server : undefined
     const endpoint = serverEndpoint(s)
     if (id === 'copy-endpoint') {
-      ctx.copy(endpoint)
-      patch({ message: 'URL sent to the terminal clipboard.' })
+      await ctx.copy(endpoint)
       return
     }
     if (!api?.running) {
@@ -202,8 +201,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'copy-example') {
-    ctx.copy(example(s))
-    patch({ message: 'Example sent to the terminal clipboard.' })
+    await ctx.copy(example(s))
     return
   }
   if (id.startsWith('command:')) {

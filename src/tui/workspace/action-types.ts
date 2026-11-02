@@ -7,6 +7,6 @@ export interface ActionContext {
   update: (fn: (s: WorkspaceState) => WorkspaceState) => void
   controller: WorkspaceController
   send: () => void
-  copy: (text: string) => void
+  copy: (text: string) => void | Promise<void>
   cancel: () => void
 }

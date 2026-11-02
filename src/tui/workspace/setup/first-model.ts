@@ -25,7 +25,7 @@ export function firstModelChoices(s: WorkspaceState): FirstModelChoice[] {
     key: `local:${m.id}`,
     name: m.name || m.id,
     detail: `${engineName(m.provider)} · Downloaded`,
-    group: 'On this device',
+    group: 'Downloaded',
     action: `first-installed:${i}`,
     installed: true,
   }))
@@ -138,6 +138,7 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
   }
   if (v.error) text(c, x, bottom - 1, v.error.split('\n')[0]!, COLORS.statusError, width)
   text(c, x, barY, '-'.repeat(width), COLORS.line, width)
+  actionButton(c, 'first-intro', x, barY + 1, 'Back', 'Return to engine selection', focus)
   const label = 'Continue',
     actionX = x + width - textWidth(label) - 6,
     skipX = actionX - 15

@@ -1,11 +1,13 @@
 import { waitingSetupInput } from './setup/waiting-setup.js'
+import { downloadListInput } from './downloads/download-list-input.js'
+import { catalogDownloadInput } from './library/catalog-download-rows.js'
 import { chatFeaturesInput } from './chat/features-input.js'
 import { railInput } from './navigation/rail.js'
 import { featureInput } from './server/feature-actions.js'
 import { enginePanelInput } from './library/engine-panel-input.js'
 import { serverShellInput } from './server/server-shell-input.js'
 import { mediaInput } from './media/media-input.js'
-import { focusedTarget, inputKey } from './input/input-key.js'
+import { focusedTarget, inputKey, tabTarget } from './input/input-key.js'
 import { waitingGameInput } from './games/waiting-game.js'
 import { connectionGuideInput } from './server/connection-picker.js'
 import { catalogMenuItems } from './library/catalog-menu.js'
@@ -36,6 +38,8 @@ export function workspaceInput(
 ): InputResult {
   ;({ input, key } = inputKey(input, key))
   const shell =
+    downloadListInput(input, key, s) ??
+    catalogDownloadInput(input, key, s, frame) ??
     railInput(input, key, s, frame) ??
     chatFeaturesInput(input, key, s, frame) ??
     waitingSetupInput(input, key, s) ??
@@ -181,11 +185,7 @@ export function workspaceInput(
       delta = key.upArrow || key.shift ? -1 : 1
     return { patch: { focus: controls[(at + delta + controls.length) % controls.length]!, hover: '' } }
   }
-  if (key.tab) {
-    const i = frame.targets.findIndex((t) => t.id === s.focus),
-      next = (i + (key.shift ? -1 : 1) + frame.targets.length) % frame.targets.length
-    return { patch: { focus: frame.targets[next]?.id ?? '', hover: '', message: '' } }
-  }
+  if (key.tab) return tabTarget(s.focus, frame.targets, key.shift)
   const firstModel = firstModelInput(key, s)
   if (firstModel) return firstModel
   if (s.overlay === 'console' && s.focus === 'console-input') {

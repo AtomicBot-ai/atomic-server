@@ -74,7 +74,7 @@ export function inferenceReadiness(
 
 /** Final onboarding waits for its selected text download, not optional media jobs. */
 export function setupModelPending(snapshot: WorkspaceSnapshot | null | undefined, model = '') {
-  const job = connectionDownload(snapshot?.setups ?? [], model)
+  const job = connectionDownload(snapshot?.setups ?? [], snapshot?.selection?.model || model)
   return Boolean(
     job &&
     !['ready', 'complete', 'completed', 'succeeded', 'success', 'done', 'removed', 'deleted'].includes(

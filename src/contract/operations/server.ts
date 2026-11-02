@@ -23,7 +23,16 @@ export const SERVER_OPERATIONS: readonly WorkspaceOperation[] = [
     'Start API',
     'configure',
     'Start the OpenAI-compatible API listener. The optional request overrides host, port, prefix, trusted hosts and the proxy timeout. Engine capability limits apply.',
-    { properties: { request: LISTENER_REQUEST } }
+    {
+      properties: {
+        request: LISTENER_REQUEST,
+        restore_selected: {
+          type: 'boolean',
+          description:
+            'Load the saved installed model before starting, even if the listener is already running.',
+        },
+      },
+    }
   ),
   operation(
     'api.stop',

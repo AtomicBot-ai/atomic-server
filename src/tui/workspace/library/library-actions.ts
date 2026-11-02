@@ -12,6 +12,15 @@ import type { LibraryView } from './library-model.js'
 import { libraryRows, record } from './library-model.js'
 import { downloadAction } from './download-detail.js'
 export async function libraryAction(id: string, ctx: ActionContext): Promise<boolean> {
+  const variant = /^catalog-download-variant:(\d+):(\d+)$/.exec(id)
+  if (variant) {
+    const s = ctx.get(),
+      row = s.libraryRows[Number(variant[1])]
+    if (s.busy || !row || s.catalogOpen !== row.id) return true
+    const value = s.catalogVariants[Number(variant[2])]?.value ?? ''
+    ctx.update((v) => ({ ...v, catalogVariant: value }))
+    return libraryAction(`catalog-download:${variant[1]}`, ctx)
+  }
   if (await catalogFilterAction(id, ctx)) return true
   if (await catalogBrowseAction(id, ctx)) return true
   if (id.startsWith('catalog-download:')) id = `library-row:${id.slice(17)}`

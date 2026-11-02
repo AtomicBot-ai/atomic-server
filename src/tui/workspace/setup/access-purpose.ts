@@ -14,11 +14,21 @@ const PERMISSIONS = [
   },
 ] as const
 
+/** Finishing with a local model can load an engine; show that work and prevent duplicate finishes. */
+export async function finishFirstRun(ctx: ActionContext) {
+  ctx.update((s) => ({ ...s, busy: true, message: 'Preparing your server…' }))
+  try {
+    await ctx.controller.runtime.execute('setup.manual')
+  } finally {
+    ctx.update((s) => ({ ...s, busy: false }))
+  }
+}
+
 export async function openFirstRunServer(ctx: ActionContext) {
   const s = ctx.get(),
     setup = s.setup,
     model = setup?.selections[0]?.plan.model_id ?? setup?.path?.job?.model ?? s.model
-  await ctx.controller.runtime.execute('setup.manual')
+  await finishFirstRun(ctx)
   ctx.update((v) => ({
     ...v,
     setupComplete: true,

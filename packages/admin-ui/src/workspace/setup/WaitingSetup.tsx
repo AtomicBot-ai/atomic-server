@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { connectionDownload, downloadStopped, reminderSet, setupModelPending } from '@view'
+import { connectionDownload, downloadStopped, reminderSet, setupDownloadsPending } from '@view'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { DownloadGame } from '../games/DownloadGame'
@@ -25,7 +25,7 @@ export function WaitingSetup({
   const [email, setEmail] = useState(''),
     [emailStatus, setEmailStatus] = useState<EmailStatus>('idle'),
     [emailError, setEmailError] = useState('')
-  const pending = setupModelPending(workspace.snapshot)
+  const pending = setupDownloadsPending(workspace.snapshot)
   const job = connectionDownload(workspace.snapshot?.setups ?? [])
   const stopped = downloadStopped(String(job?.stage ?? job?.state ?? ''))
   const saving = emailStatus === 'saving'

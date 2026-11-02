@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 /** Keep keyboard focus inside the topmost dialog, and restore it on close. */
-export function useDialog(onClose: () => void, active = true) {
+export function useDialog(onClose: () => void, active = true, { dismissOnOutside = true } = {}) {
   const ref = useRef<HTMLElement>(null)
   const close = useRef(onClose)
   close.current = onClose
@@ -51,7 +51,7 @@ export function useDialog(onClose: () => void, active = true) {
       // Consume the whole click: dismissing a dialog must not activate the page below it.
       event.preventDefault()
       event.stopImmediatePropagation()
-      close.current()
+      if (dismissOnOutside) close.current()
     }
     document.addEventListener('click', onOutside, true)
     document.addEventListener('keydown', onKey)
@@ -69,6 +69,6 @@ export function useDialog(onClose: () => void, active = true) {
             ?.focus()
       }
     }
-  }, [active])
+  }, [active, dismissOnOutside])
   return ref
 }

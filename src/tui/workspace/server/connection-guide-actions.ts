@@ -143,10 +143,10 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       ...(!s.firstRun ? s.connectionReturn : {}),
       connectionReturn: undefined,
     }))
-  } else if (id === 'guide-copy') ctx.copy(d.command || d.endpoint)
+  } else if (id === 'guide-copy') await ctx.copy(d.command || d.endpoint)
   else if (id === 'guide-key') {
     const key = await c.runtime.execute('keys.reveal', { id: d.keyId })
-    ctx.copy(typeof key === 'string' ? key : String(record(key)['token'] ?? record(key)['key'] ?? ''))
+    await ctx.copy(typeof key === 'string' ? key : String(record(key)['token'] ?? record(key)['key'] ?? ''))
   } else if (id === 'guide-configure') {
     const selected = connectionModelState(
       d.model,

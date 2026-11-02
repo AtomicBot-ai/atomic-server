@@ -9,24 +9,26 @@ import type { WorkspaceServiceOptions } from './service-options.js'
 import type { WorkspaceMetrics } from './snapshot/metrics.js'
 import { object, sanitized } from './validation.js'
 import { publicEndpoint } from './snapshot/snapshot.js'
-import { saveWorkspaceSetup } from './snapshot/state.js'
+import { readWorkspaceSetup, saveWorkspaceSetup } from './snapshot/state.js'
 import { verifyWorkload } from './snapshot/readiness.js'
 import { callPublic } from './snapshot/public-api.js'
 import { engineSettingsSchema, workspaceConfig, updateWorkspaceConfig } from './settings.js'
 import { workspaceLogs } from './workspace-logs.js'
 import { NOT_CORE } from './not-core.js'
+import { apiDownloadWait } from '../workspace-view/index.js'
 import { startApi } from '../terminal-service/index.js'
 
 export interface ServerParts {
+  restoreSelection?: () => Promise<boolean>
   options: WorkspaceServiceOptions
   keys: ClientKeys
   metrics: Pick<WorkspaceMetrics, 'setDetailed'>
   request: typeof fetch
-  snapshot: () => Promise<Pick<WorkspaceSnapshot, 'api' | 'services'>>
+  snapshot: () => Promise<Pick<WorkspaceSnapshot, 'api' | 'services'> & Partial<WorkspaceSnapshot>>
 }
 
 export async function serverOperation(
-  { options, keys, metrics, request, snapshot: readSnapshot }: ServerParts,
+  { options, keys, metrics, request, snapshot: readSnapshot, restoreSelection }: ServerParts,
   operation: string,
   input: WorkspaceInput
 ) {
@@ -46,6 +48,7 @@ export async function serverOperation(
     case 'api.start':
     case 'api.restart': {
       if (operation === 'api.restart') await link.server.stop()
+      if (input['restore_selected'] === true) await restoreSelection?.()
       const status = operation === 'api.start' ? (await readSnapshot()).api : undefined
       const started = await startApi(link, config, await keys.get(), {
         request: object(input['request']),
@@ -105,8 +108,18 @@ export async function serverOperation(
         throw new AtcError('ATC_USAGE', 'No such API key.')
       await keys.revoke(String(input['id']))
       return { revoked: true }
-    case 'setup.manual':
+    case 'setup.manual': {
+      if (
+        !(await readWorkspaceSetup(paths))?.complete &&
+        !apiDownloadWait(await readSnapshot()) &&
+        (await restoreSelection?.())
+      )
+        await startApi(link, config, await keys.get(), {
+          status: await link.server.status(),
+          ...(options.probePort ? { probePort: options.probePort } : {}),
+        })
       return saveWorkspaceSetup(paths, 'manual')
+    }
     case 'setup.complete': {
       const snapshot = await readSnapshot()
       if (

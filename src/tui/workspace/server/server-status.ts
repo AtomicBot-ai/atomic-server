@@ -18,7 +18,7 @@ export function serverSelection(s: WorkspaceState) {
       engine: s.engines.find((choice) => choice.provider === active.provider)?.id ?? active.provider,
       model: serverChatModel(s),
     }
-  // Nothing loaded: the saved engine and the last download, as the web admin's panel shows them.
+  // A local model has no download record; keep the saved choice visible before its session starts.
   const shared = serverPanelSelection(s.workspace, s.engine)
-  return { engine: shared.engine, model: serverChatModel(s) || shared.model }
+  return { engine: shared.engine, model: serverChatModel(s) || shared.model || s.model }
 }

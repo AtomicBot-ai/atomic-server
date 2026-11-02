@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useConfirmation } from './use-confirmation'
 import type { Workspace } from './useWorkspace'
 import { HostStepBanner } from './HostStepBanner'
-import { loadStageText } from '@view'
+import { apiDownloadWait, loadStageText } from '@view'
 import type { Page } from './types'
 import { Action, JsonResult } from './Controls'
 import { Eye } from './Eye'
@@ -19,6 +19,7 @@ export function Cockpit({
   const { ask, confirmation, waiting } = useConfirmation()
   const [ping, setPing] = useState<unknown>()
   const s = w.snapshot
+  const downloadWait = apiDownloadWait(s)
   const state: EyeState = w.error
     ? 'disconnected'
     : w.pending.some((op) => ['api.start', 'api.restart', 'models.load'].includes(op))
@@ -92,9 +93,12 @@ export function Cockpit({
         </div>
         <div className="ew-actions">
           <Action
-            primary={!s?.api.running}
+            primary={!s?.api.running && !downloadWait}
+            unavailable={Boolean(downloadWait)}
+            title={downloadWait?.message}
             disabled={!s || waiting}
             onClick={() => {
+              if (downloadWait) throw new Error(downloadWait.message)
               if (s?.api.running)
                 ask({
                   title: 'Stop the API?',
@@ -106,7 +110,7 @@ export function Cockpit({
               else return w.execute('api.start')
             }}
           >
-            {s?.api.running ? 'Stop API' : 'Start API'}
+            {downloadWait?.label ?? (s?.api.running ? 'Stop API' : 'Start API')}
           </Action>
           <Action
             disabled={!s?.api.running || waiting}

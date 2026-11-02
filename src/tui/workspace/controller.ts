@@ -7,13 +7,7 @@ import { installedModels } from '../../terminal-setup/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
 import { dirname, join } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
-import {
-  TerminalSetup,
-  ModelCatalog,
-  modelFiles,
-  EngineSelection,
-  modelProvider,
-} from '../../terminal-setup/index.js'
+import { TerminalSetup, ModelCatalog, modelFiles, EngineSelection } from '../../terminal-setup/index.js'
 import type { HubRepository } from '../../terminal-setup/index.js'
 import { prepareAgent } from '../../agent-launch/index.js'
 import type { AgentHost, AgentId } from '../../agent-launch/index.js'
@@ -246,24 +240,8 @@ export class WorkspaceController {
   }
   async api(start: boolean, restoreModel = true): Promise<void> {
     if (start) await this.keys.initialize(this.deps.apiKey)
-    const link = await this.deps.base.attach({ launch: start, log: this.log })
-    if (start) {
-      if (!(await link.server.status()).running) {
-        const config = (await this.config()).values
-        if (restoreModel && config.tui.model) {
-          const selected = (await this.installed()).find((m) => m.id === config.tui.model)
-          if (selected && !(await link.models.sessions()).some((s) => s.model_id === selected.id)) {
-            const manifest = await this.setup.read()
-            const provider = modelProvider(
-              (await this.engineSelection.read()) || manifest?.engine.provider || '',
-              selected.provider
-            )
-            await this.runtime.execute('models.load', { provider, model_id: selected.id })
-          }
-        }
-        await this.runtime.execute('api.start')
-      }
-    } else await link.server.stop()
+    if (start) await this.runtime.execute('api.start', { restore_selected: restoreModel })
+    else await this.runtime.read('api.stop')
     await this.legacy.run({ name: 'refresh' })
   }
   /** A daemon replacement gets a fresh subscription; the console holds no ownership lease. */

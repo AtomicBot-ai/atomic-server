@@ -6,6 +6,7 @@ import {
   downloadControl,
 } from '../../../workspace-view/index.js'
 import { workspaceDownloadRows } from '../downloads/download-layout.js'
+import { downloadListAction } from '../downloads/download-list.js'
 import type { DownloadRow } from '../../../workspace-view/index.js'
 import { record } from './library-model.js'
 import type { ActionContext } from '../actions.js'
@@ -27,6 +28,7 @@ function selection(job: DownloadRow, s: WorkspaceState) {
   }
 }
 export async function downloadAction(id: string, ctx: ActionContext) {
+  if (downloadListAction(id, ctx)) return true
   if (
     id === 'close' &&
     ['download-remove', 'download-detail'].includes(ctx.get().overlay ?? '') &&
@@ -44,21 +46,14 @@ export async function downloadAction(id: string, ctx: ActionContext) {
   }
   if (!id.startsWith('download-') && !id.startsWith('media-delete:')) return false
   const s = ctx.get(),
-    rows = downloadRows(
-      s.workspace?.setups ?? [],
-      s.workspace?.downloads ?? [],
-      s.page === 'models' && s.libraryView === 'downloads'
-    )
-  if (id === 'download-more') {
-    ctx.update((v) => ({
-      ...v,
-      page: 'models',
-      libraryView: 'downloads',
-      overlay: null,
-      focus: 'library-refresh',
-    }))
-    return true
-  }
+    rows =
+      s.overlay === 'download-list' || s.downloadSelection?.returnOverlay === 'download-list'
+        ? workspaceDownloadRows(s)
+        : downloadRows(
+            s.workspace?.setups ?? [],
+            s.workspace?.downloads ?? [],
+            s.page === 'models' && s.libraryView === 'downloads'
+          )
   if (id.startsWith('media-delete:')) {
     const job = (s.workspace?.setups ?? []).map(record).find((j) => j['id'] === id.slice(13))
     if (job)
@@ -147,9 +142,13 @@ export async function downloadAction(id: string, ctx: ActionContext) {
       ctx.update((v) => ({
         ...v,
         workspace,
-        overlay: null,
-        downloadSelection: null,
-        focus: 'library-refresh',
+        ...(v.overlay === s.overlay && v.downloadSelection === s.downloadSelection
+          ? {
+              overlay: s.downloadSelection?.returnOverlay ?? null,
+              downloadSelection: null,
+              focus: s.downloadSelection?.returnFocus ?? v.focus,
+            }
+          : {}),
       }))
       return true
     }
@@ -180,10 +179,14 @@ export async function downloadAction(id: string, ctx: ActionContext) {
 }
 export function drawDownloadDetail(c: Canvas, s: WorkspaceState, focus: string) {
   const chosen = s.downloadSelection
-  const job = downloadRows(
-    s.workspace?.setups ?? [],
-    s.workspace?.downloads ?? [],
-    s.page === 'models' && s.libraryView === 'downloads'
+  const job = (
+    chosen?.returnOverlay === 'download-list'
+      ? workspaceDownloadRows(s)
+      : downloadRows(
+          s.workspace?.setups ?? [],
+          s.workspace?.downloads ?? [],
+          s.page === 'models' && s.libraryView === 'downloads'
+        )
   ).find((row) => row.id === chosen?.id && (downloadOwner(row) ?? 'download') === chosen.owner)
   if (!chosen) return
   const width = Math.min(84, c.width - 8),

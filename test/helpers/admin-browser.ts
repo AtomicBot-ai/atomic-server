@@ -50,6 +50,8 @@ export async function adminSession(
   const env = {
     ...process.env,
     NO_COLOR: '1',
+    HOME: join(scratch, 'home'),
+    USERPROFILE: join(scratch, 'home'),
     HF_ENDPOINT: CLOSED,
     ATC_LITERT_LM_MODELS_URL: pathToFileURL(join(ROOT, 'test/fixtures/litert-lm/litert-lm-models.json')).href,
     ATC_FOUNDRY_LOCAL_MODELS_URL: CLOSED,
@@ -62,6 +64,9 @@ export async function adminSession(
   }
   let browser: Browser | undefined
   const close = async () => {
+    // Let intercepted polling requests finish before closing their browser context.
+    for (const context of browser?.contexts() ?? [])
+      for (const page of context.pages()) await page.unrouteAll({ behavior: 'wait' })
     await browser?.close()
     atc('stop', '--force', '--kill')
     rmSync(scratch, { recursive: true, force: true })

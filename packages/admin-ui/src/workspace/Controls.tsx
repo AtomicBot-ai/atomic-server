@@ -10,6 +10,7 @@ export function Action({
   disabled = false,
   title,
   ariaLabel,
+  unavailable = false,
 }: {
   children: ReactNode
   onClick: () => void | Promise<unknown>
@@ -18,6 +19,7 @@ export function Action({
   disabled?: boolean
   title?: string
   ariaLabel?: string
+  unavailable?: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -27,6 +29,7 @@ export function Action({
         type="button"
         title={title}
         aria-label={ariaLabel}
+        aria-disabled={unavailable || undefined}
         aria-busy={busy || undefined}
         disabled={busy || disabled}
         className={`ew-button ${primary ? 'primary' : ''} ${danger ? 'danger' : ''}`}

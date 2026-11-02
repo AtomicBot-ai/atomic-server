@@ -6,12 +6,23 @@ import { SetupWizard } from './SetupWizard'
 import { WaitingSetup } from './WaitingSetup'
 import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
 
-it('offers a playable final wait, the model-ready email and an exit while download continues', async () => {
+it.each([
+  ['Connect an agent', 'agents'],
+  ['Configure an endpoint', 'endpoint'],
+])('keeps %s on a playable waiting screen until explicit override', async (label, destination) => {
   const { workspace, execute } = workspaceFixture(
     { 'cloud.list': [] },
     {
       setup: null,
-      setups: [{ id: 'model', stage: 'downloading', plan: { model_id: 'Qwen', total_download_bytes: 1000 } }],
+      selection: { engine: 'llamacpp-upstream', model: 'Qwen' },
+      setups: [
+        {
+          setup_id: 'model',
+          stage: 'downloading_model',
+          plan: { model_id: 'Qwen', total_download_bytes: 1000 },
+        },
+        { id: 'image', stage: 'downloading', plan: { category: 'image', model_id: 'image' } },
+      ],
       downloads: [{ taskId: 'model', transferred: 400, total: 1000, eta_seconds: 60 }],
     }
   )
@@ -19,12 +30,16 @@ it('offers a playable final wait, the model-ready email and an exit while downlo
   render(
     <SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} onDestination={onDestination} />
   )
+  fireEvent.click(screen.getByRole('dialog', { name: 'Set up Atomic Server' }).parentElement!)
+  expect(screen.getByRole('heading', { name: 'Permissions' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
+  await userEvent.click(screen.getByRole('button', { name: new RegExp(label!) }))
   expect(screen.getByRole('heading', { name: 'Getting your model ready' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('dialog', { name: 'Set up Atomic Server' }).parentElement!)
+  expect(screen.getByRole('region', { name: 'Minesweeper' })).toBeInTheDocument()
   const game = within(screen.getByRole('region', { name: 'Minesweeper' }))
   await userEvent.click(game.getByRole('gridcell', { name: 'Row 1, column 1, hidden' }))
   expect(game.queryByText('Mine hit')).not.toBeInTheDocument()
@@ -38,7 +53,7 @@ it('offers a playable final wait, the model-ready email and an exit while downlo
   expect(screen.getByLabelText('Download status').closest('.workspace-status-header')).not.toBeNull()
   await userEvent.click(screen.getByRole('button', { name: "I can't wait - take me to the control panel" }))
   expect(execute).toHaveBeenCalledWith('setup.manual')
-  expect(onDestination).toHaveBeenCalledWith('agents')
+  expect(onDestination).toHaveBeenCalledWith(destination)
 })
 it('keeps paused download status truthful and exposes existing controls in a dismissible dialog', async () => {
   const { workspace, execute } = workspaceFixture(
@@ -116,3 +131,35 @@ it('offers no email once the model is downloaded', () => {
   expect(screen.getByText('Your model is downloaded. Continue to finish setup.')).toBeInTheDocument()
   expect(screen.queryByLabelText('Email me when it is ready')).not.toBeInTheDocument()
 })
+
+it.each(['Configure an endpoint', 'Connect an agent'])(
+  'keeps %s on Minesweeper for an engine-only download',
+  async (label) => {
+    const { workspace, execute } = workspaceFixture(
+      {},
+      {
+        setup: null,
+        setups: [],
+        downloads: [{ kind: 'engine', engine: 'llamacpp-upstream', taskId: 'engine', stage: 'downloading' }],
+      }
+    )
+    const onDestination = vi.fn()
+    render(
+      <SetupWizard
+        workspace={workspace}
+        onClose={vi.fn()}
+        onOpenGoal={vi.fn()}
+        onDestination={onDestination}
+      />
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Skip setup', exact: true }))
+    expect(screen.getByRole('region', { name: 'Minesweeper' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Back', exact: true }))
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(label) }))
+    expect(screen.getByRole('region', { name: 'Minesweeper' })).toBeInTheDocument()
+    expect(onDestination).not.toHaveBeenCalled()
+    expect(execute).not.toHaveBeenCalledWith('setup.manual')
+    await userEvent.click(screen.getByRole('button', { name: "I can't wait - take me to the control panel" }))
+    expect(onDestination).toHaveBeenCalledOnce()
+  }
+)

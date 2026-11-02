@@ -107,12 +107,12 @@ it('starts the API on an empty server, saying a model is still to choose, and ag
   expect(screen.getByRole('status')).toHaveTextContent('Choose and download a model to continue.')
   expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'atomic:acquire' }))
   dispatch.mockRestore()
-  expect(execute).toHaveBeenCalledWith('api.start')
+  expect(execute).toHaveBeenCalledWith('api.start', { restore_selected: true })
   expect(execute).toHaveBeenCalledWith('engines.selected')
   workspace.snapshot!.services = services
   rerender(<ServerControlPanel workspace={workspace} selectSection={select} />)
   await userEvent.click(screen.getByRole('button', { name: 'Start API' }))
-  expect(execute).toHaveBeenCalledWith('api.start')
+  expect(execute).toHaveBeenCalledWith('api.start', { restore_selected: true })
   await userEvent.click(screen.getByRole('button', { name: /Engine/ }))
   expect(select).toHaveBeenLastCalledWith('model')
   await userEvent.click(screen.getByRole('button', { name: /Connections/ }))
@@ -239,7 +239,7 @@ it('keeps the selected engine and model visible in the sidebar during their down
   )
   render(<ServerControlPanel workspace={workspace} selectSection={vi.fn()} />)
   expect(screen.getByRole('button', { name: /Engine/ })).toHaveTextContent('llama.cpp')
-  expect(screen.getByRole('button', { name: /Model/ })).toHaveTextContent('Qwen-4B')
+  expect(screen.getByRole('button', { name: 'Model Qwen-4B', exact: true })).toHaveTextContent('Qwen-4B')
 })
 it('opens Download proxy inside the Server context with the existing saved proxy settings', async () => {
   const { workspace } = workspaceFixture({

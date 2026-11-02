@@ -66,5 +66,8 @@
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.44.0",
     "vitest": "^3.2.4"
+  },
+  "patchedDependencies": {
+    "@atomic-chat/core@0.20.7": "patches/@atomic-chat%2Fcore@0.20.7.patch"
   }
 }

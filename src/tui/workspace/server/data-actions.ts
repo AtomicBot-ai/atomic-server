@@ -133,13 +133,11 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     patch({ overlay: 'endpoint', edit: 'key-name', editValue: '', focus: 'save-edit' })
   } else if (id.startsWith('key-copy:') || id === 'copy-key') {
     const token = await c.keys.get(id === 'copy-key' ? undefined : id.slice(9))
-    if (token) ctx.copy(token)
-    patch({ message: 'API key sent to the terminal clipboard.' })
+    if (token) await ctx.copy(token)
   } else if (id.startsWith('key-reveal:')) {
     patch({ secret: await c.keys.get(id.slice(11)), overlay: 'credential', focus: 'copy-secret' })
   } else if (id === 'copy-secret') {
-    ctx.copy(s.secret)
-    patch({ message: 'API key sent to the terminal clipboard.' })
+    await ctx.copy(s.secret)
   } else if (id.startsWith('key-revoke:'))
     patch({ editValue: id.slice(11), overlay: 'revoke-key', focus: 'close' })
   else if (id === 'revoke-key-confirm') {

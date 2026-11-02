@@ -189,3 +189,13 @@ describe('serverPanelSelection', () => {
     expect(serverPanelSelection({ services: [], setups: [] }, '')).toEqual({ engine: '', model: '' })
   })
 })
+
+it('shows a saved on-device selection without inventing a download record', () => {
+  expect(
+    serverPanelSelection({
+      services: [],
+      setups: [],
+      selection: { engine: 'llamacpp|b1|cpu', model: 'local-model' },
+    })
+  ).toEqual({ engine: 'llamacpp|b1|cpu', model: 'local-model' })
+})

@@ -1,4 +1,5 @@
 import {
+  type DownloadRow,
   downloadHeld,
   downloadOwner,
   downloadStopped,
@@ -19,9 +20,13 @@ export function drawDownloadCard(
   width: number,
   index = 0,
   focus = '',
-  includeCompleted = false
+  includeCompleted = false,
+  rows: DownloadRow[] = downloadRows(
+    s.workspace?.setups ?? [],
+    s.workspace?.downloads ?? [],
+    includeCompleted
+  )
 ) {
-  const rows = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? [], includeCompleted)
   const first = rows[index],
     progress = s.setup?.progress
   const selection = s.setup?.selections[index]
@@ -32,6 +37,7 @@ export function drawDownloadCard(
   const name = String(
     plan['name'] ??
       first?.['model_id'] ??
+      first?.['name'] ??
       selection?.plan.model_id ??
       path?.job?.model ??
       (preparing || first?.id) ??
@@ -141,7 +147,7 @@ export function drawDownloadCard(
     c,
     statusX,
     y + (height === 4 ? 2 : 3),
-    `${label}${remaining ? ' · ' + remaining : ''}${index === 0 && rows.length > 1 ? ` · ${rows.length - 1} more` : ''}`,
+    `${label}${remaining ? ' · ' + remaining : ''}${s.overlay !== 'download-list' && index === 0 && rows.length > 1 ? ` · ${rows.length - 1} more` : ''}`,
     COLORS.muted,
     statusWidth
   )

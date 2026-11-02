@@ -92,7 +92,7 @@ it('keeps installed models first, excludes their catalog duplicates, and uses th
     installed: [{ id: 'AtomicChat/model-0/Q4.gguf', name: 'Local model', provider: 'llamacpp-upstream' }],
   }))
   const choices = firstModelChoices(t.ctx.get())
-  expect(choices[0]).toMatchObject({ name: 'Local model', group: 'On this device', installed: true })
+  expect(choices[0]).toMatchObject({ name: 'Local model', group: 'Downloaded', installed: true })
   expect(choices.some((choice) => choice.key === 'catalog:AtomicChat/model-0')).toBe(false)
   await firstRunAction('first-model-continue', t.ctx)
   expect(t.ctx.get()).toMatchObject({
@@ -104,7 +104,7 @@ it('keeps installed models first, excludes their catalog duplicates, and uses th
   expect(t.ctx.controller.save).toHaveBeenCalledWith('tui.model', 'AtomicChat/model-0/Q4.gguf')
 })
 
-it.each(['permissions', 'cloud', 'server'] as const)(
+it.each(['permissions', 'cloud', 'waiting'] as const)(
   'keeps %s and its controls in place while an earlier model plan finishes',
   async (destination) => {
     const t = fixture()
@@ -132,7 +132,7 @@ it.each(['permissions', 'cloud', 'server'] as const)(
       page: before.page,
       focus: before.focus,
       overlay: before.overlay,
-      setup: { stage: 'download', ...(destination === 'server' ? { destination: 'server' } : {}) },
+      setup: { stage: 'download' },
     })
   }
 )
@@ -209,3 +209,34 @@ it('keeps grouped choices reachable when a background download reduces the catal
     ).toBe(true)
   }
 })
+
+it.each(['endpoint', 'agent', 'skip'])(
+  'keeps %s on Minesweeper while file lookup is still preparing the first download',
+  async (destination) => {
+    const t = fixture()
+    let release!: () => void
+    vi.mocked(t.ctx.controller.files).mockImplementationOnce(async () => {
+      await new Promise<void>((resolve) => {
+        release = resolve
+      })
+      return [{ filename: 'model.gguf', size: 1000, downloadUrl: 'https://example.invalid/model.gguf' }]
+    })
+    const snapshot = { setups: [], downloads: [{ kind: 'engine', stage: 'ready', taskId: 'engine' }] }
+    t.ctx.controller.runtime.snapshot = vi.fn(async () => snapshot as never)
+    const preparing = firstRunAction('first-model-continue', t.ctx)
+    await vi.waitFor(() => expect(t.ctx.get().setup?.preparing).toBe(true))
+    t.ctx.update((s) => ({ ...s, firstRun: 'connect' }))
+    await firstRunAction(destination === 'skip' ? 'first-skip' : `first-connect:${destination}`, t.ctx)
+    expect(t.ctx.get().page).toBe('welcome')
+    expect(t.ctx.get().finalSetup).toBeTruthy()
+    expect(t.ctx.controller.runtime.execute).not.toHaveBeenCalledWith('setup.manual')
+    const frame = workspaceFrame(t.ctx.get(), 120, 36, 0)
+    expect(frame.targets.find((target) => target.id === 'wait-cell:0')).toBeDefined()
+    expect(frame.cells.map((row) => row.map((c) => c.char).join('')).join('\n')).toContain("I can't wait")
+    release()
+    await preparing
+    expect(t.ctx.get().finalSetup).toBeTruthy()
+    await firstRunAction('wait-continue', t.ctx)
+    expect(t.ctx.get().page).toBe('server')
+  }
+)

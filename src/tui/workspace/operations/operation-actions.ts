@@ -52,7 +52,7 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
     return true
   }
   if (id === 'copy-agent-brief') {
-    ctx.copy(c.runtime.agentBrief())
+    await ctx.copy(c.runtime.agentBrief())
     patch({ message: 'Setup brief copied.' })
     return true
   }
@@ -74,11 +74,16 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
     return true
   }
   if (id === 'api-ping' || id === 'api-restart') {
+    if (id === 'api-restart' && s.apiPending) return true
     if (id === 'api-restart' && s.workspace?.api.running) {
-      patch({ overlay: 'stop', edit: 'api-restart', focus: 'close' })
+      patch({ overlay: 'stop', edit: 'api-restart', focus: 'stop-confirm', hover: '' })
       return true
     }
-    patch({ busy: true, message: id === 'api-ping' ? 'Pinging API…' : 'Restarting API…' })
+    patch({
+      busy: true,
+      ...(id === 'api-restart' ? { apiPending: 'restarting' as const } : {}),
+      message: id === 'api-ping' ? 'Pinging API…' : 'Restarting API…',
+    })
     try {
       const result = await c.runtime.execute(id === 'api-ping' ? 'api.ping' : 'api.restart')
       patch({
@@ -87,17 +92,25 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
       })
       await c.run({ name: 'refresh' })
     } finally {
-      patch({ busy: false })
+      patch({ busy: false, ...(id === 'api-restart' ? { apiPending: undefined } : {}) })
     }
     return true
   }
   if (id === 'stop-confirm' && s.edit === 'api-restart') {
-    patch({ overlay: null, edit: '', busy: true, message: 'Restarting API…' })
+    if (s.apiPending) return true
+    patch({
+      overlay: null,
+      edit: '',
+      apiPending: 'restarting',
+      message: 'Restarting API…',
+      focus: 'api-toggle',
+      hover: '',
+    })
     try {
       await c.runtime.execute('api.restart')
       patch({ workspace: await c.runtime.snapshot(), message: 'API restarted.' })
     } finally {
-      patch({ busy: false })
+      patch({ apiPending: undefined })
     }
     return true
   }
@@ -210,7 +223,7 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
     return true
   }
   if (id === 'operation-copy') {
-    ctx.copy(s.operationResult)
+    await ctx.copy(s.operationResult)
     patch({ message: 'Result copied.' })
     return true
   }

@@ -3,7 +3,6 @@ import { activate, type ActionContext } from '../actions.js'
 import { createWorkspace, type WorkspaceState } from '../state.js'
 import type { WorkspaceController } from '../controller.js'
 import { workspaceFrame } from '../frame.js'
-import { workspaceInput } from '../input.js'
 import { hit } from '../draw/canvas.js'
 import { catalogIndexes } from './catalog-filters.js'
 import { modelInstalled, modelJob } from './model-job.js'
@@ -82,13 +81,8 @@ it('opens a family, selects a specific version, downloads it once, and keeps the
   await t.action('catalog-row:0')
   expect(t.execute).not.toHaveBeenCalledWith('models.install', expect.anything())
   expect(t.get().catalogOpen).toBe('fixture/one')
-  await t.action('catalog-variants')
   expect(text(t.get())).toContain('one.Q8.gguf')
-  const key = workspaceInput('', { downArrow: true } as never, t.get(), workspaceFrame(t.get(), 120, 36, 0))
-  t.ctx.update((s) => ({ ...s, ...key.patch }))
-  expect(t.get().focus).toBe('catalog-variant:1')
-  await t.action(t.get().focus)
-  await t.action('catalog-download:0')
+  await t.action('catalog-download-variant:0:1')
   expect(t.execute).toHaveBeenCalledWith('models.plan', {
     repo: 'fixture/one',
     file: 'one.Q8.gguf',
@@ -183,7 +177,7 @@ it.each([
   const t = fixture()
   await t.action('catalog-row:0')
   const frame = workspaceFrame(t.get(), w, h, 0)
-  expect(frame.targets.some((t) => t.id === 'catalog-download:0')).toBe(true)
+  expect(frame.targets.some((t) => t.id === 'catalog-download-variant:0:0')).toBe(true)
   for (const target of frame.targets) {
     expect(target.x + target.width, target.id).toBeLessThanOrEqual(w)
     expect(target.y + target.height, target.id).toBeLessThanOrEqual(h)
@@ -259,8 +253,8 @@ it.each([
   expect(text(t.get(), w, h)).toContain('Available')
   expect(text(t.get(), w, h)).toContain('Example')
   const frame = workspaceFrame(t.get(), w, h, 0)
-  expect(frame.targets.some((target) => target.id === 'catalog-variants')).toBe(true)
-  expect(frame.targets.some((target) => target.id === 'catalog-download:0')).toBe(true)
+  expect(frame.targets.some((target) => target.id === 'catalog-variants')).toBe(false)
+  expect(frame.targets.some((target) => target.id === 'catalog-download-variant:0:0')).toBe(true)
   expect(frame.targets.every((target) => target.x + target.width <= w && target.y + target.height <= h)).toBe(
     true
   )

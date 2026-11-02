@@ -68,6 +68,8 @@ export interface WorkspaceSnapshot {
     raw: Record<string, unknown>
   }
   eye: 'offline' | 'starting' | 'ready' | 'busy' | 'overloaded' | 'error'
+  /** Saved engine and model, independent of download records and running sessions. */
+  selection?: { engine: string; model: string }
   services: WorkspaceServiceRow[]
   downloads: unknown[]
   setups: unknown[]

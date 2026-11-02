@@ -1,3 +1,4 @@
+import { firstRunDownloadsPending } from './download-pending.js'
 import { workspaceHeaderRows } from '../draw/brand-header.js'
 import { drawWaitingSetup, waitingSetupAction } from './waiting-setup.js'
 import { FIRST_RUN_STEPS, FIRST_RUN_TITLES } from '../../../contract/index.js'
@@ -25,6 +26,7 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
   if (await firstConnectionAction(id, ctx)) return true
   if (await mediaSetupAction(id, ctx)) return true
   const s = ctx.get()
+  if (s.busy && id === 'first-skip') return true
   const patch = (p: Partial<WorkspaceState>) =>
     ctx.update((v) => (s.firstRun && !s.setupComplete && v.setupComplete ? v : { ...v, ...p }))
   if (id.startsWith('first-model-choice:')) {
@@ -102,10 +104,6 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
     }
     return true
   }
-  if (id === 'first-downloads') {
-    patch({ page: 'setup', focus: 'first-continue' })
-    return true
-  }
   if (id === 'first-return') {
     patch({ page: 'welcome', firstRun: 'media', focus: 'first-next' })
     return true
@@ -115,6 +113,11 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
     return true
   }
   if (id === 'first-skip') {
+    const workspace = await Promise.resolve()
+      .then(() => ctx.controller.runtime.snapshot())
+      .catch(() => ctx.get().workspace)
+    if (firstRunDownloadsPending(ctx.get(), workspace))
+      return firstConnectionAction('first-connect:endpoint', ctx)
     await openFirstRunServer(ctx)
     return true
   }
@@ -191,11 +194,22 @@ export function drawFirstRun(c: Canvas, s: WorkspaceState, focus: string, second
         : s.libraryRows.some((row) => modelJob(s, row.id))
           ? 'Continue'
           : 'Skip'
-  button(c, 'first-back', x, actionY + 1, '< Back', 'Return to the previous choice', focus)
+  const backY = Math.min(
+    c.height - 3,
+    Math.max(
+      actionY + 1,
+      ...c.targets.filter((t) => t.x < x + 9 && t.x + t.width > x).map((t) => t.y + t.height)
+    )
+  )
+  button(c, 'first-back', x, backY, '< Back', 'Return to the previous choice', focus)
   const nextX = x + width - label.length - 6
   const skipX = step === 'connect' ? x + width - 12 : nextX - 15
   quietButton(c, 'first-skip', skipX, actionY + 1, 'Skip setup', 'Open workspace; downloads continue', focus)
-  if (step === 'connect') return
+  if (step === 'connect') {
+    if (s.message && !s.busy)
+      actionButton(c, 'first-model', x + 13, actionY, 'Choose model', 'Return to model selection', focus)
+    return
+  }
   actionButton(
     c,
     'first-next',

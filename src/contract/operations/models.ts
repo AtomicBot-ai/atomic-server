@@ -120,7 +120,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'setup.manual',
     'Set up manually',
     'configure',
-    'Record that the workspace was set up manually. This claims nothing about model readiness.'
+    'Finish onboarding without an inference check. If a saved local model is already installed, load it and start the API; pending downloads continue through their setup flow.'
   ),
   operation(
     'setup.complete',

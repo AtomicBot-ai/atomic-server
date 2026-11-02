@@ -1,9 +1,10 @@
+import { setupPreparing } from '../setup/download-pending.js'
 import type { EyeStatus } from '../draw/art.js'
 import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { fill } from '../draw/fortress.js'
-import { loadStageText, operationView } from '../../../workspace-view/index.js'
+import { apiDownloadWait, loadStageText, operationView } from '../../../workspace-view/index.js'
 
 export function cockpitStatus(s: WorkspaceState): EyeStatus {
   if (/stopping/i.test(s.message) && s.busy) return 'stopping'
@@ -115,14 +116,15 @@ export function drawCockpit(c: Canvas, s: WorkspaceState, height: number, _secon
       ? 'Detailed timings enabled | Click to configure'
       : 'Enable detailed timing and TPS | Core captures request/reply previews',
   })
+  const waiting = apiDownloadWait(s.workspace, setupPreparing(s))
   let bx = 2
   const running =
     s.workspace?.api.running ?? (s.base.daemon.kind === 'up' && s.base.daemon.snapshot.server.running)
   for (const [id, label, hint] of [
     [
       'api-toggle',
-      running ? 'Stop' : 'Start',
-      running ? 'Stop API | Active requests are interrupted' : 'Start API',
+      waiting?.label ?? (running ? 'Stop' : 'Start'),
+      waiting?.message ?? (running ? 'Stop API | Active requests are interrupted' : 'Start API'),
     ],
     ['api-restart', 'Restart', 'Restart listener | Active requests are interrupted'],
     ['api-ping', 'Ping', 'Test authenticated model endpoint'],

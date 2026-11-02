@@ -111,3 +111,27 @@
     display: none;
   }
 }
+
+.catalog-download-rows {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.catalog-download-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 36px;
+}
+.catalog-download-row > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.catalog-download-row .ew-button {
+  min-height: 36px;
+  height: 36px;
+  padding: 6px 14px;
+}

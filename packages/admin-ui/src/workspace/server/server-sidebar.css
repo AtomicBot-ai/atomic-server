@@ -230,3 +230,12 @@
     animation: none;
   }
 }
+
+.server-power.is-waiting button {
+  background: var(--ew-panel);
+  color: var(--ew-muted);
+  cursor: help;
+}
+.server-power.is-waiting button:hover {
+  background: var(--ew-raised);
+}

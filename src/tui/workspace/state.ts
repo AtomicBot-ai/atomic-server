@@ -20,7 +20,9 @@ import type { ChatImage, ChatMessage, RequestRow } from '../../terminal-service/
 import type { CommandRow } from '../command-list.js'
 import { initialState, type TuiState } from '../state.js'
 export interface WorkspaceState extends WorkspaceReturnState {
+  apiPending?: 'starting' | 'stopping' | 'restarting' | undefined
   downloadAttention?: number
+  downloadListReturn?: { overlay: WorkspaceState['overlay']; focus: string; selected: number } | null
   featureSelection?: string
   featureEditor?: FeatureEditor | undefined
   chatPreferences?: Record<string, unknown> | undefined
@@ -154,6 +156,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
     | 'console'
     | 'agent-setup'
     | 'download-detail'
+    | 'download-list'
     | 'download-remove'
     | 'catalog-filters'
     | 'catalog-menu'

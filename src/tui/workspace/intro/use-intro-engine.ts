@@ -24,7 +24,8 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
   const [error, setError] = useState('')
   const [name, setName] = useState('')
   const busy = useRef(false),
-    live = useRef(true)
+    live = useRef(true),
+    choiceRequest = useRef(0)
   useEffect(() => {
     live.current = true
     void Promise.all([controller.engineSelection.read(), controller.setup.read(), controller.runtime.setup()])
@@ -60,6 +61,7 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
   const choose = useCallback(async () => {
     if (busy.current) return
     busy.current = true
+    const request = ++choiceRequest.current
     setError('')
     setChoices([])
     setStage('engines')
@@ -82,7 +84,7 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
           },
         ]
       })
-      if (live.current) {
+      if (live.current && request === choiceRequest.current) {
         setChoices([
           ...list,
           ...builds.filter((b) => b.installed && !list.some((v) => v.provider === b.provider)),
@@ -92,9 +94,9 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
           setError('No compatible engines are available. Retry or set up later.')
       }
     } catch (e) {
-      if (live.current) setError(explained(e))
+      if (live.current && request === choiceRequest.current) setError(explained(e))
     } finally {
-      busy.current = false
+      if (request === choiceRequest.current) busy.current = false
     }
   }, [controller])
   const install = async (index = selected) => {
@@ -126,7 +128,11 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
     }
   }
   const back = () => {
-    if (stage === 'engines') setStage('choose')
+    if (stage === 'engines') {
+      choiceRequest.current++
+      busy.current = false
+      setStage('choose')
+    }
   }
   return { stage, choices, selected, setSelected, error, name, progress: null, choose, install, back }
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
@@ -40,8 +40,9 @@ function renderCatalog() {
 it('opens variant controls inline and downloads exactly the chosen variant', async () => {
   const { choose } = renderCatalog()
   await userEvent.click(screen.getByRole('button', { name: 'Qwen', exact: true }))
-  await userEvent.selectOptions(await screen.findByLabelText('Variant for Qwen'), 'Q8.gguf')
-  await userEvent.click(screen.getByRole('button', { name: 'Download', exact: true }))
+  const variant = await screen.findByText(/Q8.gguf/)
+  expect(screen.queryByLabelText('Variant for Qwen')).not.toBeInTheDocument()
+  await userEvent.click(within(variant.parentElement!).getByRole('button', { name: 'Download', exact: true }))
   expect(choose).toHaveBeenCalledWith(expect.objectContaining({ id: 'repo/qwen', selectedFile: 'Q8.gguf' }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

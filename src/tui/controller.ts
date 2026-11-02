@@ -52,6 +52,7 @@ export interface TuiDeps {
   /** The admin URL with a login token, as `atc admin` prints it. */
   loginUrl: (adminUrl: string) => Promise<string>
   openUrl: (url: string) => Promise<void>
+  copyText?: (text: string) => Promise<boolean>
   now: () => Date
   /** The terminal's environment: the workspace runs in this process when no server answers. */
   env?: NodeJS.ProcessEnv

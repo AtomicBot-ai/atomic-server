@@ -1,7 +1,7 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 807b4d9; adapted: shared real services and browser permissions.
 import { useEffect, useRef, useState } from 'react'
 import { FIRST_RUN_STEPS, FIRST_RUN_TITLES } from '@contract'
-import { setupFinished, setupModelPending } from '@view'
+import { setupFinished, setupDownloadsPending } from '@view'
 import type { FirstRunStep } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
@@ -55,19 +55,30 @@ export function SetupWizard({
   useEffect(() => {
     heading.current?.focus()
   }, [step])
-  const checking = w.pending.includes('cloud.connect')
-  const dialog = useDialog(() => {
-    if (!checking) {
-      if (waitingDestination) {
-        setWaitingDestination(null)
-        return
+  const finishing = w.pending.includes('setup.manual')
+  const checking = finishing || w.pending.includes('cloud.connect')
+  const dialog = useDialog(
+    () => {
+      if (!checking) {
+        if (waitingDestination) {
+          setWaitingDestination(null)
+          return
+        }
+        const previous = FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1]
+        if (previous) setStep(previous)
+        else onWelcome?.()
       }
-      const previous = FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1]
-      if (previous) setStep(previous)
-      else onWelcome?.()
-    }
-  })
+    },
+    true,
+    { dismissOnOutside: false }
+  )
   const skip = async () => {
+    const snapshot = await w.refresh()
+    if (setupDownloadsPending(snapshot ?? w.snapshot)) {
+      setStep('connect')
+      setWaitingDestination('endpoint')
+      return
+    }
     if (!setupFinished(w.snapshot?.setup)) await w.execute('setup.manual')
     onClose()
   }
@@ -96,11 +107,12 @@ export function SetupWizard({
           <WorkspaceBrand />
           <FloatingDownloads workspace={w} onboarding />
         </header>
+        {finishing && <p role="status">Preparing your server…</p>}
         <main className={`first-run-content ${step === 'model' ? 'first-run-model' : ''}`}>
           {
             <h1 ref={heading} tabIndex={-1}>
               {waitingDestination
-                ? setupModelPending(w.snapshot)
+                ? setupDownloadsPending(w.snapshot)
                   ? 'Getting your model ready'
                   : 'Your model is downloaded'
                 : FIRST_RUN_TITLES[step]}
@@ -144,6 +156,9 @@ export function SetupWizard({
               />
             </>
           )}
+          {!waitingDestination && step === 'connect' && w.error && (
+            <Action onClick={() => setStep('model')}>Choose another model</Action>
+          )}
           {!waitingDestination && step === 'connect' && (
             <Destinations
               choose={async (destination) => {
@@ -153,7 +168,7 @@ export function SetupWizard({
                   // Decide on the server's word, not the last poll (none right after the admin opens); when
                   // the server cannot say, wait: the waiting screen lets the person go on anyway.
                   const snapshot = await w.refresh()
-                  if (!snapshot || setupModelPending(snapshot)) setWaitingDestination(destination)
+                  if (!snapshot || setupDownloadsPending(snapshot)) setWaitingDestination(destination)
                   else await finish(destination)
                 } finally {
                   choosing.current = false
