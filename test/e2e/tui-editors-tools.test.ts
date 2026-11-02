@@ -1,11 +1,13 @@
-/** Editor recovery and long Tools menus on the built program in a real PTY. No engine or network. */
+/** Editor recovery and long Tools menus on the built program in a real PTY. No engine or external network. */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { ATC, runAtc } from '../helpers/binary.js'
-import { hasPython, runPty } from '../helpers/pty-driver.js'
+import { DRIVER, hasPython, runPty, type PtyResult } from '../helpers/pty-driver.js'
 import { readyWorkspace } from '../helpers/ready-workspace.js'
+import { runAtcAsync, runProcess } from '../helpers/async-binary.js'
+import { reportCollector } from '../helpers/report-collector.js'
 
 const scratch = mkdtempSync(join(tmpdir(), 'atc-e2e-editors-tools-'))
 const folders: string[] = []
@@ -14,7 +16,7 @@ afterAll(() => {
   for (const folder of folders) runAtc(['--data-folder', folder, 'stop', '--force', '--kill'])
   rmSync(scratch, { recursive: true, force: true })
 })
-function ready(name: string) {
+function ready(name: string, telemetry = false) {
   const folder = join(scratch, name)
   folders.push(folder)
   readyWorkspace(folder)
@@ -28,7 +30,7 @@ function ready(name: string) {
       tui: { motion: false },
       proxy: { url: 'http://127.0.0.1:9' },
       update: { checkOnStart: false },
-      telemetry: { enabled: false },
+      telemetry: { enabled: telemetry },
     })
   )
   return folder
@@ -39,25 +41,72 @@ function check(result: ReturnType<typeof runPty>) {
 }
 
 describe.skipIf(process.platform === 'win32' || !hasPython())('terminal editors and Tools', () => {
-  it('shows document and URL refusals in the retained editor, then accepts a corrected document', () => {
-    const folder = ready('editor'),
-      valid = join(folder, 'notes.txt')
+  it('keeps document refusals out of Sentry, retains the editor, and accepts a corrected path', async () => {
+    const folder = ready('editor', true),
+      valid = join(folder, 'notes.txt'),
+      collector = await reportCollector()
     writeFileSync(valid, 'Synthetic document for editor recovery.')
+    const reportingEnv = {
+      ...env,
+      TERM: 'xterm-256color',
+      ATC_SENTRY_DSN: collector.dsn,
+      ATC_SENTRY_ENVIRONMENT: 'e2e',
+      DO_NOT_TRACK: '0',
+      ATOMIC_CORE_TELEMETRY: '1',
+    }
+    try {
+      const result = await runProcess(
+        'python3',
+        [
+          '-c',
+          DRIVER,
+          JSON.stringify([
+            { wait: 'Agents & tools' },
+            { click: 'Playground' },
+            { click: 'Files' },
+            { click: 'Document' },
+            { wait: 'Attach document' },
+            { type: folder },
+            { type: '\r' },
+            { wait: 'Choose a document file.', fresh: true },
+            { type: '\u0015' },
+            { type: join(folder, 'missing.txt') },
+            { type: '\r' },
+            { wait: 'That document was not found.', fresh: true },
+            { type: '\u0015' },
+            { type: '\r' },
+            { wait: 'Choose a document file.', fresh: true },
+            { type: valid },
+            { type: '\r' },
+            { wait: 'Files 1', fresh: true },
+            { type: '\u0011' },
+          ]),
+          ...ATC,
+          '--data-folder',
+          folder,
+        ],
+        { env: reportingEnv, timeoutMs: 90_000 }
+      )
+      expect(result.code, result.err).toBe(0)
+      check(JSON.parse(result.out.trim().split('\n').at(-1)!) as PtyResult)
+      // The server owns its own reporter; flush it too before checking the local collector.
+      const stopped = await runAtcAsync(['--data-folder', folder, 'stop', '--force', '--kill'], {
+        env: reportingEnv,
+      })
+      expect(stopped.code, stopped.err).toBe(0)
+      expect(collector.events).toEqual([])
+    } finally {
+      await collector.close()
+    }
+  })
+
+  it('shows a URL refusal in the retained endpoint editor', () => {
+    const folder = ready('endpoint')
     check(
       runPty(
         [
           { wait: 'Agents & tools' },
           { click: 'Playground' },
-          { click: 'Files' },
-          { click: 'Document' },
-          { wait: 'Attach document' },
-          { type: join(folder, 'missing.txt') },
-          { type: '\r' },
-          { wait: 'ENOENT', fresh: true },
-          { type: '\u0015' },
-          { type: valid },
-          { type: '\r' },
-          { wait: 'Files 1', fresh: true },
           { click: 'Choose model' },
           { type: '\u001b[B' },
           { type: '\u001b[B' },

@@ -14,11 +14,33 @@ it('reads only the selected bounded document and rejects invalid binary or overs
   const path = join(dir, 'notes.txt')
   await writeFile(path, 'Review notes')
   expect(await readChatDocument(path, 1)).toEqual({ name: 'notes.txt', text: 'Review notes' })
+  expect(await readChatDocument(` "${path}" `, 1)).toEqual({ name: 'notes.txt', text: 'Review notes' })
   await writeFile(path, new Uint8Array(1024 * 1024 + 1))
-  await expect(readChatDocument(path, 1)).rejects.toThrow('smaller')
+  await expect(readChatDocument(path, 1)).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+    message: expect.stringContaining('smaller'),
+  })
   await writeFile(path, new Uint8Array([0]))
   await expect(readChatDocument(path, 1)).rejects.toThrow('binary')
-  await expect(readChatDocument(dir, 1)).rejects.toThrow('file')
+  await expect(readChatDocument(dir, 1)).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+    message: 'Choose a document file.',
+  })
+})
+it.each(['', ' ', '""', "''"])('refuses an empty selected path (%j) as usage', async (path) => {
+  await expect(readChatDocument(path, 1)).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+    message: 'Choose a document file.',
+  })
+})
+it('refuses missing files and a file used as a parent directory as usage', async () => {
+  const path = join(dir, 'notes.txt')
+  await expect(readChatDocument(path, 1)).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+    message: 'That document was not found. Choose an existing file.',
+  })
+  await writeFile(path, 'Review notes')
+  await expect(readChatDocument(join(path, 'child.txt'), 1)).rejects.toMatchObject({ code: 'ATC_USAGE' })
 })
 it('round-trips explicitly selected packages and never silently overwrites an existing file', async () => {
   const path = join(dir, 'review.skill'),

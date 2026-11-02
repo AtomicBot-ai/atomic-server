@@ -11,6 +11,10 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-02** — [Treat document path refusals as usage](2026-11-02-treat-document-path-refusals-as-usage.md) — actionable terminal attachment feedback without reporting expected path/size refusals; unexpected I/O failures remain reportable.
+
+- **2026-11-02** — [Diagnose native segmenter failures without collecting text](2026-11-02-diagnose-native-segmenter-failures.md) — finite runtime diagnostics and native Unicode renderer probes; SERVER-N remains unresolved.
+
 - **2026-11-01** — [Treat a missing agent CLI as an expected connect refusal](2026-11-01-treat-missing-agent-cli-as-usage.md) — exit with actionable usage feedback before launch and keep missing installations out of Sentry.
 - **2026-11-01** — [Distinguish missing Hugging Face model resources from Hub outages](2026-11-01-classify-hugging-face-check-failures.md) — reject missing model metadata locally and preserve safe HTTP status codes for reportable Hub failures.
 - **2026-11-01** — [Keep optional notification refusals out of error reports](2026-11-01-keep-notification-refusals-local.md) — show expected browser permission outcomes locally and keep reporting unexpected request failures.
@@ -134,3 +138,4 @@ add a new one that says which record it supersedes.
 - **2026-10-30** — [Distinguish missing services from manager failures](2026-10-30-distinguish-missing-services-from-manager-failures.md) — expected refusal code with exit 1; Windows status uses numeric Task Scheduler results and preserves query failures.
 - **2026-10-31** — [Serialize GGUF model file ownership](2026-10-31-serialize-gguf-model-file-ownership.md) — coordinate install, resume and removal by model ID while retaining request idempotency and parallel downloads of different models.
 - **2026-10-31** — [Distinguish unsupported self-updates from update failures](2026-10-31-distinguish-unsupported-self-updates.md) — expected source/package refusals retain exit 1 and hints; genuine update failures stay operational; package smoke checks opt out of telemetry.
+- **2026-11-02** — [Distinguish unavailable quantizations from invalid catalogs](2026-11-02-distinguish-unavailable-quants-from-invalid-catalogs.md) — unknown explicit choices are usage refusals; broken catalog lists remain reportable, and valid selection stays unchanged.
