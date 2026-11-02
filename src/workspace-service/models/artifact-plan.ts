@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import type { DownloadItem } from '../../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
+import { AtcError } from '../../errors/index.js'
 import { object } from '../validation.js'
 export interface ArtifactPlan {
   digest: string
@@ -82,11 +83,12 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
   if (category === 'image' || category === 'video') {
     const transformer = object(r['transformer']),
       quants = transformer['quants'] as Record<string, unknown>[]
-    if (!Array.isArray(quants)) throw new Error('This catalog family has no downloadable quantization.')
+    if (!Array.isArray(quants) || !quants.length)
+      throw new Error('This catalog family has no downloadable quantization.')
     const choice = quant
       ? quants.find((q) => q['id'] === quant)
       : (quants.find((q) => q['recommended'] === true) ?? quants[0])
-    if (!choice) throw new Error('Choose an available quantization.')
+    if (!choice) throw new AtcError('ATC_USAGE', 'Choose an available quantization.')
     model_id = `${row.id}:${String(choice['id'])}`
     const paths: Record<string, unknown> = {
       diffusionModel: add(
