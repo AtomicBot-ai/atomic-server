@@ -3,6 +3,7 @@ import { errorCodeOf, isCancellation } from '@atomic-chat/core/host'
 import type { ErrorReport, ErrorSink } from '@atomic-chat/core/host'
 import { AtcError, isRemoteError, markReported, wasReported } from '../errors/index.js'
 import { CLIENT_ERROR_NAMES } from '../contract/index.js'
+import { nativeFailureTags } from './native-diagnostics.js'
 
 const OPERATIONAL = new Set([
   'ATC_INTERNAL',
@@ -51,7 +52,7 @@ export function failureReport(error: unknown, context: FailureContext): ErrorRep
     source: 'event_listener',
     level: 'error',
     error: technicalError(error, context.operation),
-    tags: { ...context, error_code: errorCodeOf(error) },
+    tags: { ...context, error_code: errorCodeOf(error), ...nativeFailureTags(error) },
   }
 }
 
