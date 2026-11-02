@@ -73,7 +73,7 @@ export const adminCommand = defineCommand({
   name: 'admin',
   summary: 'The web admin: open it, see where it listens, manage its token',
   description:
-    'The admin listens on 127.0.0.1:1338 by default. From another machine, forward the port: ssh -L 1338:127.0.0.1:1338 user@server',
+    'The admin prefers 127.0.0.1:1338 and uses a free port if it is busy. Check `atc admin status` for the actual port before forwarding it with SSH.',
   group: 'access',
   defaultSubcommand: 'open',
   subcommands: [open, status, token],

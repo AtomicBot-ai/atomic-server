@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EngineChoice } from '../../../terminal-setup/index.js'
 import { WorkspaceController } from '../controller.js'
 import type { WorkspaceDeps } from '../controller.js'
+import { explained } from '../../error-text.js'
 export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
   const controller = useMemo(
     () =>
@@ -91,7 +92,7 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
           setError('No compatible engines are available. Retry or set up later.')
       }
     } catch (e) {
-      if (live.current) setError(e instanceof Error ? e.message : String(e))
+      if (live.current) setError(explained(e))
     } finally {
       busy.current = false
     }
@@ -117,7 +118,7 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
       }
     } catch (e) {
       if (live.current) {
-        setError(e instanceof Error ? e.message : String(e))
+        setError(explained(e))
         setStage('engines')
       }
     } finally {

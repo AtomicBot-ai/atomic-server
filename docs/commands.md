@@ -1333,7 +1333,7 @@ Global options:
 ```
 Usage: atc admin <command>
 
-The admin listens on 127.0.0.1:1338 by default. From another machine, forward the port: ssh -L 1338:127.0.0.1:1338 user@server
+The admin prefers 127.0.0.1:1338 and uses a free port if it is busy. Check `atc admin status` for the actual port before forwarding it with SSH.
 
 Commands:
   open    Print the admin URL (with a login token) and open it in a browser
