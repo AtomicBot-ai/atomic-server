@@ -1,3 +1,4 @@
+import { catalogFixture } from '../../../test/helpers/model-catalog-fixture.js'
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
@@ -27,23 +28,32 @@ describe('durable media installation', () => {
       release = resolve
     })
     const request = vi.fn<typeof fetch>(async (input) =>
-      String(input).includes('raw.githubusercontent.com')
-        ? new Response(
-            JSON.stringify({
-              models: [
-                {
-                  id: 'tiny',
-                  name: 'Tiny',
-                  repo: 'test/tiny',
-                  revision: 'pinned',
-                  context: 512,
-                  engine: 'llamacpp-upstream',
-                  files: [{ path: 'tiny.gguf', role: 'model', bytes: payload.length, sha256: sha }],
-                },
-              ],
-            })
-          )
-        : download
+      String(input).includes('/api/models/')
+        ? Response.json({
+            sha: 'a'.repeat(40),
+            siblings: [{ rfilename: 'tiny.gguf', lfs: { size: payload.length, sha256: sha } }],
+          })
+        : String(input).includes('raw.githubusercontent.com')
+          ? new Response(
+              JSON.stringify(
+                catalogFixture({
+                  embedding: {
+                    models: [
+                      {
+                        id: 'tiny',
+                        name: 'Tiny',
+                        repo: 'test/tiny',
+                        revision: 'pinned',
+                        context: 512,
+                        engine: 'llamacpp-upstream',
+                        files: [{ path: 'tiny.gguf', role: 'model', bytes: payload.length, sha256: sha }],
+                      },
+                    ],
+                  },
+                })
+              )
+            )
+          : download
     )
     const options = { paths: tmp.paths, link, config: defaultConfig(), fetch: request },
       service = new WorkspaceService(options)

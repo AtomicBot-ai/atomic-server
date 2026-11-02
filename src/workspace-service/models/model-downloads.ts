@@ -39,6 +39,7 @@ export function modelDownloads(
       link: options.link,
       fetch: request,
       env: options.env,
+      catalog: { directory: options.paths.cacheDir, url: options.env?.['ATC_MODEL_CATALOG_URL'] },
       directory: join(options.paths.atcDir, 'managed-model-setups'),
       downloader,
       proxy: downloadProxy(options.config),
@@ -50,6 +51,7 @@ export function modelDownloads(
       list: {
         cachePath: join(options.paths.atcDir, 'cache', 'foundry-local-models.json'),
         url: options.env?.['ATC_FOUNDRY_LOCAL_MODELS_URL'],
+        catalogUrl: options.env?.['ATC_MODEL_CATALOG_URL'],
       },
       platform: options.platform ?? process.platform,
       arch: options.arch ?? process.arch,
@@ -67,6 +69,7 @@ export function modelDownloads(
         list: {
           cachePath: join(options.paths.atcDir, 'cache', 'litert-lm-models.json'),
           url: options.env?.['ATC_LITERT_LM_MODELS_URL'],
+          catalogUrl: options.env?.['ATC_MODEL_CATALOG_URL'],
         },
         platform: options.platform ?? process.platform,
         arch: options.arch ?? process.arch,

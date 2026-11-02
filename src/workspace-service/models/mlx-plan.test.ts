@@ -25,7 +25,7 @@ function hub(pages: Listing[], options: { sha?: string; metadataStatus?: number;
   const request = (async (input: string | URL) => {
     const url = String(input)
     urls.push(url)
-    if (url === `https://huggingface.co/api/models/${row.id}`)
+    if (url === `https://huggingface.co/api/models/${row.id}/revision/main`)
       return Response.json({ sha: options.sha ?? SHA }, { status: options.metadataStatus ?? 200 })
     const page = Number(new URL(url).searchParams.get('cursor') ?? 0)
     const link =
@@ -63,18 +63,21 @@ describe('mlxPlan from the Hub', () => {
         save_path: `workspace-models/mlx/${row.id}/config.json`,
         size: 10,
         sha256: null,
+        source: { repo: row.id, revision: SHA, path: 'config.json', purpose: 'configuration' },
       },
       {
         url: `https://huggingface.co/${row.id}/resolve/${SHA}/model.safetensors`,
         save_path: `workspace-models/mlx/${row.id}/model.safetensors`,
         size: 1000,
         sha256: 'b'.repeat(64),
+        source: { repo: row.id, revision: SHA, path: 'model.safetensors', purpose: 'weights' },
       },
       {
         url: `https://huggingface.co/${row.id}/resolve/${SHA}/sub/tokenizer.json`,
         save_path: `workspace-models/mlx/${row.id}/sub/tokenizer.json`,
         size: 20,
         sha256: null,
+        source: { repo: row.id, revision: SHA, path: 'sub/tokenizer.json', purpose: 'configuration' },
       },
     ])
   })

@@ -20,7 +20,9 @@ const CPU = Buffer.from('cpu weights, a little longer')
 const sha = (body: Buffer) => createHash('sha256').update(body).digest('hex')
 
 let dirs: string[] = []
-afterEach(() => {
+const cleanups: Array<() => Promise<void>> = []
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0)) await cleanup()
   dirs.forEach((dir) => rmSync(dir, { recursive: true, force: true }))
   dirs = []
 })
@@ -63,7 +65,7 @@ function setups(downloader: ConstructorParameters<typeof LiteRtModelSetups>[0]['
   const link = fakeCoreLink()
   link.responses['POST /engines/versions'] = { engines: [{ engine: 'litert-lm' }] }
   link.responses['POST /models/litert-lm/check'] = { verdict: 'ok', reason: null }
-  return new LiteRtModelSetups({
+  const service = new LiteRtModelSetups({
     link,
     fetch,
     list: { cachePath: join(data, 'cache.json'), url: pathToFileURL(join(data, 'list.json')).href },
@@ -74,6 +76,10 @@ function setups(downloader: ConstructorParameters<typeof LiteRtModelSetups>[0]['
     directory: join(data, 'jobs'),
     downloader,
   })
+  cleanups.push(async () => {
+    for (const job of await service.list()) await service.remove(job.id, async () => {})
+  })
+  return service
 }
 
 /**

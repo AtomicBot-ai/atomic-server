@@ -14,6 +14,7 @@ import type { FoundryLocalDevice, FoundryLocalExecutionProvider } from '@atomic-
 import { CACHE_TTL_MS, fetchConfList } from '../models/conf-list.js'
 import type { ConfListOptions, ConfListResult } from '../models/conf-list.js'
 
+/** @deprecated Independent model-list URL; retained for legacy overrides. Default reads project models/catalog.json. */
 export const DEFAULT_FOUNDRY_LOCAL_MODELS_URL =
   'https://raw.githubusercontent.com/AtomicBot-ai/atomic-chat-conf/main/models/foundry-local-models.json'
 export const SUPPORTED_SCHEMA_VERSION = 1

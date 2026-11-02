@@ -49,6 +49,7 @@ function liteRtDeps(d: ModelOperationDeps) {
     list: {
       cachePath: join(paths.atcDir, 'cache', 'litert-lm-models.json'),
       url: env?.['ATC_LITERT_LM_MODELS_URL'],
+      catalogUrl: env?.['ATC_MODEL_CATALOG_URL'],
     },
     platform: d.options.platform ?? process.platform,
     arch: d.options.arch ?? process.arch,
@@ -114,6 +115,7 @@ export async function modelOperation(
             list: {
               cachePath: join(paths.atcDir, 'cache', 'foundry-local-models.json'),
               url: d.options.env?.['ATC_FOUNDRY_LOCAL_MODELS_URL'],
+              catalogUrl: d.options.env?.['ATC_MODEL_CATALOG_URL'],
             },
             platform: d.options.platform ?? process.platform,
             arch: d.options.arch ?? process.arch,

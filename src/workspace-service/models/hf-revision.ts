@@ -176,7 +176,12 @@ export async function fetchHfRevision(
     repository,
     o
   )) as { sha?: string; siblings?: HfSibling[] }
-  if (!listing.sha) throw new Error(`Hugging Face did not name the commit of ${repository}`)
+  if (
+    !listing.sha ||
+    !/^[0-9a-f]{40}$/.test(listing.sha) ||
+    (revision && /^[0-9a-f]{40}$/.test(revision) && listing.sha !== revision)
+  )
+    throw new Error(`Hugging Face did not name the commit of ${repository}`)
   const sha = listing.sha
   const files: CheckpointFile[] = (listing.siblings ?? []).map((s) => ({
     path: s.rfilename,
@@ -187,6 +192,15 @@ export async function fetchHfRevision(
     throw new AtcError('ATC_USAGE', `${repository} has no config.json at revision ${sha}.`, {
       hint: 'choose a Transformers checkpoint with config.json to check managed-engine compatibility',
     })
+  if (
+    files.some(
+      (f) =>
+        !Number.isSafeInteger(f.size) ||
+        f.size < 0 ||
+        f.path.split(/[\\/]/).some((p) => !p || p === '.' || p === '..')
+    )
+  )
+    throw new Error('Invalid Hugging Face file metadata')
   const resolve = (path: string) => resolveUrl(repository, sha, path, hub)
   const weightNames = await readWeightNames(files, resolve, o)
   return {

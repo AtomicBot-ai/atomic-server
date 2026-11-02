@@ -1,3 +1,4 @@
+import { reviewSetupPlan } from './setup-review.js'
 /**
  * GGUF model setups owned by the server: `models.plan`, `models.install` and `setup.*`. One record
  * per setup in `<atc>/model-setups/<setup id>.json`; the reviewed plans beside them in `plans/`.
@@ -15,10 +16,10 @@ import type {
 } from '../../contract/index.js'
 import { AtcError } from '../../errors/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
-import { planFor, planRequest } from './gguf-facts.js'
+import { planRequest } from './gguf-facts.js'
 import type { GgufFactsDeps } from './gguf-facts.js'
 import { runSetup, SetupCancelled, setupFilePaths, setupTaskIds } from './model-setup-run.js'
-import { bytesOnDisk } from '../../downloads/index.js'
+import { bytesOnDisk, policyFetchFor } from '../../downloads/index.js'
 import { hfResolveUrl } from '@atomic-chat/core/models'
 import type { SetupRunDeps } from './model-setup-run.js'
 import { SerialWork } from '../serial.js'
@@ -43,6 +44,7 @@ export class ModelSetups {
   private readonly writes = new SerialWork()
   private readonly modelWork = new SerialWork()
   constructor(private readonly deps: ModelSetupsDeps) {
+    this.deps = { ...deps, fetch: policyFetchFor({ proxy: deps.proxy ?? null }, deps.fetch) }
     this.installEngine = setupEngineInstaller(deps)
     this.dir = join(deps.paths.atcDir, 'model-setups')
   }
@@ -64,10 +66,7 @@ export class ModelSetups {
   }
 
   async plan(raw: Record<string, unknown>): Promise<ModelSetupPlan> {
-    const request = planRequest(raw)
-    const plan = await planFor(this.deps, request)
-    await writeDocument(join(this.dir, 'plans', `${plan.digest}.json`), { request, plan })
-    return plan
+    return reviewSetupPlan(this.deps, this.dir, raw)
   }
 
   /** What the server sees now: a record nobody runs that has not ended is `interrupted`. */
@@ -193,6 +192,13 @@ export class ModelSetups {
           throw new AtcError('ATC_USAGE', `Setup ${active.setup_id} is installing this model now.`, {
             hint: 'Wait for it, or cancel it before resuming this one.',
           })
+        for (const artifact of [...(record.plan.model_files ?? [record.plan.model]), record.plan.projector]) {
+          if (artifact && !/^[0-9a-f]{40}$/.test(artifact.revision))
+            throw new AtcError(
+              'ATC_USAGE',
+              'This download has no recorded model commit. Start a new download; partial files were kept.'
+            )
+        }
         const next = await this.commit(id, { stage: 'queued' }, true)
         this.launch(id)
         return next

@@ -5,6 +5,7 @@ import type { DownloadItem } from '../../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
 import { object } from '../validation.js'
 export interface ArtifactPlan {
+  version?: 1
   digest: string
   category: string
   model_id: string
@@ -61,16 +62,18 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
       repoId = String(source['repo'] ?? repo),
       pinnedRevision = source['revision'] === undefined ? revision : source['revision']
     if (!looksLikeHfRepo(repoId)) throw new Error('Invalid catalog repository.')
-    if (
-      ['image', 'video'].includes(category) &&
-      pinnedRevision !== undefined &&
-      (typeof pinnedRevision !== 'string' || !/^[0-9a-f]{40}$/.test(pinnedRevision))
-    )
+    if (typeof pinnedRevision !== 'string' || !/^[0-9a-f]{40}$/.test(pinnedRevision))
       throw new Error('Invalid catalog revision: use a full Hugging Face commit SHA.')
     const save_path = `${root}/${filePath(path)}`
     files.push({
       url: `https://huggingface.co/${repoId}/resolve/${encodeURIComponent(String(pinnedRevision ?? 'main'))}/${file.split('/').map(encodeURIComponent).join('/')}`,
       save_path,
+      source: {
+        repo: repoId,
+        revision: String(pinnedRevision),
+        path: file,
+        purpose: String(source['role'] ?? source['field'] ?? path.split('/')[0]),
+      },
       size: Number(source['bytes']) || null,
       sha256: typeof source['sha256'] === 'string' ? source['sha256'] : null,
     })
@@ -183,6 +186,7 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
     engine = String(r['engine'] ?? (category === 'decision' ? 'llamacpp' : 'llamacpp-upstream'))
   }
   const plan = {
+    version: 1 as const,
     category,
     model_id,
     name: row.name,

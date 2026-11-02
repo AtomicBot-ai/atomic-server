@@ -115,7 +115,7 @@ describe('workspace operations', () => {
             }),
             { headers: { 'content-length': '1000' } }
           )
-        : Response.json({ siblings: [{ rfilename: 'm.gguf', size: 1000 }] })
+        : Response.json({ sha: 'a'.repeat(40), siblings: [{ rfilename: 'm.gguf', size: 1000 }] })
     )
     const { service, link } = context(request)
     link.snapshotValue.downloads = [{ taskId: 'engine-build', transferred: 1, total: 2, percent: 50 }]

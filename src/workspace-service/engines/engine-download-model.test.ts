@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, expect, it } from 'vitest'
 import { cleanup, fixture, install, settle } from '../../../test/helpers/model-setups-fixture.js'
 import { waitFor } from '../../../test/helpers/wait-for.js'
 import { EngineDownloads } from './engine-downloads.js'
@@ -34,7 +34,7 @@ it('joins the intro Prism install, and pausing its waiting model does not cancel
     link: f.link,
     paths: f.tmp.paths,
     downloader: f.downloader,
-    fetch: vi.fn(),
+    fetch: f.request,
     env: {},
     installEngine: (build, taskId) =>
       engines.ensure('atomic-prism', taskId, { version: build.version, variant: build.backend }),
@@ -91,7 +91,7 @@ it('hands the shared engine download over to its model without another client op
     link: f.link,
     paths: f.tmp.paths,
     downloader: f.downloader,
-    fetch: vi.fn(),
+    fetch: f.request,
     env: {},
     installEngine: (build, taskId) =>
       engines.ensure('atomic-prism', taskId, { version: build.version, variant: build.backend }),

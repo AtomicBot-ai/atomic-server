@@ -217,7 +217,7 @@ describe('ManagedModelSetups', () => {
     expect(await readdir(dir)).not.toContain('model.yml')
   })
 
-  it('downloads nothing for a revision already in the store', async () => {
+  it('checks existing weights by hash and fetches small files whose source cannot be verified', async () => {
     serveRepository(server, REPO, qwenFiles())
     const root = join(scratch, `store-${n}`)
     const s = setups(core(root), root)
@@ -229,7 +229,13 @@ describe('ManagedModelSetups', () => {
     expect(
       (await settled(s, (await s.install({ request_id: 'r6', plan_digest: again.digest })).id)).stage
     ).toBe('ready')
-    expect(server.requests).toEqual([])
+    expect(server.requests.filter((r) => r.method === 'GET').map((r) => r.path)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('/config.json'),
+        expect.stringContaining('/tokenizer.json'),
+      ])
+    )
+    expect(server.requests.some((r) => r.path.includes('model-00001') && r.method === 'GET')).toBe(false)
   })
 
   it('fails, leaving the files, when the core does not list the model after model.yml', async () => {

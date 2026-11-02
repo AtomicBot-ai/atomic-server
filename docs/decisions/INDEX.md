@@ -134,3 +134,5 @@ add a new one that says which record it supersedes.
 - **2026-10-30** — [Distinguish missing services from manager failures](2026-10-30-distinguish-missing-services-from-manager-failures.md) — expected refusal code with exit 1; Windows status uses numeric Task Scheduler results and preserves query failures.
 - **2026-10-31** — [Serialize GGUF model file ownership](2026-10-31-serialize-gguf-model-file-ownership.md) — coordinate install, resume and removal by model ID while retaining request idempotency and parallel downloads of different models.
 - **2026-10-31** — [Distinguish unsupported self-updates from update failures](2026-10-31-distinguish-unsupported-self-updates.md) — expected source/package refusals retain exit 1 and hints; genuine update failures stay operational; package smoke checks opt out of telemetry.
+
+- [Pin model catalog and resume plans](2026-11-01-pin-model-catalog-and-resume-plans.md)

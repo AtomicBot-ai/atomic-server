@@ -63,9 +63,12 @@ describe('workspace policies', () => {
       source: {
         transformer: {
           repo: 'owner/repo',
+          revision: 'a'.repeat(40),
           quants: [{ id: 'q4', filename: 'model.gguf', bytes: 10, recommended: true }],
         },
-        text_encoders: [{ field: 'clip_l', repo: 'owner/clip', filename: 'clip.gguf', bytes: 20 }],
+        text_encoders: [
+          { field: 'clip_l', repo: 'owner/clip', revision: 'b'.repeat(40), filename: 'clip.gguf', bytes: 20 },
+        ],
         defaults: { steps: 4, cfg_scale: 1, width: 512, height: 512 },
         ranges: { steps: [1, 20], dims: [256, 1024], dim_multiple: 32 },
         video: {
