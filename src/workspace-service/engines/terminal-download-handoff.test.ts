@@ -65,7 +65,10 @@ it('admits the terminal model immediately and shares the still-downloading intro
   ])
   expect(progress.jobs).toHaveLength(1)
   expect(progress.engineReady).toBe(false)
-  expect(link.calls.filter((call) => /\/(update|install)$/.test(call.path))).toHaveLength(1)
+  // Admission returns before the worker's journal write and core request, especially on Windows ARM.
+  await vi.waitFor(() =>
+    expect(link.calls.filter((call) => /\/(update|install)$/.test(call.path))).toHaveLength(1)
+  )
   finish()
   await vi.waitFor(async () => expect((await engines.list())[0]?.stage).toBe('ready'))
   const snapshot = await workspace.snapshot()

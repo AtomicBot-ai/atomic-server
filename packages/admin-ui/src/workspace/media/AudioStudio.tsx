@@ -82,7 +82,7 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
   const [failure, setFailure] = useState('')
   const { model, name, mode, details, controls, values, pending } = studio
   const words = text(values.text, '')
-  const busy = pending || submitting
+  const busy = pending || submitting || studio.loading
   const run = async () => {
     setSubmitting(true)
     setFailure('')

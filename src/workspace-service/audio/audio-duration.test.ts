@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 import { withAudioDuration } from './audio-duration.js'
 
@@ -21,6 +22,31 @@ describe('the length of a music or effects job', () => {
     await expect(
       withAudioDuration(link('sfx:q8_0'), downloads, { mode: 'effects', request })
     ).resolves.toEqual({ text: 'a door', durationSec: 5 })
+  })
+
+  it.each(['unloaded', 'failed'])('keeps the catalog default when a retained model is %s', async (state) => {
+    const fake = link()
+    fake.responses['GET /audio/status'] = { model: { state, loaded: null } }
+    fake.responses['GET /audio/capabilities'] = { modelId: 'sfx:q8_0', mode: 'effects' }
+    await expect(
+      withAudioDuration(fake, downloads, { mode: 'effects', request: { text: 'a door' } })
+    ).resolves.toEqual({ text: 'a door', durationSec: 5 })
+  })
+
+  it('uses the fallback after an explicit unload clears the selected model', async () => {
+    const fake = link()
+    fake.responses['GET /audio/capabilities'] = new AtomicCoreError('MODEL_NOT_LOADED', 'No audio model.')
+    await expect(
+      withAudioDuration(fake, downloads, { mode: 'effects', request: { text: 'a door' } })
+    ).resolves.toEqual({ text: 'a door', durationSec: 10 })
+  })
+
+  it('does not turn a failed capabilities read into another duration', async () => {
+    const fake = link()
+    fake.responses['GET /audio/capabilities'] = new AtomicCoreError('INTERNAL_ERROR', 'Read failed.')
+    await expect(
+      withAudioDuration(fake, downloads, { mode: 'effects', request: { text: 'a door' } })
+    ).rejects.toThrow('Read failed.')
   })
 
   it.each([

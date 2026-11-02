@@ -1,4 +1,5 @@
-import type { AudioStatus, WorkspaceInput } from '../../contract/index.js'
+import { AtomicCoreError } from '@atomic-chat/core'
+import type { AudioCapabilities, AudioStatus, WorkspaceInput } from '../../contract/index.js'
 import type { CoreLink } from '../../core-link/index.js'
 import { audioDetails } from '../../workspace-view/index.js'
 import { object } from '../validation.js'
@@ -20,6 +21,15 @@ export async function withAudioDuration(
   const request = object(input['request'])
   if (input['mode'] === 'speech' || request['durationSec'] !== undefined) return request
   const status = await audioRequest<Partial<AudioStatus>>(link, 'GET', '/audio/status')
-  const details = audioDetails(await downloads(), status.model?.loaded?.modelId)
+  let modelId = status.model?.loaded?.modelId
+  if (!modelId) {
+    // Cancel and a crash stop the process but keep its spec and capabilities for the next job.
+    try {
+      modelId = (await audioRequest<Partial<AudioCapabilities>>(link, 'GET', '/audio/capabilities')).modelId
+    } catch (error) {
+      if (!(error instanceof AtomicCoreError && error.code === 'MODEL_NOT_LOADED')) throw error
+    }
+  }
+  const details = audioDetails(await downloads(), modelId)
   return { ...request, durationSec: details?.defaults['durationSec'] ?? FALLBACK_DURATION_SEC }
 }
