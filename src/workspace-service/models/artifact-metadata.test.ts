@@ -51,6 +51,16 @@ describe('artifact metadata before transfer', () => {
     expect(result.total_download_bytes).toBe(9)
     expect(JSON.stringify(result)).not.toContain('secret')
   })
+  it('uses the configured Hub mirror to read metadata for the pinned source', async () => {
+    const request = vi.fn(async (_url: Parameters<typeof fetch>[0]) =>
+      Response.json({ sha: A, siblings: [{ rfilename: 'weights.gguf', size: 4 }] })
+    )
+    const input = { ...plan, files: [{ ...plan.files[0]!, sha256: null }] }
+    await artifactMetadata(input, request, undefined, 'http://localhost:4321/')
+    expect(String(request.mock.calls[0]![0])).toContain(
+      `http://localhost:4321/api/models/a/model/revision/${A}`
+    )
+  })
   it.each([
     { sha: B, siblings: [] },
     { sha: A, siblings: [{ rfilename: 'weights.gguf', size: 5 }] },

@@ -10,7 +10,8 @@ interface Tree {
 export async function artifactMetadata(
   plan: ArtifactPlan,
   request: typeof fetch,
-  token?: string
+  token?: string,
+  hub = 'https://huggingface.co'
 ): Promise<ArtifactPlan> {
   const trees = new Map<string, Promise<Tree>>()
   const files = await Promise.all(
@@ -27,7 +28,7 @@ export async function artifactMetadata(
       if (!reading) {
         reading = (async () => {
           const response = await request(
-            `https://huggingface.co/api/models/${repo}/revision/${revision}?blobs=true&files_metadata=true`,
+            `${hub.replace(/\/+$/, '')}/api/models/${repo}/revision/${revision}?blobs=true&files_metadata=true`,
             {
               signal: AbortSignal.timeout(15000),
               redirect: 'error',

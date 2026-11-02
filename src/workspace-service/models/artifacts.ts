@@ -79,7 +79,8 @@ export class ArtifactService {
         : await artifactMetadata(
             artifactPlan(row, this.options.paths.dataFolder, input['quant'] as string | undefined),
             this.request,
-            this.options.env?.['HF_TOKEN']
+            this.options.env?.['HF_TOKEN'],
+            this.options.env?.['HF_ENDPOINT']
           )
     const free = await this.options.link.disk.available()
     await writeDocument(this.path(plan.digest), plan)
