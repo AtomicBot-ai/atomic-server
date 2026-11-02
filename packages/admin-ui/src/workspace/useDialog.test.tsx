@@ -124,3 +124,25 @@ it('dismisses only the topmost dialog and consumes the outside click instead of 
   expect(parentClose).toHaveBeenCalledOnce()
   expect(background).not.toHaveBeenCalled()
 })
+
+it('keeps full-page onboarding in place after outside clicks while preserving Escape', async () => {
+  const close = vi.fn(),
+    background = vi.fn()
+  function Setup() {
+    const dialog = useDialog(close, true, { dismissOnOutside: false })
+    return (
+      <>
+        <button onClick={background}>Outside</button>
+        <section ref={dialog} role="dialog" aria-modal="true" tabIndex={-1}>
+          Onboarding
+        </section>
+      </>
+    )
+  }
+  render(<Setup />)
+  await userEvent.click(screen.getByRole('button', { name: 'Outside' }))
+  expect(close).not.toHaveBeenCalled()
+  expect(background).not.toHaveBeenCalled()
+  await userEvent.keyboard('{Escape}')
+  expect(close).toHaveBeenCalledOnce()
+})

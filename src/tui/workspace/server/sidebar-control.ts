@@ -1,3 +1,5 @@
+import { setupPreparing } from '../setup/download-pending.js'
+import { apiDownloadWait } from '../../../workspace-view/index.js'
 /** Desktop's single server control surface, with terminal-sized status animation. */
 import { serverRunning, serverSelection } from './server-status.js'
 import { engineName } from '../../../terminal-setup/index.js'
@@ -15,29 +17,56 @@ export function drawSidebarControl(
   focus: string,
   seconds = 0
 ) {
-  const running = serverRunning(s),
+  const waiting = apiDownloadWait(s.workspace, setupPreparing(s))
+  const running = !waiting && serverRunning(s),
     selected = serverSelection(s)
-  const changing = s.busy && /(?:Starting|Stopping|Restarting) (?:the )?(?:API|server)/i.test(s.message)
+  const changing = Boolean(s.apiPending)
   const provider = s.engines.find((e) => e.id === selected.engine)?.provider ?? selected.engine.split('|')[0]
   const compact = c.height < 30
   panel(c, x, y, 22, compact ? 7 : 11, running, seconds)
-  const background =
-    focus === 'api-toggle' ? COLORS.composer : changing || running ? COLORS.engineButton : COLORS.accent
-  const color = focus === 'api-toggle' || (!changing && !running) ? COLORS.ground : COLORS.text
+  const background = waiting
+    ? focus === 'api-toggle'
+      ? COLORS.header
+      : COLORS.surface
+    : focus === 'api-toggle'
+      ? COLORS.composer
+      : changing || running
+        ? COLORS.engineButton
+        : COLORS.accent
+  const color = waiting
+    ? COLORS.muted
+    : focus === 'api-toggle' || (!changing && !running)
+      ? COLORS.ground
+      : COLORS.text
   fill(c, x + 1, y + 1, 20, compact ? 2 : 3, background)
   const phase = s.motion ? Math.floor(seconds * 5) % 4 : 0
   const icon = changing ? ['|', '/', '-', '\\'][phase] : running ? '[#]' : '[>]'
   const state = changing
-    ? /Stopping/i.test(s.message)
+    ? s.apiPending === 'stopping'
       ? 'Stopping…'
       : 'Starting…'
     : running
       ? 'Stop API'
       : 'Start API'
   const label = `${icon} ${state}`
-  text(c, x + 1 + Math.floor((20 - label.length) / 2), y + 2, label, color, 20, background, true)
+  if (waiting) {
+    const lines = waiting.label
+      .replace(' is ', '\n')
+      .replace(' download paused', '\ndownload paused')
+      .split('\n')
+    lines.forEach((line, i) =>
+      text(c, x + 1 + Math.floor((20 - line.length) / 2), y + 1 + i, line, color, 20, background, true)
+    )
+  } else text(c, x + 1 + Math.floor((20 - label.length) / 2), y + 2, label, color, 20, background, true)
   if (!changing)
-    c.targets.push({ id: 'api-toggle', x: x + 1, y: y + 1, width: 20, height: compact ? 2 : 3, hint: state })
+    c.targets.push({
+      id: 'api-toggle',
+      x: x + 1,
+      y: y + 1,
+      width: 20,
+      height: compact ? 2 : 3,
+      hint: waiting?.message ?? state,
+    })
   if (running && s.motion) {
     const position = Math.floor(seconds * 4) % 20
     text(

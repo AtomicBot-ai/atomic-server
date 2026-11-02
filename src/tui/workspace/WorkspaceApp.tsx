@@ -1,4 +1,5 @@
 import { readinessPatch } from './chat/readiness.js'
+import { copyWorkspaceText } from './copy.js'
 import { failedTurn } from './chat/failed-turn.js'
 import { useDownloadAttention } from './downloads/use-download-attention.js'
 import { chatFeatureRequest } from './chat/features.js'
@@ -14,18 +15,14 @@ import { isPicker } from './chat/picker.js'
 import { chosenEndpoint } from './chat/model-selection.js'
 import { useWorkspaceData } from './runtime/data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
-import { Box, Text, useApp, useInput, useWindowSize } from 'ink'
-import type { Key } from 'ink'
+import { Box, Text, useApp, useInput, useWindowSize, type Key } from 'ink'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { commandRows } from '../command-list.js'
 import type { CommandSpec } from '../../cli/index.js'
-import { reduce } from '../state.js'
-import type { TuiAction } from '../state.js'
+import { reduce, type TuiAction } from '../state.js'
 import { oneLine } from '../controller.js'
-import { WorkspaceController } from './controller.js'
-import type { WorkspaceDeps } from './controller.js'
-import { createWorkspace } from './state.js'
-import type { Page, WorkspaceState } from './state.js'
+import { WorkspaceController, type WorkspaceDeps } from './controller.js'
+import { createWorkspace, type Page, type WorkspaceState } from './state.js'
 import { workspaceFrame } from './frame.js'
 import { workspaceInputs } from './input/input-sequence.js'
 import { activate } from './actions.js'
@@ -58,9 +55,11 @@ export function WorkspaceApp(props: WorkspaceProps) {
     />
   )
 }
-function WorkspaceContent(
-  props: WorkspaceProps & { resume: WorkspaceState | null; onIntro: (state: WorkspaceState) => void }
-) {
+type ContentProps = WorkspaceProps & {
+  resume: WorkspaceState | null
+  onIntro: (state: WorkspaceState) => void
+}
+function WorkspaceContent(props: ContentProps) {
   const [state, setState] = useState(
       () =>
         props.resume ?? {
@@ -246,15 +245,12 @@ function WorkspaceContent(
     controller: controller.current!,
     send,
     cancel,
-    copy: (value: string) => write(`\u001b]52;c;${Buffer.from(value).toString('base64')}\u0007`),
+    copy: (value: string) =>
+      copyWorkspaceText(value, deps.base.copyText, write, (message) => patch({ message })),
   })
   const run = (id: string) => {
     if (id === 'first-intro') return props.onIntro(latest.current)
-    if (
-      !controller.current ||
-      (latest.current.busy && ['api-toggle', 'stop-confirm', 'refresh-models'].includes(id))
-    )
-      return
+    if (!controller.current || (latest.current.busy && id === 'refresh-models')) return
     void activate(id, context()).catch((e) => {
       captureFailure(deps.base.errors, e, { component: 'tui', operation: 'workspace.action' })
       patch({

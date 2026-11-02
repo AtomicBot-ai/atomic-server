@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Execute, RecordValue } from '../../types'
 import { bytes, record, rows, text } from '../../types'
-import { Action, Field } from '../../Controls'
+import { Action } from '../../Controls'
 import { describeError } from '@/services/admin-api'
 export function CatalogModelOptions({
   model,
@@ -23,14 +23,12 @@ export function CatalogModelOptions({
     source.format !== 'mlx' &&
     !['safetensors', 'Foundry Local'].includes(text(model.format))
   const [files, setFiles] = useState<RecordValue[]>([])
-  const [file, setFile] = useState('')
   const quants = record(source.transformer).quants ?? source.quants ?? model.quants
   const variants = Array.isArray(quants)
     ? quants
         .map((q) => (typeof q === 'string' ? q : text(record(q).id ?? record(q).name, '')))
         .filter(Boolean)
     : []
-  const [quant, setQuant] = useState('')
   const [loading, setLoading] = useState(gguf)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -48,7 +46,6 @@ export function CatalogModelOptions({
         if (!live) return
         const entries = rows(result)
         setFiles(entries)
-        setFile(text(entries[0]?.filename ?? entries[0]?.path, ''))
       })
       .catch((e) => {
         if (!live) return
@@ -74,62 +71,45 @@ export function CatalogModelOptions({
         <Action onClick={() => missing.current?.(id)}>Choose a compatible engine</Action>
       ) : (
         <>
-          {gguf && (
-            <Field label="Variant">
-              <select
-                aria-label={`Variant for ${text(model.name ?? model.title, id)}`}
-                value={file}
-                disabled={loading}
-                onChange={(e) => setFile(e.target.value)}
-              >
-                {loading ? (
-                  <option>Loading variants…</option>
-                ) : files.length ? (
-                  files.map((f) => (
-                    <option key={text(f.filename ?? f.path)} value={text(f.filename ?? f.path)}>
-                      {text(f.filename ?? f.path)}
-                      {typeof f.size === 'number' ? ` · ${bytes(f.size)}` : ''}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No GGUF files available</option>
-                )}
-              </select>
-            </Field>
-          )}
-          {!gguf && variants.length > 0 && (
-            <Field label="Variant">
-              <select
-                aria-label={`Variant for ${text(model.name ?? model.title, id)}`}
-                value={quant || variants[0]}
-                onChange={(e) => setQuant(e.target.value)}
-              >
-                {variants.map((v) => (
-                  <option key={v} value={v}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </Field>
+          {loading && <p role="status">Loading variants…</p>}
+          {!loading && gguf && !files.length && !error && <p>No GGUF files available</p>}
+          {!loading && !error && (
+            <div className="catalog-download-rows">
+              {(gguf
+                ? files.map((f) => ({
+                    value: text(f.filename ?? f.path),
+                    label: `${text(f.filename ?? f.path)}${typeof f.size === 'number' ? ` · ${bytes(f.size)}` : ''}`,
+                  }))
+                : variants.length
+                  ? variants.map((v) => ({ value: v, label: v }))
+                  : [{ value: '', label: text(model.name ?? model.title, id) }]
+              ).map((v) => (
+                <div className="catalog-download-row" key={v.value}>
+                  <span>{v.label}</span>
+                  <Action
+                    primary
+                    onClick={() =>
+                      choose({
+                        ...model,
+                        ...(gguf
+                          ? { selectedFile: v.value }
+                          : variants.length
+                            ? { selectedQuant: v.value }
+                            : {}),
+                      })
+                    }
+                  >
+                    Download
+                  </Action>
+                </div>
+              ))}
+            </div>
           )}
           {error && (
             <p role="alert">
               {error} <Action onClick={() => setRevision((v) => v + 1)}>Retry</Action>
             </p>
           )}
-          <Action
-            primary
-            disabled={loading || (gguf && !file)}
-            onClick={() =>
-              choose({
-                ...model,
-                selectedFile: file,
-                ...(variants.length ? { selectedQuant: quant || variants[0] } : {}),
-              })
-            }
-          >
-            Download
-          </Action>
         </>
       )}
     </>

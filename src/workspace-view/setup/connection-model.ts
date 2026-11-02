@@ -115,7 +115,14 @@ export function connectionModelState(
  * in the web admin and the terminal UI, so both show one answer for one server.
  */
 export function serverPanelSelection(
-  snapshot: { services?: readonly unknown[]; setups?: readonly unknown[] } | null | undefined,
+  snapshot:
+    | {
+        services?: readonly unknown[]
+        setups?: readonly unknown[]
+        selection?: { engine: string; model: string }
+      }
+    | null
+    | undefined,
   preferredEngine = ''
 ): { engine: string; model: string } {
   const service = (snapshot?.services ?? [])
@@ -123,5 +130,6 @@ export function serverPanelSelection(
     .find((s) => s['kind'] === 'chat' && ['ready', 'loaded', 'running'].includes(String(s['state'])))
   if (service) return { engine: String(service['provider'] ?? ''), model: String(service['model'] ?? '') }
   const target = connectionDownloadTarget(connectionDownload(snapshot?.setups ?? []))
-  return { engine: preferredEngine || target.provider, model: target.model }
+  const saved = snapshot?.selection
+  return { engine: saved?.engine || preferredEngine || target.provider, model: saved?.model || target.model }
 }

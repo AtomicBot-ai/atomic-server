@@ -14,7 +14,7 @@ it('uses the shared loaded model and provider until the user makes an explicit d
   expect(serverSelection(state)).toEqual({ engine: 'mlx|v1|metal', model: 'new-model' })
   const draft = { engine: 'local-draft', model: 'draft-model' }
   expect(serverSelection({ ...state, serverDraft: draft })).toEqual(draft)
-  expect(serverSelection({ ...state, workspace: { services: [] } as never }).model).toBe('')
+  expect(serverSelection({ ...state, workspace: { services: [] } as never }).model).toBe('old-model')
 })
 
 it('names the last download and its engine while nothing is loaded, like the web admin', () => {

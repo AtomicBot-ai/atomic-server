@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { execCommand, findOnPath, killTimedOut } from './exec.js'
 
 describe('execCommand', () => {
+  it('pipes literal UTF-8 input without interpreting shell syntax', async () => {
+    const input = 'brew install cloudflared\natc restart\n$(`no shell`) буфер'
+    const result = await execCommand(process.execPath, ['-e', 'process.stdin.pipe(process.stdout)'], {
+      input,
+    })
+    expect(result).toMatchObject({ code: 0, stdout: input, timedOut: false })
+  })
   it('captures output and exit code without a shell', async () => {
     const result = await execCommand(process.execPath, ['-e', 'process.stdout.write("hi"); process.exit(3)'])
     expect(result).toMatchObject({ code: 3, stdout: 'hi', timedOut: false })

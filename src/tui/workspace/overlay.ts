@@ -9,6 +9,7 @@ import { drawWaitingGame } from './games/waiting-game.js'
 import { drawCatalogMenu } from './library/catalog-menu.js'
 import { drawCatalogFilters } from './library/catalog-filters.js'
 import { drawDownloadDetail } from './library/download-detail.js'
+import { drawDownloadList } from './downloads/download-list.js'
 import { drawCloud } from './library/cloud-view.js'
 import { drawConnectionGuide } from './server/connection-guide-view.js'
 import { drawConnectionPicker } from './server/connection-picker.js'
@@ -41,6 +42,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
   }
   if (s.overlay === 'catalog-menu') return drawCatalogMenu(c, s, focus)
   if (s.overlay === 'catalog-filters') return drawCatalogFilters(c, s, focus)
+  if (s.overlay === 'download-list') return drawDownloadList(c, s, focus)
   if (s.overlay === 'download-detail' || s.overlay === 'download-remove')
     return drawDownloadDetail(c, s, focus)
   if (s.overlay === 'cloud') {

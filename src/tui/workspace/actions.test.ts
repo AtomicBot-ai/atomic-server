@@ -22,7 +22,7 @@ function context() {
       run,
       models,
       installed: async () => [],
-      runtime: { execute: async () => ({ rows: [] }) },
+      runtime: { execute: async () => ({ rows: [] }), snapshot: async () => state.workspace },
     } as unknown as WorkspaceController,
     copy: vi.fn(),
     send: vi.fn(),

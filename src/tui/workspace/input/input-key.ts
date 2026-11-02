@@ -35,3 +35,14 @@ export function focusedTarget(
   if (!id) return { patch: { focus: frame.targets[0]?.id ?? '', hover: '' } }
   return { action: id, patch: { focus: id, hover: '' } }
 }
+
+export function tabTarget(focus: string, targets: { id: string }[], backwards: boolean) {
+  const i = targets.findIndex((t) => t.id === focus)
+  return {
+    patch: {
+      focus: targets[(i + (backwards ? -1 : 1) + targets.length) % targets.length]?.id ?? '',
+      hover: '',
+      message: '',
+    },
+  }
+}

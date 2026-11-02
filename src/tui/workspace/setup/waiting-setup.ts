@@ -1,3 +1,4 @@
+import { firstRunDownloadsPending } from './download-pending.js'
 import { workspaceHeaderRows } from '../draw/brand-header.js'
 import { downloadContentBottom } from '../downloads/download-layout.js'
 import type { Key } from 'ink'
@@ -8,7 +9,6 @@ import {
   minesWon,
   newMineGame,
   revealMine,
-  setupModelPending,
 } from '../../../workspace-view/index.js'
 import type { MineGame } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
@@ -38,7 +38,7 @@ export function drawWaitingSetup(c: Canvas, s: WorkspaceState, focus: string) {
   if (!state) return
   const width = Math.min(88, c.width - 8),
     x = Math.floor((c.width - width) / 2),
-    pending = setupModelPending(s.workspace, s.model),
+    pending = firstRunDownloadsPending(s),
     headingY = workspaceHeaderRows(c),
     bottom = downloadContentBottom(c, s),
     cellWidth = c.width < 76 ? 2 : 3,

@@ -23,6 +23,8 @@ export interface ExecOptions {
   env?: NodeJS.ProcessEnv
   cwd?: string
   signal?: AbortSignal
+  /** Literal UTF-8 input; never interpreted by a shell. */
+  input?: string
   /** `inherit` lets a privileged helper prompt on the terminal. */
   stdio?: 'pipe' | 'inherit'
   /** Kill the process tree on timeout, not only the direct child. */
@@ -51,7 +53,7 @@ export const execCommand: ExecFn = (command, args, options = {}) =>
       resolve(result)
     }
     const child = spawn(command, [...args], {
-      stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'],
+      stdio: inherit ? 'inherit' : [options.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
       windowsHide: true,
       detached,
       ...(options.env ? { env: options.env } : {}),
@@ -75,6 +77,8 @@ export const execCommand: ExecFn = (command, args, options = {}) =>
     }
     child.stdout?.on('data', (c: Buffer) => collect(c, 'out'))
     child.stderr?.on('data', (c: Buffer) => collect(c, 'err'))
+    child.stdin?.on('error', () => {}) // A failed/early-exiting child is reported by error/close below.
+    if (options.input !== undefined) child.stdin?.end(options.input)
     child.once('error', (error) => done({ code: null, stdout, stderr, timedOut, error: error.message }))
     child.once('close', (code) => done({ code: timedOut ? null : code, stdout, stderr, timedOut }))
   })

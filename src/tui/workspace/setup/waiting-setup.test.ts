@@ -207,3 +207,52 @@ it('trusts the server over an older snapshot that does not list the download yet
   await t.action('first-connect:endpoint')
   expect(t.ctx.get().finalSetup?.destination).toBe('endpoint')
 })
+
+it.each(['endpoint', 'agent'])(
+  'keeps %s onboarding on Minesweeper with a stale terminal model and optional media',
+  async (destination) => {
+    const t = fixture()
+    t.ctx.update((s) => ({
+      ...s,
+      model: 'old-model',
+      workspace: {
+        ...s.workspace!,
+        selection: { engine: 'llamacpp-upstream', model: 'qwen' },
+        setups: [
+          ...s.workspace!.setups,
+          { id: 'media', stage: 'downloading', plan: { category: 'image', model_id: 'image' } },
+        ],
+      },
+    }))
+    ;(t.ctx.controller.runtime as unknown as { snapshot: () => Promise<unknown> }).snapshot = async () =>
+      t.ctx.get().workspace
+    await t.action(`first-connect:${destination}`)
+    expect(t.ctx.get().finalSetup?.destination).toBe(destination)
+    expect(t.ctx.get().firstRun).toBe('connect')
+    expect(t.execute).not.toHaveBeenCalledWith('setup.manual')
+    await t.action('wait-continue')
+    expect(t.ctx.get().page).toBe('server')
+  }
+)
+
+it.each(['endpoint', 'agent', 'skip'])(
+  'keeps %s on Minesweeper when only an engine is downloading',
+  async (destination) => {
+    const t = fixture()
+    t.ctx.update((s) => ({
+      ...s,
+      workspace: {
+        ...s.workspace!,
+        setups: [],
+        downloads: [{ kind: 'engine', engine: 'llamacpp-upstream', taskId: 'engine', stage: 'downloading' }],
+      },
+    }))
+    t.ctx.controller.runtime.snapshot = vi.fn(async () => t.ctx.get().workspace!)
+    await t.action(destination === 'skip' ? 'first-skip' : `first-connect:${destination}`)
+    expect(t.ctx.get().finalSetup).toBeTruthy()
+    expect(shown(t.ctx.get())).toContain("I can't wait")
+    expect(t.execute).not.toHaveBeenCalledWith('setup.manual')
+    await t.action('wait-continue')
+    expect(t.ctx.get().page).toBe('server')
+  }
+)

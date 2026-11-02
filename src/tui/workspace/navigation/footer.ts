@@ -5,7 +5,8 @@ import { escapeAction } from '../input/escape-action.js'
 /** Contextual commands have one location and share their keyboard action. */
 export function drawFooter(c: Canvas, s: WorkspaceState, focus: string) {
   const back = escapeAction(s)
-  const duplicate = c.targets.filter((t) => t.id === back.id && t.height === 1)
+  const visibleBack = Boolean(s.firstRun && c.targets.some((t) => t.id === back.id))
+  const duplicate = visibleBack ? [] : c.targets.filter((t) => t.id === back.id && t.height === 1)
   for (const t of duplicate) {
     const surface = c.cells[t.y]?.[Math.max(0, t.x - 1)]?.background ?? COLORS.ground
     text(c, t.x, t.y, ' '.repeat(t.width), COLORS.text, t.width, surface)
@@ -52,7 +53,8 @@ export function drawFooter(c: Canvas, s: WorkspaceState, focus: string) {
       width,
       focus === id && id ? COLORS.focus : undefined
     )
-    if (id) c.targets.push({ id, x, y: c.height - 1, width, height: 1, hint: label! })
+    if (id && !(visibleBack && id === back.id))
+      c.targets.push({ id, x, y: c.height - 1, width, height: 1, hint: label! })
     x += width + 3
   }
 }

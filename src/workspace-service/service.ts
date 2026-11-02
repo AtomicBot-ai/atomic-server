@@ -1,3 +1,5 @@
+import { suspendDownloadingApi } from './snapshot/download-api.js'
+import { readServerSelection, restoreServerSelection } from './server-selection.js'
 import { EngineDownloads } from './engines/engine-downloads.js'
 import { embedWorkspaceDocuments } from './features/workspace-embeddings.js'
 import { requireReadiness } from './snapshot/require-readiness.js'
@@ -106,6 +108,7 @@ export class WorkspaceService {
     if (options.fresh) this.shared.invalidate()
     const result = await this.shared.get()
     result.downloads.push(...(await this.engineDownloads.list()), ...this.downloads.downloader.snapshot())
+    result.selection = await readServerSelection(this.options)
     result.loads = this.loads.list()
     result.chats = this.chats.running()
     result.setups.push(
@@ -135,7 +138,15 @@ export class WorkspaceService {
   }
   async execute(operation: string, raw: WorkspaceInput = {}): Promise<unknown> {
     try {
-      return await this.mutations.run(operation, () => this.dispatch(operation, raw))
+      return await this.mutations.run(operation, async () => {
+        const result = await this.dispatch(operation, raw)
+        await suspendDownloadingApi(
+          operation,
+          () => this.snapshot({ fresh: true }),
+          () => this.options.link.server.stop()
+        )
+        return result
+      })
     } catch (error) {
       captureFailure(this.options.errors, error, {
         component: 'workspace',
@@ -192,6 +203,8 @@ export class WorkspaceService {
         options: this.options,
         keys: this.keys,
         metrics: this.metrics,
+        restoreSelection: () =>
+          restoreServerSelection(this.options, (name, input) => this.execute(name, input)),
         request: this.request,
         snapshot: () => this.snapshot({ fresh: true }),
       },

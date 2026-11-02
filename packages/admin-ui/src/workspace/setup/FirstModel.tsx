@@ -187,7 +187,7 @@ export function FirstModel({
         )}
         {!!installed.length && (
           <>
-            <h2>On this device</h2>
+            <h2>Downloaded</h2>
             <div className="first-model-grid">{cards(installed, true)}</div>
           </>
         )}

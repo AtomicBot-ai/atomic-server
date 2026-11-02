@@ -8,11 +8,12 @@ export async function remoteAction(id: string, ctx: ActionContext): Promise<bool
     c = ctx.controller
   if (id === 'remote-setup-copy') {
     const setup = remoteSetupView(s.remote)
-    if (setup) ctx.copy([...setup.commands, ...(setup.restart ? [setup.restart] : [])].join('\n'))
+    if (setup) await ctx.copy([...setup.commands, ...(setup.restart ? [setup.restart] : [])].join('\n'))
     return true
   }
   if (id === 'remote-copy') {
-    if (typeof s.remote['url'] === 'string') ctx.copy(`${s.remote['url']}${s.workspace?.api.prefix ?? '/v1'}`)
+    if (typeof s.remote['url'] === 'string')
+      await ctx.copy(`${s.remote['url']}${s.workspace?.api.prefix ?? '/v1'}`)
     return true
   }
   if (s.busy) return true

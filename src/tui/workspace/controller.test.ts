@@ -4,7 +4,7 @@ import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { resolveConfig } from '../../config/index.js'
 
-it('reloads the selected installed model on explicit server start, without replacing a new model selection', async () => {
+it('delegates API restoration to the shared service without replacing an explicit model load', async () => {
   const folder = tmpDataFolder(),
     link = fakeCoreLink(),
     config = resolveConfig({ env: {} })
@@ -39,16 +39,15 @@ it('reloads the selected installed model on explicit server start, without repla
   c.installed = async () => [{ id: 'saved-model', provider: 'llamacpp-upstream', name: 'Saved model' }]
   try {
     expect(link.calls).toEqual([])
-    const execute = vi.spyOn(c.runtime, 'execute')
+    const original = c.runtime.execute.bind(c.runtime)
+    const execute = vi
+      .spyOn(c.runtime, 'execute')
+      .mockImplementation((name, input) =>
+        name === 'api.start' ? original(name, { ...input, restore_selected: false }) : original(name, input)
+      )
     await c.api(true)
-    expect(execute).toHaveBeenCalledWith('models.load', {
-      provider: 'llamacpp-upstream',
-      model_id: 'saved-model',
-    })
-    const load = link.calls.findIndex((call) => call.path.endsWith('/saved-model/load'))
-    const start = link.calls.findIndex((call) => call.path === '/server/start')
-    expect(load).toBeGreaterThanOrEqual(0)
-    expect(start).toBeGreaterThan(load)
+    expect(execute).toHaveBeenCalledWith('api.start', { restore_selected: true })
+    expect(link.calls.some((call) => call.path === '/server/start')).toBe(true)
     link.calls.length = 0
     // Through the server's models.load: its load stage is dropped there when the load fails.
     await c.loadModel('llamacpp-upstream', 'new-model')

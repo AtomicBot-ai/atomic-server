@@ -32,6 +32,9 @@ def frame():
     j = out.find(b'\x1b[G', i) if i >= 0 else -1
     k = out.rfind(b'\x1b[?1049h')
     start = j + 3 if j >= 0 else (i + 4 if i >= 0 else (k + 8 if k >= 0 else 0))
+    # Ink also redraws from the screen origin after a full clear (not an erase-lines sequence).
+    home = out.rfind(b'\x1b[H')
+    if home >= 0: start = max(start, home + 3)
     return ansi.sub(b'', out[start:]).decode('utf8', 'replace').split('\n')
 def click(label):
     # A read can end inside a frame's write: look again on fresher output for a few seconds.

@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-02** — [Restore selected local models when finishing setup](2026-11-02-restore-local-model-onboarding.md) — shared saved selection, automatic local loading, and responsive TUI API controls.
+
 - **2026-11-02** — [Treat document path refusals as usage](2026-11-02-treat-document-path-refusals-as-usage.md) — actionable terminal attachment feedback without reporting expected path/size refusals; unexpected I/O failures remain reportable.
 
 - **2026-11-02** — [Diagnose native segmenter failures without collecting text](2026-11-02-diagnose-native-segmenter-failures.md) — finite runtime diagnostics and native Unicode renderer probes; SERVER-N remains unresolved.
@@ -145,3 +147,10 @@ add a new one that says which record it supersedes.
 - **2026-11-02** — [Keep managed-model compatibility refusals local](2026-11-02-keep-managed-model-refusals-local.md) — display incompatible or empty engine verdicts without reporting an action failure; preserve genuine check exceptions.
 - **2026-11-02** — [Pin core 0.20.7 for audio](2026-11-02-pin-core-0-20-7-for-audio.md) — use the released audio contracts and engine registry; drop temporary feature detection; preserve both catalogs and verify audio file provenance before downloading.
 - **2026-11-02** — [Fall back to a free web-admin port](2026-11-02-fall-back-to-a-free-admin-port.md) — a busy preferred port retries on an OS-assigned loopback port; status and admin links use the bound address; the intro preserves startup diagnostics.
+
+- **2026-11-02** — [Keep download management inside onboarding](2026-11-02-onboarding-download-popup.md) — downloads popup, per-variant actions and expandable catalog scrolling.
+- **2026-11-02** — [Confirm terminal copies through the system clipboard](2026-11-02-native-terminal-clipboard.md) — native clipboard helpers with literal stdin, success/error feedback and SSH OSC 52 fallback.
+
+- **2026-11-02** — [Remove automatic on-device discovery](2026-11-02-remove-device-discovery.md) — remove cross-application scans and onboarding adoption controls; keep normal current-profile downloads.
+
+- **2026-11-02** — [Wait before server handoff](2026-11-02-wait-before-server-handoff.md) — shared download gate, Minesweeper before control-panel override, and inert explanatory API controls.

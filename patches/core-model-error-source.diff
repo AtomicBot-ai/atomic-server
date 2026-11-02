@@ -1,0 +1,63 @@
+diff --git a/src/runtime/llamacpp/errors.test.ts b/src/runtime/llamacpp/errors.test.ts
+index 417ebbc..24ee565 100644
+--- a/src/runtime/llamacpp/errors.test.ts
++++ b/src/runtime/llamacpp/errors.test.ts
+@@ -86,9 +86,9 @@ describe('classifyExit / classifyProcessOutput', () => {
+     const exit = { code: 1, signal: null }
+     expect(classifyProcessOutput(exit, '', stdout, 'linux', 'llamacpp').code).toBe('MODEL_ARCH_NOT_SUPPORTED')
+     expect(classifyProcessOutput(exit, '', stdout, 'linux', 'llamacpp-upstream').code).toBe(
+-      'MODEL_FILE_CORRUPT'
++      'MODEL_ARCH_NOT_SUPPORTED'
+     )
+-    expect(classifyProcessOutput(exit, '', stdout, 'linux').code).toBe('MODEL_FILE_CORRUPT')
++    expect(classifyProcessOutput(exit, '', stdout, 'linux').code).toBe('MODEL_ARCH_NOT_SUPPORTED')
+     expect(classifyStderr(stdout, 'llamacpp').code).toBe('MODEL_ARCH_NOT_SUPPORTED')
+     // The other corruption markers stay corruption on both.
+     expect(classifyStderr('invalid magic', 'llamacpp').code).toBe('MODEL_FILE_CORRUPT')
+diff --git a/src/runtime/llamacpp/errors.ts b/src/runtime/llamacpp/errors.ts
+index b2eeb02..dbd4a5a 100644
+--- a/src/runtime/llamacpp/errors.ts
++++ b/src/runtime/llamacpp/errors.ts
+@@ -67,8 +67,7 @@ const includesAny = (lower: string, needles: string[]) => needles.some((n) => lo
+ /**
+  * TurboQuant (`llamacpp`) can know an architecture and still expect a tensor layout that differs
+  * from a valid upstream GGUF: re-downloading cannot fix that, and the same file loads in stock
+- * llama.cpp, so there the mismatch is an unsupported architecture. Upstream it still means a
+- * damaged file.
++ * llama.cpp, so there the mismatch is an unsupported architecture. Ollama conversions can differ from upstream too; tensor counts alone do not prove corruption.
+  */
+ const TENSOR_COUNT_MISMATCH = 'wrong number of tensors'
+-const tensorLayoutIsArchitecture = (provider: LocalProviderId) => provider === 'llamacpp'
++const tensorLayoutIsArchitecture = (_provider: LocalProviderId) => true
+diff --git a/test/contract/errors.test.ts b/test/contract/errors.test.ts
+index b5cc43b..6a325a9 100644
+--- a/test/contract/errors.test.ts
++++ b/test/contract/errors.test.ts
+@@ -19,6 +19,15 @@ describe(`contract: errors (${index.source.file} @ ${index.source.commit.slice(0
+   it.each(cases.map((c) => [c.name, c] as const))('%s', (_name, c) => {
+     // The emitter runs on Unix, so signals are Unix numbers and the platform is unix-like.
+     const err = classifyProcessOutput(c.input.exit, c.input.stderr, c.input.stdout, 'linux')
+-    expect(err.toJSON()).toEqual(c.expected)
++    // Intentional correction: an intact Ollama conversion can also have a different tensor layout.
++    // Keep the original desktop fixture unchanged; see the tensor-layout error ADR.
++    const expected = c.input.stderr.includes('wrong number of tensors')
++      ? {
++          ...c.expected,
++          code: 'MODEL_ARCH_NOT_SUPPORTED',
++          message: "The model's architecture or format is not supported by this version of the backend.",
++        }
++      : c.expected
++    expect(err.toJSON()).toEqual(expected)
+   })
+ })
+diff --git a/docs/decisions/2026-11-02-tensor-layout-error.md b/docs/decisions/2026-11-02-tensor-layout-error.md
+new file mode 100644
+index 0000000..56b9590
+--- /dev/null
++++ b/docs/decisions/2026-11-02-tensor-layout-error.md
+@@ -0,0 +1,5 @@
++# Classify tensor-layout mismatches without claiming corruption
++
++An Ollama model matched its full SHA-256 digest but llama.cpp b11946 rejected it with "wrong number of tensors; expected 1189, got 833". A tensor count mismatch alone is therefore not evidence of damaged bytes.
++
++Classify this message as MODEL_ARCH_NOT_SUPPORTED for upstream llama.cpp as well as the fork. Explicit truncation, invalid magic, and end-of-file markers remain MODEL_FILE_CORRUPT. Keep original desktop fixtures unchanged and document the intentional contract correction in the test.

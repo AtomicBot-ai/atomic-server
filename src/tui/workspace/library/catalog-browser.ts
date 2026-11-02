@@ -1,12 +1,12 @@
-import { isVariantFormat, variantNext } from './catalog-variants.js'
+import { drawCatalogDownloadRows } from './catalog-download-rows.js'
 import { downloadCardHeight, drawDownloadCard } from '../setup/download-card.js'
 import { attributionOf, downloadRows, downloadOwner, downloadStopped } from '../../../workspace-view/index.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text, wrap, rule } from '../draw/canvas.js'
 import { fieldControl, scrollTrack } from '../draw/controls.js'
-import { card, actionButton } from '../draw/cards.js'
+import { card } from '../draw/cards.js'
 import type { WorkspaceState } from '../state.js'
-import { computeRowWindow } from '../../row-window.js'
+import { catalogWindow } from './catalog-window.js'
 import { catalogIndexes } from './catalog-filters.js'
 import { CATEGORY_NAMES } from './catalog-menu.js'
 import { catalogColumns, drawCatalogColumns, drawCatalogMetadata } from './catalog-table.js'
@@ -85,12 +85,28 @@ export function drawCatalogBrowser(
     rowHeight = media ? 4 : 2
   const openIndex = indices.findIndex((index) => s.libraryRows[index]?.id === s.catalogOpen)
   const detailHeight =
-    openIndex >= 0 ? Math.min(7, Math.max(4, bottom - start - rowHeight - (media ? 2 : 0))) : 0
-  const count = Math.max(1, Math.floor((bottom - start - detailHeight - (media ? 2 : 0)) / rowHeight))
-  const win = computeRowWindow(indices.length, s.selected, count)
+    openIndex >= 0
+      ? Math.min(
+          Math.max(5, s.catalogVariants.length * 2 + 3),
+          Math.max(4, bottom - start - rowHeight - (media ? 2 : 0))
+        )
+      : 0
+  const heights = indices.map(
+    (index, at) =>
+      rowHeight +
+      (at === openIndex ? detailHeight : 0) +
+      (media &&
+      (at === 0 ||
+        modelInstalled(s, s.libraryRows[indices[at - 1]!]!.id) !==
+          modelInstalled(s, s.libraryRows[index]!.id))
+        ? 1
+        : 0)
+  )
+  const win = catalogWindow(heights, s.selected, bottom - start)
   let rowY = start,
     lastGroup = ''
   indices.slice(win.start, win.start + win.count).forEach((index, offset) => {
+    if (rowY + rowHeight > bottom) return
     const model = s.libraryRows[index]!,
       open = model.id === s.catalogOpen,
       status = catalogDeviceStatus(s, model)
@@ -194,65 +210,45 @@ export function drawCatalogBrowser(
         return
       }
     }
-    const controlY = rowY + Math.max(1, detailHeight - 4)
-    if (s.catalogVariants.length)
+    const controlY = rowY + Math.min(2, detail.length) + 1
+    if (s.busy) text(c, x + 2, controlY, 'Reading versions...', COLORS.muted, width - 4)
+    else if (job && !ready)
+      button(c, 'library:downloads', x + 2, controlY, 'View download', 'Open download controls', focus)
+    else if (loaded || (ready && record(job?.['plan'])['category'])) {
+      const mediaReady = ready && record(job?.['plan'])['category']
       button(
         c,
-        'catalog-variants',
+        mediaReady ? `media-installed:${job?.['id']}` : `installed:${s.installed.indexOf(loaded!)}`,
         x + 2,
         controlY,
-        `${s.catalogVariant.slice(0, Math.max(12, width - 23))} v`,
-        'Choose a download version',
-        focus
-      )
-    else if (s.busy) text(c, x + 2, controlY, 'Reading versions...', COLORS.muted, width - 4)
-    if (job && !ready)
-      button(c, 'library:downloads', x + 2, controlY + 2, 'View download', 'Open download controls', focus)
-    else if (ready && record(job?.['plan'])['category'])
-      actionButton(
-        c,
-        `media-installed:${job?.['id']}`,
-        x + 2,
-        controlY + 1,
         'Load model',
         'Load this installed model',
-        focus
+        focus,
+        true
       )
-    else if (loaded)
-      actionButton(
+      button(
         c,
-        `installed:${s.installed.indexOf(loaded)}`,
-        x + 2,
-        controlY + 1,
-        'Load model',
-        'Load this installed model',
+        mediaReady ? `media-delete:${job?.['id']}` : `installed-delete:${encodeURIComponent(loaded!.id)}`,
+        x + 17,
+        controlY,
+        'X Delete',
+        'Delete downloaded model',
         focus
       )
-    else
-      actionButton(
+    } else
+      drawCatalogDownloadRows(
         c,
-        `catalog-download:${index}`,
+        s,
+        index,
         x + 2,
-        controlY + 1,
-        isVariantFormat(model.source?.['format'])
-          ? ({ engine: 'Install engine', prepare: 'Prepare accelerators', download: 'Download' }[
-              variantNext(model.source, s.catalogVariant).action
-            ] ?? 'Download')
-          : 'Download',
-        'Prepare required components or download this version',
+        controlY,
+        width - 4,
+        Math.max(1, Math.min(detailHeight - (controlY - rowY), bottom - controlY)),
         focus
       )
-    const remove =
-      ready && record(job?.['plan'])['category']
-        ? `media-delete:${job?.['id']}`
-        : loaded
-          ? `installed-delete:${encodeURIComponent(loaded.id)}`
-          : ''
-    if (remove) button(c, remove, x + 20, controlY + 2, 'X Delete', 'Delete downloaded model', focus)
     rowY += detailHeight
   })
-  if (openIndex < 0)
-    scrollTrack(c, x + width - 1, start, count * rowHeight, win.start, win.count, indices.length)
+  scrollTrack(c, x + width - 1, start, bottom - start, win.start, win.count, indices.length)
   if (!indices.length)
     text(c, x, start, s.busy ? 'Reading catalog...' : 'No models match your search.', COLORS.muted, width)
 }

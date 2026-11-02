@@ -19,15 +19,7 @@ it.each(['chat.start', 'chat.complete'])('rejects %s before a model is ready', a
 // The API serves without a model (`atc api start`, `api.autoStart`): a Start with nothing loaded is not an error.
 it('does not interfere with the API, daemon management, stop, downloads or cancellation', async () => {
   const snapshot = vi.fn()
-  for (const operation of [
-    'api.start',
-    'api.restart',
-    'api.stop',
-    'setup.resume',
-    'chat.cancel',
-    'engines.install',
-    'models.load',
-  ])
+  for (const operation of ['api.stop', 'setup.resume', 'chat.cancel', 'engines.install', 'models.load'])
     await requireReadiness(operation, {}, snapshot)
   expect(snapshot).not.toHaveBeenCalled()
 })
@@ -52,5 +44,19 @@ it.each(['', '   ', undefined])(
         'Choose a model'
       )
     expect(snapshot).not.toHaveBeenCalled()
+  }
+)
+
+it.each(['api.start', 'api.restart'])(
+  'rejects %s while the first model is downloading, even with an empty running API',
+  async (operation) => {
+    const pending = {
+      ...state(true),
+      setups: [{ setup_id: 'j', stage: 'downloading_model', plan: { model_id: 'qwen' } }],
+    }
+    await expect(requireReadiness(operation, {}, async () => pending)).rejects.toThrow(
+      'Wait for the model to download'
+    )
+    await expect(requireReadiness(operation, {}, async () => state(false, true))).resolves.toBeUndefined()
   }
 )

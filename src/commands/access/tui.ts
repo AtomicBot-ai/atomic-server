@@ -9,7 +9,7 @@ import { AtcError, defineCommand } from '../../cli/index.js'
 import { readTextFile, resolveConfig } from '../../config/index.js'
 import { CHECKS, coreHardware, runChecks } from '../../doctor/index.js'
 import { managedFacts } from '../system/doctor.js'
-import { HostStepJournal } from '../../host/index.js'
+import { HostStepJournal, copyToClipboard } from '../../host/index.js'
 import { colorEnabled } from '../../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../../telemetry/index.js'
 import { detectInstall } from '../../update/index.js'
@@ -113,6 +113,7 @@ export const tuiCommand = defineCommand({
             })),
         loginUrl: async (adminUrl) => adminLoginUrl(adminUrl, await ensureAdminToken(paths.adminToken)),
         openUrl: io.openUrl,
+        copyText: (text) => copyToClipboard(text, ctx.host.facts.platform, io.env, ctx.host.exec),
         now: ctx.now,
       },
     })
