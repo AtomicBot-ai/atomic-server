@@ -25,6 +25,7 @@ afterAll(async () => {
 
 let t: TestRun
 let close: (() => Promise<void>) | undefined
+let removeDownload: (id: string) => Promise<unknown>
 afterEach(async () => {
   await close?.()
   t?.cleanup()
@@ -97,6 +98,7 @@ async function server(o: { gated?: boolean; token?: string } = {}) {
   }
   const ws = await workspaceServer(t.link, paths, env, undefined, { platform: 'linux', arch: 'x64' })
   close = ws.close
+  removeDownload = (id) => ws.service.execute('downloads.remove', { owner: 'litert', id })
   return join(paths.dataFolder, 'litert-lm', 'models')
 }
 
@@ -149,6 +151,9 @@ describe('atc models pull --engine litert-lm', () => {
     expect(await t.run(args)).toBe(0)
     expect(await t.run(['models', 'pull', '--cancel', 'lr-1', '--engine', 'litert-lm'])).toBe(0)
     expect(out()).toContain('lr-1')
+    // Cancel returns before the worker exits; removal waits for its final writes before teardown.
+    hub.release()
+    await removeDownload('lr-1')
   })
 
   it('continues a download by its request id even when a new plan would differ', async () => {
