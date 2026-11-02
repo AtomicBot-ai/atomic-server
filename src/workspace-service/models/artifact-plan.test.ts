@@ -4,6 +4,7 @@ import type { CatalogRow } from './catalog.js'
 
 const modelRevision = 'a'.repeat(40)
 const vaeRevision = 'b'.repeat(40)
+const encoderRevision = 'c'.repeat(40)
 function row(): CatalogRow {
   return {
     id: 'z-image',
@@ -17,18 +18,26 @@ function row(): CatalogRow {
         quants: [{ id: 'q4', filename: 'model.gguf', bytes: 10 }],
       },
       vae: { repo: 'owner/vae', revision: vaeRevision, filename: 'vae.safetensors', bytes: 20 },
-      text_encoders: [{ repo: 'owner/encoder', filename: 'encoder.gguf', bytes: 30, field: 'llm' }],
+      text_encoders: [
+        {
+          repo: 'owner/encoder',
+          revision: encoderRevision,
+          filename: 'encoder.gguf',
+          bytes: 30,
+          field: 'llm',
+        },
+      ],
     },
   }
 }
 
 describe('diffusion catalog revisions', () => {
-  it('pins each repository independently and keeps main for unpinned files', () => {
+  it('pins each repository independently', () => {
     const plan = artifactPlan(row(), '/data')
     expect(plan.files.map((file) => file.url)).toEqual([
       `https://huggingface.co/unsloth/Z-Image-Turbo-GGUF/resolve/${modelRevision}/model.gguf`,
       `https://huggingface.co/owner/vae/resolve/${vaeRevision}/vae.safetensors`,
-      'https://huggingface.co/owner/encoder/resolve/main/encoder.gguf',
+      `https://huggingface.co/owner/encoder/resolve/${encoderRevision}/encoder.gguf`,
     ])
     const changed = row()
     ;(changed.source['transformer'] as Record<string, unknown>)['revision'] = 'c'.repeat(40)
@@ -43,6 +52,12 @@ describe('diffusion catalog revisions', () => {
       expect(() => artifactPlan(input, '/data')).toThrow('Invalid catalog revision')
     }
   )
+
+  it('rejects unpinned side files', () => {
+    const input = row()
+    delete (input.source['vae'] as Record<string, unknown>)['revision']
+    expect(() => artifactPlan(input, '/data')).toThrow('Invalid catalog revision')
+  })
 
   it('rejects malformed side-file revisions', () => {
     const input = row()
