@@ -1,5 +1,6 @@
 /** Native Unicode rendering with the embedded runtime; no real terminal or user data is required. */
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,7 +8,9 @@ import { expect, it } from 'vitest'
 import { runProcess } from '../helpers/async-binary.js'
 
 const fixture = fileURLToPath(new URL('../fixtures/unicode-renderer.ts', import.meta.url))
-const targets = process.platform === 'win32' && process.arch === 'x64' ? ['default', 'baseline'] : ['default']
+const baseline = process.env['ATC_TEST_BASELINE_BUN']
+const targets =
+  process.platform === 'win32' && process.arch === 'x64' && baseline ? ['default', 'baseline'] : ['default']
 
 it.each(targets)('renders Unicode in a compiled %s binary without a native exception', async (target) => {
   const dir = mkdtempSync(join(tmpdir(), 'atc-unicode-renderer-'))
@@ -19,7 +22,9 @@ it.each(targets)('renders Unicode in a compiled %s binary without a native excep
       '--production',
       '--keep-names',
       '--sourcemap',
-      ...(target === 'baseline' ? ['--target=bun-windows-x64-baseline'] : []),
+      ...(target === 'baseline'
+        ? ['--target=bun-windows-x64-baseline', '--compile-executable-path', baseline!]
+        : []),
       fixture,
       '--outfile',
       outfile,
@@ -34,6 +39,7 @@ it.each(targets)('renders Unicode in a compiled %s binary without a native excep
     expect(JSON.parse(result.out)).toMatchObject({ frames: 156, characters: expect.any(Number) })
     expect(JSON.parse(result.out).characters).toBeGreaterThan(1_000)
   } finally {
-    rmSync(dir, { recursive: true, force: true })
+    // Windows may retain the executable mapping briefly after the child has exited.
+    await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   }
 })

@@ -14,7 +14,9 @@ title: "Diagnose native segmenter failures without collecting text"
   `JSC_INTL_SEGMENTER_BAD_RECEIVER`. Keep the scrubbed message, stack frames, fatal severity, consent,
   and exit behavior. Other messages, including messages with added content, receive no diagnostic.
   Exercise synthetic Unicode, combining characters, emoji and malformed UTF-16 through Ink under
-  Node, Bun and a compiled probe with release flags. Windows x64 tests both default and baseline.
+  Node, Bun and a compiled probe with release flags. Windows x64 CI prepares both default and
+  baseline compilers before tests; `ATC_TEST_BASELINE_BUN` supplies the local baseline executable
+  through `--compile-executable-path`, so the test never downloads a cross-compilation runtime.
 - **Consequences:** A future matching event distinguishes iterator/text initialization failure from
   an invalid receiver without uploading prompts or rendered text. Initialization still combines ICU
   clone and setText failures because WebKit gives them the same message. This is diagnostic work,
