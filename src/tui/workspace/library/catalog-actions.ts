@@ -66,11 +66,14 @@ export async function managedChoice(repository: string, ctx: ActionContext): Pro
     )
     return true
   }
-  throw new Error(
-    verdicts.length
+  update((v) => ({
+    ...v,
+    busy: false,
+    message: verdicts.length
       ? verdicts.map(verdictLine).join(' ')
-      : 'No GGUF file found, and no managed engine takes this model.'
-  )
+      : 'No GGUF file found, and no managed engine takes this model.',
+  }))
+  return true
 }
 
 async function catalogRows(
