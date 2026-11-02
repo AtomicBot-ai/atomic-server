@@ -112,6 +112,27 @@ describe('the TUI catalog for managed engines', () => {
     expect(t.get().enginePanel?.notice).toContain(REPO)
   })
 
+  it('shows managed engine refusals without throwing', async () => {
+    const verdicts = [verdict('tensorrt-llm', true, false), verdict('vllm', false, false)]
+    const t = tui({ 'models.catalog': catalogRow, 'models.check': { repository: REPO, verdicts } })
+    await activate('library:catalog', t.ctx)
+    await activate('library-row:0', t.ctx)
+    expect(t.calls('managed.plan')).toEqual([])
+    expect(t.get()).toMatchObject({
+      overlay: null,
+      busy: false,
+      message:
+        'tensorrt-llm (installed): refused — tensorrt-llm refuses it (on GPU-0) [MODEL_INCOMPATIBLE] vllm: refused — vllm refuses it (on GPU-0) [MODEL_INCOMPATIBLE]',
+    })
+    const empty = tui({
+      'models.catalog': catalogRow,
+      'models.check': { repository: REPO, verdicts: [] },
+    })
+    await activate('library:catalog', empty.ctx)
+    await activate('library-row:0', empty.ctx)
+    expect(empty.get().message).toBe('No GGUF file found, and no managed engine takes this model.')
+  })
+
   it('filters the text catalog by format, with safetensors from the managed engines and Foundry Local', async () => {
     const t = tui({
       'models.catalog': (i: Record<string, unknown>) =>
