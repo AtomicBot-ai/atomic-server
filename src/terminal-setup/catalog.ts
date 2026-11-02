@@ -1,3 +1,4 @@
+import { AtcError } from '../errors/index.js'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { fetchHfGgufFiles, parseGgufShard, ModelRegistry } from '@atomic-chat/core/models'
 import type { DataLayout } from '@atomic-chat/core/host'
@@ -42,17 +43,31 @@ export async function searchHub(
     .sort((a, b) => Number(/^AtomicChat\//i.test(b.id)) - Number(/^AtomicChat\//i.test(a.id)))
 }
 /** Single GGUF files, the balanced quant first: a sharded set needs every shard, so none is offered. */
-export async function modelFiles(repository: string, request: typeof fetch, signal?: AbortSignal) {
+export async function modelFiles(
+  repository: string,
+  request: typeof fetch,
+  signal?: AbortSignal,
+  revision?: string
+) {
   return (
     await fetchHfGgufFiles(repository, {
+      ...(revision ? { revision } : {}),
       fetch: (input, init) =>
         request(input, {
           ...init,
           signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
         }),
+    }).catch((error) => {
+      if (error instanceof AtomicCoreError && /HTTP (401|403)/.test(error.message))
+        throw new AtcError('ATC_USAGE', error.message, {
+          details: error.details ?? 'Set HF_TOKEN for a gated repository.',
+        })
+      throw error
     })
   )
-    .filter((file) => !/mmproj|projector/i.test(file.filename) && !parseGgufShard(file.filename))
+    .filter(
+      (file) => !/mmproj|projector/i.test(file.filename) && (parseGgufShard(file.filename)?.index ?? 1) === 1
+    )
     .sort(
       (a, b) => Number(!/Q4_K_M/i.test(a.filename)) - Number(!/Q4_K_M/i.test(b.filename)) || a.size - b.size
     )

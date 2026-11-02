@@ -9,6 +9,8 @@ import {
   sha256File,
   VALIDATION_CANCELLED_MESSAGE,
   verifyDownloadedFile,
+  verifiedCopy,
+  defaultVerifyDeps,
 } from './verify.js'
 
 const body = Buffer.from('hello atomic'.repeat(1000))
@@ -60,4 +62,25 @@ describe('verifyDownloadedFile', () => {
       })
     ).rejects.toThrow('Failed to verify file integrity: io')
   })
+})
+
+it('reuses matching content, refuses equal-size stale content and propagates cancellation', async () => {
+  const path = await tmpFile()
+  const controller = new AbortController()
+  expect(await verifiedCopy({ size: body.length }, path, defaultVerifyDeps, controller.signal)).toBe(false)
+  expect(
+    await verifiedCopy({ size: body.length, sha256: digest }, path, defaultVerifyDeps, controller.signal)
+  ).toBe(true)
+  expect(
+    await verifiedCopy(
+      { size: body.length, sha256: 'f'.repeat(64) },
+      path,
+      defaultVerifyDeps,
+      controller.signal
+    )
+  ).toBe(false)
+  controller.abort()
+  await expect(verifiedCopy({ sha256: digest }, path, defaultVerifyDeps, controller.signal)).rejects.toThrow(
+    VALIDATION_CANCELLED_MESSAGE
+  )
 })

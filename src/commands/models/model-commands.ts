@@ -1,3 +1,4 @@
+import { resumeGgufPull } from './resume-gguf.js'
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { AtcError, defineCommand } from '../../cli/index.js'
@@ -202,6 +203,7 @@ export const modelsCommand = defineCommand({
         let file =
           typeof inv.values['file'] === 'string' ? inv.values['file'] : colon < 0 ? '' : raw.slice(colon + 1)
         const service = await workspace(ctx)
+        if (await resumeGgufPull(ctx, service, repo, file, inv.values)) return 0
         if (!file) {
           const result = (await service.execute('models.files', { repo }).catch((error: unknown) => {
             // A repository without GGUF files: maybe a managed engine's safetensors checkpoint.

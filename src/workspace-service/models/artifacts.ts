@@ -1,13 +1,14 @@
 import { join } from 'node:path'
 import { readdir, rm } from 'node:fs/promises'
 import { registerMlx, recoverMlx } from './mlx-registration.js'
-import { Downloader } from '../../downloads/index.js'
+import { Downloader, policyFetchFor } from '../../downloads/index.js'
 import type { WorkspaceInput } from '../../contract/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
 import { AtcError } from '../../errors/index.js'
 import { ensureArtifactEngine } from '../engines/engine-install.js'
 import type { WorkspaceServiceOptions } from '../service-options.js'
 import type { WorkspaceCatalog, CatalogCategory } from './catalog.js'
+import { artifactMetadata } from './artifact-metadata.js'
 import { artifactPlan, destinationOf } from './artifact-plan.js'
 import type { ArtifactJob, ArtifactPlan } from './artifact-plan.js'
 import { migrateMediaFolders } from './media-migration.js'
@@ -32,6 +33,7 @@ export class ArtifactService {
     downloader?: Downloader,
     private ensureEngine?: (engine: string, taskId: string) => Promise<void>
   ) {
+    this.request = policyFetchFor({ proxy: downloadProxy(options.config) }, request)
     this.directory = join(options.paths.atcDir, 'media-installations')
     this.downloader =
       downloader ??
@@ -74,7 +76,12 @@ export class ArtifactService {
     const plan =
       category === 'text'
         ? await mlxPlan(row, this.options.paths.dataFolder, this.request, !curated)
-        : artifactPlan(row, this.options.paths.dataFolder, input['quant'] as string | undefined)
+        : await artifactMetadata(
+            artifactPlan(row, this.options.paths.dataFolder, input['quant'] as string | undefined),
+            this.request,
+            this.options.env?.['HF_TOKEN'],
+            this.options.env?.['HF_ENDPOINT']
+          )
     const free = await this.options.link.disk.available()
     await writeDocument(this.path(plan.digest), plan)
     return {
@@ -132,6 +139,18 @@ export class ArtifactService {
   }
   private async resumeHeld(job: ArtifactJob): Promise<ArtifactJob> {
     if (job.stage === 'ready' || this.running.has(job.id)) return job
+    for (const item of job.plan.files) {
+      const source = /https:\/\/(?:huggingface\.co|hf\.co)\/[^/]+\/[^/]+\/resolve\/([^/]+)\//.exec(item.url)
+      if (
+        source &&
+        (!/^[0-9a-f]{40}$/.test(source[1] ?? '') || !Number.isSafeInteger(item.size) || item.size! < 0)
+      )
+        throw new AtcError(
+          'ATC_USAGE',
+          'This download has no recorded model commit. Start a new download; partial files were kept.'
+        )
+    }
+
     let finished!: () => void
     const worker: Worker = {
       cancelled: false,

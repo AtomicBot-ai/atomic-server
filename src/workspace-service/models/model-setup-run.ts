@@ -3,11 +3,18 @@
  * model and its projector with atc's downloader, `model.yml` in the shared GGUF tree, then the core's
  * verdict on the file on disk by `model_id`. A file the core does not accept is removed again.
  */
+import { createHash } from 'node:crypto'
 import { rm, stat } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
 import type { LocalProviderId, ModelCompatibilityResponse } from '@atomic-chat/core/contracts'
 import { modelDirFromId } from '@atomic-chat/core/host'
-import { gateDecision, hfResolveUrl, hfToken, ModelRegistry } from '@atomic-chat/core/models'
+import {
+  gateDecision,
+  hfResolveUrl,
+  hfToken,
+  ModelRegistry,
+  ggufShardSetPaths,
+} from '@atomic-chat/core/models'
 import type { AtcPaths } from '../../config/index.js'
 import type { CoreLink } from '../../core-link/index.js'
 import type {
@@ -61,6 +68,30 @@ export function setupFilePaths(paths: AtcPaths, plan: ModelSetupPlan) {
   return { model: rel(plan.model.file), ...(plan.projector ? { projector: rel(plan.projector.file) } : {}) }
 }
 
+/** Store final paths with each artifact before any transfer or engine installation. */
+export function withSetupDestinations(paths: AtcPaths, plan: ModelSetupPlan): ModelSetupPlan {
+  const destinations = setupFilePaths(paths, plan)
+  const files = (plan.model_files ?? [plan.model]).map((file) => ({
+    ...file,
+    purpose: 'weights',
+    save_path: destinations.model.replace(/[^/]+$/, file.file.split('/').pop()!),
+  }))
+  const body = {
+    ...plan,
+    model_files: files,
+    model: files[0]!,
+    projector: plan.projector
+      ? { ...plan.projector, purpose: 'projector', save_path: destinations.projector! }
+      : null,
+  }
+  return {
+    ...body,
+    digest: createHash('sha256')
+      .update(JSON.stringify({ ...body, digest: undefined, free_bytes: undefined, blockers: undefined }))
+      .digest('hex'),
+  }
+}
+
 export function raceAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(new SetupCancelled())
   return new Promise<T>((resolve, reject) => {
@@ -81,6 +112,23 @@ export async function runSetup(
 ): Promise<void> {
   const { link, paths } = deps
   const { plan, task_ids } = record
+  const weights = plan.model_files ?? [plan.model]
+  const completeShards = ggufShardSetPaths(plan.model.file).every((path) =>
+    weights.some(
+      (file) => file.repo === plan.model.repo && file.revision === plan.model.revision && file.file === path
+    )
+  )
+  if (
+    !completeShards ||
+    !weights.length ||
+    [...weights, plan.projector].some(
+      (file) =>
+        file && (!/^[0-9a-f]{40}$/.test(file.revision) || !Number.isSafeInteger(file.size) || file.size <= 0)
+    )
+  )
+    throw new Error(
+      'This download has no complete model plan. Start a new download; partial files were kept.'
+    )
   // A build the verdict already accepts is the active one; anything else is made active here.
   if (plan.engine && plan.verdict.outcome !== 'compatible') {
     if (!plan.engine.installed) {
@@ -95,7 +143,12 @@ export async function runSetup(
   }
   const files = setupFilePaths(paths, plan)
   await enter('downloading_model')
-  await download(deps, task_ids.model, plan.model, files.model, signal)
+  for (const artifact of plan.model_files ?? [plan.model]) {
+    const path = relative(paths.layout.root, join(modelDir(paths, plan), artifact.file.split('/').pop()!))
+      .split(sep)
+      .join('/')
+    await download(deps, task_ids.model, artifact, path, signal)
+  }
   if (plan.projector && files.projector && task_ids.projector) {
     await enter('downloading_projector')
     await download(deps, task_ids.projector, plan.projector, files.projector, signal)
@@ -148,15 +201,18 @@ async function download(
   signal: AbortSignal
 ) {
   if (signal.aborted) throw new SetupCancelled()
-  // A file this setup already finished (it failed later) is not fetched again.
-  const done = await stat(join(deps.paths.dataFolder, savePath)).catch(() => undefined)
-  if (done && artifact.size > 0 && done.size === artifact.size) return
   // A cancel that came during the check above found no transfer to stop: the abort event is gone.
   if (signal.aborted) throw new SetupCancelled()
   const token = hfToken(deps.env)
   const item: DownloadItem = {
     url: hfResolveUrl(artifact.repo, artifact.file, artifact.revision),
-    save_path: savePath,
+    save_path: artifact.save_path ?? savePath,
+    source: {
+      repo: artifact.repo,
+      revision: artifact.revision,
+      path: artifact.file,
+      purpose: artifact.purpose ?? 'weights',
+    },
     ...(artifact.sha256 ? { sha256: artifact.sha256 } : {}),
     ...(artifact.size > 0 ? { size: artifact.size } : {}),
     ...(deps.proxy ? { proxy: deps.proxy } : {}),
@@ -186,7 +242,8 @@ async function modelYml(paths: AtcPaths, plan: ModelSetupPlan, files: { model: s
     // The catalog row it came from: the Hub and onboarding recognise the download by it, not by its id.
     repository: plan.model.repo,
     repository_file: plan.model.file,
-    size_bytes: modelSize + projectorSize,
+    size_bytes: (plan.model_files?.reduce((sum, file) => sum + file.size, 0) ?? modelSize) + projectorSize,
+    revision: plan.model.revision,
     ...(plan.model.sha256 ? { model_sha256: plan.model.sha256 } : {}),
     model_size_bytes: modelSize,
     ...(plan.projector?.sha256 ? { mmproj_sha256: plan.projector.sha256 } : {}),

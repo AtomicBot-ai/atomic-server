@@ -58,7 +58,7 @@ describe('planFor', () => {
     expect(l.calls).toContainEqual({
       method: 'POST',
       path: '/models/compatibility',
-      body: { repo: 'o/r', file: 'm.gguf', inspect_remote: true },
+      body: { repo: 'o/r', file: 'm.gguf', revision: 'c'.repeat(40), inspect_remote: true },
     })
     expect(l.calls.some((c) => c.path.endsWith('/catalog'))).toBe(false)
   })
@@ -79,7 +79,7 @@ describe('planFor', () => {
           id: 'bonsai-8b',
           title: 'Bonsai 8B',
           repo: 'prism-ml/Bonsai-8B-gguf',
-          revision: 'abc123',
+          revision: 'a'.repeat(40),
           files: [
             { file: 'Bonsai-8B-Q1_0.gguf', size: 1000, sha256: 'a'.repeat(64), treatment: 'prism_required' },
           ],
@@ -99,7 +99,14 @@ describe('planFor', () => {
       available: [],
       installed: [],
     }
-    const noHub = (async () => expect.fail('a family file needs no Hub lookup')) as typeof fetch
+    const noHub = (async () =>
+      Response.json({
+        sha: 'a'.repeat(40),
+        siblings: [
+          { rfilename: 'sub/Bonsai-8B-Q1_0.gguf', lfs: { size: 1000, sha256: 'a'.repeat(64) } },
+          { rfilename: 'mmproj.gguf', lfs: { size: 50, sha256: 'c'.repeat(64) } },
+        ],
+      })) as typeof fetch
     const plan = await planFor(
       { link: l, fetch: noHub, env: {} },
       { repo: 'prism-ml/Bonsai-8B-gguf', file: 'sub/Bonsai-8B-Q1_0.gguf' }

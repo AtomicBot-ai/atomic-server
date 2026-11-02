@@ -1,3 +1,4 @@
+import { catalogFixture, MODEL_COMMIT } from '../helpers/model-catalog-fixture.js'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -15,17 +16,21 @@ function context(category: 'image' | 'video', quants: unknown) {
   const paths = atcPathsFor(t.io.env['ATC_DATA_FOLDER']!)
   mkdirSync(paths.cacheDir, { recursive: true })
   writeFileSync(
-    join(paths.cacheDir, 'workspace-diffusion.json'),
+    join(paths.cacheDir, 'atomic-model-catalog-v1.json'),
     JSON.stringify({
       at: Date.now(),
-      data: {
-        families: [{ id: 'fixture', modality: category, transformer: { repo: 'owner/model', quants } }],
-      },
+      catalog: catalogFixture({
+        diffusion: {
+          families: [{ id: 'fixture', modality: category, transformer: { repo: 'owner/model', quants } }],
+        },
+      }),
     })
   )
   const capture = vi.fn(),
-    request = vi.fn<typeof fetch>(async () => {
-      throw new Error('Planning must use the cached catalog, without downloading.')
+    request = vi.fn<typeof fetch>(async (url) => {
+      if (!String(url).includes(`/api/models/owner/model/revision/${MODEL_COMMIT}`))
+        throw new Error('Unexpected metadata request.')
+      return Response.json({ sha: MODEL_COMMIT, siblings: [{ rfilename: 'model.gguf', size: 10 }] })
     }),
     service = new WorkspaceService({
       paths,
@@ -55,11 +60,12 @@ it.each(['image', 'video'] as const)(
       expect(JSON.parse(t.io.err.join(''))).toMatchObject({
         error: { code: 'ATC_USAGE', message: 'Choose an available quantization.' },
       })
+      expect(request).not.toHaveBeenCalled()
       await expect(service.execute('artifacts.plan', { ...input, quant: 'q4' })).resolves.toMatchObject({
         model_id: 'fixture:q4',
       })
       expect(capture).not.toHaveBeenCalled()
-      expect(request).not.toHaveBeenCalled()
+      expect(request).toHaveBeenCalledOnce()
       expect(t.link.calls).toEqual([])
     } finally {
       await server.close()

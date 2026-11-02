@@ -86,3 +86,20 @@ export async function verifyDownloadedFile(
     if (computed !== item.sha256) throw new Error(HASH_MISMATCH_MESSAGE)
   }
 }
+
+/** Reuse requires a content hash; equal sizes alone do not identify model bytes. */
+export async function verifiedCopy(
+  item: VerifyItem,
+  path: string,
+  deps: VerifyDeps,
+  signal: AbortSignal
+): Promise<boolean> {
+  if (!item.sha256) return false
+  try {
+    await verifyDownloadedFile(item, path, deps, signal)
+    return true
+  } catch (error) {
+    if (signal.aborted) throw error
+    return false
+  }
+}

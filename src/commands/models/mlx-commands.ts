@@ -27,18 +27,28 @@ export async function pullMlxModel(
   values: Record<string, unknown>
 ): Promise<number> {
   const service = await workspace(ctx)
-  const plan = (await service
-    .execute('artifacts.plan', { category: 'text', model_id: model })
-    .catch((e: unknown) => {
+  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
+  const existing =
+    values['request-id'] && !values['dry-run']
+      ? (
+          (await service.execute('artifacts.list')) as Array<
+            ArtifactJob & { plan: { digest: string; blockers?: string[] } }
+          >
+        ).find((job) => job.id === id)
+      : undefined
+  if (existing && (existing.plan.engine !== 'mlx' || existing.plan.model_id !== model))
+    throw new AtcError('ATC_USAGE', 'This request ID belongs to another model download.')
+  const plan =
+    existing?.plan ??
+    ((await service.execute('artifacts.plan', { category: 'text', model_id: model }).catch((e: unknown) => {
       if (e instanceof AtcError && e.code === 'ATC_USAGE' && /current catalog/.test(e.message))
         throw new AtcError('ATC_USAGE', `${model} is not an MLX checkpoint of the catalog.`, {
           hint: 'choose one from: atc models catalog --engine mlx',
         })
       throw e
-    })) as { digest: string; blockers?: string[] }
+    })) as { digest: string; blockers?: string[] })
   if (values['dry-run']) return printOperation(ctx, 'artifacts.plan', plan)
   if (plan.blockers?.length) throw new AtcError('ATC_USAGE', plan.blockers.join(' '))
-  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
   await service.execute('artifacts.install', { plan_digest: plan.digest, request_id: id })
   if (values['detach']) return printOperation(ctx, 'artifacts.install', { id, plan_digest: plan.digest })
   return followArtifact(ctx, service, id, model)

@@ -27,6 +27,8 @@ export interface GgufPlanInput {
   verdict: ModelCompatibilityResponse
   family?: { family: PrismFamily; file: PrismFamilyFile } | undefined
   /** The Hub's facts for a file no family pins; `revision` the commit they were read at. */
+  hubFiles?: ModelSetupArtifact[]
+  hubProjector?: ModelSetupArtifact
   hubFile?: { size: number; sha256?: string | undefined; revision?: string | undefined }
   /**
    * `POST /backends/atomic-prism/catalog`, when the verdict involves PrismML; `null` when the core
@@ -100,8 +102,8 @@ function artifactsOf(input: GgufPlanInput) {
   if (!family) {
     const model: ModelSetupArtifact = {
       repo: request.repo,
-      file: request.file,
-      revision: request.revision ?? input.hubFile?.revision ?? 'main',
+      file: input.hubFiles?.[0]?.file ?? request.file,
+      revision: input.hubFile?.revision ?? request.revision ?? 'main',
       ...(input.hubFile?.sha256 ? { sha256: input.hubFile.sha256 } : {}),
       size: input.hubFile?.size ?? 0,
     }
@@ -112,16 +114,18 @@ function artifactsOf(input: GgufPlanInput) {
   return {
     // The family's own copy: a file in a subfolder of its repository keeps its path; a mirror the
     // core matched by hash is fetched from the family, where the pinned revision describes it.
-    model: {
+    model: input.hubFiles?.[0] ?? {
       repo,
       file: request.repo.toLowerCase() === repo.toLowerCase() ? request.file : family.file.file,
       revision,
       sha256: family.file.sha256,
       size: family.file.size,
     },
-    projector: projector
-      ? { repo, file: projector.file, revision, sha256: projector.sha256, size: projector.size }
-      : null,
+    projector:
+      input.hubProjector ??
+      (projector
+        ? { repo, file: projector.file, revision, sha256: projector.sha256, size: projector.size }
+        : null),
   }
 }
 
@@ -137,13 +141,18 @@ export function planGgufSetup(input: GgufPlanInput): ModelSetupPlan {
     })
   const engine = engineOf(input, blockers)
   const { model, projector } = artifactsOf(input)
-  const total = (engine?.download_size ?? 0) + model.size + (projector?.size ?? 0)
+  const total =
+    (engine?.download_size ?? 0) +
+    (input.hubFiles?.reduce((sum, file) => sum + file.size, 0) ?? model.size) +
+    (projector?.size ?? 0)
   if (input.freeBytes !== null && total > input.freeBytes)
     blockers.push({
       code: 'insufficient_disk_space',
       message: `The setup needs ${total} bytes and ${input.freeBytes} are free.`,
     })
   const body = {
+    version: 1 as const,
+    ...(input.hubFiles && input.hubFiles.length > 1 ? { model_files: input.hubFiles } : {}),
     model_id: input.request.model_id ?? defaultModelId(model.repo, model.file),
     provider: verdict.provider ?? STOCK_PROVIDER,
     verdict,
@@ -160,6 +169,7 @@ export function planGgufSetup(input: GgufPlanInput): ModelSetupPlan {
     outcome: verdict.outcome,
     engine: engine && { version: engine.version, backend: engine.backend, installed: engine.installed },
     model,
+    model_files: input.hubFiles,
     projector,
     blockers: blockers.map((b) => b.code),
   }

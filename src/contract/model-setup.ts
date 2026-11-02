@@ -38,6 +38,8 @@ export interface ModelSetupArtifact {
   repo: string
   file: string
   revision: string
+  save_path?: string
+  purpose?: string
   sha256?: string
   /** Bytes; `0` when the Hub did not say. */
   size: number
@@ -61,6 +63,9 @@ export interface ModelSetupBlocker {
 }
 
 export interface ModelSetupPlan {
+  version?: 1
+  /** Every shard, ordered with the first shard before the others. */
+  model_files?: ModelSetupArtifact[]
   /** Hash of what decides the work; `models.install` takes it. */
   digest: string
   model_id: string

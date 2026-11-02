@@ -1,3 +1,4 @@
+import { catalogFixture, MODEL_COMMIT } from './model-catalog-fixture.js'
 /** A fake Hub and core for ModelSetups tests: file bodies with Range, verdicts, the PrismML catalog. */
 import { createHash } from 'node:crypto'
 import { Downloader } from '../../src/downloads/index.js'
@@ -18,9 +19,17 @@ function hub() {
   const state = { hold: false, release: () => {}, ranges: [] as string[] }
   const request: typeof fetch = async (input, init) => {
     const url = String(input)
+    if (url.includes('raw.githubusercontent.com')) return Response.json(catalogFixture())
     if (url.includes('/api/models/'))
       return Response.json({
+        sha: MODEL_COMMIT,
         siblings: [
+          { rfilename: 'Bonsai-Q1_0.gguf', size: weights.length, lfs: { size: weights.length, sha256: sha } },
+          {
+            rfilename: 'mmproj.gguf',
+            size: projector.length,
+            lfs: { size: projector.length, sha256: createHash('sha256').update(projector).digest('hex') },
+          },
           {
             rfilename: 'model.Q4_K_M.gguf',
             size: weights.length,
@@ -76,7 +85,7 @@ export function fixture(core: { prism?: boolean; verdictAfter?: string } = {}) {
                 id: 'bonsai',
                 title: 'Bonsai',
                 repo: 'prism-ml/Bonsai-gguf',
-                revision: 'pinned',
+                revision: MODEL_COMMIT,
                 files: [
                   {
                     file: 'Bonsai-Q1_0.gguf',
@@ -143,7 +152,7 @@ export function fixture(core: { prism?: boolean; verdictAfter?: string } = {}) {
       env: { HF_TOKEN: 'hf_secret' },
       ...(errors ? { errors } : {}),
     })
-  return { tmp, link, hub: state, make, downloader }
+  return { tmp, link, hub: state, make, downloader, request }
 }
 export const settle = async (setups: ModelSetups, id: string, stages = ['ready', 'failed', 'cancelled']) => {
   let record: ModelSetup | undefined

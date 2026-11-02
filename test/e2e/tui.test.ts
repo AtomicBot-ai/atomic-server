@@ -1,3 +1,4 @@
+import { catalogFixture } from '../helpers/model-catalog-fixture.js'
 import { readyWorkspace } from '../helpers/ready-workspace.js'
 /**
  * The terminal UI in the built program. Without a terminal it must refuse (every platform); in a
@@ -88,10 +89,12 @@ describe(`atc tui (${command.join(' ')})`, () => {
       const cache = join(dataFolder, 'atc', 'cache')
       mkdirSync(cache, { recursive: true })
       writeFileSync(
-        join(cache, 'workspace-staff-picks.json'),
+        join(cache, 'atomic-model-catalog-v1.json'),
         JSON.stringify({
           at: Date.now(),
-          data: { picks: [{ model_name: 'fixture/tui', title: 'Fixture model', format: 'gguf' }] },
+          catalog: catalogFixture({
+            'staff-picks': { picks: [{ model_name: 'fixture/tui', title: 'Fixture model', format: 'gguf' }] },
+          }),
         })
       )
       const steps = [

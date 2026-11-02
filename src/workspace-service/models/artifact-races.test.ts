@@ -49,7 +49,7 @@ async function fixture() {
     engine: 'llamacpp-upstream',
     files: [
       {
-        url: 'https://huggingface.co/test/tiny/resolve/pinned/model.gguf',
+        url: 'https://huggingface.co/test/tiny/resolve/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/model.gguf',
         save_path: 'workspace-models/embedding/tiny/model.gguf',
         size: payload.length,
         sha256: createHash('sha256').update(payload).digest('hex'),
@@ -78,7 +78,7 @@ describe('artifact worker serialization', () => {
     )
     expect(f.installs()).toBe(2)
     // Both jobs finish through separate, sequential writers; the duplicate request adds no worker.
-    expect(f.request).toHaveBeenCalledTimes(2)
+    expect(f.request).toHaveBeenCalledTimes(1)
   })
   it('keeps cancellation through engine completion and waits before a resumed writer starts', async () => {
     const f = await fixture()

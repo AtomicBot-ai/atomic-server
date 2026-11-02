@@ -1,3 +1,5 @@
+import { catalogFixture, MODEL_COMMIT } from '../helpers/model-catalog-fixture.js'
+import { FixtureHttpServer } from '../helpers/fixture-http-server.js'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
@@ -7,13 +9,21 @@ import { reportCollector } from '../helpers/report-collector.js'
 
 it('refuses unknown media quantizations locally but reports a broken catalog in the built program', async () => {
   const tmp = tmpDataFolder(),
-    collector = await reportCollector()
+    collector = await reportCollector(),
+    hub = new FixtureHttpServer()
+  const hubUrl = await hub.start()
+  hub.files.set(`/api/models/owner/model/revision/${MODEL_COMMIT}?blobs=true&files_metadata=true`, {
+    body: Buffer.from(
+      JSON.stringify({ sha: MODEL_COMMIT, siblings: [{ rfilename: 'model.gguf', size: 10 }] })
+    ),
+  })
   const env = {
     ...process.env,
     ATC_SENTRY_DSN: collector.dsn,
     ATC_SENTRY_ENVIRONMENT: 'e2e',
     DO_NOT_TRACK: '0',
     ATOMIC_CORE_TELEMETRY: '1',
+    HF_ENDPOINT: hubUrl,
   }
   const run = (...args: string[]) =>
     runAtcAsync([...args, '--data-folder', tmp.paths.dataFolder, '--json'], { env })
@@ -21,19 +31,21 @@ it('refuses unknown media quantizations locally but reports a broken catalog in 
     run('control', 'call', 'artifacts.plan', '--input', JSON.stringify({ category, model_id, quant }))
   mkdirSync(tmp.paths.cacheDir, { recursive: true })
   writeFileSync(
-    join(tmp.paths.cacheDir, 'workspace-diffusion.json'),
+    join(tmp.paths.cacheDir, 'atomic-model-catalog-v1.json'),
     JSON.stringify({
       at: Date.now(),
-      data: {
-        families: ['image', 'video', 'empty'].map((id) => ({
-          id,
-          modality: id === 'video' ? 'video' : 'image',
-          transformer: {
-            repo: 'owner/model',
-            quants: id === 'empty' ? [] : [{ id: 'q4', filename: 'model.gguf', bytes: 10 }],
-          },
-        })),
-      },
+      catalog: catalogFixture({
+        diffusion: {
+          families: ['image', 'video', 'empty'].map((id) => ({
+            id,
+            modality: id === 'video' ? 'video' : 'image',
+            transformer: {
+              repo: 'owner/model',
+              quants: id === 'empty' ? [] : [{ id: 'q4', filename: 'model.gguf', bytes: 10 }],
+            },
+          })),
+        },
+      }),
     })
   )
   try {
@@ -63,6 +75,7 @@ it('refuses unknown media quantizations locally but reports a broken catalog in 
   } finally {
     await run('stop', '--force', '--kill')
     await collector.close()
+    await hub.stop()
     tmp.cleanup()
   }
 })

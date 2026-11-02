@@ -119,12 +119,19 @@ describe.skipIf(process.platform === 'win32')(`managed models (${ATC.join(' ')})
     const job = jobs.result.find((j) => j.id === 'e2e-pull')!
     expect(job.stage).toBe('interrupted')
     expect(existsSync(join(job.plan.root, 'Qwen', 'Qwen3.5-2B', 'model.yml'))).toBe(false)
+    // main now identifies different bytes; Resume must not plan or inspect that version.
+    hf.files.set(`/api/models/${REPO}/revision/main?blobs=true&files_metadata=true`, {
+      body: Buffer.from(JSON.stringify({ sha: 'b'.repeat(40), siblings: [] })),
+    })
     hf.release()
     delete hf.files.get(SHARD)!.holdAfterBytes
     hf.requests.length = 0
     const resumed = await atc('models', 'pull', REPO, '--engine', 'vllm', '--request-id', 'e2e-pull')
     expect(resumed.code, resumed.err).toBe(0)
     expect(resumed.out).toContain('in the store for every managed engine')
+    expect(hf.requests.some((r) => r.path.includes('/revision/main'))).toBe(false)
+    expect(hf.requests.some((r) => r.path.includes('/resolve/' + 'b'.repeat(40)))).toBe(false)
+    expect(readFileSync(join(job.plan.root, 'Qwen', 'Qwen3.5-2B', 'model.yml'), 'utf8')).toContain(HF_SHA)
     expect(hf.requests.find((r) => r.path === SHARD && r.range?.match(/^bytes=[1-9]\d*-$/))).toBeDefined()
     expect(existsSync(join(job.plan.root, 'Qwen', 'Qwen3.5-2B', 'model.yml'))).toBe(true)
     const row = (await installed()).find((m) => m.id === REPO)

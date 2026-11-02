@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
-import type { ManagedModelPlan, ModelCheckResult } from '../../contract/index.js'
+import type { ManagedModelJob, ManagedModelPlan, ModelCheckResult } from '../../contract/index.js'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
 import { formatSize, verdictLine } from '../../workspace-view/index.js'
 import { workspace } from '../server/control.js'
@@ -109,11 +109,25 @@ export async function pullManagedModel(
 ): Promise<number> {
   const [repository, revision] = splitRevision(ref)
   const service = await workspace(ctx)
-  const plan = (await service.execute('managed.plan', {
-    repository,
-    engine,
-    ...(revision ? { revision } : {}),
-  })) as ManagedModelPlan
+  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
+  const existing =
+    values['request-id'] && !values['dry-run']
+      ? ((await service.execute('managed.list')) as ManagedModelJob[]).find((job) => job.id === id)
+      : undefined
+  if (
+    existing &&
+    (existing.plan.repository !== repository ||
+      existing.plan.engine !== engine ||
+      (revision && revision !== 'main' && revision !== existing.plan.revision))
+  )
+    throw new AtcError('ATC_USAGE', 'This request ID belongs to another model download.')
+  const plan =
+    existing?.plan ??
+    ((await service.execute('managed.plan', {
+      repository,
+      engine,
+      ...(revision ? { revision } : {}),
+    })) as ManagedModelPlan)
   if (values['dry-run']) {
     ctx.out.result(plan, () => printPlan(ctx, plan))
     return 0
@@ -122,7 +136,6 @@ export async function pullManagedModel(
   const refusal = plan.verdict.compatibility?.verdict
   if (refusal && !refusal.ok) throw AtomicCoreError.fromBody(refusal.error)
   if (plan.blockers.length) throw new AtcError('ATC_USAGE', plan.blockers.join(' '))
-  const id = typeof values['request-id'] === 'string' ? values['request-id'] : randomUUID()
   await service.execute('managed.install', { request_id: id, plan_digest: plan.digest })
   if (values['detach']) {
     ctx.out.result({ id, stage: 'queued' }, () => {

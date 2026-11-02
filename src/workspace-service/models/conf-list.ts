@@ -1,3 +1,5 @@
+// Independent list files are deprecated generated exports. Default collections project the whole catalog; the legacy reader below serves explicit custom URLs.
+import { unifiedCollection } from './unified-catalog.js'
 /**
  * A list atc reads from atomic-chat-conf (Foundry Local's and LiteRT-LM's models): fetched at most once
  * an hour and cached on disk; when conf cannot be read, or serves what this client refuses (a newer
@@ -25,6 +27,7 @@ export interface ConfListOptions {
   /** `<atc>/cache/<name>.json`. */
   cachePath: string
   fetch: typeof fetch
+  catalogUrl?: string | undefined
   url?: string | undefined
   force?: boolean
   now?: () => number
@@ -53,6 +56,19 @@ export async function fetchConfList<T>(
   spec: ConfListSpec<T>,
   o: ConfListOptions
 ): Promise<ConfListResult<T>> {
+  if (o.url === undefined) {
+    const name = spec.defaultUrl
+      .split('/')
+      .pop()!
+      .replace(/\.json$/, '')
+    const result = await unifiedCollection(name, dirname(o.cachePath), o.fetch, o.force, o.catalogUrl)
+    return {
+      list: spec.parse(result.value),
+      source: result.source,
+      fetchedAt: result.fetchedAt,
+      ...(result.error ? { error: result.error } : {}),
+    }
+  }
   const now = o.now ?? Date.now
   const cached = await readFile(o.cachePath, 'utf8')
     .then((text) => JSON.parse(text) as { value: unknown; fetchedAt: number })

@@ -1,3 +1,4 @@
+import { catalogFixture } from '../helpers/model-catalog-fixture.js'
 /**
  * `atc models catalog|search --engine <engine>` for the engines without a list of their own (MLX, the
  * llama.cpp family): the catalog narrowed to what that engine runs, never the managed engines' reader,
@@ -48,18 +49,20 @@ async function server() {
   }
   mkdirSync(paths.cacheDir, { recursive: true })
   writeFileSync(
-    join(paths.cacheDir, 'workspace-staff-picks.json'),
+    join(paths.cacheDir, 'atomic-model-catalog-v1.json'),
     JSON.stringify({
       at: Date.now(),
-      data: {
-        picks: [
-          { model_name: GGUF, title: 'Qwen3.8 27B', summary: 'Hybrid attention.', format: 'gguf' },
-          { model_name: MLX, title: 'Qwen3.5 9B', summary: 'For Apple silicon.', format: 'mlx' },
-        ],
-      },
+      catalog: catalogFixture({
+        'staff-picks': {
+          picks: [
+            { model_name: GGUF, title: 'Qwen3.8 27B', summary: 'Hybrid attention.', format: 'gguf' },
+            { model_name: MLX, title: 'Qwen3.5 9B', summary: 'For Apple silicon.', format: 'mlx' },
+          ],
+        },
+      }),
     })
   )
-  hub.files.set(`/api/models/${MLX}`, { body: Buffer.from(JSON.stringify({ sha: SHA })) })
+  hub.files.set(`/api/models/${MLX}/revision/${SHA}`, { body: Buffer.from(JSON.stringify({ sha: SHA })) })
   hub.files.set(`/api/models/${MLX}/tree/${SHA}?recursive=true&expand=false&limit=1000`, {
     body: Buffer.from(
       JSON.stringify([
@@ -117,7 +120,9 @@ describe('atc models pull --engine mlx', () => {
   it('plans a verified MLX repository outside the curated catalog', async () => {
     await server()
     const id = 'mlx-community/Other-4bit'
-    hub.files.set(`/api/models/${id}`, { body: Buffer.from(JSON.stringify({ sha: SHA, tags: ['mlx'] })) })
+    hub.files.set(`/api/models/${id}/revision/main`, {
+      body: Buffer.from(JSON.stringify({ sha: SHA, tags: ['mlx'] })),
+    })
     hub.files.set(`/api/models/${id}/tree/${SHA}?recursive=true&expand=false&limit=1000`, {
       body: Buffer.from(
         JSON.stringify([
@@ -133,7 +138,7 @@ describe('atc models pull --engine mlx', () => {
   it('refuses an uncurated repository without MLX metadata', async () => {
     await server()
     const id = 'owner/Not-MLX'
-    hub.files.set(`/api/models/${id}`, {
+    hub.files.set(`/api/models/${id}/revision/main`, {
       body: Buffer.from(JSON.stringify({ sha: SHA, tags: ['safetensors'] })),
     })
     expect(await t.run(['models', 'pull', id, '--engine', 'mlx', '--dry-run'])).toBe(2)
