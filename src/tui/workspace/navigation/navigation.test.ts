@@ -4,8 +4,8 @@ import {
   SERVER_SECTIONS,
   LIBRARY_SECTIONS,
   SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
 } from '../../../contract/index.js'
-import { playgroundTasks } from '../../../workspace-view/index.js'
 import { SERVER_SIDEBAR } from './sidebar.js'
 import { createWorkspace, PAGES } from '../state.js'
 import { workspaceFrame } from '../frame.js'
@@ -53,8 +53,8 @@ it('uses a rail and keeps contextual desktop navigation available inside detail 
 })
 it('opens task-specific media forms directly from mouse and keyboard targets', async () => {
   const { ctx, execute } = fixture()
-  const tasks = playgroundTasks(ctx.get().workspace)
-  for (const task of tasks.filter((v) => v.id !== 'chat')) {
+  const tasks = PLAYGROUND_TASKS
+  for (const task of tasks.filter((v) => v.id === 'image' || v.id === 'video')) {
     await activate(`playground-task:${task.id}`, ctx)
     expect(ctx.get()).toMatchObject({ page: 'tools', operationReturn: 'chat', overlay: null })
     expect(playgroundTask(ctx.get())).toBe(task.id)
@@ -70,17 +70,11 @@ it('opens task-specific media forms directly from mouse and keyboard targets', a
   await activate('playground-task:chat', ctx)
   expect(ctx.get()).toMatchObject({ page: 'chat', focus: 'composer' })
 })
-it('offers audio in the playground only where the core has it', async () => {
-  const { ctx } = fixture()
-  expect(playgroundTasks(ctx.get().workspace).map((task) => task.id)).not.toContain('audio')
-  await activate('playground-task:audio', ctx)
-  expect(ctx.get().page).not.toBe('tools')
-})
 it('opens the audio operations from the playground, and comes back to it', async () => {
   const { ctx } = fixture()
   ctx.update((s) => ({
     ...s,
-    workspace: { services: [], setups: [], downloads: [], audio_available: true } as never,
+    workspace: { services: [], setups: [], downloads: [] } as never,
   }))
   await activate('playground-task:audio', ctx)
   expect(ctx.get()).toMatchObject({

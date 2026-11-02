@@ -14,16 +14,25 @@ export async function mlxPlan(
 ): Promise<ArtifactPlan> {
   if (row.source['format'] !== 'mlx' || !looksLikeHfRepo(row.id))
     throw new Error('Choose an MLX repository from the catalog.')
-  const metadata = await request(`https://huggingface.co/api/models/${row.id}`, {
-    signal: AbortSignal.timeout(15000),
-    redirect: 'error',
-  })
+  const metadata = await request(
+    `https://huggingface.co/api/models/${row.id}/revision/${encodeURIComponent(String(row.source['revision'] ?? 'main'))}`,
+    {
+      signal: AbortSignal.timeout(15000),
+      redirect: 'error',
+    }
+  )
   if (!metadata.ok) throw new Error(`Model metadata returned HTTP ${metadata.status}.`)
   const info = (await metadata.json()) as { sha?: string; tags?: string[] }
   if (requireMlxTag && !info.tags?.includes('mlx'))
     throw new AtcError('ATC_USAGE', 'Choose a repository tagged as an MLX checkpoint.')
-  if (!info.sha || !/^[a-f0-9]{40,64}$/.test(info.sha))
+  if (!info.sha || !/^[a-f0-9]{40}$/.test(info.sha))
     throw new Error('The repository has no immutable revision.')
+  if (
+    typeof row.source['revision'] === 'string' &&
+    /^[a-f0-9]{40}$/.test(row.source['revision']) &&
+    info.sha !== row.source['revision']
+  )
+    throw new Error('Hugging Face returned another model commit.')
   let url = `https://huggingface.co/api/models/${row.id}/tree/${info.sha}?recursive=true&expand=false&limit=1000`
   const files: DownloadItem[] = [],
     root = `workspace-models/mlx/${row.id}`
@@ -48,6 +57,12 @@ export async function mlxPlan(
       files.push({
         url: `https://huggingface.co/${row.id}/resolve/${info.sha}/${file.path.split('/').map(encodeURIComponent).join('/')}`,
         save_path: `${root}/${file.path}`,
+        source: {
+          repo: row.id,
+          revision: info.sha,
+          path: file.path,
+          purpose: file.path.endsWith('.safetensors') ? 'weights' : 'configuration',
+        },
         size: file.lfs?.size ?? file.size,
         sha256: file.lfs?.oid ?? null,
       })
@@ -63,7 +78,10 @@ export async function mlxPlan(
     !files.some((f) => f.save_path.endsWith('/config.json'))
   )
     throw new Error('This repository is not a complete MLX checkpoint.')
+  if (files.some((file) => !Number.isSafeInteger(file.size) || file.size! < 0))
+    throw new Error('The checkpoint has incomplete file metadata.')
   const base = {
+    version: 1 as const,
     category: 'text',
     model_id: row.id,
     name: row.name,

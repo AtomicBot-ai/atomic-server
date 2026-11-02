@@ -32,7 +32,7 @@ const job = {
   },
 }
 function audioWorkspace(over: Partial<NonNullable<WorkspaceState['workspace']>> = {}) {
-  return { services: [], setups: [], downloads: [], audio_available: true, ...over } as never
+  return { services: [], setups: [], downloads: [], ...over } as never
 }
 function state(over: Partial<WorkspaceState> = {}): WorkspaceState {
   return {
@@ -50,12 +50,11 @@ const screen = (s: WorkspaceState, width = 100) =>
     .cells.map((row) => row.map((cell) => cell.char).join(''))
     .join('\n')
 
-it('offers the audio category only on a core with audio', () => {
+it('offers the audio category before and after a status snapshot', () => {
   const labels = (s: WorkspaceState) =>
     catalogMenuItems({ ...s, catalogMenu: 'category' }).map((item) => item.label)
   expect(labels(state())).toContain('Audio')
-  expect(labels(state({ workspace: audioWorkspace({ audio_available: false }) }))).not.toContain('Audio')
-  expect(labels(state({ workspace: null }))).not.toContain('Audio')
+  expect(labels(state({ workspace: null }))).toContain('Audio')
 })
 
 it('shows the notice of its license on a model it offers', () => {
@@ -153,13 +152,6 @@ function goalContext(start: WorkspaceState) {
   } as ActionContext
   return { ctx, execute, state: () => s }
 }
-
-it('leaves the audio goal out on a core without audio', async () => {
-  const none = goalContext(state({ workspace: audioWorkspace({ audio_available: false }) }))
-  await goalSetupAction('goal:audio', none.ctx)
-  expect(none.execute).not.toHaveBeenCalled()
-  expect(none.state().setupGoal).toBe('chat')
-})
 
 it('opens the audio catalog for the audio goal', async () => {
   const { ctx, state: current } = goalContext(state({ libraryCategory: 'text' }))

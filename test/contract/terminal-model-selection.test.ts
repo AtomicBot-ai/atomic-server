@@ -2,7 +2,7 @@
 import { createElement } from 'react'
 import { writeFileSync } from 'node:fs'
 import { render } from 'ink'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { ModelRegistry } from '@atomic-chat/core/models'
 import { tmpDataFolder } from '../helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../helpers/fake-core-link.js'
@@ -23,7 +23,8 @@ async function mount(
 ) {
   const temp = tmpDataFolder(),
     terminal = fakeTerminal(120, 40),
-    link = fakeCoreLink()
+    link = fakeCoreLink(),
+    capture = vi.fn()
   cleanup.push(temp.cleanup)
   if (complete) readyWorkspace(temp.paths.dataFolder)
   const registry = new ModelRegistry(temp.paths.layout)
@@ -69,6 +70,7 @@ async function mount(
     chatKey: '',
     request,
     base: {
+      errors: { capture },
       paths: temp.paths,
       attach: async () => link,
       loadConfig: config,
@@ -110,7 +112,7 @@ async function mount(
       x = lines[y]!.indexOf(label)
     terminal.stdin.press(`\u001b[<0;${x + 1};${y + 1}M`)
   }
-  return { temp, terminal, link, ui, config, sees, click }
+  return { temp, terminal, link, ui, config, sees, click, capture }
 }
 
 it.each(['Second GGUF', 'Apple fixture'])('retains %s through Continue → Escape → Continue', async (name) => {
@@ -197,15 +199,25 @@ it('shows document and URL errors in the open editor and clears the recovered do
   await t.sees('How can I help you today?')
   await t.click('Files')
   await t.click('Document')
-  t.terminal.stdin.press(missing)
-  t.terminal.stdin.press('\r')
-  await t.sees('ENOENT')
-  expect(t.terminal.stdout.lastFrame()).toContain('Attach document')
+  for (const [path, message] of [
+    [t.temp.paths.dataFolder, 'Choose a document file.'],
+    [missing, 'That document was not found.'],
+    ['', 'Choose a document file.'],
+  ]) {
+    t.terminal.stdin.press('\u0015')
+    if (path) t.terminal.stdin.press(path)
+    t.terminal.stdin.press('\r')
+    await t.sees(message!)
+    expect(t.terminal.stdout.lastFrame()).toContain('Attach document')
+    if (path) expect(t.terminal.stdout.lastFrame()).toContain(path.slice(-24))
+    expect(t.capture).not.toHaveBeenCalled()
+  }
   t.terminal.stdin.press('\u0015')
   t.terminal.stdin.press(valid)
   t.terminal.stdin.press('\r')
   await t.sees('Files 1')
-  expect(t.terminal.stdout.lastFrame()).not.toContain('ENOENT')
+  expect(t.terminal.stdout.lastFrame()).not.toContain('Choose a document file.')
+  expect(t.capture).not.toHaveBeenCalled()
   await t.click('Choose model')
   for (let i = 0; i < 6; i++) t.terminal.stdin.press('\u001b[B')
   await t.click('Connect an endpoint')

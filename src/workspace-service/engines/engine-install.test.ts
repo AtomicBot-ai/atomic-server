@@ -1,4 +1,3 @@
-import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import { describe, expect, it } from 'vitest'
@@ -234,13 +233,12 @@ it.each([{ flash_attn: 'qa-invalid-mode' }, { cache_type_k: 'qa-invalid-cache' }
   }
 )
 
-describe('audio.cpp, on a core with and without it', () => {
-  const noRoute = new AtomicCoreError('INVALID_ARGUMENT', 'No such control route: /audio/status')
+describe('audio.cpp from the pinned core', () => {
   const listed = {
     engines: [{ engine: 'audio-cpp', kind: 'engine-build', builds: [], active: null, latest: null }],
   }
 
-  it('is an engine of builds, whatever the pinned core lists', () => {
+  it('uses the engine kind exported by the core', () => {
     expect(engineKind('audio-cpp')).toBe('engine-build')
   })
 
@@ -277,14 +275,13 @@ describe('audio.cpp, on a core with and without it', () => {
     })
   })
 
-  it('answers plainly on a core without it', async () => {
+  it('refuses installation when the core does not offer a build on this platform', async () => {
     const link = fakeCoreLink()
     link.responses['POST /engines/versions'] = { engines: [] }
-    link.responses['GET /audio/status'] = noRoute
-    await expect(installEngine(link, 'audio-cpp')).rejects.toThrow("this server's core has no audio")
-    await expect(coreOperation(link, 'engines.catalog', { engine: 'audio-cpp' })).rejects.toThrow(
-      "this server's core has no audio"
-    )
-    expect(link.calls.some((c) => c.path.startsWith('/engine-builds'))).toBe(false)
+    await expect(installEngine(link, 'audio-cpp')).rejects.toMatchObject({
+      code: 'ATC_USAGE',
+      message: expect.stringContaining('not available on this platform'),
+    })
+    expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
   })
 })

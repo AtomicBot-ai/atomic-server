@@ -1,5 +1,4 @@
 import { cloudChatServices } from '../cloud/chat-readiness.js'
-import { isMissingRoute } from '../../core-link/index.js'
 import type { CoreLink } from '../../core-link/index.js'
 import type { AtcConfig, AtcPaths } from '../../config/index.js'
 import type { WorkspaceEngine, WorkspaceSnapshot, WorkspaceServiceRow } from '../../contract/index.js'
@@ -85,13 +84,9 @@ export async function workspaceSnapshot(
   } catch (error) {
     errors.push({ source: 'cloud', message: error instanceof Error ? error.message : String(error) })
   }
-  // A core before audio has no such route: nothing to show, and nothing wrong.
-  const audioRead = results[3]!
-  const audio_available = audioRead.status === 'fulfilled' || !isMissingRoute(audioRead.reason)
   results.forEach((result, i) => {
     const kind = (['image-video', 'embedding', 'decision', 'audio'] as const)[i]!
     if (result.status === 'rejected') {
-      if (kind === 'audio' && !audio_available) return
       errors.push({
         source: kind,
         message: String(result.reason instanceof Error ? result.reason.message : result.reason),
@@ -151,6 +146,5 @@ export async function workspaceSnapshot(
     errors,
     ...(await managedState(snap, paths.hostStepsJournal)),
     loads: [],
-    audio_available,
   }
 }

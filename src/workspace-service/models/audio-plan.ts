@@ -7,6 +7,7 @@ import type {
   LoadAudioModelRequest,
 } from '../../contract/index.js'
 import type { DownloadItem } from '../../downloads/index.js'
+import { AtcError } from '../../errors/index.js'
 import { object } from '../validation.js'
 import type { CatalogRow } from './catalog.js'
 
@@ -36,6 +37,7 @@ function audioFile(row: CatalogRow, quant: Record<string, unknown>): DownloadIte
   return {
     url: `https://huggingface.co/${repo}/resolve/${revision}/${path.split('/').map(encodeURIComponent).join('/')}`,
     save_path: `${MODELS_ROOT}/${filename}`,
+    source: { repo, revision, path, purpose: 'model' },
     size: bytes,
     sha256,
   }
@@ -45,10 +47,11 @@ function audioFile(row: CatalogRow, quant: Record<string, unknown>): DownloadIte
 export function audioPlan(row: CatalogRow, quantId?: string) {
   const r = row.source,
     quants = Array.isArray(r['quants']) ? r['quants'].map(object) : []
+  if (!quants.length) fail('no downloadable quantization')
   const choice = quantId
     ? quants.find((q) => q['id'] === quantId)
     : (quants.find((q) => q['recommended'] === true) ?? quants[0])
-  if (!choice) throw new Error('Choose an available quantization.')
+  if (!choice) throw new AtcError('ATC_USAGE', 'Choose an available quantization.')
   const mode = r['mode'] as AudioMode
   if (!AUDIO_MODES.includes(mode)) fail('mode')
   if (r['task'] !== 'tts' && r['task'] !== 'gen') fail('task')

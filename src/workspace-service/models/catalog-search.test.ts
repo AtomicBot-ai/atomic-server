@@ -1,3 +1,4 @@
+import { catalogFixture } from '../../../test/helpers/model-catalog-fixture.js'
 import { afterEach, expect, it } from 'vitest'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
@@ -18,16 +19,18 @@ it.each([
     urls.push(url)
     return Response.json(
       url.hostname === 'raw.githubusercontent.com'
-        ? {
-            picks: [
-              { model_name: 'owner/curated', title: 'LFM2 1.2B', format },
-              {
-                model_name: 'owner/other',
-                title: 'LFM2 wrong format',
-                format: format === 'mlx' ? 'gguf' : 'mlx',
-              },
-            ],
-          }
+        ? catalogFixture({
+            'staff-picks': {
+              picks: [
+                { model_name: 'owner/curated', title: 'LFM2 1.2B', format },
+                {
+                  model_name: 'owner/other',
+                  title: 'LFM2 wrong format',
+                  format: format === 'mlx' ? 'gguf' : 'mlx',
+                },
+              ],
+            },
+          })
         : [{ id: 'owner/remote', downloads: 123 }]
     )
   }) as typeof fetch

@@ -81,15 +81,11 @@ export {
 } from './engines/engine-order.js'
 export {
   attributionOf,
-  audioAvailable,
   audioControls,
   audioDetails,
   audioJobRequest,
   audioPhaseText,
-  catalogCategories,
   loadedAudioModel,
-  playgroundTasks,
-  setupGoals,
 } from './audio/audio-view.js'
 export type { AudioControl } from './audio/audio-view.js'
 export {

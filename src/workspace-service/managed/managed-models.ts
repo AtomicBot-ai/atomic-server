@@ -6,6 +6,8 @@
  * writes them there), so its verdict already follows the chosen card and context length.
  */
 
+import { atomicModelRevision } from '@atomic-chat/core/client'
+import { unifiedCatalog } from '../models/unified-catalog.js'
 import { AtomicCoreError, ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type {
   EngineVersionsResponse,
@@ -22,6 +24,7 @@ import { segment } from '../validation.js'
 
 export interface ManagedModelDeps {
   link: CoreLink
+  catalog?: { directory: string; url?: string | undefined }
   fetch: typeof fetch
   /** The server's environment: `HF_TOKEN` for gated repositories, `HF_ENDPOINT` for a Hub mirror. */
   env?: Record<string, string | undefined> | undefined
@@ -60,6 +63,10 @@ export async function readRevision(
   repository: string,
   revision?: string
 ): Promise<HfRevision> {
+  if (!revision && d.catalog) {
+    const snapshot = await unifiedCatalog(d.catalog.directory, d.fetch, false, d.catalog.url)
+    revision = atomicModelRevision(snapshot.catalog, repository)
+  }
   return fetchHfRevision(repository, revision, {
     token: d.env?.['HF_TOKEN'],
     fetch: d.fetch,

@@ -99,8 +99,6 @@ export interface WorkspaceSnapshot {
   chats?: WorkspaceChat[]
   /** The model-ready email (`setup.reminder`) both clients show; never the address. */
   reminder?: WorkspaceReminder | null
-  /** This server's core generates audio: clients offer it only then (a core before audio has no routes). */
-  audio_available?: boolean
 }
 /** An email reminder for a downloading model. The server keeps no address, only what it waits for. */
 export interface WorkspaceReminder {

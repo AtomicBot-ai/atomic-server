@@ -1,10 +1,10 @@
-import { join } from 'node:path'
+import { projectAtomicModelCollection } from '@atomic-chat/core/client'
+import { unifiedCatalogBaseline, unifiedCollection } from '../workspace-service/index.js'
 import { looksLikeHfRepo } from '@atomic-chat/core/models'
-import { readDocument, writeDocument } from '../terminal-data/index.js'
-import baseline from './staff-picks.json' with { type: 'json' }
+import { ATOMIC_MODEL_CATALOG_URL } from '@atomic-chat/core/client'
 import type { HubRepository } from './types.js'
 import { searchHub } from './catalog.js'
-export const STAFF_PICKS_URL = baseline.source
+export const STAFF_PICKS_URL = ATOMIC_MODEL_CATALOG_URL
 interface StaffPick {
   model_name: string
   title?: string
@@ -12,6 +12,7 @@ interface StaffPick {
   format?: string
   order?: number
   active?: boolean
+  revision?: string
 }
 export function staffPicks(raw: unknown): HubRepository[] {
   const picks = (raw as { picks?: StaffPick[] } | null)?.picks
@@ -29,6 +30,7 @@ export function staffPicks(raw: unknown): HubRepository[] {
     .map((p) => ({
       id: p.model_name,
       downloads: 0,
+      ...(p.revision ? { revision: p.revision } : {}),
       ...(typeof p.title === 'string' ? { title: p.title } : {}),
       ...(typeof p.summary === 'string' ? { summary: p.summary } : {}),
     }))
@@ -42,22 +44,18 @@ export function rankModels(rows: HubRepository[], query: string): HubRepository[
 }
 /** The desktop's staff-picks feed is the default; refresh never blocks browsing. */
 export class ModelCatalog {
-  private rows = staffPicks(baseline)
+  private rows = staffPicks(projectAtomicModelCollection(unifiedCatalogBaseline(), 'staff-picks'))
   private refreshed = 0
   private refreshing: Promise<void> | undefined
-  private path: string
   constructor(
-    directory: string,
-    private request: typeof fetch
-  ) {
-    this.path = join(directory, 'terminal-model-catalog.json')
+    private directory: string,
+    private request: typeof fetch,
+    private url = process.env['ATC_MODEL_CATALOG_URL']
+  ) {}
+  revision(repository: string): string | undefined {
+    return this.rows.find((row) => row.id === repository)?.revision
   }
   async list(query: string, signal: AbortSignal, onRefresh?: (rows: HubRepository[]) => void) {
-    const cached = await readDocument<{ at: number; rows: HubRepository[] } | null>(this.path, null)
-    if (cached?.rows.length) {
-      this.rows = cached.rows
-      this.refreshed = cached.at
-    }
     if (!query.trim()) {
       if (Date.now() - this.refreshed > 3600000 && !this.refreshing) {
         this.refreshing = this.refresh(signal)
@@ -76,12 +74,9 @@ export class ModelCatalog {
     return rankModels([...matches, ...(await searchHub(query, this.request, signal))], query)
   }
   private async refresh(signal: AbortSignal) {
-    const response = await this.request(STAFF_PICKS_URL, {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(8000)]),
-    })
-    if (!response.ok) throw new Error(`Catalog HTTP ${response.status}`)
-    this.rows = staffPicks(await response.json())
+    if (signal.aborted) return
+    const result = await unifiedCollection('staff-picks', this.directory, this.request, true, this.url)
+    this.rows = staffPicks(result.value)
     this.refreshed = Date.now()
-    await writeDocument(this.path, { at: this.refreshed, rows: this.rows })
   }
 }

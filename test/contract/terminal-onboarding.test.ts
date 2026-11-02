@@ -1,3 +1,4 @@
+import { catalogFixture } from '../helpers/model-catalog-fixture.js'
 import { createElement } from 'react'
 import { render } from 'ink'
 import { expect, it } from 'vitest'
@@ -58,8 +59,12 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
   const stalled = new AbortController()
   const hub = (async (url: unknown, init?: RequestInit) => {
     const href = String(url)
-    if (href.includes('staff-picks.json'))
-      return Response.json({ picks: [{ model_name: 'fixture/repo', title: 'Fixture', order: 0 }] })
+    if (href.includes('catalog.json'))
+      return Response.json(
+        catalogFixture({
+          'staff-picks': { picks: [{ model_name: 'fixture/repo', title: 'Fixture', order: 0 }] },
+        })
+      )
     if (href.includes('/api/models?')) return Response.json([{ id: 'fixture/repo', downloads: 1 }])
     if (href.includes('/resolve/')) {
       const range = new Headers(init?.headers).get('range')
@@ -81,7 +86,10 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
         },
       })
     }
-    return Response.json({ siblings: [{ rfilename: 'model.Q4_K_M.gguf', size: weights.length }] })
+    return Response.json({
+      sha: 'a'.repeat(40),
+      siblings: [{ rfilename: 'model.Q4_K_M.gguf', size: weights.length }],
+    })
   }) as typeof fetch
   // The server: its workspace runs the setups; the terminal reaches it through the admin listener.
   const daemon = () =>

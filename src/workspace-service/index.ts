@@ -9,3 +9,5 @@ export type { FoundrySearchResult, FoundryModelRow, FoundryVariantRow } from './
 export { contextExceeded } from './chat/chat-request.js'
 export { unavailableHere } from './engines/engine-install.js'
 export { remoteAccessSetup } from './remote-setup.js'
+
+export { unifiedCatalogBaseline, unifiedCollection } from './models/unified-catalog.js'

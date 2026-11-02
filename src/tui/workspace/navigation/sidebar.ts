@@ -4,11 +4,11 @@ export { serverRunning } from '../server/server-status.js'
 import {
   LIBRARY_SECTIONS,
   SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
   SETTINGS_WORKSPACE_SECTIONS,
   SERVER_NAVIGATION,
   CONNECTION_AGENTS,
 } from '../../../contract/index.js'
-import { playgroundTasks } from '../../../workspace-view/index.js'
 import { workspacePage, serverSection, playgroundTask } from './navigation.js'
 import { text, COLORS } from '../draw/canvas.js'
 import { navigationRow, scrollTrack } from '../draw/controls.js'
@@ -129,7 +129,7 @@ export function drawSidebar(
       page === 'models'
         ? [...LIBRARY_SECTIONS].sort((a, b) => Number(b.id === 'downloads') - Number(a.id === 'downloads'))
         : page === 'chat'
-          ? playgroundTasks(s.workspace)
+          ? PLAYGROUND_TASKS
           : [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
     const prefix = page === 'models' ? 'library' : page === 'chat' ? 'playground-task' : 'settings-section'
     const selected = page === 'models' ? s.libraryView : page === 'chat' ? playgroundTask(s) : s.settingsGroup

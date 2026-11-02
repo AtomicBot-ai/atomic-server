@@ -10,7 +10,7 @@ import type {
   ModelCompatibilityResponse,
   PrismFamiliesResponse,
 } from '@atomic-chat/core/contracts'
-import { fetchHfGgufFiles, hfToken } from '@atomic-chat/core/models'
+import { fetchHfGgufFiles, hfToken, ggufShardSetPaths } from '@atomic-chat/core/models'
 import type { CoreLink } from '../../core-link/index.js'
 import type { ModelSetupPlan, ModelSetupPlanRequest } from '../../contract/index.js'
 import { AtcError } from '../../errors/index.js'
@@ -45,47 +45,107 @@ export function planRequest(raw: Record<string, unknown>): ModelSetupPlanRequest
 
 export async function planFor(deps: GgufFactsDeps, request: ModelSetupPlanRequest): Promise<ModelSetupPlan> {
   const { link } = deps
-  const [families, verdict, freeBytes] = await Promise.all([
-    link
-      .request<PrismFamiliesResponse>('GET', '/models/atomic-prism/families')
-      .catch(() => ({ families: [] }) as unknown as PrismFamiliesResponse),
+  const families = await link
+    .request<PrismFamiliesResponse>('GET', '/models/atomic-prism/families')
+    .catch(() => ({ families: [] }) as unknown as PrismFamiliesResponse)
+  const known = families.families.find(
+    (f) =>
+      f.repo === request.repo &&
+      (!request.revision || request.revision === f.revision) &&
+      f.files.some((file) => file.file === request.file || file.file === request.file.split('/').pop())
+  )
+  const token = hfToken(deps.env)
+  const revision = known?.revision ?? request.revision
+  const files = await fetchHfGgufFiles(request.repo, {
+    fetch: deps.fetch,
+    ...(revision ? { revision } : {}),
+    ...(token ? { token } : {}),
+  }).catch((error) => {
+    if (error instanceof AtomicCoreError && /HTTP (401|403)/.test(error.message))
+      throw new AtcError('ATC_USAGE', error.message, {
+        details: error.details ?? 'Set HF_TOKEN for a gated repository.',
+      })
+    throw error
+  })
+  const artifacts = ggufShardSetPaths(request.file).map((path) => {
+    const found = files.find((f) => f.filename === path)
+    if (!found) throw new AtcError('ATC_USAGE', `"${path}" is not a GGUF file of ${request.repo}.`)
+    if (
+      !found.revision ||
+      !/^[0-9a-f]{40}$/.test(found.revision) ||
+      !Number.isSafeInteger(found.size) ||
+      found.size <= 0
+    )
+      throw new AtcError('ATC_USAGE', 'The model has no complete immutable Hugging Face metadata.')
+    return {
+      repo: request.repo,
+      file: path,
+      revision: found.revision,
+      size: found.size,
+      ...(found.sha256 ? { sha256: found.sha256 } : {}),
+    }
+  })
+  const selected = artifacts[0]!
+  const expected = known?.files.find((file) => file.file === selected.file.split('/').pop())
+  if (
+    expected &&
+    (expected.size !== selected.size || (selected.sha256 && expected.sha256 !== selected.sha256))
+  )
+    throw new AtcError('ATC_USAGE', 'The catalog and Hugging Face disagree about the selected model file.')
+  const hubFile: GgufPlanInput['hubFile'] = {
+    revision: selected.revision,
+    size: selected.size,
+    ...(selected.sha256 ? { sha256: selected.sha256 } : {}),
+  }
+  const [verdict, freeBytes] = await Promise.all([
     link.request<ModelCompatibilityResponse>('POST', '/models/compatibility', {
       repo: request.repo,
-      file: request.file,
-      ...(request.revision ? { revision: request.revision } : {}),
+      file: selected.file,
+      revision: selected.revision,
       inspect_remote: true,
     }),
     link.disk.available().catch(() => null),
   ])
   const family = matchFamily(families.families, verdict, request.file)
-  let hubFile: GgufPlanInput['hubFile']
-  if (!family) {
-    const token = hfToken(deps.env)
-    // The listing the core reads also names the repository's commit; the plan pins it, so the URL
-    // names exactly the bytes described here and a file uploaded again later is a different URL.
-    let commit: string | undefined
-    const files = await fetchHfGgufFiles(request.repo, {
-      fetch: async (input, init) => {
-        const response = await deps.fetch(input, init)
-        const body = (await response
-          .clone()
-          .json()
-          .catch(() => undefined)) as { sha?: unknown } | undefined
-        if (typeof body?.sha === 'string' && /^[0-9a-f]{40}$/.test(body.sha)) commit = body.sha
-        return response
-      },
-      ...(token ? { token } : {}),
-    })
-    const found = files.find((f) => f.filename === request.file)
-    if (!found) throw new AtcError('ATC_USAGE', `"${request.file}" is not a GGUF file of ${request.repo}.`)
-    hubFile = {
-      size: found.size,
-      ...(found.sha256 ? { sha256: found.sha256 } : {}),
-      ...(commit ? { revision: commit } : {}),
+  const wantedProjector =
+    request.include_projector === false ? undefined : family?.family.projectors.find((p) => p.default)
+  let hubProjector: GgufPlanInput['hubProjector']
+  if (wantedProjector && family) {
+    const repo = family.family.repo
+    const same = repo === request.repo && family.family.revision === selected.revision
+    const listing = same
+      ? files
+      : await fetchHfGgufFiles(repo, {
+          fetch: deps.fetch,
+          revision: family.family.revision,
+          ...(token ? { token } : {}),
+        })
+    const file = listing.find((f) => f.filename === wantedProjector.file)
+    if (
+      !file ||
+      file.size !== wantedProjector.size ||
+      (file.sha256 && file.sha256 !== wantedProjector.sha256)
+    )
+      throw new AtcError('ATC_USAGE', 'The catalog and Hugging Face disagree about the projector.')
+    hubProjector = {
+      repo,
+      revision: file.revision!,
+      file: file.filename,
+      size: file.size,
+      ...(file.sha256 ? { sha256: file.sha256 } : {}),
     }
   }
   const prism = verdict.provider === 'atomic-prism' ? await prismCatalog(link, verdict) : undefined
-  return planGgufSetup({ request, verdict, family, ...(hubFile ? { hubFile } : {}), prism, freeBytes })
+  return planGgufSetup({
+    request,
+    verdict,
+    family,
+    hubFile,
+    hubFiles: artifacts,
+    ...(hubProjector ? { hubProjector } : {}),
+    prism,
+    freeBytes,
+  })
 }
 
 /**

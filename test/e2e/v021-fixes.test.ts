@@ -1,3 +1,4 @@
+import { catalogFixture } from '../helpers/model-catalog-fixture.js'
 /**
  * The built program on the 0.2.1 server bugs (ADR 2026-10-27): a port another program holds on a
  * wildcard address is busy to `doctor` and to `api start`; the server brings the API up by itself
@@ -80,15 +81,17 @@ describe('models catalog --engine', async () => {
   it('narrows the catalog to what the engine runs and refuses an unknown engine', async () => {
     mkdirSync(join(dataFolder, 'atc', 'cache'), { recursive: true })
     writeFileSync(
-      join(dataFolder, 'atc', 'cache', 'workspace-staff-picks.json'),
+      join(dataFolder, 'atc', 'cache', 'atomic-model-catalog-v1.json'),
       JSON.stringify({
         at: Date.now(),
-        data: {
-          picks: [
-            { model_name: 'fixture/one-GGUF', title: 'One', format: 'gguf' },
-            { model_name: 'fixture/two-MLX', title: 'Two', format: 'mlx' },
-          ],
-        },
+        catalog: catalogFixture({
+          'staff-picks': {
+            picks: [
+              { model_name: 'fixture/one-GGUF', title: 'One', format: 'gguf' },
+              { model_name: 'fixture/two-MLX', title: 'Two', format: 'mlx' },
+            ],
+          },
+        }),
       })
     )
     const mlx = await atc('models', 'catalog', '--engine', 'mlx', '--json')

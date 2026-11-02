@@ -93,6 +93,7 @@ export interface ManagedModelFile {
  * fetch, and why it cannot start (`blockers`). `present` when that revision is already in the store.
  */
 export interface ManagedModelPlan {
+  version?: 1
   digest: string
   repository: string
   revision: string

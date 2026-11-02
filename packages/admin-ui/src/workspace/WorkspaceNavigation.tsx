@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/components/left-sidebar/index.tsx @ 807b4d9; adapted: shared server workspace and chat history.
-import { downloadRows, playgroundTasks } from '@view'
+import { downloadRows } from '@view'
 import {
   Blocks,
   RadioTower,
@@ -25,6 +25,7 @@ import {
   SERVER_NAVIGATION,
   LIBRARY_SECTIONS,
   SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
   SETTINGS_WORKSPACE_SECTIONS,
 } from '@contract'
 import type { Page } from './types'
@@ -82,7 +83,7 @@ export function WorkspaceNavigation({
         ? LIBRARY_SECTIONS
         : page === 'settings'
           ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
-          : playgroundTasks(workspace.snapshot)
+          : PLAYGROUND_TASKS
   const title = WORKSPACE_NAVIGATION.find((item) => item.id === page)?.label
   // What the Downloads page still shows: a finished transfer in the snapshot is not a pending download.
   const pending = downloadRows(workspace.snapshot?.setups ?? [], workspace.snapshot?.downloads ?? []).length

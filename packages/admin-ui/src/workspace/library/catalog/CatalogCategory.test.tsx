@@ -18,11 +18,11 @@ function renderCatalog(over = {}, catalog: unknown = []) {
   return execute
 }
 
-it('offers audio models only on a core with audio', async () => {
+it('offers audio models without waiting for a status snapshot', async () => {
   renderCatalog()
   await userEvent.click(screen.getByRole('combobox', { name: 'Model category' }))
   expect(screen.getByRole('option', { name: /Images/ })).toBeInTheDocument()
-  expect(screen.queryByRole('option', { name: /Audio/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('option', { name: /Audio/ })).toBeInTheDocument()
 })
 
 it('lists audio models with the notice their license asks for', async () => {
@@ -37,7 +37,7 @@ it('lists audio models with the notice their license asks for', async () => {
       quants: [{ id: 'q8_0', label: 'Q8' }],
     },
   }
-  const execute = renderCatalog({ audio_available: true }, { rows: [stable] })
+  const execute = renderCatalog({}, { rows: [stable] })
   await userEvent.click(screen.getByRole('combobox', { name: 'Model category' }))
   await userEvent.click(screen.getByRole('option', { name: /Audio/ }))
   await waitFor(() => expect(execute).toHaveBeenCalledWith('models.catalog', { category: 'audio' }))

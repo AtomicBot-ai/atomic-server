@@ -109,6 +109,7 @@ export async function managedModelPlan(
     )
     .digest('hex')
   return {
+    version: 1,
     digest,
     repository: meta.repository,
     revision: meta.revision,

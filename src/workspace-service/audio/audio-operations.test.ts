@@ -64,15 +64,13 @@ describe('the audio operations', () => {
     expect(link.calls.at(-1)).toEqual({ method, path, body })
   })
 
-  it.each(CALLS)('%s answers plainly on a core without audio', async (name, input) => {
+  it.each(CALLS)('%s preserves the core error', async (name, input) => {
     const link = fakeCoreLink()
+    const error = new AtomicCoreError('INTERNAL_ERROR', 'Audio service unavailable')
     link.request = async () => {
-      throw new AtomicCoreError('INVALID_ARGUMENT', 'No such control route: /audio')
+      throw error
     }
-    await expect(coreOperation(link, name, input)).rejects.toMatchObject({
-      code: 'ATC_NOT_IMPLEMENTED',
-      message: expect.stringContaining('no audio'),
-    })
+    await expect(coreOperation(link, name, input)).rejects.toBe(error)
   })
 
   it('refuses a generation without text, or in an unknown mode', async () => {

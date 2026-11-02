@@ -57,7 +57,12 @@ export class WorkspaceService {
     this.history = new ChatHistory(options.paths.atcDir)
     this.chats = new ChatJobs(options, this.keys, this.history, (body) => this.features.enrich(body))
     this.request = options.fetch ?? fetch
-    this.catalog = new WorkspaceCatalog(options.paths, this.request, options.env?.['ATC_AUDIO_MODELS_URL'])
+    this.catalog = new WorkspaceCatalog(
+      options.paths,
+      this.request,
+      options.env?.['ATC_MODEL_CATALOG_URL'],
+      options.env?.['ATC_AUDIO_MODELS_URL']
+    )
     this.engineDownloads = new EngineDownloads(
       options.paths.atcDir,
       options.link,

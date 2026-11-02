@@ -1,3 +1,4 @@
+import { catalogFixture, MODEL_COMMIT } from '../../test/helpers/model-catalog-fixture.js'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -46,8 +47,12 @@ it('opens a useful default list immediately when the network stalls, then refres
     const rows = await catalog.list('', abort.signal, refreshed)
     expect(rows.length).toBeGreaterThan(20)
     expect(rows.some((r) => r.id.startsWith('AtomicChat/'))).toBe(true)
-    expect(request).toHaveBeenCalledWith(STAFF_PICKS_URL, expect.anything())
-    reply(Response.json({ picks: [{ model_name: 'AtomicChat/fresh', order: 0 }] }))
+    await vi.waitFor(() => expect(request).toHaveBeenCalledWith(STAFF_PICKS_URL, expect.anything()))
+    reply(
+      Response.json(
+        catalogFixture({ 'staff-picks': { picks: [{ model_name: 'AtomicChat/fresh', order: 0 }] } })
+      )
+    )
     await vi.waitFor(() => expect(refreshed).toHaveBeenCalled())
     expect((await catalog.list('', abort.signal))[0]?.id).toBe('AtomicChat/fresh')
     expect(request).toHaveBeenCalledTimes(1)
@@ -73,6 +78,7 @@ it('queries the Atomic Chat author separately so download popularity cannot hide
 it('reads actual GGUF variants and puts the balanced quant before larger files', async () => {
   const request = (async () =>
     Response.json({
+      sha: MODEL_COMMIT,
       siblings: [
         { rfilename: 'model.Q8_0.gguf', size: 8000 },
         { rfilename: 'mmproj.gguf', size: 10 },
@@ -84,5 +90,6 @@ it('reads actual GGUF variants and puts the balanced quant before larger files',
   expect((await modelFiles('owner/model', request)).map((f) => f.filename)).toEqual([
     'model.Q4_K_M.gguf',
     'model.Q8_0.gguf',
+    'big/model-00001-of-00002.gguf',
   ])
 })

@@ -62,7 +62,7 @@ system, hardware and compatible builds; `atc engines list` shows what is availab
 - **LiteRT-LM** (`litert-lm`) — Google's `.litertlm` models on supported CPU, GPU or Intel NPU
   accelerators; see [LiteRT-LM](#litert-lm) for platforms and setup.
 - **stable-diffusion.cpp** (`sd-cpp`) — image generation.
-- **audio.cpp** (`audio-cpp`) — speech, music and sound effects; needs a core with audio, see
+- **audio.cpp** (`audio-cpp`) — speech, music and sound effects; see
   [Audio generation](#audio-generation).
 
 Engines are downloaded on demand. Install one with `atc engines install <engine-id>`, or choose it in
@@ -274,8 +274,7 @@ hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
 ## Audio generation
 
-Audio runs on audio.cpp, one model at a time, and needs an embedded core that has it: on a core
-without audio nothing is offered, and asking anyway says so. The catalog holds MOSS-TTS-Nano 100M and
+Audio runs on audio.cpp, one model at a time, through the embedded core 0.20.7. The catalog holds MOSS-TTS-Nano 100M and
 Qwen3-TTS 1.7B for speech, ACE-Step 1.5 Turbo for music and Stable Audio 3 Small SFX for effects:
 
 ```bash

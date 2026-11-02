@@ -46,20 +46,17 @@ export function CatalogCategory({
   value,
   onChange,
   onFocus,
-  audio = false,
 }: {
   value: string
   onChange: (value: string) => void
   onFocus: () => void
-  /** A core without audio has no such models to offer. */
-  audio?: boolean
 }) {
   return (
     <div className="hub-category" onFocus={onFocus}>
       <DetailPicker
         label="Model category"
         value={value}
-        choices={choices.filter((choice) => audio || choice.id !== 'audio')}
+        choices={choices}
         placeholder="Choose model type"
         onChange={onChange}
       />

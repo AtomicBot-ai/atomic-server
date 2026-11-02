@@ -1,4 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { catalogFixture } from '../../../test/helpers/model-catalog-fixture.js'
+import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
+import { defaultConfig } from '../../config/index.js'
+import { WorkspaceService } from '../index.js'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { WorkspaceCatalog } from '../models/catalog.js'
 import { artifactPlan } from '../models/artifact-plan.js'
@@ -111,7 +115,44 @@ describe('the audio category of the catalog', () => {
     const tmp = tmpDataFolder()
     cleanup.push(tmp.cleanup)
     const request = conf({ schema_version: 1, models: [] })
-    await new WorkspaceCatalog(tmp.paths, request, 'https://example.test/audio.json').list('audio')
+    await new WorkspaceCatalog(tmp.paths, request, undefined, 'https://example.test/audio.json').list('audio')
     expect(request).toHaveBeenCalledWith('https://example.test/audio.json', expect.anything())
   })
+})
+
+it('keeps the unified and audio catalog overrides independent through the workspace', async () => {
+  const tmp = tmpDataFolder()
+  cleanup.push(tmp.cleanup)
+  const modelUrl = 'https://example.test/models.json',
+    audioUrl = 'https://example.test/audio.json'
+  const request = vi.fn<typeof fetch>(async (input) => {
+    if (String(input) === modelUrl)
+      return Response.json(
+        catalogFixture({
+          'staff-picks': { picks: [{ model_name: 'owner/text', title: 'Text', format: 'gguf' }] },
+        })
+      )
+    if (String(input) === audioUrl)
+      return Response.json({
+        schema_version: 1,
+        models: [{ id: 'voice', mode: 'speech', engines: ['audio-cpp'], quants: [{}] }],
+      })
+    throw new Error(`Unexpected catalog URL: ${String(input)}`)
+  })
+  const workspace = new WorkspaceService({
+    paths: tmp.paths,
+    link: fakeCoreLink(),
+    config: defaultConfig(),
+    fetch: request,
+    env: { ATC_MODEL_CATALOG_URL: modelUrl, ATC_AUDIO_MODELS_URL: audioUrl },
+  })
+  await expect(workspace.execute('models.catalog', { category: 'text' })).resolves.toMatchObject({
+    rows: [{ id: 'owner/text' }],
+    cached: false,
+  })
+  await expect(workspace.execute('models.catalog', { category: 'audio' })).resolves.toMatchObject({
+    rows: [{ id: 'voice' }],
+    cached: false,
+  })
+  expect(request.mock.calls.map(([url]) => String(url))).toEqual([modelUrl, audioUrl])
 })

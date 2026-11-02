@@ -20,7 +20,6 @@ beforeAll(async () => {
       json: {
         ...snapshot,
         captured_at: Date.now(),
-        audio_available: true,
         services: resident
           ? [
               {

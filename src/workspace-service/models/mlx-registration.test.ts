@@ -1,3 +1,4 @@
+import { catalogFixture } from '../../../test/helpers/model-catalog-fixture.js'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -20,8 +21,10 @@ function fixture() {
   const request = (async (input: unknown) => {
     const url = String(input)
     if (url.includes('raw.githubusercontent.com'))
-      return Response.json({ picks: [{ model_name: id, title: 'Tiny MLX', format: 'mlx' }] })
-    if (url.endsWith(`/api/models/${id}`)) return Response.json({ sha })
+      return Response.json(
+        catalogFixture({ 'staff-picks': { picks: [{ model_name: id, title: 'Tiny MLX', format: 'mlx' }] } })
+      )
+    if (url.includes(`/api/models/${id}/revision/`)) return Response.json({ sha })
     if (url.includes('/tree/'))
       return Response.json([
         { type: 'file', path: 'config.json', size: 2 },

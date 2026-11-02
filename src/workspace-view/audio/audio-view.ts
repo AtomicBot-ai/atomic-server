@@ -1,8 +1,7 @@
 /**
- * Audio as both UIs show it: whether it is offered at all, the catalog's attribution, the form a model
+ * Audio as both UIs show it: the catalog's attribution, the form a model
  * takes. What a model takes is always the catalog's data, never decided by its id. Pure and browser-safe.
  */
-import { PLAYGROUND_TASKS, SETUP_GOALS } from '../../contract/index.js'
 import type {
   AudioJobPhase,
   AudioPlanDetails,
@@ -12,21 +11,6 @@ import type {
 
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
-
-/** A core without audio (0.20.5) leaves it out of every list; absent means that. */
-export const audioAvailable = (snapshot: Pick<WorkspaceSnapshot, 'audio_available'> | null | undefined) =>
-  snapshot?.audio_available === true
-
-type Availability = Pick<WorkspaceSnapshot, 'audio_available'> | null | undefined
-
-export const playgroundTasks = (snapshot: Availability) =>
-  PLAYGROUND_TASKS.filter((task) => task.id !== 'audio' || audioAvailable(snapshot))
-
-export const setupGoals = (snapshot: Availability) =>
-  SETUP_GOALS.filter((goal) => goal.category !== 'audio' || audioAvailable(snapshot))
-
-export const catalogCategories = <T extends string>(categories: readonly T[], snapshot: Availability) =>
-  categories.filter((category) => category !== 'audio' || audioAvailable(snapshot))
 
 /** The notice a model's license asks for, from a catalog row or a download's plan. */
 export function attributionOf(model: unknown): string {

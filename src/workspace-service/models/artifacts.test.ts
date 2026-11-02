@@ -1,7 +1,7 @@
+import { catalogFixture } from '../../../test/helpers/model-catalog-fixture.js'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { AtomicCoreError } from '@atomic-chat/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
@@ -30,23 +30,32 @@ describe('durable media installation', () => {
       release = resolve
     })
     const request = vi.fn<typeof fetch>(async (input) =>
-      String(input).includes('raw.githubusercontent.com')
-        ? new Response(
-            JSON.stringify({
-              models: [
-                {
-                  id: 'tiny',
-                  name: 'Tiny',
-                  repo: 'test/tiny',
-                  revision: 'pinned',
-                  context: 512,
-                  engine: 'llamacpp-upstream',
-                  files: [{ path: 'tiny.gguf', role: 'model', bytes: payload.length, sha256: sha }],
-                },
-              ],
-            })
-          )
-        : download
+      String(input).includes('/api/models/')
+        ? Response.json({
+            sha: 'a'.repeat(40),
+            siblings: [{ rfilename: 'tiny.gguf', lfs: { size: payload.length, sha256: sha } }],
+          })
+        : String(input).includes('raw.githubusercontent.com')
+          ? new Response(
+              JSON.stringify(
+                catalogFixture({
+                  embedding: {
+                    models: [
+                      {
+                        id: 'tiny',
+                        name: 'Tiny',
+                        repo: 'test/tiny',
+                        revision: 'pinned',
+                        context: 512,
+                        engine: 'llamacpp-upstream',
+                        files: [{ path: 'tiny.gguf', role: 'model', bytes: payload.length, sha256: sha }],
+                      },
+                    ],
+                  },
+                })
+              )
+            )
+          : download
     )
     const options = { paths: tmp.paths, link, config: defaultConfig(), fetch: request },
       service = new WorkspaceService(options)
@@ -115,9 +124,14 @@ describe('an audio model download', () => {
     const link = fakeCoreLink()
     link.responses['POST /engine-builds/audio-cpp/catalog'] = { active: { tag: 'v0.9.3' } }
     const request = vi.fn<typeof fetch>(async (input) =>
-      String(input).includes('raw.githubusercontent.com')
-        ? Response.json(catalog)
-        : new Response(payload, { headers: { 'content-length': String(payload.length) } })
+      String(input).includes('/api/models/')
+        ? Response.json({
+            sha: 'c'.repeat(40),
+            siblings: [{ rfilename: 'dir/voice.gguf', lfs: { size: payload.length, sha256 } }],
+          })
+        : String(input).includes('raw.githubusercontent.com')
+          ? Response.json(catalog)
+          : new Response(payload, { headers: { 'content-length': String(payload.length) } })
     )
     const service = new WorkspaceService({
       paths: tmp.paths,
@@ -200,14 +214,17 @@ describe('an audio model download', () => {
     ).rejects.toThrow('Unload this model')
   })
 
-  it('downloads nothing on a core without audio', async () => {
-    const { link, request, service } = fixture()
-    link.responses['GET /audio/status'] = new AtomicCoreError(
-      'INVALID_ARGUMENT',
-      'No such control route: /audio/status'
+  it('refuses a plan if the pinned Hub metadata disagrees with the catalog', async () => {
+    const { request, service } = fixture()
+    request.mockImplementationOnce(async () => Response.json(catalog))
+    request.mockImplementationOnce(async () =>
+      Response.json({
+        sha: 'c'.repeat(40),
+        siblings: [{ rfilename: 'dir/voice.gguf', lfs: { size: payload.length, sha256: 'f'.repeat(64) } }],
+      })
     )
-    await expect(plan(service)).rejects.toThrow("this server's core has no audio")
-    expect(request.mock.calls.some(([url]) => String(url).includes('huggingface'))).toBe(false)
+    await expect(plan(service)).rejects.toThrow('Catalog metadata disagrees')
+    expect(request.mock.calls.every(([url]) => !String(url).includes('/resolve/'))).toBe(true)
     expect(await service.execute('artifacts.list')).toEqual([])
   })
 })

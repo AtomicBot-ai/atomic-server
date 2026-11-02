@@ -5,7 +5,6 @@ import type { WorkspaceServiceRow } from '../../contract/index.js'
 import { AtcError } from '../../errors/index.js'
 import { callPublic } from './public-api.js'
 import { object } from '../validation.js'
-import { audioRequest } from '../audio/audio-core.js'
 import type { AudioJob, AudioMode } from '../../contract/index.js'
 
 const VERIFICATION_DEADLINE_MS = 600000
@@ -13,13 +12,13 @@ const VERIFICATION_DEADLINE_MS = 600000
 /** The smallest real clip: a word to say, or the shortest sound the loaded model's mode can make. */
 async function verifyAudio(link: CoreLink, service: WorkspaceServiceRow) {
   const mode = object(object(service.details['model'])['loaded'])['mode'] as AudioMode
-  const { id } = await audioRequest<AudioJob>(link, 'POST', '/audio/jobs', {
+  const { id } = await link.request<AudioJob>('POST', '/audio/jobs', {
     mode,
     request: mode === 'speech' ? { text: 'Ready.' } : { text: 'A short soft click.', durationSec: 1 },
   })
   const deadline = Date.now() + VERIFICATION_DEADLINE_MS
   while (Date.now() < deadline) {
-    const { job } = await audioRequest<{ job: AudioJob | null }>(link, 'GET', `/audio/jobs/${id}`)
+    const { job } = await link.request<{ job: AudioJob | null }>('GET', `/audio/jobs/${id}`)
     if (job?.state === 'completed') return { task: 'audio', job_id: id }
     if (!job || ['failed', 'cancelled'].includes(job.state))
       throw new AtcError('ATC_USAGE', job?.error?.message ?? 'The verification job failed.')

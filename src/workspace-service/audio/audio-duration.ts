@@ -3,7 +3,6 @@ import type { AudioCapabilities, AudioStatus, WorkspaceInput } from '../../contr
 import type { CoreLink } from '../../core-link/index.js'
 import { audioDetails } from '../../workspace-view/index.js'
 import { object } from '../validation.js'
-import { audioRequest } from './audio-core.js'
 
 /** For a model loaded by hand (`audio.load`): it has no download to read a default from. */
 const FALLBACK_DURATION_SEC = 10
@@ -20,12 +19,12 @@ export async function withAudioDuration(
 ): Promise<Record<string, unknown>> {
   const request = object(input['request'])
   if (input['mode'] === 'speech' || request['durationSec'] !== undefined) return request
-  const status = await audioRequest<Partial<AudioStatus>>(link, 'GET', '/audio/status')
+  const status = await link.request<Partial<AudioStatus>>('GET', '/audio/status')
   let modelId = status.model?.loaded?.modelId
   if (!modelId) {
     // Cancel and a crash stop the process but keep its spec and capabilities for the next job.
     try {
-      modelId = (await audioRequest<Partial<AudioCapabilities>>(link, 'GET', '/audio/capabilities')).modelId
+      modelId = (await link.request<Partial<AudioCapabilities>>('GET', '/audio/capabilities')).modelId
     } catch (error) {
       if (!(error instanceof AtomicCoreError && error.code === 'MODEL_NOT_LOADED')) throw error
     }

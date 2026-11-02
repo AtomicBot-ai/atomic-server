@@ -2,18 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { AudioPlanDetails, WorkspaceServiceRow } from '../../contract/index.js'
 import {
   attributionOf,
-  audioAvailable,
   audioControls,
   audioDetails,
   audioJobRequest,
   audioPhaseText,
-  catalogCategories,
   loadedAudioModel,
-  playgroundTasks,
-  setupGoals,
 } from './audio-view.js'
 
-const ids = (list: readonly { id: string }[]) => list.map((item) => item.id)
 const details = (over: Partial<AudioPlanDetails> = {}): AudioPlanDetails => ({
   mode: 'effects',
   attribution: null,
@@ -21,29 +16,6 @@ const details = (over: Partial<AudioPlanDetails> = {}): AudioPlanDetails => ({
   defaults: {},
   ranges: {},
   ...over,
-})
-
-describe('offering audio', () => {
-  it('is off without the core saying it has audio', () => {
-    for (const snapshot of [null, undefined, {}, { audio_available: false }])
-      expect(audioAvailable(snapshot)).toBe(false)
-  })
-
-  it.each([
-    [{ audio_available: true }, ['chat', 'image', 'video', 'audio']],
-    [{ audio_available: false }, ['chat', 'image', 'video']],
-    [null, ['chat', 'image', 'video']],
-  ])('playground tasks for %j', (snapshot, expected) => {
-    expect(ids(playgroundTasks(snapshot))).toEqual(expected)
-  })
-
-  it('hides the setup goal and the catalog category with it', () => {
-    expect(ids(setupGoals({ audio_available: true }))).toContain('audio')
-    expect(ids(setupGoals(null))).not.toContain('audio')
-    const categories = ['text', 'audio'] as const
-    expect(catalogCategories(categories, { audio_available: true })).toEqual(['text', 'audio'])
-    expect(catalogCategories(categories, {})).toEqual(['text'])
-  })
 })
 
 describe('attributionOf', () => {

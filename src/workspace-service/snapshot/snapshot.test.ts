@@ -29,13 +29,12 @@ const progress = (stage: string, elapsed_ms = 1) => ({
 describe('audio in the workspace snapshot', () => {
   const noRoute = new AtomicCoreError('INVALID_ARGUMENT', 'No such control route: /audio/status')
 
-  it('stays quiet on a core without audio: no row, no error, and clients told not to offer it', async () => {
+  it('reports a missing audio route as an integration failure', async () => {
     const { link, service } = context()
     link.responses['GET /audio/status'] = noRoute
     const snap = await service.snapshot()
-    expect(snap.audio_available).toBe(false)
     expect(snap.services).toEqual([])
-    expect(snap.errors).toEqual([])
+    expect(snap.errors).toEqual([{ source: 'audio', message: noRoute.message }])
     expect(snap.eye).toBe('offline')
   })
 
@@ -43,7 +42,6 @@ describe('audio in the workspace snapshot', () => {
     const { link, service } = context()
     link.responses['GET /audio/status'] = { model: { state: 'unloaded', loaded: null }, activeJob: null }
     const snap = await service.snapshot()
-    expect(snap.audio_available).toBe(true)
     expect(snap.services).toEqual([])
   })
 
@@ -67,11 +65,10 @@ describe('audio in the workspace snapshot', () => {
     expect((await service.snapshot()).eye).toBe('busy')
   })
 
-  it('reports a failed read of a core with audio, unlike a missing route', async () => {
+  it('reports a failed audio status read', async () => {
     const { link, service } = context()
     link.responses['GET /audio/status'] = new AtomicCoreError('INTERNAL_ERROR', 'boom')
     const snap = await service.snapshot()
-    expect(snap.audio_available).toBe(true)
     expect(snap.errors).toEqual([{ source: 'audio', message: 'boom' }])
   })
 })

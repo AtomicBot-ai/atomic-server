@@ -3,10 +3,12 @@ import { join } from 'node:path'
 import { looksLikeHfRepo } from '@atomic-chat/core/models'
 import type { DownloadItem } from '../../downloads/index.js'
 import type { CatalogRow } from './catalog.js'
+import { AtcError } from '../../errors/index.js'
 import { object } from '../validation.js'
 import type { AudioPlanDetails } from '../../contract/index.js'
 import { audioPlan } from './audio-plan.js'
 export interface ArtifactPlan {
+  version?: 1
   digest: string
   category: string
   model_id: string
@@ -59,6 +61,7 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
   if (row.category === 'audio') {
     const { files, load, ...audio } = audioPlan(row, quant)
     return sealed({
+      version: 1,
       ...audio,
       category: row.category,
       name: row.name,
@@ -84,16 +87,18 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
       repoId = String(source['repo'] ?? repo),
       pinnedRevision = source['revision'] === undefined ? revision : source['revision']
     if (!looksLikeHfRepo(repoId)) throw new Error('Invalid catalog repository.')
-    if (
-      ['image', 'video'].includes(category) &&
-      pinnedRevision !== undefined &&
-      (typeof pinnedRevision !== 'string' || !/^[0-9a-f]{40}$/.test(pinnedRevision))
-    )
+    if (typeof pinnedRevision !== 'string' || !/^[0-9a-f]{40}$/.test(pinnedRevision))
       throw new Error('Invalid catalog revision: use a full Hugging Face commit SHA.')
     const save_path = `${root}/${filePath(path)}`
     files.push({
       url: `https://huggingface.co/${repoId}/resolve/${encodeURIComponent(String(pinnedRevision ?? 'main'))}/${file.split('/').map(encodeURIComponent).join('/')}`,
       save_path,
+      source: {
+        repo: repoId,
+        revision: String(pinnedRevision),
+        path: file,
+        purpose: String(source['role'] ?? source['field'] ?? path.split('/')[0]),
+      },
       size: Number(source['bytes']) || null,
       sha256: typeof source['sha256'] === 'string' ? source['sha256'] : null,
     })
@@ -105,11 +110,12 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
   if (category === 'image' || category === 'video') {
     const transformer = object(r['transformer']),
       quants = transformer['quants'] as Record<string, unknown>[]
-    if (!Array.isArray(quants)) throw new Error('This catalog family has no downloadable quantization.')
+    if (!Array.isArray(quants) || !quants.length)
+      throw new Error('This catalog family has no downloadable quantization.')
     const choice = quant
       ? quants.find((q) => q['id'] === quant)
       : (quants.find((q) => q['recommended'] === true) ?? quants[0])
-    if (!choice) throw new Error('Choose an available quantization.')
+    if (!choice) throw new AtcError('ATC_USAGE', 'Choose an available quantization.')
     model_id = `${row.id}:${String(choice['id'])}`
     const paths: Record<string, unknown> = {
       diffusionModel: add(
@@ -206,6 +212,7 @@ export function artifactPlan(row: CatalogRow, dataFolder: string, quant?: string
     engine = String(r['engine'] ?? (category === 'decision' ? 'llamacpp' : 'llamacpp-upstream'))
   }
   return sealed({
+    version: 1 as const,
     category,
     model_id,
     name: row.name,

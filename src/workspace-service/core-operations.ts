@@ -8,8 +8,6 @@ import { modelIdPath, object, segment } from './validation.js'
 import { managedEngineOperation } from './engines/managed-engines.js'
 import { engineSettingsSchema } from './settings.js'
 import { orderEngines, settingValuesError } from '../workspace-view/index.js'
-import { AUDIO_ENGINE_ID } from '../contract/index.js'
-import { audioRequest, requireAudioCore } from './audio/audio-core.js'
 export { NOT_CORE } from './not-core.js'
 export async function coreOperation(
   link: CoreLink,
@@ -60,7 +58,6 @@ export async function coreOperation(
       const engine = String(input['engine'])
       const kind = engineKind(engine)
       if (kind === 'managed') return link.environments.list()
-      if (engine === AUDIO_ENGINE_ID) await requireAudioCore(link)
       return post(
         kind === 'engine-build'
           ? `/engine-builds/${segment(engine)}/catalog`
@@ -187,27 +184,27 @@ export async function coreOperation(
     case 'media.router.run':
       return post('/decision/score', request)
     case 'audio.status':
-      return audioRequest(link, 'GET', '/audio/status')
+      return link.request('GET', '/audio/status')
     case 'audio.capabilities':
-      return audioRequest(link, 'GET', '/audio/capabilities')
+      return link.request('GET', '/audio/capabilities')
     case 'audio.files':
-      return audioRequest(link, 'GET', '/audio/model-files')
+      return link.request('GET', '/audio/model-files')
     case 'audio.gallery':
-      return audioRequest(link, 'GET', '/audio/gallery?offset=0&limit=100')
+      return link.request('GET', '/audio/gallery?offset=0&limit=100')
     case 'audio.configure':
-      return audioRequest(link, 'PUT', '/audio/config', request)
+      return link.request('PUT', '/audio/config', request)
     case 'audio.load':
-      return audioRequest(link, 'POST', '/audio/model/load', request)
+      return link.request('POST', '/audio/model/load', request)
     case 'audio.unload':
-      return audioRequest(link, 'POST', '/audio/model/unload', {})
+      return link.request('POST', '/audio/model/unload', {})
     case 'audio.generate':
-      return audioRequest(link, 'POST', '/audio/jobs', { mode: input['mode'], request })
+      return link.request('POST', '/audio/jobs', { mode: input['mode'], request })
     case 'audio.job':
-      return audioRequest(link, 'GET', `/audio/jobs/${id()}`)
+      return link.request('GET', `/audio/jobs/${id()}`)
     case 'audio.cancel':
-      return audioRequest(link, 'POST', `/audio/jobs/${id()}/cancel`, {})
+      return link.request('POST', `/audio/jobs/${id()}/cancel`, {})
     case 'audio.delete':
-      return audioRequest(link, 'DELETE', `/audio/gallery/${id()}`)
+      return link.request('DELETE', `/audio/gallery/${id()}`)
     default:
       return managedEngineOperation(link, name, input)
   }

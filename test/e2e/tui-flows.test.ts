@@ -1,3 +1,4 @@
+import { catalogFixture } from '../helpers/model-catalog-fixture.js'
 /**
  * Terminal UI journeys on the built program, in a real pseudo-terminal, where this change found bugs:
  * LiteRT-LM in the Local models catalog (its format, its families, a variant waiting on its engine), and a
@@ -31,10 +32,12 @@ function ready(name: string) {
   expect(runAtc(['config', 'set', 'tui.motion', 'false', '--data-folder', folder]).code).toBe(0)
   mkdirSync(join(folder, 'atc', 'cache'), { recursive: true })
   writeFileSync(
-    join(folder, 'atc', 'cache', 'workspace-staff-picks.json'),
+    join(folder, 'atc', 'cache', 'atomic-model-catalog-v1.json'),
     JSON.stringify({
       at: Date.now(),
-      data: { picks: [{ model_name: 'fixture/tui', title: 'Fixture model', format: 'gguf' }] },
+      catalog: catalogFixture({
+        'staff-picks': { picks: [{ model_name: 'fixture/tui', title: 'Fixture model', format: 'gguf' }] },
+      }),
     })
   )
   return folder

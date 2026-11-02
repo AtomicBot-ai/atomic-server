@@ -77,7 +77,15 @@ export class ManagedModelSetups {
     const { plan } = job
     const token = this.d.env?.['HF_TOKEN']
     try {
-      if (!plan.present) {
+      if (
+        !/^[0-9a-f]{40}$/.test(plan.revision) ||
+        !plan.files.length ||
+        plan.files.some((file) => !Number.isSafeInteger(file.size) || file.size < 0)
+      )
+        throw new Error(
+          'This download has no recorded model commit. Start a new download; partial files were kept.'
+        )
+      {
         await this.journal.step(job, worker, 'downloading')
         if (worker.cancelled) return void (await this.journal.step(job, worker, 'cancelled'))
         const items = plan.files.map((f) => ({

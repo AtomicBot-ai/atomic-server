@@ -14,6 +14,7 @@ import { CACHE_TTL_MS, fetchConfList } from '../models/conf-list.js'
 import type { ConfListOptions, ConfListResult } from '../models/conf-list.js'
 
 export { CACHE_TTL_MS }
+/** @deprecated Independent model-list URL; retained for legacy overrides. Default reads project models/catalog.json. */
 export const DEFAULT_LITERT_LM_MODELS_URL =
   'https://raw.githubusercontent.com/AtomicBot-ai/atomic-chat-conf/main/models/litert-lm-models.json'
 export const SUPPORTED_SCHEMA_VERSION = 1

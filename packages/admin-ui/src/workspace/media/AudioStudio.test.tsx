@@ -185,10 +185,10 @@ it('loads a downloaded model from the picker, with its notice', async () => {
   expect(execute).toHaveBeenCalledWith('artifacts.load', { id: 'job' })
 })
 
-it('shows what the core answers when it has no audio', async () => {
+it('shows a core request failure', async () => {
   const { execute } = workspaceFixture({})
-  execute.mockRejectedValue(new Error("Audio generation is not available: this server's core has no audio."))
+  execute.mockRejectedValue(new Error('Audio service unavailable.'))
   const { workspace } = workspaceFixture({})
   render(<AudioStudio workspace={{ ...workspace, execute }} onCatalog={vi.fn()} />)
-  expect(await screen.findByRole('alert')).toHaveTextContent("this server's core has no audio")
+  expect(await screen.findByRole('alert')).toHaveTextContent('Audio service unavailable')
 })

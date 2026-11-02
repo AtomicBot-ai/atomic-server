@@ -7,9 +7,9 @@ import { serverShellAction } from '../server/server-shell-actions.js'
 import {
   WORKSPACE_OPERATIONS,
   SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
   SETTINGS_WORKSPACE_SECTIONS,
 } from '../../../contract/index.js'
-import { playgroundTasks } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import { defaultInput, operationFields } from '../operations/operation-model.js'
 import { PAGE_FOCUS } from '../state.js'
@@ -118,7 +118,7 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
   if (id.startsWith('playground-task:')) {
     if (!s.setupComplete) return true
     const task = id.slice(16)
-    if (!playgroundTasks(s.workspace).some((v) => v.id === task)) return true
+    if (!PLAYGROUND_TASKS.some((v) => v.id === task)) return true
     if (task === 'chat') {
       ctx.update((v) => ({
         ...v,

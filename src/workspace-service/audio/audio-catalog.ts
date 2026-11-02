@@ -47,6 +47,7 @@ export function fetchAudioCatalog(options: ConfListOptions): Promise<ConfListRes
       parse: parseAudioCatalog,
       baseline,
     },
-    options
+    // Audio is not a unified collection yet; keep its independent list and cache.
+    { ...options, url: options.url ?? DEFAULT_AUDIO_MODELS_URL }
   )
 }

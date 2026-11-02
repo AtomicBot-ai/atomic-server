@@ -20,14 +20,7 @@ import { CatalogRuntimeOptions } from './CatalogRuntimeOptions'
 import type { CatalogFormat } from './catalog-data'
 import { CatalogToolbar } from './CatalogToolbar'
 import { initialCatalogFilters } from './catalog-models'
-import {
-  audioAvailable,
-  catalogModelMatches,
-  matchesEngineFilter,
-  mentionsUncensored,
-  modelEngines,
-  toggleLike,
-} from '@view'
+import { catalogModelMatches, matchesEngineFilter, mentionsUncensored, modelEngines, toggleLike } from '@view'
 import { catalogStatus } from './catalog-status'
 import './catalog-desktop.css'
 export function CatalogBrowse({
@@ -184,7 +177,6 @@ export function CatalogBrowse({
           importFile,
         }}
         busy={loading}
-        audio={audioAvailable(workspace?.snapshot)}
         hasLikes={catalog.some((m) => m.likes != null || record(m.source).likes != null)}
       />
       {loading ? (

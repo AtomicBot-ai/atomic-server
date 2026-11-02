@@ -27,7 +27,6 @@ export function CatalogToolbar({
   importFile,
   hasLikes,
   busy = false,
-  audio = false,
 }: {
   category: string
   setCategory: (value: string) => void
@@ -44,7 +43,6 @@ export function CatalogToolbar({
   importFile: () => void
   hasLikes: boolean
   busy?: boolean
-  audio?: boolean
 }) {
   const searchInput = useRef<HTMLInputElement>(null)
   const { menu, setMenu, closeMenu, ref, onKeyDown } = useCatalogMenu()
@@ -61,7 +59,6 @@ export function CatalogToolbar({
     >
       <CatalogCategory
         value={category}
-        audio={audio}
         onFocus={() => setMenu('')}
         onChange={(value) => {
           setCategory(value)

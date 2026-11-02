@@ -1,7 +1,6 @@
 import { join } from 'node:path'
+import { unifiedCollection } from './unified-catalog.js'
 import type { AtcPaths } from '../../config/index.js'
-import { readDocument, writeDocument } from '../../terminal-data/index.js'
-import { object } from '../validation.js'
 import { fetchAudioCatalog } from '../audio/audio-catalog.js'
 export type CatalogCategory = 'text' | 'image' | 'video' | 'audio' | 'embedding' | 'decision'
 export interface CatalogRow {
@@ -15,10 +14,11 @@ export class WorkspaceCatalog {
   constructor(
     private paths: AtcPaths,
     private request: typeof fetch,
+    private url?: string,
     /** `ATC_AUDIO_MODELS_URL`: another audio list, a `file://` included. */
     private audioUrl?: string
   ) {}
-  /** The one catalog with a copy of its own: it works before conf serves it, and offline. */
+  /** Audio retains its independent list and cache until it joins the unified catalog. */
   private async audio(query: string, refresh: boolean) {
     const { list, source, fetchedAt, error } = await fetchAudioCatalog({
       cachePath: join(this.paths.cacheDir, 'workspace-audio.json'),
@@ -59,29 +59,13 @@ export class WorkspaceCatalog {
     if (category === 'audio') return this.audio(query, refresh)
     const file =
       category === 'text' ? 'staff-picks' : ['image', 'video'].includes(category) ? 'diffusion' : category
-    const path = join(this.paths.cacheDir, `workspace-${file}.json`)
-    let doc = await readDocument<{ at: number; data: Record<string, unknown> } | null>(path, null),
-      error: string | undefined
-    let cached = true
-    if (refresh || !doc || Date.now() - doc.at > 3600000) {
-      try {
-        const response = await this.request(
-          `https://raw.githubusercontent.com/AtomicBot-ai/atomic-chat-conf/main/models/${file}.json`,
-          { signal: AbortSignal.timeout(12000), redirect: 'error' }
-        )
-        if (!response.ok) throw new Error(`Catalog returned HTTP ${response.status}.`)
-        doc = { at: Date.now(), data: object(await response.json()) }
-        await writeDocument(path, doc)
-        cached = false
-      } catch (failure) {
-        if (!doc) throw failure
-        error = failure instanceof Error ? failure.message : String(failure)
-      }
-    }
-    const data = doc!.data
+    const result = await unifiedCollection(file, this.paths.cacheDir, this.request, refresh, this.url)
+    const data = result.value
+    const cached = result.source !== 'remote'
+    const error = result.error
     const entries = (data['picks'] ?? data['families'] ?? data['models']) as Record<string, unknown>[]
     if (!Array.isArray(entries)) throw new Error('The model catalog has an invalid format.')
     const rows = this.rows(entries, category, query)
-    return { rows, cached, updated_at: doc!.at, ...(error ? { error } : {}) }
+    return { rows, cached, updated_at: result.fetchedAt ?? 0, ...(error ? { error } : {}) }
   }
 }

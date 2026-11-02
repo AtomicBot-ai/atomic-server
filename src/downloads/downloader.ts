@@ -25,7 +25,12 @@ import { policyFetchFor } from './proxy-fetch.js'
 import { downloadRanged, rangedBytes, readRangeState } from './ranges.js'
 import { preflightSize } from './size.js'
 import { downloadSingle, partialBytes } from './single.js'
-import { defaultVerifyDeps, VALIDATION_CANCELLED_MESSAGE, verifyDownloadedFile } from './verify.js'
+import {
+  defaultVerifyDeps,
+  VALIDATION_CANCELLED_MESSAGE,
+  verifyDownloadedFile,
+  verifiedCopy,
+} from './verify.js'
 import type { VerifyDeps } from './verify.js'
 import type { FileJob } from './request.js'
 
@@ -43,6 +48,7 @@ export interface DownloadItem {
   proxy?: ProxyConfig | null
   /** What a partial belongs to, when a file's link changes between attempts (an expiring SAS link). */
   resume_key?: string
+  source?: { repo: string; revision: string; path: string; purpose?: string }
 }
 export interface DownloadOptions {
   headers?: Record<string, string>
@@ -160,6 +166,7 @@ export class Downloader {
 
     const roots = await allowedRoots(dataFolder, options.allowedRoots ?? [])
     const savePaths: string[] = []
+    const reused = new Set<number>()
     // Free space is asked of the volume holding each root the files go to, for what goes there.
     const remaining = new Map<string, { total: number; partials: number[] }>()
     for (const [i, item] of items.entries()) {
@@ -170,12 +177,13 @@ export class Downloader {
       const root = roots.find((r) => isInside(canonical, r.canonical))
       if (!root) throw new Error(`Path ${savePath} is outside of the data folder ${dataFolder}`)
       const share = remaining.get(root.given) ?? { total: 0, partials: [] }
-      share.total += sizes[i] ?? 0
+      if (await verifiedCopy(item, savePath, this.deps.verify ?? defaultVerifyDeps, signal)) reused.add(i)
+      else share.total += sizes[i] ?? 0
       remaining.set(root.given, share)
       savePaths.push(savePath)
       // Core 0.16's parallel parts (atc 0.1.0): nothing resumes them, so they go before the space check.
       await rm(`${savePath}.segments`, { recursive: true, force: true })
-      if (!resume) continue
+      if (!resume || reused.has(i)) continue
       const identity = item.resume_key ?? item.url
       const state = ranged[i] ? await readRangeState(savePath, identity, sizes[i] ?? 0) : undefined
       share.partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, identity)) ?? 0))
@@ -204,6 +212,11 @@ export class Downloader {
     const settled = await Promise.allSettled(
       items
         .map(async (item, i) => {
+          if (reused.has(i)) {
+            done.set(i, sizes[i] ?? 0)
+            publish(true)
+            return
+          }
           const job: FileJob = {
             fetch: fetchOf(item),
             url: item.url,
@@ -243,6 +256,7 @@ export class Downloader {
 
     const verify = this.deps.verify ?? defaultVerifyDeps
     for (const [i, item] of items.entries()) {
+      if (reused.has(i)) continue
       const savePath = savePaths[i] as string
       const s = sidecars(savePath)
       try {
@@ -257,7 +271,8 @@ export class Downloader {
       }
     }
     // Past verification nothing is cancelled: renaming and dropping the sidecars leaves no half state.
-    for (const savePath of savePaths) {
+    for (const [i, savePath] of savePaths.entries()) {
+      if (reused.has(i)) continue
       const s = sidecars(savePath)
       await rename(s.tmp, savePath)
       await rm(s.ranges, { force: true }).catch(() => {})

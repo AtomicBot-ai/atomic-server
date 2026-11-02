@@ -40,6 +40,7 @@ describe('an audio model plan', () => {
       {
         url: `https://huggingface.co/owner/repo/resolve/${revision}/Dir/model%20q8.gguf`,
         save_path: 'audio/models/model-q8.gguf',
+        source: { repo: 'owner/repo', revision, path: 'Dir/model q8.gguf', purpose: 'model' },
         size: 10,
         sha256,
       },
@@ -112,7 +113,11 @@ describe('an audio model plan', () => {
     const both = { ...row(), source: { ...source, quants: [q('a'), q('b', true)] } }
     expect(artifactPlan(both, '/data').model_id).toBe('voice-model:b')
     expect(artifactPlan(both, '/data', 'a').model_id).toBe('voice-model:a')
-    expect(() => artifactPlan(both, '/data', 'c')).toThrow('Choose an available quantization')
+    expect(() => artifactPlan(both, '/data', 'c')).toThrow(expect.objectContaining({ code: 'ATC_USAGE' }))
+  })
+
+  it('reports an empty catalog quantization list as an invalid catalog', () => {
+    expect(() => artifactPlan(row({ quants: [] }), '/data')).toThrow('Invalid audio catalog entry')
   })
 
   it.each([

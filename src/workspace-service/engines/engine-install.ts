@@ -4,29 +4,23 @@ import type { EngineKind, EngineVersions, EngineVersionsResponse } from '@atomic
 import type { CoreLink } from '../../core-link/index.js'
 import type { ProxyConfig } from '../../downloads/index.js'
 import { AtcError } from '../../errors/index.js'
-import { AUDIO_ENGINE_ID } from '../../contract/index.js'
 import type { ManagedInstallResult } from '../../contract/index.js'
 import { engineName } from '../../workspace-view/index.js'
 import { managedEngineState } from './managed-engines.js'
 import { object, segment } from '../validation.js'
-import { noAudioCore } from '../audio/audio-core.js'
 
 /** How the core installs an engine (`ENGINE_KINDS`); `undefined` for a name it does not know. */
 export function engineKind(engine: string): EngineKind | undefined {
-  // core-workaround: audio-engine-kind until core 0.21.0 — 0.20.5's ENGINE_KINDS has no audio-cpp
-  if (engine === AUDIO_ENGINE_ID) return 'engine-build'
   return (ENGINE_KINDS as Readonly<Record<string, EngineKind>>)[engine]
 }
 
 /** An engine the core does not register here: one sentence for every command and client. */
 export const unavailableHere = (engine: string) =>
-  engine === AUDIO_ENGINE_ID
-    ? noAudioCore()
-    : new AtcError(
-        'ATC_USAGE',
-        `${engineName(engine)} is not available on this platform: the core does not offer it here.`,
-        { hint: 'see atc engines status' }
-      )
+  new AtcError(
+    'ATC_USAGE',
+    `${engineName(engine)} is not available on this platform: the core does not offer it here.`,
+    { hint: 'see atc engines status' }
+  )
 
 async function engineVersions(link: CoreLink, engine: string): Promise<EngineVersions | undefined> {
   const { engines } = await link.request<EngineVersionsResponse>('POST', '/engines/versions', {})
