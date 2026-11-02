@@ -57,3 +57,28 @@ it('routes send failures to the server logger even after initialization', async 
   notify('HTTP 429')
   expect(warn).toHaveBeenCalledWith('HTTP 429')
 })
+
+for (const source of ['uncaught_exception', 'unhandled_rejection'] as const) {
+  it.each([
+    ['failed to initialize Segments', 'JSC_INTL_SEGMENTS_INIT_FAILED'],
+    [
+      "Intl.Segmenter.prototype.segment called on value that's not a Segmenter",
+      'JSC_INTL_SEGMENTER_BAD_RECEIVER',
+    ],
+  ])(`keeps a fixed native diagnostic for ${source}: %s`, async (message, diagnostic) => {
+    const base = new AtcErrorReporter(undefined, true)
+    const capture = vi.spyOn(base, 'capture')
+    const reporter = new LazyErrorReporter(async () => base)
+    const error = new TypeError(message)
+    error.stack = `TypeError: ${message}\n    at segment (unknown)\n    at measure (renderer.js:175:36)`
+    reporter.capture({ source, level: 'fatal', error })
+    await reporter.flush()
+    expect(capture.mock.calls[0]?.[0]).toMatchObject({
+      source,
+      level: 'fatal',
+      tags: { component: 'process', native_failure: diagnostic },
+      error: { name: 'TypeError', message: `Unexpected failure in ${source}` },
+    })
+    expect((capture.mock.calls[0]?.[0].error as Error).stack).toContain('at segment (unknown)')
+  })
+}

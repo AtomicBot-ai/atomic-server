@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { artifactPlan } from './artifact-plan.js'
 import type { CatalogRow } from './catalog.js'
+import { AtcError } from '../../errors/index.js'
 
 const modelRevision = 'a'.repeat(40)
 const vaeRevision = 'b'.repeat(40)
@@ -63,5 +64,53 @@ describe('diffusion catalog revisions', () => {
     const input = row()
     ;(input.source['vae'] as Record<string, unknown>)['revision'] = 'main'
     expect(() => artifactPlan(input, '/data')).toThrow('Invalid catalog revision')
+  })
+})
+
+describe.each(['image', 'video'] as const)('%s quantization selection', (category) => {
+  const family = (quants: unknown) => {
+    const input = row()
+    input.category = category
+    ;(input.source['transformer'] as Record<string, unknown>)['quants'] = quants
+    return input
+  }
+
+  it('refuses an unavailable explicit choice as usage instead of choosing another file', () => {
+    const input = family([{ id: 'q4', filename: 'model.gguf', bytes: 10 }])
+    expect(() => artifactPlan(input, '/data', 'unavailable')).toThrow(
+      new AtcError('ATC_USAGE', 'Choose an available quantization.')
+    )
+    try {
+      artifactPlan(input, '/data', 'unavailable')
+    } catch (error) {
+      expect(error).toBeInstanceOf(AtcError)
+      expect(error).toMatchObject({ code: 'ATC_USAGE' })
+    }
+  })
+
+  it.each([[], undefined, null, {}].map((quants) => ({ quants })))(
+    'keeps invalid catalog quants $quants as a catalog failure',
+    ({ quants }) => {
+      try {
+        artifactPlan(family(quants), '/data', 'unavailable')
+        expect.fail('A catalog without quantizations must fail.')
+      } catch (error) {
+        expect(error).not.toBeInstanceOf(AtcError)
+        expect(error).toMatchObject({ message: 'This catalog family has no downloadable quantization.' })
+      }
+    }
+  )
+
+  it('preserves explicit, recommended and first-entry selection', () => {
+    const input = family([
+      { id: 'q4', filename: 'model-q4.gguf', bytes: 10 },
+      { id: 'q8', filename: 'model-q8.gguf', bytes: 20, recommended: true },
+    ])
+    expect(artifactPlan(input, '/data', 'q4').files[0]?.url).toContain('/model-q4.gguf')
+    expect(artifactPlan(input, '/data').model_id).toBe('z-image:q8')
+    delete (
+      (input.source['transformer'] as Record<string, unknown>)['quants'] as Record<string, unknown>[]
+    )[1]!['recommended']
+    expect(artifactPlan(input, '/data').model_id).toBe('z-image:q4')
   })
 })

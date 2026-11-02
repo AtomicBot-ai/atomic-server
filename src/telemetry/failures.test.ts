@@ -37,3 +37,15 @@ describe('failure ownership and privacy', () => {
     expect(capture).toHaveBeenCalledTimes(1)
   })
 })
+
+it('retains a fixed native diagnostic at an operation boundary without classifying it as expected', () => {
+  const report = failureReport(new TypeError('failed to initialize Segments'), {
+    component: 'tui',
+    operation: 'workspace.action',
+  })
+  expect(report).toMatchObject({
+    level: 'error',
+    tags: { native_failure: 'JSC_INTL_SEGMENTS_INIT_FAILED' },
+    error: { name: 'TypeError', message: 'Unexpected failure in workspace.action' },
+  })
+})

@@ -36,6 +36,11 @@ clean Debian, Ubuntu, Fedora, Rocky and Arch containers with `scripts/smoke-linu
 README's own commands and a repository of the draft on loopback (`docs/release.md` shows how to run it
 locally with Docker).
 
+The Unicode renderer probe also runs as a small compiled executable in e2e. Windows x64 CI installs
+Bun's pinned baseline executable during setup and supplies its local path as `ATC_TEST_BASELINE_BUN`,
+so the probe checks default and baseline builds without downloading a toolchain inside a test. Local
+Windows runs check the default build; set that variable to a preinstalled baseline Bun to check both.
+
 ## Isolation
 
 `test/setup.ts` (unit, contract, e2e) sets, once per worker, `ATC_UPDATE_CHECK_ON_START=false` (no look at GitHub from a server a test starts; a contract test drives `daemon.releases.check()` against a faked `fetch`), `ATC_DATA_FOLDER` and
