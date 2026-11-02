@@ -1,8 +1,8 @@
 import {
   LIBRARY_SECTIONS,
-  PLAYGROUND_TASKS,
   SERVER_NAVIGATION,
   SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
   SETTINGS_WORKSPACE_SECTIONS,
 } from '../../../contract/index.js'
 import type { Canvas } from '../draw/canvas.js'
@@ -22,9 +22,9 @@ export function serverSection(s: WorkspaceState): string {
   return s.serverView
 }
 export function playgroundTask(s: WorkspaceState): string {
-  return s.page === 'tools' && s.operationReturn === 'chat' && s.operation.startsWith('media.')
-    ? (s.operation.split('.')[1] ?? 'chat')
-    : 'chat'
+  if (s.page !== 'tools' || s.operationReturn !== 'chat') return 'chat'
+  if (s.operation.startsWith('audio.')) return 'audio'
+  return s.operation.startsWith('media.') ? (s.operation.split('.')[1] ?? 'chat') : 'chat'
 }
 export const SERVER_PAGES: Record<string, Page> = {
   overview: 'server',

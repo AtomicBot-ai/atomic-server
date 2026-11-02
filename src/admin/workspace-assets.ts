@@ -4,6 +4,42 @@ import { realpath, stat } from 'node:fs/promises'
 import { relative, isAbsolute } from 'node:path'
 import type { CoreLink } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
+import type { AudioGalleryItem, AudioGalleryPage, AudioStatus } from '../contract/index.js'
+
+const PAGE = 100
+
+/** The core has no lookup of one clip: its gallery is read page by page, newest first. */
+async function audioClip(link: CoreLink, id: string): Promise<AudioGalleryItem | null> {
+  for (let offset = 0; ; offset += PAGE) {
+    const page = await link.request<AudioGalleryPage>('GET', `/audio/gallery?offset=${offset}&limit=${PAGE}`)
+    const item = page.items.find((candidate) => candidate.id === id)
+    if (item || !page.hasMore || !page.items.length) return item ?? null
+  }
+}
+
+/** The file of a gallery item and the folder it must be inside. */
+async function galleryFile(link: CoreLink, kind: string, id: string) {
+  if (kind === 'audio') {
+    const [item, status] = await Promise.all([
+      audioClip(link, id),
+      link.request<AudioStatus>('GET', '/audio/status'),
+    ])
+    return { item, folder: status.outputDir }
+  }
+  const prefix = kind === 'image' ? '/diffusion' : '/diffusion/video'
+  const [{ item }, status] = await Promise.all([
+    link.request<{ item: { path: string } | null }>('GET', `${prefix}/gallery/${id}`),
+    link.request<{ outputDir: string; videoOutputDir: string }>('GET', '/diffusion/status'),
+  ])
+  return { item, folder: kind === 'image' ? status.outputDir : status.videoOutputDir }
+}
+
+const CONTENT_TYPES: Readonly<Record<string, string>> = {
+  image: 'image/png',
+  video: 'video/webm',
+  audio: 'audio/wav',
+}
+
 /** Only Core gallery IDs can name a media file; client paths never enter the filesystem. */
 export async function serveWorkspaceAsset(
   link: CoreLink,
@@ -12,18 +48,11 @@ export async function serveWorkspaceAsset(
   kind: string,
   id: string
 ): Promise<void> {
-  if (!['image', 'video'].includes(kind) || !/^[a-f0-9-]{1,80}$/i.test(id))
+  if (!(kind in CONTENT_TYPES) || !/^[a-f0-9-]{1,80}$/i.test(id))
     throw new AtcError('ATC_USAGE', 'Unknown media item.')
-  const prefix = kind === 'image' ? '/diffusion' : '/diffusion/video'
-  const [{ item }, status] = await Promise.all([
-    link.request<{ item: { path: string } | null }>('GET', `${prefix}/gallery/${id}`),
-    link.request<{ outputDir: string; videoOutputDir: string }>('GET', '/diffusion/status'),
-  ])
+  const { item, folder } = await galleryFile(link, kind, id)
   if (!item) throw new AtcError('ATC_USAGE', 'This media item no longer exists.')
-  const [path, root] = await Promise.all([
-    realpath(item.path),
-    realpath(kind === 'image' ? status.outputDir : status.videoOutputDir),
-  ])
+  const [path, root] = await Promise.all([realpath(item.path), realpath(folder)])
   const rel = relative(root, path)
   if (rel.startsWith('..') || isAbsolute(rel))
     throw new AtcError('ATC_USAGE', 'The media file is outside the gallery.')
@@ -50,7 +79,7 @@ export async function serveWorkspaceAsset(
     code = 206
   }
   res.writeHead(code, {
-    'content-type': kind === 'image' ? 'image/png' : 'video/webm',
+    'content-type': CONTENT_TYPES[kind]!,
     'content-length': String(end - start + 1),
     'cache-control': 'no-store',
     'x-content-type-options': 'nosniff',

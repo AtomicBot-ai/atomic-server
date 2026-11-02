@@ -1,0 +1,25 @@
+/* The clip list beside the shared media controls; see media-studio.css. */
+.audio-attribution {
+  color: var(--ew-muted);
+  font-size: 12px;
+  padding: 0 4px;
+}
+.audio-clips {
+  display: flex;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+.audio-clips article {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.audio-clips article strong {
+  overflow-wrap: anywhere;
+}
+.audio-clips audio {
+  width: 100%;
+}

@@ -62,6 +62,8 @@ system, hardware and compatible builds; `atc engines list` shows what is availab
 - **LiteRT-LM** (`litert-lm`) — Google's `.litertlm` models on supported CPU, GPU or Intel NPU
   accelerators; see [LiteRT-LM](#litert-lm) for platforms and setup.
 - **stable-diffusion.cpp** (`sd-cpp`) — image generation.
+- **audio.cpp** (`audio-cpp`) — speech, music and sound effects; see
+  [Audio generation](#audio-generation).
 
 Engines are downloaded on demand. Install one with `atc engines install <engine-id>`, or choose it in
 the web admin or terminal UI; the core selects a compatible build for your hardware.
@@ -270,12 +272,36 @@ resumes, is checked by the core, and writes `model.yml` last; a folder without i
 model answers one request at a time: several clients are served in turn. The list is cached for an
 hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
+## Audio generation
+
+Audio runs on audio.cpp, one model at a time, through the embedded core 0.20.7. The catalog holds MOSS-TTS-Nano 100M and
+Qwen3-TTS 1.7B for speech, ACE-Step 1.5 Turbo for music and Stable Audio 3 Small SFX for effects:
+
+```bash
+atc control call models.catalog --input '{"category":"audio"}' --json
+atc control call artifacts.plan --input '{"category":"audio","model_id":"moss-tts-nano-100m"}' --json
+atc control call artifacts.install --input '{"plan_digest":"<digest>","request_id":"my-voice"}' --json
+atc control call artifacts.load --input '{"id":"my-voice"}' --json
+atc control call audio.generate --input '{"mode":"speech","request":{"text":"Hello."}}' --json
+atc control call audio.job --input '{"id":"<job id>"}' --json
+```
+
+The web admin has the same catalog under Models → Audio and a studio under Playground → Audio; the
+terminal UI has the catalog and runs the `audio.*` operations from Playground → Audio. A job's mode must
+be the loaded model's. Music and effects always name a length: `durationSec`, else the model's catalog
+default. The engine reports no percentage, so a job shows its phase. A download pins the Hugging Face
+revision and checks size and sha256, and goes into `<data>/audio/models/`; clips go to `<data>/audios`.
+The list is conf's `models/audio.json`, cached for an hour, with a copy bundled for a first launch that
+cannot reach it; `ATC_AUDIO_MODELS_URL` names another one. Models are shown with the notice their
+license asks for: Stable Audio with "Powered by Stability AI".
+
 ## Where data lives
 
 ```
 <data> = <system data>/atomic-chat-cli/data      --data-folder or ATC_DATA_FOLDER override it
 <data>/atomic-core/           the core: instance.lock, control-token (0600), settings.json, processes.json, telemetry.json, model-claims/
 <data>/llamacpp/models/       GGUF models, one folder with model.yml each (both llama.cpp providers)
+<data>/audio/models/          audio models, one file each; clips go to <data>/audios/
 <data>/<provider>/backends/   engine builds the core installs
 <data>/atc/                   what only atc owns (owner-only ACL on Windows)
   config.json                 settings (0644, written atomically; unknown keys are kept)

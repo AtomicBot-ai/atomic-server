@@ -4,8 +4,8 @@ export { serverRunning } from '../server/server-status.js'
 import {
   LIBRARY_SECTIONS,
   SETTINGS_SECTIONS,
-  SETTINGS_WORKSPACE_SECTIONS,
   PLAYGROUND_TASKS,
+  SETTINGS_WORKSPACE_SECTIONS,
   SERVER_NAVIGATION,
   CONNECTION_AGENTS,
 } from '../../../contract/index.js'

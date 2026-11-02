@@ -25,8 +25,8 @@ import {
   SERVER_NAVIGATION,
   LIBRARY_SECTIONS,
   SETTINGS_SECTIONS,
-  SETTINGS_WORKSPACE_SECTIONS,
   PLAYGROUND_TASKS,
+  SETTINGS_WORKSPACE_SECTIONS,
 } from '@contract'
 import type { Page } from './types'
 import type { Workspace } from './useWorkspace'

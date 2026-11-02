@@ -41,7 +41,10 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
       if (taskId && !engine) {
         await new Promise<void>((resolve) => {
           finishEngine = resolve
-          link.snapshotValue.downloads = [{ taskId, transferred: 50, total: 100, percent: 50 }]
+          const progress = { taskId, transferred: 50, total: 100, percent: 50 }
+          link.snapshotValue.downloads = [progress]
+          // A real core announces progress, invalidating the workspace's shared snapshot immediately.
+          server.event('download:progress', progress)
         })
       }
       engine = true
@@ -183,6 +186,7 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
     await sees('Choose your engine')
     await sees('llama.cpp')
     terminal.stdin.press('\r')
+    await waitFor(() => Boolean(finishEngine))
     await sees('50%')
     expect(terminal.stdout.lastFrame()).not.toContain('Press any key')
     expect(engine).toBe(false)

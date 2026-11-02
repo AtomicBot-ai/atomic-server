@@ -26,6 +26,53 @@ const progress = (stage: string, elapsed_ms = 1) => ({
   elapsed_ms,
 })
 
+describe('audio in the workspace snapshot', () => {
+  const noRoute = new AtomicCoreError('INVALID_ARGUMENT', 'No such control route: /audio/status')
+
+  it('reports a missing audio route as an integration failure', async () => {
+    const { link, service } = context()
+    link.responses['GET /audio/status'] = noRoute
+    const snap = await service.snapshot()
+    expect(snap.services).toEqual([])
+    expect(snap.errors).toEqual([{ source: 'audio', message: noRoute.message }])
+    expect(snap.eye).toBe('offline')
+  })
+
+  it('offers audio with nothing loaded', async () => {
+    const { link, service } = context()
+    link.responses['GET /audio/status'] = { model: { state: 'unloaded', loaded: null }, activeJob: null }
+    const snap = await service.snapshot()
+    expect(snap.services).toEqual([])
+  })
+
+  it('lists the loaded model as a service of audio.cpp', async () => {
+    const { link, service } = context()
+    const loaded = { modelId: 'moss:q8_0', mode: 'speech' }
+    link.responses['GET /audio/status'] = { model: { state: 'loaded', loaded }, activeJob: null }
+    const snap = await service.snapshot()
+    expect(snap.services).toMatchObject([
+      { id: 'audio', kind: 'audio', provider: 'audio-cpp', model: 'moss:q8_0', state: 'loaded' },
+    ])
+  })
+
+  it('shows a running job as busy', async () => {
+    const { link, service } = context()
+    link.snapshotValue.server = { ...link.snapshotValue.server, running: true }
+    link.responses['GET /audio/status'] = {
+      model: { state: 'loaded', loaded: { modelId: 'moss:q8_0' } },
+      activeJob: { id: 'j' },
+    }
+    expect((await service.snapshot()).eye).toBe('busy')
+  })
+
+  it('reports a failed audio status read', async () => {
+    const { link, service } = context()
+    link.responses['GET /audio/status'] = new AtomicCoreError('INTERNAL_ERROR', 'boom')
+    const snap = await service.snapshot()
+    expect(snap.errors).toEqual([{ source: 'audio', message: 'boom' }])
+  })
+})
+
 describe('the workspace snapshot', () => {
   it('lists managed installations and unfinished operations, with phase, progress, digest and error', async () => {
     const { link, service } = context()

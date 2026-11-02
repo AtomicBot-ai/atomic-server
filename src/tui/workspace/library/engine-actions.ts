@@ -11,6 +11,7 @@ import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
+import { engineHasSettings } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
 import { buildAction, readBuilds } from './engine-builds.js'
 import { settingsAction, readEngineForm } from './engine-settings.js'
@@ -91,7 +92,7 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
     if (opened?.engine === engine) {
       await readBuilds(ctx).catch(() => {})
       try {
-        if (engine !== 'sd-cpp') panel(ctx, engine, { form: await readEngineForm(ctx, opened) })
+        if (engineHasSettings(engine)) panel(ctx, engine, { form: await readEngineForm(ctx, opened) })
       } catch (error) {
         panel(ctx, engine, { error: error instanceof Error ? error.message : String(error) })
       }

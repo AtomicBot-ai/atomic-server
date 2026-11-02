@@ -72,7 +72,22 @@ export {
 } from './engines/foundry.js'
 export { liteRtAcceleratorLines, liteRtVariantLabel, liteRtVerdictText } from './engines/litert.js'
 export { LOAD_STAGE_LABELS, loadStageText } from './engines/loads.js'
-export { engineFamily, engineName, orderEngines } from './engines/engine-order.js'
+export {
+  engineFamily,
+  engineHasSettings,
+  engineName,
+  engineTaskNote,
+  orderEngines,
+} from './engines/engine-order.js'
+export {
+  attributionOf,
+  audioControls,
+  audioDetails,
+  audioJobRequest,
+  audioPhaseText,
+  loadedAudioModel,
+} from './audio/audio-view.js'
+export type { AudioControl } from './audio/audio-view.js'
 export {
   changedValues,
   fieldText,

@@ -6,6 +6,7 @@ const operations: Record<string, [string, string][]> = {
     ['media.image.create', 'Image request'],
     ['media.video.create', 'Video request'],
   ],
+  'audio': [['audio.generate', 'Audio request']],
   'embedding': [['media.embedding.run', 'Embedding request']],
   'decision': [
     ['media.decision.run', 'Classification request'],

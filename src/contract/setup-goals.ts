@@ -63,6 +63,16 @@ export const SETUP_GOALS = [
     next: 'Open Connections for the video control commands. Use Playground to validate a short request.',
   },
   {
+    id: 'audio',
+    label: 'Audio service',
+    category: 'audio',
+    task: 'audio',
+    destination: 'server',
+    summary: 'Serve speech, music and sound effects to your apps and tools.',
+    guidance: 'Models range from a few hundred megabytes to several gigabytes. Begin with one short clip.',
+    next: 'Open Connections for the audio control commands. Use Playground to test a short clip.',
+  },
+  {
     id: 'search',
     label: 'Embedding service',
     category: 'embedding',

@@ -5,6 +5,7 @@ import { bytes, record, rows, text } from '../../types'
 import { Action, Field, JsonResult } from '../../Controls'
 import { PlanCommands } from './PlanCommands'
 import { describeError } from '@/services/admin-api'
+import { PlanFacts } from './PlanFacts'
 
 export function ModelInstall({
   autoStart = false,
@@ -240,12 +241,7 @@ export function ModelInstall({
         {error && <Action onClick={() => setRevision((v) => v + 1)}>Retry</Action>}
         {plan && !planning && !autoStart && (
           <>
-            <div className="plan-facts">
-              <div>
-                <span>Download</span>
-                <strong>{bytes(plan.total_download_bytes ?? plan.total_bytes)}</strong>
-              </div>
-            </div>
+            <PlanFacts plan={plan} model={model} />
             {technical && (
               <PlanCommands
                 execute={execute}

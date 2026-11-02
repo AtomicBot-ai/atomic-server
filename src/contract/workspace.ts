@@ -38,7 +38,7 @@ export interface WorkspaceServiceRow {
   id: string
   provider: string
   model: string
-  kind: 'chat' | 'image-video' | 'embedding' | 'decision'
+  kind: 'chat' | 'image-video' | 'audio' | 'embedding' | 'decision'
   state: string
   details: Record<string, unknown>
 }

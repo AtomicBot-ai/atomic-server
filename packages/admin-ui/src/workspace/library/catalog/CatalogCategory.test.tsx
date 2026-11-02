@@ -4,16 +4,46 @@ import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { Catalog } from './Catalog'
 
-function renderCatalog() {
-  const { workspace, execute } = workspaceFixture({
-    'engines.list': { engines: [] },
-    'models.catalog': [],
-    'models.installed': [],
-    'artifacts.list': [],
-  })
+function renderCatalog(over = {}, catalog: unknown = []) {
+  const { workspace, execute } = workspaceFixture(
+    {
+      'engines.list': { engines: [] },
+      'models.catalog': catalog,
+      'models.installed': [],
+      'artifacts.list': [],
+    },
+    over
+  )
   render(<Catalog workspace={workspace} openCommand={vi.fn()} />)
   return execute
 }
+
+it('offers audio models without waiting for a status snapshot', async () => {
+  renderCatalog()
+  await userEvent.click(screen.getByRole('combobox', { name: 'Model category' }))
+  expect(screen.getByRole('option', { name: /Images/ })).toBeInTheDocument()
+  expect(screen.getByRole('option', { name: /Audio/ })).toBeInTheDocument()
+})
+
+it('lists audio models with the notice their license asks for', async () => {
+  const stable = {
+    id: 'stable-audio-3-small-sfx',
+    name: 'Stable Audio 3 Small SFX',
+    description: 'Short sound effects from a description.',
+    category: 'audio',
+    source: {
+      attribution: 'Powered by Stability AI',
+      engines: ['audio-cpp'],
+      quants: [{ id: 'q8_0', label: 'Q8' }],
+    },
+  }
+  const execute = renderCatalog({}, { rows: [stable] })
+  await userEvent.click(screen.getByRole('combobox', { name: 'Model category' }))
+  await userEvent.click(screen.getByRole('option', { name: /Audio/ }))
+  await waitFor(() => expect(execute).toHaveBeenCalledWith('models.catalog', { category: 'audio' }))
+  expect(await screen.findByText('Powered by Stability AI')).toBeInTheDocument()
+  expect(screen.getByText('Stable Audio 3 Small SFX')).toBeInTheDocument()
+})
 
 it('previews category choices with the keyboard and Escape returns focus without changing the catalog', async () => {
   const execute = renderCatalog()

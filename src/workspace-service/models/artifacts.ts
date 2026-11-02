@@ -280,6 +280,7 @@ export class ArtifactService {
       await link.request('PUT', '/diffusion/config', { dataFolder: this.options.paths.dataFolder })
       return link.request('POST', '/diffusion/model/load', job.plan.load)
     }
+    if (job.plan.category === 'audio') return link.request('POST', '/audio/model/load', job.plan.load)
     await link.request('PUT', `/${job.plan.category}/config`, job.plan.load)
     return link.request('POST', `/${job.plan.category}/load`, {})
   }

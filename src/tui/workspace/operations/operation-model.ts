@@ -73,12 +73,13 @@ export function operationChoices(s: WorkspaceState) {
     runtime: ['api', 'remote', 'settings', 'environments', 'config'],
     diagnostics: ['hardware', 'logs'],
     models: ['models', 'engines', 'settings', 'environments', 'artifacts', 'setup'],
-    playground: ['chat', 'media'],
+    playground: ['chat', 'media', 'audio'],
   }
   const rows = s.operations.filter((o) => (groups[s.toolGroup] ?? [s.toolGroup]).includes(o.group))
   const preferred = [
     'media.image.create',
     'media.video.create',
+    'audio.generate',
     'media.embedding.run',
     'media.decision.run',
     'media.router.run',

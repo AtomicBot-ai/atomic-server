@@ -7,7 +7,14 @@ import { EngineReload } from './EngineReload'
 import { useEngineSettingsData } from './use-engine-settings-data'
 import { useEffect, useState } from 'react'
 import type { GpuFacts } from '@atomic-chat/core/contracts'
-import { changedValues, engineFamily, engineName, settingValuesError } from '@view'
+import {
+  changedValues,
+  engineFamily,
+  engineHasSettings,
+  engineName,
+  engineTaskNote,
+  settingValuesError,
+} from '@view'
 import { useDialog } from '../../useDialog'
 import type { Workspace } from '../../useWorkspace'
 import { Action, Field } from '../../Controls'
@@ -28,7 +35,7 @@ export function EngineSettings({
   onClose: () => void
 }) {
   const { values, setValues, saved, schema, revision, error, setError, loading, markSaved } =
-    useEngineSettingsData(provider, w.execute, provider !== 'sd-cpp')
+    useEngineSettingsData(provider, w.execute, engineHasSettings(provider))
   const [query, setQuery] = useState(''),
     [group, setGroup] = useState('All')
   const [formError, setFormError] = useState('')
@@ -111,9 +118,7 @@ export function EngineSettings({
         {provider === 'foundry-local' && <FoundryLocal workspace={w} onClose={onClose} embedded />}
         {provider === 'litert-lm' && <LiteRtLm workspace={w} onClose={onClose} embedded />}
         <p className="ew-muted engine-settings-note">
-          {provider === 'sd-cpp'
-            ? 'Generation settings are saved with image and video tasks.'
-            : 'Settings apply on the next model load.'}
+          {engineTaskNote(provider) ?? 'Settings apply on the next model load.'}
         </p>
         {loading && <p role="status">Loading engine settings…</p>}
         {(formError || error) && (
@@ -155,7 +160,7 @@ export function EngineSettings({
           />
           Review changes ({Object.keys(changes).length})
         </label>
-        {!visible.length && !loading && provider !== 'sd-cpp' && (
+        {!visible.length && !loading && engineHasSettings(provider) && (
           <p className="ew-muted">No settings match. Search another term or choose All.</p>
         )}
         <div className="form-grid">

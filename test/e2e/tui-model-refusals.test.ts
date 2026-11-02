@@ -1,3 +1,4 @@
+import { catalogFixture } from '../helpers/model-catalog-fixture.js'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
@@ -36,10 +37,14 @@ it.skipIf(process.platform === 'win32' || !hasPython())(
     readyWorkspace(tmp.paths.dataFolder)
     mkdirSync(tmp.paths.cacheDir, { recursive: true })
     writeFileSync(
-      join(tmp.paths.cacheDir, 'workspace-staff-picks.json'),
+      join(tmp.paths.cacheDir, 'atomic-model-catalog-v1.json'),
       JSON.stringify({
         at: Date.now(),
-        data: { picks: [{ model_name: repository, title: 'Incompatible fixture', format: 'safetensors' }] },
+        catalog: catalogFixture({
+          'staff-picks': {
+            picks: [{ model_name: repository, title: 'Incompatible fixture', format: 'safetensors' }],
+          },
+        }),
       })
     )
     try {

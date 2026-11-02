@@ -35,7 +35,7 @@ const FAMILY_LOGO_RULES: Array<[RegExp, string]> = [
   [/mai-image/i, '/model-brands/svg/microsoft-color.svg'],
   [/ming-image|inclusionai/i, '/model-brands/images/model-provider/inclusionai.webp'],
   [
-    /stable[-_ ]?diffusion|stable-image|stability|\bsd[_-]?xl|sdxl|\bsd[_-]?3|\bsd[_-]?1\.?5|v1-5-pruned|\bsd-turbo/i,
+    /stable[-_ ]?diffusion|stable[-_ ]?audio|stable-image|stability|\bsd[_-]?xl|sdxl|\bsd[_-]?3|\bsd[_-]?1\.?5|v1-5-pruned|\bsd-turbo/i,
     '/model-brands/svg/stability-color.svg',
   ],
   [/deepseek/i, '/model-brands/svg/deepseek-color.svg'],

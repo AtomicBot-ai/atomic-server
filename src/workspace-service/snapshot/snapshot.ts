@@ -2,7 +2,7 @@ import { cloudChatServices } from '../cloud/chat-readiness.js'
 import type { CoreLink } from '../../core-link/index.js'
 import type { AtcConfig, AtcPaths } from '../../config/index.js'
 import type { WorkspaceEngine, WorkspaceSnapshot, WorkspaceServiceRow } from '../../contract/index.js'
-import { MANAGED_FINISHED_PHASES } from '../../contract/index.js'
+import { AUDIO_ENGINE_ID, MANAGED_FINISHED_PHASES } from '../../contract/index.js'
 import type { CoreSnapshot } from '@atomic-chat/core/client'
 import { HostStepJournal, waitingHostSteps } from '../../host/index.js'
 import type { ClientKeys } from '../../terminal-data/index.js'
@@ -60,7 +60,7 @@ export async function workspaceSnapshot(
   ])
   const errors: WorkspaceSnapshot['errors'] = []
   const results = await Promise.allSettled(
-    ['diffusion', 'embedding', 'decision'].map(async (kind) => {
+    ['diffusion', 'embedding', 'decision', 'audio'].map(async (kind) => {
       const status = await link.request('GET', `/${kind}/status`)
       if (kind !== 'decision') return status
       // Core's decision status omits the public model ID; the module's config owns it.
@@ -85,7 +85,7 @@ export async function workspaceSnapshot(
     errors.push({ source: 'cloud', message: error instanceof Error ? error.message : String(error) })
   }
   results.forEach((result, i) => {
-    const kind = (['image-video', 'embedding', 'decision'] as const)[i]!
+    const kind = (['image-video', 'embedding', 'decision', 'audio'] as const)[i]!
     if (result.status === 'rejected') {
       errors.push({
         source: kind,
@@ -108,7 +108,9 @@ export async function workspaceSnapshot(
       provider:
         kind === 'image-video'
           ? 'sd-cpp'
-          : String(object(details['engine'])['provider'] ?? details['provider'] ?? ''),
+          : kind === 'audio'
+            ? AUDIO_ENGINE_ID
+            : String(object(details['engine'])['provider'] ?? details['provider'] ?? ''),
       model: String(details['model_id'] ?? details['modelId'] ?? loaded['modelId'] ?? loaded['id'] ?? ''),
       kind,
       state,

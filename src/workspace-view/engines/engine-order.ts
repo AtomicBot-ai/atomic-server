@@ -30,9 +30,21 @@ const NAMES: Readonly<Record<string, string>> = {
   'foundry-local': 'Foundry Local',
   'litert-lm': 'LiteRT-LM',
   'sd-cpp': 'stable-diffusion.cpp',
+  'audio-cpp': 'audio.cpp',
 }
 
 export const engineName = (id: string): string => NAMES[id] ?? id
+
+/** Engines that take their settings with each task: they have no provider settings in the core. */
+const TASK_SETTINGS: Readonly<Record<string, string>> = {
+  'sd-cpp': 'Generation settings are saved with image and video tasks.',
+  'audio-cpp': 'Generation settings are sent with each audio task.',
+}
+
+export const engineHasSettings = (id: string): boolean => !(id in TASK_SETTINGS)
+
+/** What an engine's panel says about its settings when it has none to edit. */
+export const engineTaskNote = (id: string): string | undefined => TASK_SETTINGS[id]
 
 /** `ids` in display order; a stable sort, so unknown engines keep the order they came in. */
 export function orderEngines<T extends string>(ids: readonly T[]): T[] {

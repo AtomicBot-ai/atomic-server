@@ -183,7 +183,7 @@ export function CatalogBrowse({
         <Empty>Loading models…</Empty>
       ) : !visible.length ? (
         <Empty>No models match these filters.</Empty>
-      ) : ['image', 'video', 'embedding', 'decision'].includes(category) ? (
+      ) : ['image', 'video', 'audio', 'embedding', 'decision'].includes(category) ? (
         <CatalogMedia
           {...{
             models: visible,

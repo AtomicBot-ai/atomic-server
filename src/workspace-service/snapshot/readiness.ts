@@ -5,6 +5,27 @@ import type { WorkspaceServiceRow } from '../../contract/index.js'
 import { AtcError } from '../../errors/index.js'
 import { callPublic } from './public-api.js'
 import { object } from '../validation.js'
+import type { AudioJob, AudioMode } from '../../contract/index.js'
+
+const VERIFICATION_DEADLINE_MS = 600000
+
+/** The smallest real clip: a word to say, or the shortest sound the loaded model's mode can make. */
+async function verifyAudio(link: CoreLink, service: WorkspaceServiceRow) {
+  const mode = object(object(service.details['model'])['loaded'])['mode'] as AudioMode
+  const { id } = await link.request<AudioJob>('POST', '/audio/jobs', {
+    mode,
+    request: mode === 'speech' ? { text: 'Ready.' } : { text: 'A short soft click.', durationSec: 1 },
+  })
+  const deadline = Date.now() + VERIFICATION_DEADLINE_MS
+  while (Date.now() < deadline) {
+    const { job } = await link.request<{ job: AudioJob | null }>('GET', `/audio/jobs/${id}`)
+    if (job?.state === 'completed') return { task: 'audio', job_id: id }
+    if (!job || ['failed', 'cancelled'].includes(job.state))
+      throw new AtcError('ATC_USAGE', job?.error?.message ?? 'The verification job failed.')
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  throw new AtcError('ATC_USAGE', 'Verification is still running. Check the job before trying again.')
+}
 /** A successful small inference, not a populated model menu, completes guided setup. */
 export async function verifyWorkload(
   link: CoreLink,
@@ -46,6 +67,8 @@ export async function verifyWorkload(
       throw new AtcError('ATC_USAGE', result.message ?? 'The decision model is unavailable.')
     return { task: 'decision' }
   }
+  const audio = ready.find((s) => s.kind === 'audio')
+  if (audio) return verifyAudio(link, audio)
   const media = ready.find((s) => s.kind === 'image-video')!
   const loaded = object(object(media.details['model'])['loaded']),
     video = loaded['modality'] === 'video'
@@ -73,7 +96,7 @@ export async function verifyWorkload(
   const job = object(await link.request('POST', `${prefix}/jobs`, body)),
     jobId = String(job['jobId'] ?? job['id'] ?? object(job['job'])['id'] ?? '')
   if (!jobId) throw new AtcError('ATC_USAGE', 'The verification job did not return an ID.')
-  const deadline = Date.now() + 600000
+  const deadline = Date.now() + VERIFICATION_DEADLINE_MS
   while (Date.now() < deadline) {
     const { job: state } = await link.request<{
       job: { state: string; error?: { message?: string } } | null

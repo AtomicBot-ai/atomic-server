@@ -260,3 +260,10 @@ it('forgets a finished install a day later while the server keeps running', asyn
   expect((await queue.list()).map((j) => j.id)).not.toContain(job.id)
   expect(existsSync(join(tmp.paths.atcDir, 'engine-downloads', `${job.id}.json`))).toBe(false)
 })
+it('queues audio.cpp as an engine of builds on a core with audio', async () => {
+  const { link, queue } = fixture()
+  link.responses['POST /engines/versions'] = { engines: [{ engine: 'audio-cpp', latest: null }] }
+  const job = await queue.enqueue('audio-cpp')
+  expect(job).toMatchObject({ engine: 'audio-cpp', name: 'audio.cpp' })
+  await vi.waitFor(() => expect(link.calls.some((c) => c.path === '/engines/audio-cpp/update')).toBe(true))
+})

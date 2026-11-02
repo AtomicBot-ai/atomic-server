@@ -9,6 +9,7 @@ export const CATEGORY_NAMES: Record<string, string> = {
   text: 'Text',
   image: 'Images',
   video: 'Video',
+  audio: 'Audio',
   embedding: 'Embeddings',
   decision: 'Decisions',
 }

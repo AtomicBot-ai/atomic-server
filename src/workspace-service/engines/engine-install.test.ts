@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 import { DIGEST_A, plan } from '../../../test/helpers/managed-fixtures.js'
 import { coreOperation } from '../core-operations.js'
-import { ensureArtifactEngine, installEngine } from './engine-install.js'
+import { engineKind, ensureArtifactEngine, installEngine } from './engine-install.js'
 
 /** `POST /engines/versions` as the core answers it for one engine. */
 function versions(engine: EngineId, over: Record<string, unknown> = {}) {
@@ -232,3 +232,56 @@ it.each([{ flash_attn: 'qa-invalid-mode' }, { cache_type_k: 'qa-invalid-cache' }
     expect(link.calls).toEqual([])
   }
 )
+
+describe('audio.cpp from the pinned core', () => {
+  const listed = {
+    engines: [{ engine: 'audio-cpp', kind: 'engine-build', builds: [], active: null, latest: null }],
+  }
+
+  it('uses the engine kind exported by the core', () => {
+    expect(engineKind('audio-cpp')).toBe('engine-build')
+  })
+
+  it('installs through the core where the core lists it', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = listed
+    await installEngine(link, 'audio-cpp')
+    expect(link.calls.at(-1)).toMatchObject({ method: 'POST', path: '/engines/audio-cpp/update' })
+  })
+
+  it('reads its builds from the engine builds of the core', async () => {
+    const link = fakeCoreLink()
+    await coreOperation(link, 'engines.catalog', { engine: 'audio-cpp' })
+    expect(link.calls.at(-1)).toMatchObject({ path: '/engine-builds/audio-cpp/catalog' })
+  })
+
+  it('is not installed for a model when a build is active', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engine-builds/audio-cpp/catalog'] = { active: { tag: 'v0.9.3' } }
+    await ensureArtifactEngine(link, 'audio-cpp', 'task')
+    expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
+  })
+
+  it('removes a build through the core', async () => {
+    const link = fakeCoreLink()
+    await coreOperation(link, 'engines.remove', {
+      engine: 'audio-cpp',
+      version: 'v0.9.3',
+      variant: 'macos-arm64',
+    })
+    expect(link.calls.at(-1)).toMatchObject({
+      method: 'DELETE',
+      path: '/engines/audio-cpp/builds/v0.9.3/macos-arm64',
+    })
+  })
+
+  it('refuses installation when the core does not offer a build on this platform', async () => {
+    const link = fakeCoreLink()
+    link.responses['POST /engines/versions'] = { engines: [] }
+    await expect(installEngine(link, 'audio-cpp')).rejects.toMatchObject({
+      code: 'ATC_USAGE',
+      message: expect.stringContaining('not available on this platform'),
+    })
+    expect(link.calls.some((c) => c.path.endsWith('/update'))).toBe(false)
+  })
+})

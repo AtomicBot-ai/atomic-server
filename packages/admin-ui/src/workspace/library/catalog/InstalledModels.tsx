@@ -1,7 +1,7 @@
 import { useConfirmation } from '../../use-confirmation'
 import { DeleteConfirmation } from '../DeleteConfirmation'
 import { useState } from 'react'
-import { engineName, loadStageText } from '@view'
+import { attributionOf, engineName, loadStageText } from '@view'
 import { describeError } from '@/services/admin-api'
 import { Action, Empty, Field, Panel } from '../../Controls'
 import { record, text } from '../../types'
@@ -42,7 +42,13 @@ export function InstalledModels({
       onConfirm: () =>
         service.kind === 'chat'
           ? w.execute('models.unload', { provider: service.provider, model_id: service.model })
-          : w.execute(service.kind === 'image-video' ? 'media.unload' : `media.${service.kind}.unload`),
+          : w.execute(
+              service.kind === 'image-video'
+                ? 'media.unload'
+                : service.kind === 'audio'
+                  ? 'audio.unload'
+                  : `media.${service.kind}.unload`
+            ),
     })
   return (
     <>
@@ -110,6 +116,7 @@ export function InstalledModels({
                   <small>
                     {engineName(selectedEngine)} · {state}
                   </small>
+                  {attributionOf(row) && <small>{attributionOf(row)}</small>}
                   {providers.length > 1 && !artifact && (
                     <select
                       aria-label={`Load ${id} with`}

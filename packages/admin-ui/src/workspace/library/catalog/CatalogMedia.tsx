@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { text } from '../../types'
 import type { RecordValue } from '../../types'
+import { attributionOf } from '@view'
 import { ModelMark } from './ModelMark'
 import { modelId } from './catalog-models'
 export function CatalogMedia({
@@ -43,6 +44,7 @@ export function CatalogMedia({
                     <span>
                       <strong>{text(model.title ?? model.name, id)}</strong>
                       <small>{text(model.description ?? model.summary, '')}</small>
+                      {attributionOf(model) && <small>{attributionOf(model)}</small>}
                       {status && <small data-model-status={status}>{status}</small>}
                     </span>
                     <span className="hub-model-chevron">

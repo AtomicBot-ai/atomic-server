@@ -1,5 +1,5 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/hub/HubCategorySelect.tsx @ 807b4d9; adapted: existing accessible listbox and supported catalog categories.
-import { GitBranch, Image, MessageSquare, Network, Video } from 'lucide-react'
+import { AudioLines, GitBranch, Image, MessageSquare, Network, Video } from 'lucide-react'
 import { DetailPicker } from '../../server/DetailPicker'
 import './catalog-category.css'
 
@@ -21,6 +21,12 @@ const choices = [
     name: 'Video',
     icon: <Video size={16} aria-hidden="true" />,
     detail: 'Generate short videos',
+  },
+  {
+    id: 'audio',
+    name: 'Audio',
+    icon: <AudioLines size={16} aria-hidden="true" />,
+    detail: 'Generate speech, music and sound effects',
   },
   {
     id: 'embedding',

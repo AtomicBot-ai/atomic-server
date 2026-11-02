@@ -109,7 +109,7 @@ export const modelsCommand = defineCommand({
       options: {
         category: {
           type: 'string',
-          description: 'text, image, video, embedding or decision',
+          description: 'text, image, video, audio, embedding or decision',
           default: 'text',
         },
         ...engineOption,

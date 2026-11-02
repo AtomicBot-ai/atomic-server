@@ -88,13 +88,15 @@ export interface HttpCoreLinkOptions {
   log?: (message: string) => void
 }
 
+/** How a core answers a path it has no route for: an older core, not a failed request. */
+export const isMissingRoute = (error: unknown): boolean =>
+  error instanceof AtomicCoreError &&
+  error.code === 'INVALID_ARGUMENT' &&
+  /No such control route/.test(error.message)
+
 /** A core build without the `/environments` routes answers "no such route": say so plainly. */
 function unavailable(error: unknown): never {
-  if (
-    error instanceof AtomicCoreError &&
-    error.code === 'INVALID_ARGUMENT' &&
-    /No such control route/.test(error.message)
-  ) {
+  if (isMissingRoute(error)) {
     throw new AtcError('ATC_NOT_IMPLEMENTED', 'Managed environments are not available in this core build.', {
       details: 'the embedded core has no /environments routes yet (core branch feat/tenzor-rt)',
     })

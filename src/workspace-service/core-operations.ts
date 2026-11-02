@@ -183,6 +183,28 @@ export async function coreOperation(
       return post('/decision/decide', request)
     case 'media.router.run':
       return post('/decision/score', request)
+    case 'audio.status':
+      return link.request('GET', '/audio/status')
+    case 'audio.capabilities':
+      return link.request('GET', '/audio/capabilities')
+    case 'audio.files':
+      return link.request('GET', '/audio/model-files')
+    case 'audio.gallery':
+      return link.request('GET', '/audio/gallery?offset=0&limit=100')
+    case 'audio.configure':
+      return link.request('PUT', '/audio/config', request)
+    case 'audio.load':
+      return link.request('POST', '/audio/model/load', request)
+    case 'audio.unload':
+      return link.request('POST', '/audio/model/unload', {})
+    case 'audio.generate':
+      return link.request('POST', '/audio/jobs', { mode: input['mode'], request })
+    case 'audio.job':
+      return link.request('GET', `/audio/jobs/${id()}`)
+    case 'audio.cancel':
+      return link.request('POST', `/audio/jobs/${id()}/cancel`, {})
+    case 'audio.delete':
+      return link.request('DELETE', `/audio/gallery/${id()}`)
     default:
       return managedEngineOperation(link, name, input)
   }

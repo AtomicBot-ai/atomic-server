@@ -6,8 +6,8 @@ import { remoteAction } from '../server/remote-actions.js'
 import { serverShellAction } from '../server/server-shell-actions.js'
 import {
   WORKSPACE_OPERATIONS,
-  PLAYGROUND_TASKS,
   SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
   SETTINGS_WORKSPACE_SECTIONS,
 } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
@@ -129,6 +129,12 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
         edit: '',
         scroll: 0,
       }))
+      return true
+    }
+    // Audio has no studio here yet: its operations, on the runner they share with the rest of the server.
+    if (task === 'audio') {
+      await navigationAction('open-operation:audio.generate', ctx)
+      ctx.update((v) => ({ ...v, operationReturn: 'chat' }))
       return true
     }
     const name = `media.${task}.${task === 'image' || task === 'video' ? 'create' : 'run'}`

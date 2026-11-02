@@ -611,7 +611,7 @@ Usage: atc models catalog [options]
 Browse Atomic model picks by task
 
 Options:
-      --category <value>   text, image, video, embedding or decision (default: text)
+      --category <value>   text, image, video, audio, embedding or decision (default: text)
       --engine <provider>  Engine provider ID
 
 Global options:
