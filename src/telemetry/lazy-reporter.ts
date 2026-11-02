@@ -2,6 +2,7 @@ import type { ErrorReport, ErrorSink, TelemetryControl } from '@atomic-chat/core
 import type { AtcErrorReporter } from './reporter.js'
 import { flushWithin } from './flush.js'
 import { technicalError } from './failures.js'
+import { nativeFailureTags } from './native-diagnostics.js'
 
 export interface ProcessErrorSink extends ErrorSink {
   setHostConsent?(enabled: boolean | undefined): void
@@ -41,7 +42,7 @@ export class LazyErrorReporter implements ProcessErrorSink {
       report = {
         ...report,
         error: technicalError(report.error, report.source),
-        tags: { ...report.tags, component: 'process' },
+        tags: { ...report.tags, component: 'process', ...nativeFailureTags(report.error) },
       }
     const task = (this.reporter ??= Promise.resolve().then(() =>
       this.create(this.hostConsent, (message) => this.warn(message))

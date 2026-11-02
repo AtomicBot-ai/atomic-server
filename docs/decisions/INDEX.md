@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-02** — [Diagnose native segmenter failures without collecting text](2026-11-02-diagnose-native-segmenter-failures.md) — finite runtime diagnostics and native Unicode renderer probes; SERVER-N remains unresolved.
+
 - **2026-11-01** — [Treat a missing agent CLI as an expected connect refusal](2026-11-01-treat-missing-agent-cli-as-usage.md) — exit with actionable usage feedback before launch and keep missing installations out of Sentry.
 - **2026-11-01** — [Distinguish missing Hugging Face model resources from Hub outages](2026-11-01-classify-hugging-face-check-failures.md) — reject missing model metadata locally and preserve safe HTTP status codes for reportable Hub failures.
 - **2026-11-01** — [Keep optional notification refusals out of error reports](2026-11-01-keep-notification-refusals-local.md) — show expected browser permission outcomes locally and keep reporting unexpected request failures.
