@@ -55,24 +55,30 @@ export class AdminServer {
       })
     })
     server.keepAliveTimeout = 65_000
-    await new Promise<void>((resolve, reject) => {
-      server.once('error', (error: NodeJS.ErrnoException) =>
-        reject(
-          new AtcError(
-            'ATC_ADMIN_BIND_FAILED',
-            `The admin could not listen on ${options.host}:${options.port}.`,
-            {
-              details: error.code === 'EADDRINUSE' ? 'the port is in use' : error.message,
-              hint: 'choose another with `atc config set admin.port <port>`',
-            }
-          )
-        )
+    let requestedPort = options.port
+    try {
+      await listen(server, options.host, requestedPort).catch(async (error: NodeJS.ErrnoException) => {
+        if (error.code !== 'EADDRINUSE' || requestedPort === 0) throw error
+        // Bind port 0 directly: probing or scanning leaves a race before the actual listen.
+        requestedPort = 0
+        await listen(server, options.host, requestedPort)
+      })
+    } catch (error) {
+      const failure = error as NodeJS.ErrnoException
+      throw new AtcError(
+        'ATC_ADMIN_BIND_FAILED',
+        `The admin could not listen on ${options.host}:${requestedPort}.`,
+        {
+          details: failure.code === 'EADDRINUSE' ? 'the port is in use' : failure.message,
+          hint: 'choose another with `atc config set admin.port <port>`',
+        }
       )
-      server.listen(options.port, options.host, () => resolve())
-    })
+    }
     const address = server.address()
     const port = typeof address === 'object' && address ? address.port : options.port
     const admin = new AdminServer(server, options.host, port)
+    if (options.port !== 0 && requestedPort === 0)
+      options.log.warn(`Port ${options.host}:${options.port} is in use; web admin moved to ${admin.url}`)
     options.log.info(`admin listening on ${admin.url}`)
     return admin
   }
@@ -83,4 +89,21 @@ export class AdminServer {
       this.server.close(() => resolve())
     })
   }
+}
+
+/** Remove both one-shot listeners before retrying a failed bind on the same server. */
+function listen(server: Server, host: string, port: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const failed = (error: Error) => {
+      server.off('listening', ready)
+      reject(error)
+    }
+    const ready = () => {
+      server.off('error', failed)
+      resolve()
+    }
+    server.once('error', failed)
+    server.once('listening', ready)
+    server.listen(port, host)
+  })
 }

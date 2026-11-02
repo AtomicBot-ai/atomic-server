@@ -197,7 +197,10 @@ operations as the commands, and polls the workspace snapshot every 2.5 s for wha
    only source of hardware facts. `atc` never sends `PUT /hardware/override`; `atc hardware` and
    `atc doctor` show what the core found (`docs/decisions/2026-10-19-take-hardware-facts-from-the-core.md`).
 5. Admin, unless `--no-admin` or `admin.autoStart=false`: `ensureAdminToken`, then `AdminServer.start` on
-   `admin.host:admin.port`. A non-loopback host is refused (`ATC_ADMIN_BIND_FAILED`, iteration 5).
+   `admin.host:admin.port`. If the port is occupied (`EADDRINUSE`), the same loopback host binds an
+   OS-assigned port instead; the log records the move and `admin_url` publishes the actual address.
+   The configured port remains the preference for the next start. Other bind errors still fail startup;
+   a non-loopback host is refused (`ATC_ADMIN_BIND_FAILED`, iteration 5).
 6. `writeDaemonRecord(atc/run/daemon.json)` — from now on commands accept this owner as an `atc` daemon.
 7. `runDaemon` prints the core's ready line plus `admin_url` as one JSON line on stdout, then waits on
    `Promise.race([io.waitForShutdown(shutdown), core.stopped])`. Shutdown: `core.shutdown()`, stop the
