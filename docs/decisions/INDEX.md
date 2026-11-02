@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-02** — [Treat document path refusals as usage](2026-11-02-treat-document-path-refusals-as-usage.md) — actionable terminal attachment feedback without reporting expected path/size refusals; unexpected I/O failures remain reportable.
+
 - **2026-11-02** — [Diagnose native segmenter failures without collecting text](2026-11-02-diagnose-native-segmenter-failures.md) — finite runtime diagnostics and native Unicode renderer probes; SERVER-N remains unresolved.
 
 - **2026-11-01** — [Treat a missing agent CLI as an expected connect refusal](2026-11-01-treat-missing-agent-cli-as-usage.md) — exit with actionable usage feedback before launch and keep missing installations out of Sentry.
