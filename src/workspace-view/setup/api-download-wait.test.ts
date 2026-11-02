@@ -51,3 +51,20 @@ it('does not miss a download before its selection or setup record has arrived', 
   ).toBe('Model is downloading...')
   expect(apiDownloadWait({ setups: [], downloads: [] }, true)?.label).toBe('Model is preparing...')
 })
+
+it.each(['chat', 'audio', 'image-video', 'embedding', 'decision'] as const)(
+  'keeps a ready %s service available during another download or preparation',
+  (kind) => {
+    for (const state of ['ready', 'loaded', 'running']) {
+      const snapshot = { ...pending, services: [{ kind, state }] as never }
+      expect(apiDownloadWait(snapshot)).toBeNull()
+      expect(apiDownloadWait(snapshot, true)).toBeNull()
+    }
+  }
+)
+it.each(['loading', 'failed', 'stopped'])(
+  'does not count an audio service in state %s as usable',
+  (state) => {
+    expect(apiDownloadWait({ ...pending, services: [{ kind: 'audio', state }] as never })).not.toBeNull()
+  }
+)

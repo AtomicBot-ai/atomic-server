@@ -60,3 +60,16 @@ it.each(['api.start', 'api.restart'])(
     await expect(requireReadiness(operation, {}, async () => state(false, true))).resolves.toBeUndefined()
   }
 )
+
+it.each(['audio', 'image-video', 'embedding', 'decision'] as const)(
+  'allows API start and restart for a loaded %s service during a text download',
+  async (kind) => {
+    const snapshot = {
+      ...state(true),
+      services: [{ kind, state: 'loaded' }],
+      setups: [{ setup_id: 'j', stage: 'downloading_model', plan: { model_id: 'qwen' } }],
+    } as unknown as WorkspaceSnapshot
+    for (const operation of ['api.start', 'api.restart'])
+      await expect(requireReadiness(operation, {}, async () => snapshot)).resolves.toBeUndefined()
+  }
+)

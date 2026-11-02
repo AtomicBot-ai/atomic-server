@@ -4,8 +4,7 @@ import { downloadRows } from '../downloads/downloads.js'
 import { downloadStopped } from '../downloads/download-controls.js'
 
 export function apiDownloadWait(snapshot: Partial<WorkspaceSnapshot> | null | undefined, preparing = false) {
-  if (snapshot?.services?.some((s) => s.kind === 'chat' && ['ready', 'loaded', 'running'].includes(s.state)))
-    return null
+  if (snapshot?.services?.some((s) => ['ready', 'loaded', 'running'].includes(s.state))) return null
   if (preparing)
     return {
       label: 'Model is preparing...',

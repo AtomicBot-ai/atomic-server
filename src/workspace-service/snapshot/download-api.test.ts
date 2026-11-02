@@ -19,3 +19,20 @@ it('stops an empty listener when downloading begins but preserves a live model a
   await suspendDownloadingApi('config.update', snapshot, stop)
   expect(snapshot).not.toHaveBeenCalled()
 })
+
+it.each(['audio', 'image-video', 'embedding', 'decision'] as const)(
+  'does not suspend an API serving %s when another download begins',
+  async (kind) => {
+    const snapshot = async () =>
+      ({
+        api: { running: true },
+        services: [{ kind, state: 'loaded' }],
+        setups: [{ setup_id: 'job', stage: 'downloading_model', plan: { model_id: 'q' } }],
+        downloads: [],
+      }) as unknown as WorkspaceSnapshot
+    const stop = vi.fn(async () => ({}))
+    await suspendDownloadingApi('models.install', snapshot, stop)
+    await suspendDownloadingApi('engines.enqueue', snapshot, stop)
+    expect(stop).not.toHaveBeenCalled()
+  }
+)
