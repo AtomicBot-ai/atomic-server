@@ -32,6 +32,7 @@ const KEEP_READY_MS = 24 * 60 * 60 * 1000
 export class EngineDownloads {
   private jobs = new Map<string, EngineJob>()
   private runs = new Map<string, Promise<void>>()
+  private errors = new Map<string, unknown>()
   private admission = new SerialWork()
   private worker = new SerialWork()
   private loaded: Promise<void> | undefined
@@ -75,6 +76,7 @@ export class EngineDownloads {
     for (const job of [...this.jobs.values()])
       if (job.stage === 'ready' && this.now() - job.updated_at > KEEP_READY_MS && !this.runs.has(job.id)) {
         this.jobs.delete(job.id)
+        this.errors.delete(job.id)
         await rm(this.path(job.id), { force: true })
       }
   }
@@ -197,6 +199,7 @@ export class EngineDownloads {
       if (this.runs.has(id) || !terminal.has(job.stage))
         throw new AtcError('ATC_USAGE', `${job.name} is still installing.`)
       this.jobs.delete(id)
+      this.errors.delete(id)
       await rm(this.path(id), { force: true })
       return { id, dismissed: true }
     })
@@ -206,12 +209,16 @@ export class EngineDownloads {
     await this.load()
     const [selected, version, variant] = (await this.selection.read()).split('|')
     if (!target && selected === engine && version && variant) target = { version, variant }
+    const fail = (job: EngineJob): never => {
+      const cause = this.errors.get(job.id)
+      if (cause instanceof Error) throw cause
+      throw new AtcError('ATC_INTERNAL', String(job['error'] ?? 'Engine installation failed.'))
+    }
     const install = async () => {
       const job = await this.enqueue(engine, target ? { target } : {})
       await this.runs.get(job.id)
       const result = this.jobs.get(job.id)!
-      if (result.stage !== 'ready')
-        throw new AtcError('ATC_INTERNAL', String(result['error'] ?? 'Engine installation failed.'))
+      if (result.stage !== 'ready') fail(result)
     }
     const pending = [...this.jobs.values()].find(
       (job) =>
@@ -222,8 +229,7 @@ export class EngineDownloads {
     )
     if (pending) {
       await this.runs.get(pending.id)
-      if (pending.stage !== 'ready')
-        throw new AtcError('ATC_INTERNAL', String(pending['error'] ?? 'Engine installation failed.'))
+      if (pending.stage !== 'ready') fail(pending)
       return
     }
     if (target) {
@@ -248,6 +254,7 @@ export class EngineDownloads {
     if (active) await this.selection.remember(`${job.engine}|${active.version}|${active.variant}`)
   }
   private launch(job: EngineJob) {
+    this.errors.delete(job.id)
     const run = this.worker
       .run('engine-builds', async () => {
         job.stage = 'connecting'
@@ -268,6 +275,7 @@ export class EngineDownloads {
           await this.rememberActive(job).catch(() => undefined)
           outcome = { stage: 'ready', transferred: job.total }
         } catch (error) {
+          this.errors.set(job.id, error)
           outcome = { stage: 'failed', error: error instanceof Error ? error.message : String(error) }
         }
         // The record first, then what snapshots show: a job seen as finished is finished on disk, with
@@ -276,7 +284,8 @@ export class EngineDownloads {
         await writeDocument(this.path(job.id), finished)
         Object.assign(job, finished)
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (!this.errors.has(job.id)) this.errors.set(job.id, error)
         job.stage = 'interrupted'
       })
       .finally(() => this.runs.delete(job.id))
