@@ -97,27 +97,30 @@ describe('durable media installation', () => {
 describe('an audio model download', () => {
   const payload = 'small voice model',
     sha256 = createHash('sha256').update(payload).digest('hex')
-  const catalog = {
-    schema_version: 1,
-    models: [
-      {
-        id: 'voice',
-        name: 'Voice',
-        description: 'A voice.',
-        attribution: 'Powered by Someone',
-        mode: 'speech',
-        engines: ['audio-cpp'],
-        family: 'voice_tts',
-        task: 'tts',
-        repo: 'owner/voice',
-        revision: 'c'.repeat(40),
-        quants: [{ id: 'q8', path: 'dir/voice.gguf', filename: 'voice.gguf', bytes: payload.length, sha256 }],
-        default_voice: 'vivian',
-        controls: ['voice'],
-        defaults: { durationSec: 7 },
-      },
-    ],
-  }
+  const catalog = catalogFixture({
+    audio: {
+      models: [
+        {
+          id: 'voice',
+          name: 'Voice',
+          description: 'A voice.',
+          attribution: 'Powered by Someone',
+          mode: 'speech',
+          engines: ['audio-cpp'],
+          family: 'voice_tts',
+          task: 'tts',
+          repo: 'owner/voice',
+          revision: 'c'.repeat(40),
+          quants: [
+            { id: 'q8', path: 'dir/voice.gguf', filename: 'voice.gguf', bytes: payload.length, sha256 },
+          ],
+          default_voice: 'vivian',
+          controls: ['voice'],
+          defaults: { durationSec: 7 },
+        },
+      ],
+    },
+  })
   function fixture() {
     const tmp = tmpDataFolder()
     cleanup.push(tmp.cleanup)

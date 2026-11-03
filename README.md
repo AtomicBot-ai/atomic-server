@@ -291,8 +291,9 @@ terminal UI has the catalog and runs the `audio.*` operations from Playground â†
 be the loaded model's. Music and effects always name a length: `durationSec`, else the model's catalog
 default. The engine reports no percentage, so a job shows its phase. A download pins the Hugging Face
 revision and checks size and sha256, and goes into `<data>/audio/models/`; clips go to `<data>/audios`.
-The list is conf's `models/audio.json`, cached for an hour, with a copy bundled for a first launch that
-cannot reach it; `ATC_AUDIO_MODELS_URL` names another one. Models are shown with the notice their
+The list is the `audio` collection of conf's `models/catalog.json`, the catalog every category reads:
+cached for an hour, with a copy bundled for a first launch that cannot reach it; `ATC_MODEL_CATALOG_URL`
+names another one. Models are shown with their maker's logo, one line about them and the notice their
 license asks for: Stable Audio with "Powered by Stability AI".
 
 ## Where data lives

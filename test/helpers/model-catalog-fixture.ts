@@ -10,6 +10,7 @@ export function catalogFixture(documents: Record<string, Record<string, unknown>
     'diffusion': 'families',
     'embedding': 'models',
     'decision': 'models',
+    'audio': 'models',
   }
   for (const [name, document] of Object.entries(documents)) {
     const field = fields[name]!

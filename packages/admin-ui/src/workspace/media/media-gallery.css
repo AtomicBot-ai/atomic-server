@@ -193,6 +193,18 @@
   color: var(--ew-muted);
   margin-top: 6px;
 }
+.media-model-list .hub-model-mark {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+.media-model-list .media-model-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 @media (max-width: 1100px) {
   .media-studio {
     grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);

@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-03** — [Read audio models from the unified catalog](2026-11-03-read-audio-from-the-unified-catalog.md) — the `audio` collection of `models/catalog.json`, no separate list or `ATC_AUDIO_MODELS_URL`; plans keep the maker's logo key and one line for the studio picker.
+
 - **2026-11-02** — [Restore selected local models when finishing setup](2026-11-02-restore-local-model-onboarding.md) — shared saved selection, automatic local loading, and responsive TUI API controls.
 
 - **2026-11-02** — [Treat document path refusals as usage](2026-11-02-treat-document-path-refusals-as-usage.md) — actionable terminal attachment feedback without reporting expected path/size refusals; unexpected I/O failures remain reportable.
