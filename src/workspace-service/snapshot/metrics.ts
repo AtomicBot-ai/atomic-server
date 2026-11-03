@@ -38,6 +38,9 @@ export class WorkspaceMetrics {
       ttft_ms: number(finish['ttft_ms']),
       completion_tokens: number(finish['completion_tokens']),
       tokens_estimated: finish['tokens_estimated'] === true,
+      // The window the request ran with and the prompt the engine reused; a core before 0.21 sends neither.
+      context_length: number(finish['ctx_len']),
+      cached_tokens: number(finish['cached_tokens']),
       finished_at: number(event['finished_at_ms']) ?? Date.now(),
     }
     this.rows = [row, ...this.rows.filter((r) => r.id !== id)].slice(0, 1000)
