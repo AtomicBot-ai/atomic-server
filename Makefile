@@ -21,5 +21,5 @@ fast: ## lint, typecheck and the unit + contract tests touched by uncommitted ch
 verify: ## every gate, as CI runs them
 	npm run verify
 
-release: ## npm run release -- patch --push
+release: ## npm run release -- patch --push (VERSION=rc for a pre-release)
 	npm run release -- $(or $(VERSION),patch) --push
