@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { AtomicCoreError } from '@atomic-chat/core'
 import { afterEach, expect, it, vi } from 'vitest'
 import { tmpDataFolder } from '../../../test/helpers/tmp-data-folder.js'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
@@ -140,7 +141,7 @@ it('rejects managed consent bypass and invalid targets before any core install',
   const { link, queue } = fixture()
   await expect(queue.enqueue('vllm')).rejects.toThrow('review')
   await expect(
-    queue.enqueue('atomic-prism', { target: { version: { token: 'x' }, variant: 'cpu' } })
+    queue.enqueue('atomic-prism', { target: { version: { token: 'private' }, variant: 'cpu' } })
   ).rejects.toThrow('version and variant')
   expect(link.calls).toEqual([])
 })
@@ -266,4 +267,24 @@ it('queues audio.cpp as an engine of builds on a core with audio', async () => {
   const job = await queue.enqueue('audio-cpp')
   expect(job).toMatchObject({ engine: 'audio-cpp', name: 'audio.cpp' })
   await vi.waitFor(() => expect(link.calls.some((c) => c.path === '/engines/audio-cpp/update')).toBe(true))
+})
+it('rethrows the original engine install error to ensure callers', async () => {
+  const { link, queue } = fixture()
+  const coreError = new AtomicCoreError('ENGINE_INSTALL_FAILED', 'Engine archive download failed.')
+  link.responses['POST /engines/atomic-prism/update'] = coreError
+  await expect(queue.ensure('atomic-prism', 'artifact-task')).rejects.toBe(coreError)
+
+  let rejectUpdate!: (error: unknown) => void
+  link.responses['POST /engines/llamacpp-upstream/update'] = () =>
+    new Promise((_, reject) => {
+      rejectUpdate = reject
+    })
+  await queue.enqueue('llamacpp-upstream')
+  await vi.waitFor(() =>
+    expect(link.calls.some((c) => c.path === '/engines/llamacpp-upstream/update')).toBe(true)
+  )
+  const pending = queue.ensure('llamacpp-upstream', 'joined-task', { version: 'b1', variant: 'cpu' })
+  const joinedError = new AtomicCoreError('IO_ERROR', 'Checksum mismatch.')
+  rejectUpdate(joinedError)
+  await expect(pending).rejects.toBe(joinedError)
 })
