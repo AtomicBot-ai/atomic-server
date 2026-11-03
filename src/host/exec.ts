@@ -29,6 +29,8 @@ export interface ExecOptions {
   stdio?: 'pipe' | 'inherit'
   /** Kill the process tree on timeout, not only the direct child. */
   killTree?: boolean
+  /** Windows: pass `args` as written, for a cmd.exe line already quoted for cmd. */
+  windowsVerbatimArguments?: boolean
 }
 
 export type ExecFn = (command: string, args: readonly string[], options?: ExecOptions) => Promise<ExecResult>
@@ -59,6 +61,7 @@ export const execCommand: ExecFn = (command, args, options = {}) =>
       ...(options.env ? { env: options.env } : {}),
       ...(options.cwd ? { cwd: options.cwd } : {}),
       ...(options.signal ? { signal: options.signal } : {}),
+      ...(options.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
     })
     const timer = setTimeout(() => {
       timedOut = true

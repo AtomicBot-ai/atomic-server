@@ -70,6 +70,29 @@ describe('server operations', () => {
     ).rejects.toThrow('Start the API before connecting an agent.')
   })
 
+  it("hands an agent profile the served window, and refuses one below the agent's minimum", async () => {
+    const profile = async (window: number | undefined) => {
+      const { link, parts: p } = parts({
+        request: (async () =>
+          Response.json({
+            data: [{ id: 'm', ...(window ? { context_length: window } : {}) }],
+          })) as typeof fetch,
+      })
+      link.snapshotValue.server.running = true
+      link.snapshotValue.sessions = [{ model_id: 'm' }] as never
+      return serverOperation(p, 'connection.profile', { agent: 'codex', model: 'm' })
+    }
+    expect(await profile(65536)).toMatchObject({
+      context_length: 65536,
+      profile: { args: expect.arrayContaining(['model_context_window=65536']) },
+    })
+    expect(await profile(undefined)).toMatchObject({ context_length: null })
+    await expect(profile(8192)).rejects.toMatchObject({
+      code: 'ATC_USAGE',
+      message: 'Codex needs a context window of at least 32,768 tokens; m is served with 8,192.',
+    })
+  })
+
   it('refuses to finish guided setup without a running API and a loaded model', async () => {
     const snapshot = async () => ({ api: { running: false }, services: [] })
     await expect(serverOperation(parts({ snapshot }).parts, 'setup.complete', {})).rejects.toThrow(

@@ -29,6 +29,8 @@ it('releases mouse capture before handing off and returns to Server without stop
       env: {},
       find: () => '/fake/atag',
       exec: async () => ({ code: 0, stdout: '0.6.6', stderr: '', timedOut: false }),
+      platform: 'linux',
+      request: (async () => Response.json({ data: [{ id: 'test-model' }] })) as typeof fetch,
     },
     launchAgent: async (launch) => {
       expect(terminal.stdout.writes.join('')).toContain('\u001b[?1006l')

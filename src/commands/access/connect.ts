@@ -46,6 +46,8 @@ export const connectCommand = defineCommand({
       folder: join(ctx.paths.atcDir, 'agents'),
       find: ctx.host.findOnPath,
       exec: ctx.host.exec,
+      platform: ctx.host.facts.platform,
+      request: ctx.io.fetch,
     })
     await runAgent(launch)
     return 0

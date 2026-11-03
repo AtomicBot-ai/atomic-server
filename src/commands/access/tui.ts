@@ -69,6 +69,8 @@ export const tuiCommand = defineCommand({
         folder: join(paths.dataFolder, 'atc', 'agents'),
         find: ctx.host.findOnPath,
         exec: ctx.host.exec,
+        platform: ctx.host.facts.platform,
+        request: io.fetch,
       },
       screen: screen as Screen | undefined,
       request: io.fetch,
