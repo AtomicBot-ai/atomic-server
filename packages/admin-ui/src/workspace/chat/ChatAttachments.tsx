@@ -48,23 +48,34 @@ export function ChatAttachments({
           const files = [...(event.target.files ?? [])]
           event.target.value = ''
           try {
-            if (files.length + attachments.length > 5)
-              throw new Error('Attach at most five files per message.')
+            if (files.length + attachments.length > 5) {
+              setError('Attach at most five files per message.')
+              return
+            }
             const features = await workspaceApi.execute<WorkspaceFeatures>('features.get')
             const settings = features?.attachments ?? DEFAULT_ATTACHMENTS
             const next: Attachment[] = []
             for (const file of files) {
-              if (file.size > settings.max_file_size_mb * 1024 * 1024)
-                throw new Error(`Attachments must be below ${settings.max_file_size_mb} MB.`)
+              if (file.size > settings.max_file_size_mb * 1024 * 1024) {
+                setError(`Attachments must be below ${settings.max_file_size_mb} MB.`)
+                return
+              }
               if (/^image\//.test(file.type)) {
-                if (!vision)
-                  throw new Error('This model cannot read images. Choose a vision model to attach one.')
-                if (!/^image\/(png|jpeg|webp)$/.test(file.type))
-                  throw new Error('Attach a PNG, JPEG or WebP image.')
+                if (!vision) {
+                  setError('This model cannot read images. Choose a vision model to attach one.')
+                  return
+                }
+                if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+                  setError('Attach a PNG, JPEG or WebP image.')
+                  return
+                }
                 const image = await attachmentImage(file, settings.max_image_size_px)
                 next.push({ name: file.name, image })
               } else {
-                if (!settings.enabled) throw new Error('Enable document attachments in Settings first.')
+                if (!settings.enabled) {
+                  setError('Enable document attachments in Settings first.')
+                  return
+                }
                 const parsed = await workspaceApi.execute<{ content: string }>('attachments.parse', {
                   name: file.name,
                   data: await fileData(file),
