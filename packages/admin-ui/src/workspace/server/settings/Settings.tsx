@@ -45,6 +45,7 @@ export function Settings({
         <WorkspaceSettings key={section} section={section} workspace={w} />
       ) : section === 'shortcuts' ? (
         <section className="settings-card">
+          <p>Page shortcuts work outside text fields and dialogs. Option is the Alt key on Mac.</p>
           <dl className="settings-shortcuts">
             {[
               // The rail's order is the keys' order (`useWorkspaceShortcuts`).

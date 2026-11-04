@@ -1,0 +1,45 @@
+.desktop-workspace :is(.media-recipe-dialog, .media-model-picker) {
+  width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px;
+  gap: 16px;
+  border-radius: 12px;
+}
+.desktop-workspace :is(.media-recipe-dialog, .media-model-picker) > .panel-heading {
+  margin: 0;
+  flex-shrink: 0;
+  align-items: center;
+}
+.desktop-workspace .media-dialog-body {
+  overflow: auto;
+  min-height: 0;
+}
+.desktop-workspace .media-dialog-body > p {
+  margin-top: 0;
+}
+.desktop-workspace .media-dialog-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+.desktop-workspace .media-model-list {
+  max-height: none;
+  overflow: visible;
+  margin: 0;
+}
+.desktop-workspace .media-model-list > div {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.desktop-workspace .media-model-list > div > span:not(.hub-model-mark) {
+  flex-basis: 180px;
+}
+.desktop-workspace .floating-download-dialog {
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  border-radius: 12px;
+}

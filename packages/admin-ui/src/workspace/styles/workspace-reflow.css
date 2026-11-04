@@ -1,0 +1,117 @@
+/* Collapse secondary navigation before compressing the editor. Match useWorkspaceSidebar. */
+.desktop-workspace {
+  grid-template-columns: 72px 240px minmax(0, 1fr);
+}
+.desktop-workspace .desktop-rail {
+  padding: 8px 4px;
+  gap: 8px;
+}
+.desktop-workspace .desktop-rail .rail-item {
+  width: 64px;
+  min-height: 56px;
+  height: auto;
+  padding: 8px 4px;
+}
+.desktop-workspace .desktop-sidebar {
+  margin: 0;
+  border-radius: 0;
+  border-width: 0 1px 0 0;
+  padding: 16px 8px;
+}
+.desktop-workspace .sidebar-sections button {
+  min-height: 36px;
+  padding: 8px 12px;
+}
+.desktop-workspace .sidebar-sections svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.desktop-workspace .desktop-main .workspace-content:has(> .server-page),
+.desktop-workspace .desktop-main .workspace-content:has(> .settings-page),
+.desktop-workspace .desktop-main .workspace-content {
+  padding: 24px;
+}
+.desktop-workspace .desktop-main .workspace-content:has(.media-studio),
+.desktop-workspace .desktop-main .workspace-content.chat-page {
+  padding: 0;
+}
+@media (min-width: 1100px) {
+  .desktop-workspace.sidebar-collapsed {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+}
+@media (max-width: 1099px) {
+  .desktop-workspace,
+  .desktop-workspace.sidebar-collapsed {
+    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .desktop-workspace .desktop-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .desktop-workspace .desktop-sidebar {
+    display: none;
+    position: absolute;
+    inset: 0 auto 0 72px;
+    width: min(240px, calc(100vw - 88px));
+    z-index: 45;
+  }
+  .desktop-workspace.sidebar-open .desktop-sidebar {
+    display: flex;
+  }
+  .desktop-workspace .sidebar-sections,
+  .desktop-workspace .desktop-sidebar header {
+    display: grid;
+  }
+  .desktop-workspace .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0 0 0 72px;
+    z-index: 40;
+    border: 0;
+    background: #0007;
+  }
+  .desktop-workspace .desktop-main .workspace-content:has(.media-studio) {
+    overflow: auto;
+  }
+  .desktop-workspace .media-studio {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .desktop-workspace .media-controls {
+    overflow: visible;
+    border-right: 0;
+  }
+  .desktop-workspace .media-output {
+    min-height: 420px;
+  }
+  .desktop-workspace .media-viewer {
+    min-height: 300px;
+  }
+}
+@media (max-width: 600px) {
+  .desktop-workspace .desktop-main .workspace-content {
+    padding: 16px;
+  }
+  .desktop-workspace .media-controls {
+    padding: 16px;
+  }
+  .desktop-workspace .settings-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .desktop-workspace .settings-item-control {
+    flex-basis: 100%;
+  }
+  .desktop-workspace .server-save-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .desktop-workspace .server-save-bar > span:first-child {
+    flex-basis: 100%;
+  }
+}

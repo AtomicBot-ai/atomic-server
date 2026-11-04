@@ -41,6 +41,11 @@ export function useWorkspaceShortcuts(options: {
         event.preventDefault()
         window.dispatchEvent(new Event('atomic:new-chat'))
       } else if (event.altKey && !event.ctrlKey && !event.metaKey && WORKSPACE_NAVIGATION[digit - 1]) {
+        if (
+          event.target instanceof Element &&
+          event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
+        )
+          return
         event.preventDefault()
         navigation.navigate(WORKSPACE_NAVIGATION[digit - 1]!.id)
       } else if (event.key === 'Escape') {

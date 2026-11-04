@@ -7,7 +7,7 @@ html:not(.dark) .desktop-workspace {
   --ew-line: #d7d7da;
   --ew-muted: #626269;
   --ew-text: #202023;
-  --ew-teal: #277d68;
+  --ew-teal: var(--atomic-accent);
   color: var(--ew-text);
   background: var(--ew-bg);
 }
@@ -34,7 +34,7 @@ html:not(.dark)
 html:not(.dark) .desktop-workspace :is(input, select, textarea, .hub-toolbar > select) {
   background: var(--ew-bg);
   color: var(--ew-text);
-  border-color: var(--ew-line);
+  border-color: var(--atomic-control-border);
 }
 html:not(.dark)
   .desktop-workspace
@@ -59,7 +59,7 @@ html:not(.dark) .desktop-workspace .desktop-server-control {
   background: #e3f0ec;
 }
 html:not(.dark) .desktop-workspace .server-power.is-running button {
-  color: #277d68;
+  color: var(--atomic-accent);
 }
 html:not(.dark) .desktop-workspace .rail-brand img {
   filter: brightness(0);

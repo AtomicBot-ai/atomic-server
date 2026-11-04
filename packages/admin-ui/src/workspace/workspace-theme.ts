@@ -26,8 +26,14 @@ export const LIGHT_COLORS = {
 export function workspaceTheme(theme: 'light' | 'dark' = 'dark'): CSSProperties {
   const colors = theme === 'light' ? LIGHT_COLORS : WORKSPACE_COLORS
   return Object.fromEntries(
-    Object.entries({ ...colors, onAccent: theme === 'light' ? '#ffffff' : colors.composerInk }).map(
-      ([name, value]) => [`--atomic-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`, value]
-    )
+    Object.entries({
+      ...colors,
+      controlBorder: theme === 'light' ? '#708a80' : '#66897d',
+      focusRing: theme === 'light' ? '#086759' : '#84e1cc',
+      onAccent: theme === 'light' ? '#ffffff' : colors.composerInk,
+    }).map(([name, value]) => [
+      `--atomic-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`,
+      value,
+    ])
   ) as CSSProperties
 }

@@ -18,8 +18,32 @@ vi.mock('./intro/EngineIntro', () => ({
 }))
 
 beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })
   vi.mocked(useWorkspace).mockReturnValue(workspaceFixture({}).workspace)
   vi.spyOn(workspaceApi, 'execute').mockResolvedValue([] as never)
+})
+
+it.each(['¡', '№'])('leaves Option typing in a text field alone (%s)', async (key) => {
+  await open()
+  await userEvent.click(screen.getByRole('button', { name: 'Playground', exact: true }))
+  const draft = screen.getByRole('textbox', { name: 'Message' })
+  draft.focus()
+  expect(fireEvent.keyDown(draft, { key, code: 'Digit1', altKey: true })).toBe(true)
+  expect(screen.getByRole('button', { name: 'Playground', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page'
+  )
+})
+
+it('starts with a collapsed sidebar at 1024 and closes the drawer after choosing a task', async () => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+  await open()
+  expect(screen.getByRole('button', { name: 'Toggle sidebar' })).toHaveAttribute('aria-expanded', 'false')
+  await userEvent.click(screen.getByRole('button', { name: 'Playground', exact: true }))
+  expect(screen.getByRole('button', { name: 'Toggle sidebar' })).toHaveAttribute('aria-expanded', 'true')
+  await userEvent.click(screen.getByRole('button', { name: 'Images', exact: true }))
+  expect(screen.getByRole('button', { name: 'Toggle sidebar' })).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.getByRole('textbox', { name: 'Prompt' })).toBeInTheDocument()
 })
 afterEach(() => {
   cleanup()
@@ -40,7 +64,7 @@ it.each([
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Playground', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: label, exact: true }))
-  await userEvent.click(screen.getAllByRole('button', { name: 'Choose a model', exact: true })[0])
+  await userEvent.click(screen.getAllByRole('button', { name: `Choose ${category} model`, exact: true })[0])
   await userEvent.click(screen.getByRole('button', { name: 'Browse models', exact: true }))
   expect(await screen.findByLabelText('Model category')).toHaveValue(category)
 })

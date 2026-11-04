@@ -26,3 +26,12 @@ it.each([
     b = luminance(colors[`--atomic-${background}`]!)
   expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(4.5)
 })
+
+it.each(['light', 'dark'] as const)('keeps the %s focus ring distinct from surrounding surfaces', (theme) => {
+  const colors = workspaceTheme(theme) as Record<string, string>
+  for (const surface of ['ground', 'surface', 'header']) {
+    const a = luminance(colors['--atomic-focus-ring']!),
+      b = luminance(colors[`--atomic-${surface}`]!)
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeGreaterThanOrEqual(3)
+  }
+})

@@ -90,6 +90,8 @@ it('holds a length typed past the catalog range to that range', async () => {
   const length = await screen.findByRole('spinbutton', { name: 'Length (seconds)' })
   await userEvent.clear(length)
   await userEvent.type(length, '500')
+  expect(length).toHaveValue(500)
+  expect(length).toHaveAccessibleDescription('This model will use 30. Your entered value is kept.')
   await userEvent.type(screen.getByRole('textbox', { name: 'Describe the sound' }), 'A door')
   await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
   expect(execute).toHaveBeenCalledWith('audio.generate', {
@@ -178,7 +180,7 @@ it('plays, saves and deletes clips from the gallery', async () => {
 
 it('loads a downloaded model from the picker, with its notice', async () => {
   const { execute } = studio({ 'artifacts.list': [stable] }, { services: [] })
-  const [trigger] = await screen.findAllByRole('button', { name: 'Choose a model' })
+  const [trigger] = await screen.findAllByRole('button', { name: 'Choose audio model' })
   await userEvent.click(trigger!)
   expect(await screen.findByText('Powered by Stability AI')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Load model' }))
@@ -197,7 +199,7 @@ it("shows each model's maker and one line about it, in the picker and beside the
   const trigger = await screen.findByRole('button', { name: 'Stable Audio 3 Small SFX' })
   expect(trigger.querySelector('img')).toHaveAttribute('src', '/model-brands/svg/stability-color.svg')
   await userEvent.click(trigger)
-  const dialog = await screen.findByRole('dialog', { name: 'Choose a model' })
+  const dialog = await screen.findByRole('dialog', { name: 'Choose audio model' })
   expect(within(dialog).getByText('Sound effects.')).toBeInTheDocument()
   expect(dialog.querySelector('.hub-model-mark img')).toHaveAttribute(
     'src',
