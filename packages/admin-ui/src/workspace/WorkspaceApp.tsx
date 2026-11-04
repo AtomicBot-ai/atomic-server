@@ -1,3 +1,4 @@
+import { useThemeStore } from '@/hooks/useTheme'
 import { useEffect, useState } from 'react'
 import { setupFinished } from '@view'
 import { PanelLeft } from 'lucide-react'
@@ -47,6 +48,7 @@ export function WorkspaceApp() {
   )
 }
 function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
+  const theme = useThemeStore((state) => state.theme)
   const workspace = useWorkspace()
   const navigation = useWorkspaceNavigation()
   const {
@@ -66,6 +68,7 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const [connectionGuide, setConnectionGuide] = useState(false)
   const [prepared, setPrepared] = useState<string[]>([])
   const [command, setCommand] = useState<string | null>(null)
+  const [catalogCategory, setCatalogCategory] = useState('text')
   const [catalogFor, setCatalogFor] = useState<{ engine: string; opened: number } | null>(null)
   const [wizard, setWizard] = useState(false)
   const [setupDismissed, setSetupDismissed] = useState(false)
@@ -100,7 +103,8 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const section = page === 'server' ? serverSection : page === 'catalog' ? catalogSection : settingsSection
   const selectSection =
     page === 'server' ? setServerSection : page === 'catalog' ? setCatalogSection : setSettingsSection
-  const models = (section = 'catalog', engine?: string) => {
+  const models = (section = 'catalog', engine?: string, category = 'text') => {
+    setCatalogCategory(category)
     setCatalogSection(section)
     // A new key opens the catalog afresh, so it takes the engine's format and filter every time.
     setCatalogFor(engine ? { engine, opened: Date.now() } : null)
@@ -120,7 +124,7 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   }
   return (
     <div
-      style={workspaceTheme}
+      style={workspaceTheme(theme)}
       className={`eye-workspace desktop-workspace ${sidebarOpen ? 'sidebar-open' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
     >
       <WorkspaceNavigation
@@ -191,7 +195,8 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
           )}
           {page === 'catalog' && (
             <Catalog
-              key={catalogFor?.opened ?? 'catalog'}
+              key={`${catalogFor?.opened ?? 'catalog'}:${catalogCategory}`}
+              initialCategory={catalogCategory}
               {...(catalogFor ? { engine: catalogFor.engine } : {})}
               workspace={workspace}
               openCommand={setCommand}
@@ -217,14 +222,14 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
                 onSkillStarted={() => setTrySkill(null)}
               />
             ) : task === 'audio' ? (
-              <AudioStudio workspace={workspace} onCatalog={() => models()} />
+              <AudioStudio workspace={workspace} onCatalog={() => models('catalog', undefined, 'audio')} />
             ) : (
               <Media
                 key={task}
                 workspace={workspace}
                 task={task}
                 openCommand={setCommand}
-                onCatalog={() => models()}
+                onCatalog={() => models('catalog', undefined, task)}
               />
             ))}
         </main>

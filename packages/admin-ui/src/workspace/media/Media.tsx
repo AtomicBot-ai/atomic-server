@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
 import { Action, Field, JsonResult, Panel } from '../Controls'
 import { AdminApiError, describeError } from '@/services/admin-api'
@@ -21,6 +21,7 @@ export function Media({
 }) {
   const [capabilities, setCapabilities] = useState<RecordValue>({})
   const [values, setValues] = useState<RecordValue>(() => mediaDefaults({}, task))
+  const edited = useRef(new Set<string>())
   const [error, setError] = useState('')
   const [result, setResult] = useState<unknown>()
   const [job, setJob] = useState<RecordValue | null>(null)
@@ -62,7 +63,10 @@ export function Media({
           if (!active) return
           const cap = record(value)
           setCapabilities(cap)
-          setValues(mediaDefaults(cap, task))
+          setValues((current) => ({
+            ...mediaDefaults(cap, task),
+            ...Object.fromEntries(Object.entries(current).filter(([key]) => edited.current.has(key))),
+          }))
         })
         .catch((e) => {
           if (active) {
@@ -103,7 +107,10 @@ export function Media({
       clearInterval(timer)
     }
   }, [jobId, pendingJob, execute, task, refreshGallery])
-  const change = (name: string, value: unknown) => setValues((current) => ({ ...current, [name]: value }))
+  const change = (name: string, value: unknown) => {
+    edited.current.add(name)
+    setValues((current) => ({ ...current, [name]: value }))
+  }
   const request = (): RecordValue => {
     const extra = record(JSON.parse(advanced))
     if (task === 'embedding') return { input: text(values.prompt, ''), ...extra }
@@ -166,6 +173,7 @@ export function Media({
         }}
         refresh={refreshGallery}
         reset={() => {
+          edited.current = new Set(['prompt', 'negativePrompt', 'workflow'])
           setValues((current) => ({
             ...mediaDefaults(capabilities, task),
             prompt: current.prompt,
@@ -174,7 +182,8 @@ export function Media({
           }))
           setAdvanced('{}')
         }}
-        restore={(recipe) =>
+        restore={(recipe) => {
+          Object.keys(recipe).forEach((key) => edited.current.add(key))
           setValues((current) => ({
             ...current,
             ...Object.fromEntries(
@@ -196,7 +205,7 @@ export function Media({
               )
             ),
           }))
-        }
+        }}
         estimate={async () => setResult(await execute('media.video.estimate', { request: request() }))}
         onCatalog={onCatalog ?? (() => openCommand('media.load'))}
       />

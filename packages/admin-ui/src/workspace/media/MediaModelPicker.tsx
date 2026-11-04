@@ -8,6 +8,7 @@ import { useDialog } from '../useDialog'
 import { modelCategory, modelId } from '../library/catalog/catalog-models'
 import { ModelMark } from '../library/catalog/ModelMark'
 import { describeError } from '@/services/admin-api'
+import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { attributionOf } from '@view'
 
 export function MediaModelPicker({
@@ -33,23 +34,19 @@ export function MediaModelPicker({
   })
   const { execute } = workspace
   useEffect(() => {
-    let active = true
     setLoading(true)
-    setError('')
-    void execute('artifacts.list')
-      .then((result) => {
-        if (active)
-          setModels(rows(result).filter((model) => model.stage === 'ready' && modelCategory(model) === task))
-      })
-      .catch((e) => {
-        if (active) setError(describeError(e))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
+    return watchSharedRead(
+      () => sharedRead(execute, 'artifacts.list'),
+      (result) => {
+        setModels(rows(result).filter((model) => model.stage === 'ready' && modelCategory(model) === task))
+        setLoading(false)
+        setError('')
+      },
+      (e) => {
+        setError(describeError(e))
+        setLoading(false)
+      }
+    )
   }, [execute, task, revision])
   return (
     <div className="modal-shade">

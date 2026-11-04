@@ -73,7 +73,7 @@ it('recovers the selected model when the studio opens after another client stopp
   expect(screen.getByRole('spinbutton', { name: 'Length (seconds)' })).toHaveValue(5)
 })
 
-it('forgets a retained model after an explicit unload instead of keeping a stale selection', async () => {
+it('forgets an explicitly unloaded model while retaining the text draft', async () => {
   let selected = true
   const { workspace } = workspaceFixture(
     {
@@ -95,7 +95,7 @@ it('forgets a retained model after an explicit unload instead of keeping a stale
   view.rerender(<AudioStudio workspace={unloaded} onCatalog={vi.fn()} />)
   expect(await screen.findByText('Choose a downloaded model to generate audio.')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled()
-  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Text', exact: true })).toHaveValue(''))
+  expect(screen.getByRole('textbox', { name: 'Text', exact: true })).toHaveValue('A soft click')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 

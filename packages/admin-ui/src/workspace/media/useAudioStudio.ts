@@ -25,9 +25,6 @@ export function useAudioStudio(workspace: Workspace) {
   useEffect(() => {
     void refresh().catch((e) => setError(describeError(e)))
   }, [refresh])
-  useEffect(() => {
-    setDraft({})
-  }, [model])
   // A job another client or an earlier page started is followed the same way.
   const active = record(record(service?.details).activeJob)
   const running =
@@ -58,7 +55,13 @@ export function useAudioStudio(workspace: Workspace) {
     ...Object.fromEntries(
       controls.flatMap((c) => (c.default === undefined ? [] : [[c.name, c.default] as const]))
     ),
-    ...draft,
+    ...Object.fromEntries(
+      Object.entries(draft).filter(
+        ([name, value]) =>
+          (name === 'text' || controls.some((c) => c.name === name)) &&
+          (name !== 'voice' || selection.voices.includes(String(value)))
+      )
+    ),
   }
   const generate = async () => {
     setError('')
