@@ -18,7 +18,14 @@ export function useWorkspaceShortcuts(options: {
       options
     const { page, task } = navigation
     const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || openWizard || document.querySelector('[aria-modal="true"]')) return
+      const digit = /^Digit[1-4]$/.test(event.code) ? Number(event.code.slice(5)) : Number(event.key)
+      if (
+        event.isComposing ||
+        event.defaultPrevented ||
+        openWizard ||
+        document.querySelector('[aria-modal="true"]')
+      )
+        return
       if (event.key === 'F4') {
         event.preventDefault()
         setCommand((current) => (current ? null : 'api.ping'))
@@ -33,9 +40,9 @@ export function useWorkspaceShortcuts(options: {
       ) {
         event.preventDefault()
         window.dispatchEvent(new Event('atomic:new-chat'))
-      } else if (event.altKey && WORKSPACE_NAVIGATION[Number(event.key) - 1]) {
+      } else if (event.altKey && !event.ctrlKey && !event.metaKey && WORKSPACE_NAVIGATION[digit - 1]) {
         event.preventDefault()
-        navigation.navigate(WORKSPACE_NAVIGATION[Number(event.key) - 1]!.id)
+        navigation.navigate(WORKSPACE_NAVIGATION[digit - 1]!.id)
       } else if (event.key === 'Escape') {
         // Escape inside a field is the field's (it clears or leaves it), not the page's.
         if (

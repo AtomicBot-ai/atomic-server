@@ -4,7 +4,7 @@
  * admin token, in the folder restricted to the owner.
  */
 
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import type { IncomingMessage } from 'node:http'
 import { dirname } from 'node:path'
@@ -16,6 +16,7 @@ export const SESSION_IDLE_MS = 24 * 60 * 60 * 1000
 const TOUCH_WRITE_MS = 60 * 1000
 
 export class SessionStore {
+  readonly cookieName: string
   private readonly sessions = new Map<string, number>()
 
   constructor(
@@ -23,6 +24,11 @@ export class SessionStore {
     private readonly idleMs: number = SESSION_IDLE_MS,
     private readonly file?: string
   ) {
+    // Cookies are scoped to hosts, not ports. A stable profile namespace prevents local collisions.
+    this.cookieName = `${SESSION_COOKIE}_${createHash('sha256')
+      .update(file ?? randomBytes(24))
+      .digest('hex')
+      .slice(0, 24)}`
     if (file) this.load(file)
   }
 
@@ -97,12 +103,12 @@ export function parseCookies(header: string | undefined): Record<string, string>
   return out
 }
 
-export function sessionCookie(id: string, options: { secure?: boolean } = {}): string {
-  return `${SESSION_COOKIE}=${encodeURIComponent(id)}; Path=/; HttpOnly; SameSite=Strict${options.secure ? '; Secure' : ''}`
+export function sessionCookie(id: string, options: { secure?: boolean; name?: string } = {}): string {
+  return `${options.name ?? SESSION_COOKIE}=${encodeURIComponent(id)}; Path=/; HttpOnly; SameSite=Strict${options.secure ? '; Secure' : ''}`
 }
 
-export function clearedSessionCookie(): string {
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
+export function clearedSessionCookie(name = SESSION_COOKIE): string {
+  return `${name}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
 }
 
 /** Drop every session when the admin token this process last saw has changed. */
@@ -119,7 +125,7 @@ export async function adminAuthorised(
 ): Promise<boolean> {
   const token = await deps.adminToken()
   noteToken(state, token, deps.sessions)
-  const cookie = parseCookies(req.headers.cookie)[SESSION_COOKIE]
+  const cookie = parseCookies(req.headers.cookie)[deps.sessions.cookieName]
   const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? '')?.[1]
   return deps.sessions.validate(cookie) || (bearer !== undefined && tokensMatch(bearer, token))
 }

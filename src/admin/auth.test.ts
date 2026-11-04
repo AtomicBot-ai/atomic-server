@@ -65,6 +65,8 @@ describe('SessionStore with a file', () => {
       const id = first.create()
       // A new store over the same file (the daemon after a restart) knows the session.
       const second = new SessionStore(() => t, 100, file)
+      expect(second.cookieName).toBe(first.cookieName)
+      expect(new SessionStore(() => t, 100, join(dir, 'other.json')).cookieName).not.toBe(first.cookieName)
       expect(second.validate(id)).toBe(true)
       t = 1150
       expect(new SessionStore(() => t, 100, file).validate(id)).toBe(false)

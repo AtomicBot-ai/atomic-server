@@ -50,8 +50,10 @@ it('uses the desktop studio controls, selectable gallery, recipe and keyboard-di
   expect(screen.getByRole('button', { name: 'Open image preview' })).toContainElement(
     screen.getAllByAltText('Second picture')[0]
   )
-  await userEvent.click(screen.getByText('Recipe', { selector: 'summary' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Recipe', exact: true }))
+  expect(screen.getByRole('dialog', { name: 'Recipe' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Restore settings' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByLabelText('Prompt')).toHaveValue('Second picture')
   const trigger = screen.getByRole('button', { name: 'Full-screen preview' })
   await userEvent.click(trigger)
@@ -194,7 +196,7 @@ it('does not use an image model for video and enables generation only after a vi
     />
   )
   await waitFor(() => expect(execute).toHaveBeenCalledWith('media.video.capabilities'))
-  await userEvent.type(screen.getByLabelText('Prompt'), 'A moving landscape')
+  expect(screen.getByLabelText('Prompt')).toHaveValue('A moving landscape')
   expect(screen.getByRole('button', { name: 'video-model' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Generate' })).toBeEnabled()
 })

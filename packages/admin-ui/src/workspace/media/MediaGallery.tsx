@@ -1,4 +1,5 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/images/ImageGenerationPage.tsx and ImageViewer.tsx @ 807b4d9; adapted: authenticated artifact URLs and supported gallery actions.
+import { MediaRecipe } from './MediaRecipe'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Download, Expand, Image, Video } from 'lucide-react'
 import { Action } from '../Controls'
@@ -26,6 +27,7 @@ export function MediaGallery({
   hasModel: boolean
 }) {
   const [selected, setSelected] = useState('')
+  const [recipe, setRecipe] = useState<RecordValue | null>(null)
   const [fullscreen, setFullscreen] = useState(false)
   const index = Math.max(
     0,
@@ -85,13 +87,7 @@ export function MediaGallery({
               <Action ariaLabel="Next result" disabled={gallery.length < 2} onClick={() => step(1)}>
                 <ChevronRight size={16} />
               </Action>
-              <details className="media-recipe">
-                <summary>Recipe</summary>
-                <div>
-                  <p>{text(record(item.recipe).prompt, 'No prompt recorded.')}</p>
-                  <Action onClick={() => restore(record(item.recipe))}>Restore settings</Action>
-                </div>
-              </details>
+              <Action onClick={() => setRecipe(record(item.recipe))}>Recipe</Action>
               {task === 'image' && (
                 <Action ariaLabel="Full-screen preview" onClick={() => setFullscreen(true)}>
                   <Expand size={16} />
@@ -151,6 +147,7 @@ export function MediaGallery({
           </div>
         </section>
       )}
+      {recipe && <MediaRecipe recipe={recipe} restore={restore} onClose={() => setRecipe(null)} />}
       {fullscreen && item && (
         <MediaPreview
           src={src(item.id)}

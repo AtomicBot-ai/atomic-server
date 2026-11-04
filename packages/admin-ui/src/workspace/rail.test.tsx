@@ -27,7 +27,12 @@ it('numbers the shortcuts in the order of the rail and has no Web item', () => {
   const titles = ['Server', 'Playground', 'Models', 'Settings'].map((name) =>
     screen.getByRole('button', { name }).getAttribute('title')
   )
-  expect(titles).toEqual(['Server · Alt+1', 'Playground · Alt+2', 'Models · Alt+3', 'Settings · Alt+4'])
+  expect(titles).toEqual([
+    'Server · Alt/Option+1',
+    'Playground · Alt/Option+2',
+    'Models · Alt/Option+3',
+    'Settings · Alt/Option+4',
+  ])
   expect(screen.queryByRole('link', { name: 'Web' })).not.toBeInTheDocument()
 })
 
@@ -41,9 +46,9 @@ it('lists the page shortcuts in Settings in the order the keys open them', async
     row.querySelector('kbd')?.textContent,
   ])
   expect(rows.slice(0, 4)).toEqual([
-    ['Server', 'Alt+1'],
-    ['Playground', 'Alt+2'],
-    ['Models', 'Alt+3'],
-    ['Settings', 'Alt+4'],
+    ['Server', 'Alt/Option+1'],
+    ['Playground', 'Alt/Option+2'],
+    ['Models', 'Alt/Option+3'],
+    ['Settings', 'Alt/Option+4'],
   ])
 })

@@ -52,27 +52,14 @@
   padding: 5px 10px;
   font-size: 12px;
 }
-.media-recipe {
-  position: relative;
-  margin-left: auto;
+.media-recipe-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
 }
-.media-recipe summary {
-  cursor: pointer;
-}
-.media-recipe > div {
-  position: absolute;
-  z-index: 3;
-  right: 0;
-  bottom: 30px;
-  width: min(260px, 60vw);
-  padding: 14px;
-  border: 1px solid var(--ew-line);
-  border-radius: 10px;
-  background: var(--ew-panel);
-  box-shadow: 0 8px 30px #0005;
-}
-.media-recipe p {
+.media-recipe-dialog p {
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .media-gallery {
   display: flex;

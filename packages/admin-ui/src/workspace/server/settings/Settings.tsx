@@ -48,7 +48,7 @@ export function Settings({
           <dl className="settings-shortcuts">
             {[
               // The rail's order is the keys' order (`useWorkspaceShortcuts`).
-              ...WORKSPACE_NAVIGATION.map((item, index) => [item.label, `Alt+${index + 1}`]),
+              ...WORKSPACE_NAVIGATION.map((item, index) => [item.label, `Alt/Option+${index + 1}`]),
               ['Move focus', 'Tab / Shift+Tab'],
               ['Activate', 'Enter'],
               ['Close dialog', 'Escape'],
