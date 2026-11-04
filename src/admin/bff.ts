@@ -12,7 +12,7 @@ import { AtcError, errorBody } from '../errors/index.js'
 import type { Logger } from '../output/index.js'
 import { adminAuthorised, clearedSessionCookie, noteToken, parseCookies, sessionCookie } from './auth.js'
 import type { SessionStore } from './auth.js'
-import { ADMIN_API, SESSION_COOKIE } from '../contract/index.js'
+import { ADMIN_API } from '../contract/index.js'
 import type { AdminConfigView, AdminStatus } from '../contract/index.js'
 import { gateRequest } from './gates.js'
 import { sseFrame } from './relay.js'
@@ -174,12 +174,14 @@ export function createBffHandler(deps: BffDeps): (req: Req, res: Res) => Promise
             return true
           }
           noteToken(tokenState, token, deps.sessions)
-          send(res, 204, undefined, { 'set-cookie': sessionCookie(deps.sessions.create()) })
+          send(res, 204, undefined, {
+            'set-cookie': sessionCookie(deps.sessions.create(), { name: deps.sessions.cookieName }),
+          })
           return true
         }
         if (method === 'DELETE') {
-          deps.sessions.revoke(parseCookies(req.headers.cookie)[SESSION_COOKIE])
-          send(res, 204, undefined, { 'set-cookie': clearedSessionCookie() })
+          deps.sessions.revoke(parseCookies(req.headers.cookie)[deps.sessions.cookieName])
+          send(res, 204, undefined, { 'set-cookie': clearedSessionCookie(deps.sessions.cookieName) })
           return true
         }
         send(res, 405, { error: { code: 'ATC_USAGE', message: 'method not allowed' } })

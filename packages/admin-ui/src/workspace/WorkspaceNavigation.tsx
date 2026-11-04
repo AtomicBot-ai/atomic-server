@@ -99,7 +99,7 @@ export function WorkspaceNavigation({
               className={`rail-item ${page === item.id ? 'active' : ''}`}
               aria-label={item.label}
               aria-current={page === item.id ? 'page' : undefined}
-              title={`${item.label} · Alt+${index + 1}`}
+              title={`${item.label} · Alt/Option+${index + 1}`}
               onClick={() => navigate(item.id)}
             >
               <Icon size={20} strokeWidth={1.6} />
@@ -116,7 +116,7 @@ export function WorkspaceNavigation({
             className={`rail-item ${page === 'settings' ? 'active' : ''}`}
             aria-label="Settings"
             aria-current={page === 'settings' ? 'page' : undefined}
-            title={`Settings · Alt+${WORKSPACE_NAVIGATION.findIndex((v) => v.id === 'settings') + 1}`}
+            title={`Settings · Alt/Option+${WORKSPACE_NAVIGATION.findIndex((v) => v.id === 'settings') + 1}`}
             onClick={() => navigate('settings')}
           >
             <Settings size={20} strokeWidth={1.6} />

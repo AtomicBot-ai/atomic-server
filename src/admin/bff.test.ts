@@ -96,6 +96,30 @@ function listenPort(server: Server): number {
 }
 
 describe('admin sessions', () => {
+  it('isolates two profiles on the same host when their cookies share a browser jar', async () => {
+    const first = await adminServer({ value: 'first-token' })
+    const second = await adminServer({ value: 'second-token' })
+    const login = async (url: string, token: string) =>
+      fetch(`${url}/api/session`, { method: 'POST', headers: mutate, body: JSON.stringify({ token }) })
+    const a = sessionPair(await login(first, 'first-token'))
+    const b = sessionPair(await login(second, 'second-token'))
+    expect(a.split('=')[0]).not.toBe(b.split('=')[0])
+    const status = async (url: string, cookie: string) =>
+      (await fetch(`${url}/api/status`, { headers: { cookie } })).status
+    const jar = `${a}; ${b}`
+    expect(await status(first, jar)).toBe(200)
+    expect(await status(second, jar)).toBe(200)
+    expect(await status(first, b)).toBe(401)
+    expect(await status(second, a)).toBe(401)
+    const logout = await fetch(`${second}/api/session`, {
+      method: 'DELETE',
+      headers: { ...mutate, cookie: jar },
+    })
+    expect(sessionPair(logout)).toBe(`${b.split('=')[0]}=`)
+    expect(await status(second, jar)).toBe(401)
+    expect(await status(first, jar)).toBe(200)
+  })
+
   it('revokes the cookie on logout and when the admin token changes', async () => {
     const token = { value: 'admin-token' }
     const url = await adminServer(token)
@@ -106,7 +130,7 @@ describe('admin sessions', () => {
     })
     expect(login.status).toBe(204)
     const cookie = sessionPair(login)
-    expect(cookie.startsWith('atc_session=')).toBe(true)
+    expect(cookie.startsWith('atc_session_')).toBe(true)
     expect((await fetch(`${url}/api/status`, { headers: { cookie } })).status).toBe(200)
 
     const logout = await fetch(`${url}/api/session`, { method: 'DELETE', headers: { ...mutate, cookie } })

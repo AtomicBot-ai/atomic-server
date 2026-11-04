@@ -25,6 +25,7 @@
   color: var(--atomic-accent);
 }
 .desktop-workspace .rail-item {
+  color: var(--atomic-muted);
   background: var(--atomic-nav-button);
   border-color: var(--atomic-nav-edge);
 }
@@ -42,9 +43,9 @@
 .desktop-workspace .ew-button.primary {
   background: var(--atomic-accent);
   border-color: var(--atomic-accent);
-  color: var(--atomic-composer-ink);
+  color: var(--atomic-on-accent);
 }
-.desktop-workspace .ew-button.primary:hover {
+.desktop-workspace .ew-button.primary:hover:not(:disabled) {
   background: var(--atomic-green);
   border-color: var(--atomic-green);
 }
@@ -59,6 +60,11 @@
 .desktop-workspace .floating-downloads progress {
   accent-color: var(--atomic-accent);
 }
+.desktop-workspace .floating-downloads .download-count {
+  color: var(--atomic-text);
+  background: var(--atomic-focus);
+  border-color: var(--atomic-nav-edge);
+}
 .desktop-workspace .state-ready,
 .desktop-workspace .state-busy {
   color: var(--atomic-status-running);
@@ -72,4 +78,17 @@
 .desktop-workspace .state-error,
 .desktop-workspace .state-overloaded {
   color: var(--atomic-status-error);
+}
+
+.desktop-workspace .ew-error,
+.desktop-workspace .ew-button.danger {
+  color: var(--atomic-status-error);
+}
+.desktop-workspace .ew-muted,
+.desktop-workspace .ew-empty {
+  color: var(--atomic-muted);
+}
+html:not(.dark) .desktop-workspace .ew-button.primary:hover:not(:disabled) {
+  background: var(--atomic-green);
+  color: var(--atomic-on-accent);
 }

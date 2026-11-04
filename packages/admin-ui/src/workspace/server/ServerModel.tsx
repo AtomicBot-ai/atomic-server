@@ -77,7 +77,7 @@ export function ServerModel({
                 label="Inference engine"
                 value={selectedEngine}
                 choices={availableEngines.map(engineChoice)}
-                placeholder="No engines available"
+                placeholder={availableEngines.length ? 'Select engine' : 'No engines available'}
                 disabled={applying}
                 onChange={(value) => {
                   setEngine(value)

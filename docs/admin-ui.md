@@ -64,6 +64,10 @@ control token never reaches the page; the page never knows the core's port.
 Login: the SPA reads `#token=…` from the URL once, posts it to `POST /api/session`, drops the fragment
 from the address bar and relies on the `HttpOnly` cookie from then on. A 401 anywhere means "open the URL
 `atc admin` prints".
+The cookie name is `atc_session_<profile hash>`, derived from the server's session-file path:
+cookies share a host across ports, so a distinct name keeps local profiles signed in independently.
+Restarting on another port preserves the name; moving the profile requires a new login link.
+Upgrades from the old shared `atc_session` cookie require signing in once again.
 
 ## Events (SSE)
 

@@ -102,7 +102,7 @@ describe('the daemon owns the folder', () => {
     const login = await post('/api/session', { token })
     expect(login.status).toBe(204)
     const cookie = login.headers.get('set-cookie')?.split(';')[0]
-    expect(cookie).toMatch(/^atc_session=/)
+    expect(cookie).toMatch(/^atc_session_[a-f0-9]{24}=/)
     const headers = { cookie: cookie as string }
     const status = await fetch(`${adminUrl}/api/status`, { headers })
     expect(status.status).toBe(200)

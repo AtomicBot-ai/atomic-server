@@ -21,6 +21,12 @@ export function ChatTurnStatus({
   onCatalog: () => void
 }) {
   const last = messages.at(-1)
+  const answer =
+    typeof last?.content === 'string'
+      ? last.content
+      : rows(last?.content)
+          .map((part) => (typeof part.text === 'string' ? part.text : ''))
+          .join('')
   const toolsPending = last?.role === 'assistant' && rows(last.tool_calls).length > 0
   return (
     <>
@@ -57,7 +63,12 @@ export function ChatTurnStatus({
           Generate from here
         </Action>
       )}
-      {!s.busy && last?.role === 'assistant' && !toolsPending && (
+      {!s.busy && last?.role === 'assistant' && !toolsPending && !answer.trim() && s.error && (
+        <Action disabled={!serviceReady} onClick={() => generate(messages.slice(0, -1))}>
+          Retry answer
+        </Action>
+      )}
+      {!s.busy && last?.role === 'assistant' && !toolsPending && Boolean(answer.trim()) && (
         <Action
           disabled={!serviceReady}
           onClick={() =>

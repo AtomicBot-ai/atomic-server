@@ -25,6 +25,7 @@ export function Catalog({
   section,
   onSection,
   engine,
+  initialCategory = 'text',
 }: {
   workspace: Workspace
   openCommand: (name: string) => void
@@ -32,11 +33,12 @@ export function Catalog({
   onSection?: (section: string) => void
   /** Opened from Server → Browse models: the engine's format and filter, as the Filters menu sets them. */
   engine?: string
+  initialCategory?: string
 }) {
   const [localTab, setLocalTab] = useState('catalog')
   const tab = section ?? localTab
   const selectTab = onSection ?? setLocalTab
-  const [category, setCategory] = useState('text')
+  const [category, setCategory] = useState(initialCategory)
   const [query, setQuery] = useState('')
   const [catalog, setCatalog] = useState<RecordValue[]>([])
   const [installed, setInstalled] = useState<RecordValue[]>([])
