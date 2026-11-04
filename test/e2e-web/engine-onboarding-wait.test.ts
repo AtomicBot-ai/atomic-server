@@ -7,6 +7,11 @@ it('keeps both destination cards on Minesweeper when the engine has no model job
   const s = await adminSession((folder) => {
     const directory = join(folder, 'atc', 'engine-downloads')
     mkdirSync(directory, { recursive: true })
+    // The API wait follows the selected engine, rather than an unrelated standalone download.
+    writeFileSync(
+      join(folder, 'atc', 'engine-choice.json'),
+      JSON.stringify({ id: 'llamacpp-upstream|b1|cpu' })
+    )
     writeFileSync(
       join(directory, 'engine.json'),
       JSON.stringify({
