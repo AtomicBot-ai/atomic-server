@@ -12,6 +12,7 @@ import { readyWorkspace } from '../helpers/ready-workspace.js'
 import { readTextFile, resolveConfig } from '../../src/config/index.js'
 import { WorkspaceApp } from '../../src/tui/workspace/WorkspaceApp.js'
 import type { WorkspaceDeps } from '../../src/tui/workspace/controller.js'
+import { WorkspaceController } from '../../src/tui/workspace/controller.js'
 
 const cleanup: (() => void | Promise<void>)[] = []
 afterEach(async () => {
@@ -136,8 +137,9 @@ it.each(['Second GGUF', 'Apple fixture'])('retains %s through Continue → Escap
 })
 
 it('keeps a newly saved endpoint after an earlier local model load finishes', async () => {
-  let finish!: () => void,
-    loaded = false
+  let finish!: () => void
+  const loading = vi.spyOn(WorkspaceController.prototype, 'loadModel')
+  cleanup.push(() => loading.mockRestore())
   const gate = new Promise<void>((done) => {
     finish = done
   })
@@ -145,9 +147,7 @@ it('keeps a newly saved endpoint after an earlier local model load finishes', as
     const load = link.models.load
     link.models.load = async (...args) => {
       await gate
-      const result = await load(...args)
-      loaded = true
-      return result
+      return load(...args)
     }
   })
   await t.sees('How can I help you today?')
@@ -164,8 +164,10 @@ it('keeps a newly saved endpoint after an earlier local model load finishes', as
   t.terminal.stdin.press('\r')
   await t.sees('Connection saved.')
   finish()
-  await eventually(() => loaded, 'old load finishes')
-  // Flush the model-load continuation through the real persistence transport.
+  // The core load returns before the controller starts the API and writes its keyring.
+  // Await that whole operation before asserting persistence and removing the data folder.
+  expect(loading).toHaveBeenCalledOnce()
+  await loading.mock.results[0]!.value
   await t.click('Choose model')
   await t.sees('Inference engine')
   expect((await t.config()).values.tui).toMatchObject({
