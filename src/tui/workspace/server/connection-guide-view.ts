@@ -95,7 +95,7 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
       actionButton(
         c,
         'guide-configure',
-        x + width - (d.error ? 'Retry connection' : 'Configure & start').length - 6,
+        x + width - (d.error ? 'Retry connection' : 'Configure & start').length - 2,
         bottom - 2,
         d.error ? 'Retry connection' : 'Configure & start',
         'Load, start and verify the model, then prepare connection details',

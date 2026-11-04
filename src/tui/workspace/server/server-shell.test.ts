@@ -127,7 +127,7 @@ it('searches agents inline, lets Tab leave search, and opens the matching guide'
   await activate('server-agent:0', ctx)
   expect(ctx.get().connection).toMatchObject({ agent: 'codex', step: 'review' })
 })
-it('scrolls every sidebar agent into view and opens the last one', async () => {
+it('scrolls every sidebar agent into view on a wide terminal and opens the last one', async () => {
   const { ctx } = fixture()
   ctx.update((s) => ({ ...s, focus: 'sidebar-agent:0' }))
   for (let i = 0; i < CONNECTION_AGENTS.length - 1; i++) {
@@ -135,10 +135,10 @@ it('scrolls every sidebar agent into view and opens the last one', async () => {
       '',
       { downArrow: true } as Key,
       ctx.get(),
-      workspaceFrame(ctx.get(), 80, 24, 0)
+      workspaceFrame(ctx.get(), 120, 36, 0)
     )
     ctx.update((s) => ({ ...s, ...result.patch }))
-    expect(workspaceFrame(ctx.get(), 80, 24, 0).targets.some((t) => t.id === ctx.get().focus)).toBe(true)
+    expect(workspaceFrame(ctx.get(), 120, 36, 0).targets.some((t) => t.id === ctx.get().focus)).toBe(true)
   }
   await activate(ctx.get().focus, ctx)
   expect(ctx.get().connection?.agent).toBe('xcode')

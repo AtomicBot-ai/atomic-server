@@ -162,7 +162,9 @@ it('walks first-run setup with mouse and keyboard, gates access, and resumes the
   const click = async (label: string) => {
     await sees(label)
     const lines = terminal.stdout.lastFrame().split('\n')
-    const y = lines.findLastIndex((line, i) => i < lines.length - 2 && line.includes(label))
+    const matches = (line: string) =>
+      label === 'Skip' ? /(?:^|\s)Skip\s*$/.test(line) : line.includes(label)
+    const y = lines.findLastIndex((line, i) => i < lines.length - 2 && matches(line))
     const x = lines[y]!.lastIndexOf(label)
     terminal.stdin.press(`\u001b[<0;${x + 1};${y + 1}M`)
   }

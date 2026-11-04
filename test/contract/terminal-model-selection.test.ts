@@ -199,6 +199,7 @@ it('shows document and URL errors in the open editor and clears the recovered do
   await t.sees('How can I help you today?')
   await t.click('Files')
   await t.click('Document')
+  await t.sees('Attach document')
   for (const [path, message] of [
     [t.temp.paths.dataFolder, 'Choose a document file.'],
     [missing, 'That document was not found.'],

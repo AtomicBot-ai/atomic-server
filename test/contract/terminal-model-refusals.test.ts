@@ -90,7 +90,7 @@ it.each(['refused', 'empty', 'failure'])(
       await vi.waitFor(() => expect(snapshot).toHaveBeenCalled())
       await snapshot.mock.results[0]?.value
       await sees('Agents & tools')
-      terminal.stdin.press('\u001b2')
+      terminal.stdin.press('\u001b3')
       await click('Fixture model')
       await click('Download')
       await sees(

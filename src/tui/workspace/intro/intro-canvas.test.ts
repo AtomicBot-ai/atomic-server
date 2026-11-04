@@ -8,12 +8,12 @@ it.each([
   [80, 24],
   [120, 36],
   [40, 16],
-])('shows engine progress and an inverted CTA at %ix%i', (width, height) => {
+])('shows engine progress and an compact CTA at %ix%i', (width, height) => {
   const c = introCanvas(width, height, 0, false, 'Press any key')
   const button = c.targets.find((target) => target.id === 'intro-continue')!
-  expect(button.height).toBe(3)
-  expect(c.cells[button.y]![button.x]!.background).toBe(COLORS.accent)
-  expect(hit(c, button.x + 1, button.y + 2)?.id).toBe('intro-continue')
+  expect(button.height).toBe(1)
+  expect(c.cells[button.y]![button.x]!.background).toBe(COLORS.surface)
+  expect(hit(c, button.x + 1, button.y)?.id).toBe('intro-continue')
   const intro = c.cells.map((row) => row.map((cell) => cell.char).join('')).join('\n')
   expect(intro.match(/Press any key/g)).toHaveLength(1)
   expect(intro).not.toMatch(/\[\s+Press any key/)

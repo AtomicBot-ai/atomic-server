@@ -49,7 +49,7 @@ it.each([
       'wait-email',
       'wait-save',
       'wait-continue',
-      'download-status',
+      height! <= 35 ? 'download-more' : 'download-status',
     ]) {
       const target = frame.targets.find((t) => t.id === id)!
       expect(target, id).toBeDefined()
@@ -58,7 +58,7 @@ it.each([
     const email = frame.targets.find((target) => target.id === 'wait-email')!
     const confirm = frame.targets.find((target) => target.id === 'wait-save')!
     expect(confirm.x).toBeGreaterThan(email.x + email.width)
-    expect(confirm.y + 1).toBe(email.y)
+    expect(confirm.y).toBe(email.y)
     const card = floatingDownloadBounds(frame, t.ctx.get())!
     for (const target of frame.targets.filter((target) => target.id.startsWith('wait-')))
       expect(target.y).toBeGreaterThanOrEqual(card.y + card.height)
