@@ -119,7 +119,10 @@ it.each(['audio', 'image', 'video'] as const)(
         : page.getByRole('textbox', { name: 'Prompt', exact: true })
     await field.fill('Keep this first draft')
     if (task !== 'audio') await page.getByLabel('Width', { exact: true }).fill('768')
-    await page.getByRole('button', { name: 'Choose a model', exact: true }).first().click()
+    await page
+      .getByRole('button', { name: `Choose ${task} model`, exact: true })
+      .first()
+      .click()
     await page.getByText(`No ${task} models downloaded.`, { exact: true }).waitFor()
     ready = true
     await page.getByRole('button', { name: 'Load model', exact: true }).click()
@@ -152,9 +155,11 @@ it.each(['image', 'video'] as const)(
     const page = s.page
     await page.reload()
     await studio(task)
+    // 512 x 384 CSS pixels is the reflow space of a 1024 x 768 window at 200% zoom.
     for (const viewport of [
       { width: 1280, height: 860 },
-      { width: 600, height: 650 },
+      { width: 1024, height: 768 },
+      { width: 512, height: 384 },
     ]) {
       await page.setViewportSize(viewport)
       await page.getByRole('button', { name: 'Recipe', exact: true }).click()
@@ -165,6 +170,10 @@ it.each(['image', 'video'] as const)(
       expect(box!.y).toBeGreaterThanOrEqual(0)
       expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width)
       expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height)
+      expect(box!.width).toBeLessThanOrEqual(Math.min(560, viewport.width - 32))
+      const footer = await dialog.getByRole('button', { name: 'Restore settings' }).boundingBox()
+      expect(footer!.y).toBeGreaterThanOrEqual(box!.y)
+      expect(footer!.y + footer!.height).toBeLessThanOrEqual(box!.y + box!.height)
       if (viewport.width === 1280 && process.env['ATC_WEB_RETEST_SCREENSHOT'])
         await page.screenshot({
           path: process.env['ATC_WEB_RETEST_SCREENSHOT'].replace('.png', `-${task}-recipe.png`),
@@ -172,6 +181,17 @@ it.each(['image', 'video'] as const)(
       await dialog.getByRole('button', { name: 'Restore settings' }).click()
       expect(await page.getByRole('textbox', { name: 'Prompt', exact: true }).inputValue()).toBe(prompt)
       expect(await dialog.count()).toBe(0)
+      await page.getByRole('button', { name: 'Recipe', exact: true }).click()
+      await page.keyboard.press('Escape')
+      expect(
+        await page
+          .getByRole('button', { name: 'Recipe', exact: true })
+          .evaluate(
+            (element) =>
+              element ===
+              (globalThis as unknown as { document: { activeElement: unknown } }).document.activeElement
+          )
+      ).toBe(true)
     }
   }
 )

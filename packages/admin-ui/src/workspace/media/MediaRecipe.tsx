@@ -30,15 +30,19 @@ export function MediaRecipe({
             ×
           </Action>
         </div>
-        <p>{text(recipe.prompt, 'No prompt recorded.')}</p>
-        <Action
-          onClick={() => {
-            restore(recipe)
-            onClose()
-          }}
-        >
-          Restore settings
-        </Action>
+        <div className="media-dialog-body">
+          <p>{text(recipe.prompt, 'No prompt recorded.')}</p>
+        </div>
+        <footer className="media-dialog-footer">
+          <Action
+            onClick={() => {
+              restore(recipe)
+              onClose()
+            }}
+          >
+            Restore settings
+          </Action>
+        </footer>
       </section>
     </div>
   )

@@ -108,7 +108,7 @@ export function MediaGallery({
                 ? 'Enter a prompt and select Generate.'
                 : `Generated ${task === 'video' ? 'videos' : 'images'} appear here.`}
             </p>
-            {!hasModel && <Action onClick={openModels}>Choose a model</Action>}
+            {!hasModel && <Action onClick={openModels}>Choose {task} model</Action>}
           </div>
         )}
         {job?.error ? (

@@ -35,7 +35,7 @@ export function Chat({
   onSkillStarted,
 }: {
   workspace: Workspace
-  onCatalog: () => void
+  onCatalog: (section?: string) => void
   historyContainer?: HTMLElement | null
   trySkill?: string | null
   onSkillStarted?: () => void
