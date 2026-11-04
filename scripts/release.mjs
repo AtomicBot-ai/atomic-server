@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const PACKAGE_JSON = join(ROOT, 'package.json')
 const VERSION_TS = join(ROOT, 'src/version.ts')
-const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/
+// A release `X.Y.Z`, or a release candidate `X.Y.Z-rc.N`, which the workflow publishes as a pre-release.
+const SEMVER = /^(\d+)\.(\d+)\.(\d+)(?:-rc\.(\d+))?$/
 
 function fail(message) {
   console.error(`release: ${message}`)
@@ -29,24 +30,30 @@ function git(...args) {
   return res.stdout.trim()
 }
 
+/** `[major, minor, patch, rc]`; `rc` is `Infinity` for a release, so a candidate sorts before it. */
 function parse(version) {
   const match = SEMVER.exec(version)
-  if (!match) fail(`${version} is not X.Y.Z`)
-  return match.slice(1).map(Number)
+  if (!match) fail(`${version} is not X.Y.Z or X.Y.Z-rc.N`)
+  const [major, minor, patch, rc] = match.slice(1)
+  return [Number(major), Number(minor), Number(patch), rc === undefined ? Infinity : Number(rc)]
 }
 
+/** A bump from a candidate releases the version it was a candidate for, as npm's semver does. */
 function nextVersion(current, bump) {
-  const [major, minor, patch] = parse(current)
-  if (bump === 'patch') return `${major}.${minor}.${patch + 1}`
-  if (bump === 'minor') return `${major}.${minor + 1}.0`
-  if (bump === 'major') return `${major + 1}.0.0`
+  const [major, minor, patch, rc] = parse(current)
+  const candidate = rc !== Infinity
+  if (bump === 'patch') return `${major}.${minor}.${candidate ? patch : patch + 1}`
+  if (bump === 'minor') return candidate && patch === 0 ? `${major}.${minor}.0` : `${major}.${minor + 1}.0`
+  if (bump === 'major') return candidate && minor === 0 && patch === 0 ? `${major}.0.0` : `${major + 1}.0.0`
+  if (bump === 'rc')
+    return candidate ? `${major}.${minor}.${patch}-rc.${rc + 1}` : `${major}.${minor}.${patch + 1}-rc.1`
   if (SEMVER.test(bump ?? '')) return bump
-  fail('usage: npm run release -- <patch|minor|major|X.Y.Z> [--push]')
+  fail('usage: npm run release -- <patch|minor|major|rc|X.Y.Z|X.Y.Z-rc.N> [--push]')
 }
 
 function isBelow(a, b) {
   const [x, y] = [parse(a), parse(b)]
-  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i]
+  for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] < y[i]
   return false
 }
 

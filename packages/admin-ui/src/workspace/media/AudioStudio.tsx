@@ -4,6 +4,7 @@ import { audioPhaseText } from '@view'
 import type { AudioControl } from '@view'
 import { Field } from '../Controls'
 import { DeleteConfirmation } from '../library/DeleteConfirmation'
+import { ModelMark } from '../library/catalog/ModelMark'
 import { describeError } from '@/services/admin-api'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
@@ -102,6 +103,7 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
         <h1>Audio</h1>
         <div className="media-prompt-card">
           <button className="media-model-trigger" disabled={busy} onClick={() => setModels(true)}>
+            {model && <ModelMark model={{ name, icon: details?.icon }} />}
             <span>{name || 'Choose a model'}</span>
             <ChevronDown size={16} />
           </button>

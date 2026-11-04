@@ -29,6 +29,8 @@ export function Activity({ workspace: w }: { workspace: Workspace }) {
                 <th>Duration</th>
                 <th>First token</th>
                 <th>Tokens</th>
+                <th>Cached</th>
+                <th>Context</th>
               </tr>
             </thead>
             <tbody>
@@ -44,6 +46,8 @@ export function Activity({ workspace: w }: { workspace: Workspace }) {
                     {row.tokens_estimated ? '≈ ' : ''}
                     {text(row.completion_tokens)}
                   </td>
+                  <td>{text(row.cached_tokens)}</td>
+                  <td>{text(row.context_length)}</td>
                 </tr>
               ))}
             </tbody>

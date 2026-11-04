@@ -1,4 +1,4 @@
-// Lifted from Atomic-Chat/web-app/src/lib/model-logo.ts @ 5043013; adapted: server catalog logo resolution and bundled asset paths.
+// Lifted from Atomic-Chat/web-app/src/lib/model-logo.ts @ 5043013; adapted: server catalog logo resolution and bundled asset paths; audio maker keys from ae494232d.
 // Bundled brand logos served from web-app/public. Matching is done on the model
 // *family*, so a community quant (e.g. a Gemma repack by some user) still shows
 // the recognizable brand mark instead of the quantizer's avatar or a letter.
@@ -156,6 +156,12 @@ const ICON_KEY_LOGOS: Readonly<Record<string, string>> = {
   'lightricks': '/model-brands/svg/lightricks.svg',
   'ltx': '/model-brands/svg/lightricks.svg',
   'z-image': '/model-brands/svg/z-image.svg',
+  // Audio model makers (atomic-chat-conf catalog.json audio `icon`): Stability
+  // from @lobehub/icons-static-svg 1.95.1, the others their Hugging Face
+  // organization avatars.
+  'stability': '/model-brands/svg/stability-color.svg',
+  'openmoss': '/model-brands/images/model-provider/openmoss.webp',
+  'acestep': '/model-brands/images/model-provider/acestep.webp',
   'huggingface': '/model-brands/images/model-provider/huggingface.svg',
 }
 

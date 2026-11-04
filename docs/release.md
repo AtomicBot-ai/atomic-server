@@ -28,7 +28,9 @@ folder, signing identities and apt/dnf hosting URL do not change with the reposi
 npm run release -- patch --push        # 0.1.0 → 0.1.1, commit, tag v0.1.1, push branch + tag
 npm run release -- minor               # bump and tag only; prints the push command
 npm run release -- 1.2.3 --push        # an explicit version (the current one only tags HEAD)
-make release                           # patch; VERSION=minor / major / X.Y.Z
+npm run release -- rc --push           # 0.2.11 → 0.2.12-rc.1, or 0.2.12-rc.1 → 0.2.12-rc.2: a pre-release
+npm run release -- patch --push        # from 0.2.12-rc.2: 0.2.12, the release the candidates tested
+make release                           # patch; VERSION=minor / major / rc / X.Y.Z
 ```
 
 `scripts/release.mjs` refuses a dirty tree, a version below the current one and a tag that already exists
@@ -36,6 +38,14 @@ locally or on `origin`. It rewrites the one version line in `package.json` and i
 (`ATC_VERSION`; a unit test keeps the two equal), commits `release: vX.Y.Z`, creates an annotated tag and,
 with `--push`, runs `git push --follow-tags origin HEAD`. Follow the run with
 `gh run list --workflow release.yml`.
+
+A release candidate (`X.Y.Z-rc.N`) goes through the same gates, signing and smoke tests and is published
+as a GitHub pre-release: never `latest`, never in the apt/dnf repository or the AUR, so `atc update`, the
+server's update notice and the installers' default skip it. Testers install it by tag
+(`ATC_VERSION=vX.Y.Z-rc.N` for `install.sh` and `install.ps1`, or `atc update --version X.Y.Z-rc.N`);
+the release that follows reaches them as an ordinary update, since a candidate sorts before its release.
+Tag a candidate from a pull request's branch to test it before it merges; its `release:` commit merges
+with the branch.
 
 ## What the workflow does (`.github/workflows/release.yml`)
 
@@ -228,7 +238,7 @@ Authenticode. `atc update` refuses a binary less trusted than the installed one 
 
 `atc` embeds the core as the npm package `@atomic-chat/core` (repo `atomic-chat-core`, published by its
 release workflow) at an **exact** version, never a caret: the protocol and version checks make a silently
-newer core unsafe. 0.20.5 is the pin. The Foundry Local and LiteRT-LM host entries (`./foundry-host`
+newer core unsafe. 0.21.0 is the pin. The Foundry Local and LiteRT-LM host entries (`./foundry-host`
 and `./litert-host`) run before command parsing in `src/bin.ts`, including in the compiled binary.
 The core also exports the provider setting schemas
 (`./settings`), `readWindowsAcl` in `./host`, and a PrismML catalog that picks the build for a file's
@@ -240,7 +250,7 @@ limit on remote GGUF reads (`remoteGgufTimeoutMs`); `startDaemon` passes both op
 
 ```jsonc
 // package.json
-"dependencies": { "@atomic-chat/core": "0.20.5" }
+"dependencies": { "@atomic-chat/core": "0.21.0" }
 ```
 
 To bump the core: `bun add --exact @atomic-chat/core@<version>`, run `npm run verify`, and commit the bump

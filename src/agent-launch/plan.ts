@@ -1,4 +1,5 @@
 import { endpointUrl } from '../terminal-service/index.js'
+import { outputCap } from './context-window.js'
 export const AGENTS = [
   {
     id: 'atomic-agent',
@@ -31,6 +32,8 @@ export interface AgentLaunch {
   args: string[]
   env: NodeJS.ProcessEnv
   cwd: string
+  /** Hand `args` to the process as written: a Windows `.cmd` shim runs through a quoted cmd.exe line. */
+  windowsVerbatimArguments?: boolean
   cleanup?: () => Promise<void>
 }
 export interface Profile {
@@ -38,17 +41,22 @@ export interface Profile {
   env: NodeJS.ProcessEnv
   config?: Record<string, unknown>
 }
-/** Only connection settings change. Permission prompts remain the agent's own defaults. */
+/**
+ * Only connection settings change. Permission prompts remain the agent's own defaults. A known
+ * `contextLength` (the served window) goes into each agent's own setting, so it compacts in time.
+ */
 export function agentProfile(
   id: AgentId,
   endpoint: string,
   model: string,
   key: string,
   profileDir: string,
-  major = 1
+  major = 1,
+  contextLength?: number
 ): Profile {
   const base = endpointUrl(endpoint),
-    credential = key || 'atomic-local'
+    credential = key || 'atomic-local',
+    window = contextLength !== undefined && contextLength > 0 ? Math.floor(contextLength) : undefined
   if (!model.trim()) throw new Error('Choose a model before opening an agent.')
   if (id === 'codex') {
     const fields = {
@@ -72,6 +80,15 @@ export function agentProfile(
         'model_provider="atomic_chat"',
         '-c',
         `model_providers.atomic_chat={${provider}}`,
+        // Codex otherwise assumes 272K for a model it does not know; compact at three quarters.
+        ...(window
+          ? [
+              '-c',
+              `model_context_window=${window}`,
+              '-c',
+              `model_auto_compact_token_limit=${Math.floor((window * 3) / 4)}`,
+            ]
+          : []),
       ],
       env: { ATC_AGENT_API_KEY: credential },
     }
@@ -93,6 +110,8 @@ export function agentProfile(
               defaultChatModel: model,
               supportsTools: true,
               requestTimeoutMs: 300000,
+              // Outranks the bundled catalog, which assumes 128K for a model it does not know.
+              ...(window ? { userModels: [{ id: model, kind: 'chat', contextWindow: window }] } : {}),
             },
             {
               id: 'local-llama',
@@ -120,6 +139,14 @@ export function agentProfile(
         ANTHROPIC_DEFAULT_SONNET_MODEL: model,
         ANTHROPIC_DEFAULT_HAIKU_MODEL: model,
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+        // The terminal title costs a side request to the local model on every turn.
+        CLAUDE_CODE_DISABLE_TERMINAL_TITLE: '1',
+        ...(window
+          ? {
+              CLAUDE_CODE_MAX_CONTEXT_TOKENS: String(window),
+              CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(outputCap(window)),
+            }
+          : {}),
       },
     }
   }
@@ -135,8 +162,17 @@ export function agentProfile(
       : {
           npm: '@ai-sdk/openai-compatible',
           name: 'Atomic Chat',
-          options: { baseURL: base, apiKey: '{env:ATC_AGENT_API_KEY}' },
-          models: { [model]: { name: model } },
+          // A long local turn must not hit the SDK's own request and header timeouts.
+          options: { baseURL: base, apiKey: '{env:ATC_AGENT_API_KEY}', timeout: false, headerTimeout: false },
+          models: {
+            [model]: {
+              name: model,
+              // Thinking models answer in `reasoning_content`; the window lets OpenCode compact.
+              reasoning: true,
+              interleaved: { field: 'reasoning_content' },
+              ...(window ? { limit: { context: window, output: outputCap(window) } } : {}),
+            },
+          },
         }
   const config = {
     model: `atomic-chat/${model}`,

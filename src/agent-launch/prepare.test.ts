@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { AGENTS } from './plan.js'
 import { prepareAgent } from './prepare.js'
 import { runAgent } from './interactive.js'
+/** A model list that names no window, as a core before 0.21 serves it. */
+const noWindow = (async () => Response.json({ data: [{ id: 'model' }] })) as typeof fetch
+const served = (window: number) =>
+  (async () => Response.json({ data: [{ id: 'model', context_length: window }] })) as typeof fetch
 describe('agent handoff', () => {
   it('launches Codex in the current workspace with its existing home and only an environment credential', async () => {
     const folder = await mkdtemp(join(tmpdir(), 'atc-codex-'))
@@ -17,6 +21,8 @@ describe('agent handoff', () => {
         exec: async () => {
           throw new Error('No detection command needed')
         },
+        platform: 'linux' as const,
+        request: noWindow,
       }
       const launch = await prepareAgent('codex', 'http://localhost:14447/v1', 'model', 'secret', host)
       expect(launch.command).toBe('/bin/codex')
@@ -37,6 +43,8 @@ describe('agent handoff', () => {
         env: {},
         find: () => process.execPath,
         exec: async () => ({ code: 0, stdout: '1.4.0', stderr: '', timedOut: false }),
+        platform: process.platform,
+        request: noWindow,
       }
       const launch = await prepareAgent('claude', 'http://localhost:1337/v1', 'm', 'test-key', host)
       const path = launch.args.at(-1)!
@@ -62,6 +70,8 @@ describe('agent handoff', () => {
           env: {},
           find,
           exec,
+          platform: 'linux',
+          request: noWindow,
         })
       ).rejects.toMatchObject({
         code: 'ATC_USAGE',
@@ -70,6 +80,73 @@ describe('agent handoff', () => {
       expect(find.mock.calls.map((call) => call[0])).toEqual([...agent.bins])
       expect(exec).not.toHaveBeenCalled()
       expect(await readdir(folder)).toEqual([])
+    } finally {
+      await rm(folder, { recursive: true, force: true })
+    }
+  })
+  it('tells the agent the window the model is served with', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'atc-window-'))
+    try {
+      const launch = await prepareAgent('codex', 'http://localhost:1/v1', 'model', 'key', {
+        folder,
+        cwd: '/',
+        env: {},
+        find: () => '/bin/codex',
+        exec: vi.fn(),
+        platform: 'linux',
+        request: served(65536),
+      })
+      expect(launch.args).toEqual(
+        expect.arrayContaining(['model_context_window=65536', 'model_auto_compact_token_limit=49152'])
+      )
+    } finally {
+      await rm(folder, { recursive: true, force: true })
+    }
+  })
+  it('refuses a window smaller than the agent needs, before writing a profile', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'atc-small-window-'))
+    try {
+      await expect(
+        prepareAgent('atomic-agent', 'http://localhost:1/v1', 'model', 'key', {
+          folder,
+          cwd: '/',
+          env: {},
+          find: () => '/bin/atag',
+          exec: vi.fn(),
+          platform: 'linux',
+          request: served(16384),
+        })
+      ).rejects.toMatchObject({
+        code: 'ATC_USAGE',
+        message:
+          'Atomic Agent needs a context window of at least 32,768 tokens; model is served with 16,384.',
+      })
+      expect(await readdir(folder)).toEqual([])
+    } finally {
+      await rm(folder, { recursive: true, force: true })
+    }
+  })
+  it('runs a Windows npm shim through cmd.exe, its version probe included', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'atc-shim-'))
+    const exec = vi.fn(async () => ({ code: 0, stdout: '1.15.0', stderr: '', timedOut: false }))
+    try {
+      const launch = await prepareAgent('opencode', 'http://localhost:1/v1', 'model', 'key', {
+        folder,
+        cwd: 'C:\\work',
+        env: {},
+        find: () => 'C:\\npm\\opencode.cmd',
+        exec,
+        platform: 'win32',
+        request: noWindow,
+      })
+      expect(exec).toHaveBeenCalledWith(
+        'cmd.exe',
+        ['/d', '/s', '/c', '"C:\\npm\\opencode.cmd --version"'],
+        expect.objectContaining({ windowsVerbatimArguments: true })
+      )
+      expect(launch).toMatchObject({ command: 'cmd.exe', windowsVerbatimArguments: true })
+      expect(launch.args.slice(0, 3)).toEqual(['/d', '/s', '/c'])
+      expect(launch.args[3]).toBe('"C:\\npm\\opencode.cmd --model atomic-chat/model"')
     } finally {
       await rm(folder, { recursive: true, force: true })
     }

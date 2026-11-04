@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
@@ -183,6 +183,26 @@ it('loads a downloaded model from the picker, with its notice', async () => {
   expect(await screen.findByText('Powered by Stability AI')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Load model' }))
   expect(execute).toHaveBeenCalledWith('artifacts.load', { id: 'job' })
+})
+
+it("shows each model's maker and one line about it, in the picker and beside the loaded model", async () => {
+  const described = {
+    ...stable,
+    plan: {
+      ...stable.plan,
+      audio: { ...stable.plan.audio, icon: 'stability', description: 'Sound effects.' },
+    },
+  }
+  studio({ 'artifacts.list': [described] }, { setups: [described] })
+  const trigger = await screen.findByRole('button', { name: 'Stable Audio 3 Small SFX' })
+  expect(trigger.querySelector('img')).toHaveAttribute('src', '/model-brands/svg/stability-color.svg')
+  await userEvent.click(trigger)
+  const dialog = await screen.findByRole('dialog', { name: 'Choose a model' })
+  expect(within(dialog).getByText('Sound effects.')).toBeInTheDocument()
+  expect(dialog.querySelector('.hub-model-mark img')).toHaveAttribute(
+    'src',
+    '/model-brands/svg/stability-color.svg'
+  )
 })
 
 it('shows a core request failure', async () => {

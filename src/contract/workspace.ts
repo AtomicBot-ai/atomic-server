@@ -52,6 +52,10 @@ export interface WorkspaceRequest {
   ttft_ms: number | null
   completion_tokens: number | null
   tokens_estimated: boolean
+  /** The context window the request ran with, kept after a reload or unload. */
+  context_length?: number | null
+  /** Prompt tokens the engine reused from its cache. */
+  cached_tokens?: number | null
   finished_at: number
 }
 export interface WorkspaceSnapshot {

@@ -4,12 +4,17 @@ import type { ExecFn } from '../host/index.js'
 import { AtcError } from '../errors/index.js'
 import { AGENTS, agentProfile } from './plan.js'
 import type { AgentId, AgentLaunch } from './plan.js'
+import { spawnTarget } from './spawn-target.js'
+import { checkAgentWindow, readServedWindow } from './context-window.js'
 export interface AgentHost {
   env: NodeJS.ProcessEnv
   cwd: string
   folder: string
   find: (name: string) => string | undefined
   exec: ExecFn
+  platform: NodeJS.Platform
+  /** Reads the served window from the endpoint's model list. */
+  request: typeof fetch
 }
 /** Profiles live inside this server's data folder; existing agent settings are never rewritten. */
 export async function prepareAgent(
@@ -26,15 +31,22 @@ export async function prepareAgent(
     throw new AtcError('ATC_USAGE', `${agent.name} is not installed on PATH. Install it from ${agent.docs}`)
   let major = 1
   if (id === 'opencode') {
-    const version = await host.exec(command, ['--version'], { timeoutMs: 5000, env: host.env })
+    const probe = spawnTarget(command, ['--version'], host.platform)
+    const version = await host.exec(probe.file, probe.args, {
+      timeoutMs: 5000,
+      env: host.env,
+      ...(probe.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+    })
     const match = version.stdout.match(/(?:^|\s)v?(\d+)\.\d+/)
     if (version.code !== 0 || !match)
       throw new Error('Could not detect the OpenCode version. Run opencode --version and retry.')
     major = Number(match[1])
     if (major > 2) throw new Error('This OpenCode version needs an updated connection adapter.')
   }
+  const contextLength = await readServedWindow(host.request, endpoint, key, model)
+  checkAgentWindow(agent.name, model, contextLength)
   const folder = join(host.folder, id)
-  const profile = agentProfile(id, endpoint, model, key, folder, major)
+  const profile = agentProfile(id, endpoint, model, key, folder, major, contextLength)
   if (profile.config || id === 'claude') await mkdir(folder, { recursive: true, mode: 0o700 })
   if (profile.config) {
     const path = join(folder, id === 'opencode' ? 'opencode.json' : 'config.json')
@@ -61,5 +73,11 @@ export async function prepareAgent(
     launch.args.push('--settings', path)
     launch.cleanup = () => rm(temp, { recursive: true, force: true })
   }
-  return launch
+  const target = spawnTarget(launch.command, launch.args, host.platform)
+  return {
+    ...launch,
+    command: target.file,
+    args: target.args,
+    ...(target.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}),
+  }
 }

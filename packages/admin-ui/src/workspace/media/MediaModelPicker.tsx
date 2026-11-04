@@ -6,6 +6,7 @@ import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { useDialog } from '../useDialog'
 import { modelCategory, modelId } from '../library/catalog/catalog-models'
+import { ModelMark } from '../library/catalog/ModelMark'
 import { describeError } from '@/services/admin-api'
 import { attributionOf } from '@view'
 
@@ -75,30 +76,42 @@ export function MediaModelPicker({
         )}
         {!loading && !error && !models.length && <p>No {task} models downloaded.</p>}
         <div className="media-model-list">
-          {models.map((model) => (
-            <div key={text(model.id)}>
-              <span>
-                <strong>{text(model.name ?? record(model.plan).name, modelId(model))}</strong>
-                <small>{current === modelId(model) ? 'Loaded' : 'Downloaded'}</small>
-                {attributionOf(model) && <small>{attributionOf(model)}</small>}
-              </span>
-              <Action
-                primary
-                disabled={Boolean(pending) || current === modelId(model)}
-                onClick={async () => {
-                  setPending(text(model.id))
-                  try {
-                    await execute('artifacts.load', { id: model.id })
-                    onClose()
-                  } finally {
-                    setPending('')
-                  }
-                }}
-              >
-                {pending === model.id ? 'Loading…' : current === modelId(model) ? 'Loaded' : 'Load model'}
-              </Action>
-            </div>
-          ))}
+          {models.map((model) => {
+            const plan = record(model.plan),
+              audio = record(plan.audio),
+              name = text(model.name ?? plan.name, modelId(model)),
+              description = text(audio.description, '')
+            return (
+              <div key={text(model.id)}>
+                <ModelMark model={{ name, icon: audio.icon }} />
+                <span>
+                  <strong>{name}</strong>
+                  {description && (
+                    <small className="media-model-description" title={description}>
+                      {description}
+                    </small>
+                  )}
+                  <small>{current === modelId(model) ? 'Loaded' : 'Downloaded'}</small>
+                  {attributionOf(model) && <small>{attributionOf(model)}</small>}
+                </span>
+                <Action
+                  primary
+                  disabled={Boolean(pending) || current === modelId(model)}
+                  onClick={async () => {
+                    setPending(text(model.id))
+                    try {
+                      await execute('artifacts.load', { id: model.id })
+                      onClose()
+                    } finally {
+                      setPending('')
+                    }
+                  }}
+                >
+                  {pending === model.id ? 'Loading…' : current === modelId(model) ? 'Loaded' : 'Load model'}
+                </Action>
+              </div>
+            )
+          })}
         </div>
         <Action
           disabled={Boolean(pending)}

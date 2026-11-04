@@ -23,3 +23,18 @@
 .audio-clips audio {
   width: 100%;
 }
+/* The loaded model's maker beside its name, as in the desktop Audios picker. */
+.media-model-trigger .hub-model-mark {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.media-model-trigger .hub-model-mark img {
+  width: 16px;
+  height: 16px;
+}
+.media-model-trigger > span:not(.hub-model-mark) {
+  flex: 1;
+}

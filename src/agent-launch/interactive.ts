@@ -9,6 +9,7 @@ export async function runAgent(launch: AgentLaunch): Promise<void> {
         cwd: launch.cwd,
         stdio: 'inherit',
         shell: false,
+        windowsVerbatimArguments: launch.windowsVerbatimArguments ?? false,
       })
       child.once('error', () =>
         reject(new Error('The agent could not be opened. Check its installation and retry.'))

@@ -2,7 +2,7 @@
 
 import { join } from 'node:path'
 import { AtcError } from '../errors/index.js'
-import { AGENTS, agentProfile, type AgentId } from '../agent-launch/index.js'
+import { AGENTS, agentProfile, checkAgentWindow, servedWindow, type AgentId } from '../agent-launch/index.js'
 import type { ClientKeys } from '../terminal-data/index.js'
 import { WORKSPACE_OPERATIONS, type WorkspaceInput, type WorkspaceSnapshot } from '../contract/index.js'
 import type { WorkspaceServiceOptions } from './service-options.js'
@@ -86,11 +86,29 @@ export async function serverOperation(
       if (!key) throw new AtcError('ATC_USAGE', 'Select an existing API key.')
       if (!(await link.models.sessions()).some((s) => s.model_id === model))
         throw new AtcError('ATC_USAGE', 'Load the selected chat model before connecting an agent.')
+      // A list that cannot be read leaves the window unknown; the agent is only not told it.
+      const context_length = servedWindow(
+        await callPublic(link, config, keys, request, '/models').then(
+          ({ result }) => result,
+          () => undefined
+        ),
+        model
+      )
+      checkAgentWindow(AGENTS.find((a) => a.id === agent)?.name ?? agent, model, context_length)
       return {
         agent,
         endpoint: base,
         model,
-        profile: agentProfile(agent, base, model, key, join(paths.atcDir, 'agents', agent)),
+        context_length: context_length ?? null,
+        profile: agentProfile(
+          agent,
+          base,
+          model,
+          key,
+          join(paths.atcDir, 'agents', agent),
+          1,
+          context_length
+        ),
         launch_command: `${commandPrefix(options)} connect ${agent} --model ${shellWord(model)}${input['key_id'] ? ` --key-id ${shellWord(String(input['key_id']))}` : ''}`,
       }
     }

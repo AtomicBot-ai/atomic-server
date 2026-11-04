@@ -100,6 +100,17 @@ describe('an audio model plan', () => {
     expect(plan.load).not.toHaveProperty('attribution')
   })
 
+  it("keeps the maker's logo key and the one-line description for the model picker", () => {
+    const described = { ...row({ icon: 'stability' }), description: 'Sound effects from a prompt.' }
+    expect(artifactPlan(described, '/data').audio).toMatchObject({
+      icon: 'stability',
+      description: 'Sound effects from a prompt.',
+    })
+    const odd = artifactPlan(row({ icon: '../logo.svg' }), '/data').audio
+    expect(odd).not.toHaveProperty('icon')
+    expect(odd).not.toHaveProperty('description')
+  })
+
   it('picks the recommended quantization, or the one asked for', () => {
     const source = row().source
     const q = (id: string, recommended = false) => ({

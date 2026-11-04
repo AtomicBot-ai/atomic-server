@@ -48,4 +48,40 @@ describe('agent connection profiles', () => {
     })
     expect(JSON.stringify(two.config)).not.toContain('"key"')
   })
+  it("writes a known served window into each agent's own setting, and nothing when it is unknown", () => {
+    const at = (id: Parameters<typeof agentProfile>[0], window?: number) =>
+      agentProfile(id, 'http://localhost:1/v1', 'coder', 'key', '/p', 1, window)
+    expect(at('claude', 65536).env).toMatchObject({
+      CLAUDE_CODE_DISABLE_TERMINAL_TITLE: '1',
+      CLAUDE_CODE_MAX_CONTEXT_TOKENS: '65536',
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: '8192',
+    })
+    expect(at('claude').env).not.toHaveProperty('CLAUDE_CODE_MAX_CONTEXT_TOKENS')
+    expect(at('codex', 40000).args).toEqual(
+      expect.arrayContaining(['model_context_window=40000', 'model_auto_compact_token_limit=30000'])
+    )
+    expect(at('codex').args.join(' ')).not.toContain('model_context_window')
+    const provider = (window?: number) =>
+      (at('atomic-agent', window).config as { llm: { providers: Record<string, unknown>[] } }).llm
+        .providers[0]
+    expect(provider(32768)).toMatchObject({
+      userModels: [{ id: 'coder', kind: 'chat', contextWindow: 32768 }],
+    })
+    expect(provider()).not.toHaveProperty('userModels')
+    const opencode = (window?: number) =>
+      JSON.parse(at('opencode', window).env['OPENCODE_CONFIG_CONTENT']!) as {
+        provider: { 'atomic-chat': { options: object; models: Record<string, object> } }
+      }
+    expect(opencode(32768).provider['atomic-chat']).toMatchObject({
+      options: { timeout: false, headerTimeout: false },
+      models: {
+        coder: {
+          reasoning: true,
+          interleaved: { field: 'reasoning_content' },
+          limit: { context: 32768, output: 8192 },
+        },
+      },
+    })
+    expect(opencode().provider['atomic-chat'].models['coder']).not.toHaveProperty('limit')
+  })
 })

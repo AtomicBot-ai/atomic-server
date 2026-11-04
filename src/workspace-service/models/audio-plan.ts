@@ -73,8 +73,12 @@ export function audioPlan(row: CatalogRow, quantId?: string) {
     ...(defaultRequestOptions ? { defaultRequestOptions } : {}),
     ...(typeof r['default_voice'] === 'string' ? { defaultVoice: r['default_voice'] } : {}),
   }
+  // A malformed logo key costs the model its mark, not its download.
+  const icon = typeof r['icon'] === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(r['icon']) ? r['icon'] : undefined
   const audio: AudioPlanDetails = {
     mode,
+    ...(icon ? { icon } : {}),
+    ...(row.description ? { description: row.description } : {}),
     attribution: typeof r['attribution'] === 'string' ? r['attribution'] : null,
     controls: Array.isArray(r['controls']) ? r['controls'].map(String) : [],
     defaults: object(r['defaults']) as AudioPlanDetails['defaults'],

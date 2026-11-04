@@ -21,6 +21,10 @@ export type {
 
 export interface AudioPlanDetails {
   mode: AudioMode
+  /** The maker's logo key from the catalog (`qwen`, `stability`, …); a plan from before the key has none. */
+  icon?: string
+  /** The catalog's one line about the model, for a model picker. */
+  description?: string
   attribution: string | null
   controls: string[]
   defaults: Record<string, number>
