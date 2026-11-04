@@ -37,3 +37,23 @@ it.each([false, true])(
     }
   }
 )
+
+it.each([false, true])(
+  'keeps API controls available during an audio engine download (running=%s)',
+  async (running) => {
+    const { workspace, execute } = workspaceFixture({})
+    workspace.snapshot!.api.running = running
+    workspace.snapshot!.services = []
+    workspace.snapshot!.setups = []
+    workspace.snapshot!.selection = { model: 'qwen', engine: 'llamacpp-upstream|b1|cpu' }
+    workspace.snapshot!.downloads = [
+      { id: 'audio', kind: 'engine', engine: 'audio-cpp', stage: 'downloading' },
+    ]
+    render(<ServerControlPanel workspace={workspace} selectSection={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: running ? 'Stop API' : 'Start API' }))
+    expect(execute).toHaveBeenCalledWith(
+      running ? 'api.stop' : 'api.start',
+      running ? {} : { restore_selected: true }
+    )
+  }
+)

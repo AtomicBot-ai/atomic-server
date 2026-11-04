@@ -43,7 +43,14 @@ export function inferenceReadiness(
     model = downloads.find((row) => row.id === String(job?.['id'] ?? job?.['setup_id'] ?? '')),
     // A named model's own engine transfer is folded into its setup row above; any other engine download
     // (a stale failed one of another engine) says nothing about this model.
-    engine = options.model ? undefined : downloads.find((row) => row.owner === 'download')
+    engine = options.model
+      ? undefined
+      : downloads.find(
+          (row) =>
+            row.owner === 'download' &&
+            row['kind'] === 'engine' &&
+            row['engine'] === snapshot.selection?.engine.split('|')[0]
+        )
   if (model) {
     const paused = downloadStopped(model.state)
     return blocked(

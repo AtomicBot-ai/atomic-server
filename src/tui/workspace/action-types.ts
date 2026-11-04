@@ -8,5 +8,5 @@ export interface ActionContext {
   controller: WorkspaceController
   send: () => void
   copy: (text: string) => void | Promise<void>
-  cancel: () => void
+  cancel: (abandon?: boolean) => void
 }

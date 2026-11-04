@@ -155,3 +155,26 @@ it('shows a waiting control after explicit override while the download is still 
   expect(api).not.toHaveBeenCalled()
   expect(state().message).toContain('Wait for the model download')
 })
+
+it.each([false, true])(
+  'keeps API controls usable during an unrelated audio download (running=%s)',
+  async (running) => {
+    const s = createWorkspace('server')
+    s.setupComplete = true
+    s.workspace = {
+      api: { running },
+      services: [],
+      setups: [],
+      loads: [],
+      selection: { model: 'qwen', engine: 'llamacpp-upstream|b1|cpu' },
+      downloads: [{ id: 'audio', kind: 'engine', engine: 'audio-cpp', stage: 'downloading' }],
+    } as unknown as WorkspaceSnapshot
+    const { ctx, api, state } = context(s)
+    await activate('api-toggle', ctx)
+    if (running) {
+      expect(state().overlay).toBe('stop')
+      await activate('stop-confirm', ctx)
+      expect(api).toHaveBeenCalledWith(false)
+    } else expect(api).toHaveBeenCalledWith(true, true)
+  }
+)

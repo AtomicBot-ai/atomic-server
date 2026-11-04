@@ -22,7 +22,10 @@ export function apiDownloadWait(snapshot: Partial<WorkspaceSnapshot> | null | un
         !['image', 'video', 'audio'].includes(String(plan?.['category'] ?? r['category'] ?? ''))
       )
     }),
-    engine = rows.find((r) => r['kind'] === 'engine'),
+    // A standalone engine only blocks the connection that selected it. In particular, installing
+    // audio.cpp must not stop or block an otherwise empty text API.
+    selectedEngine = snapshot.selection?.engine.split('|')[0],
+    engine = rows.find((r) => r['kind'] === 'engine' && selectedEngine && r['engine'] === selectedEngine),
     pending = model ?? engine
   if (!pending) return null
   const enginePending = pending === engine || /engine/.test(pending.state),

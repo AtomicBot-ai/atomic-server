@@ -36,3 +36,16 @@ it.each(['audio', 'image-video', 'embedding', 'decision'] as const)(
     expect(stop).not.toHaveBeenCalled()
   }
 )
+
+it('does not stop an empty text API for an unrelated audio engine installation', async () => {
+  const snapshot = {
+    api: { running: true },
+    services: [],
+    setups: [],
+    selection: { model: 'qwen', engine: 'llamacpp-upstream|b1|cpu' },
+    downloads: [{ id: 'audio', kind: 'engine', engine: 'audio-cpp', stage: 'downloading' }],
+  } as unknown as WorkspaceSnapshot
+  const stop = vi.fn(async () => ({}))
+  await suspendDownloadingApi('engines.enqueue', async () => snapshot, stop)
+  expect(stop).not.toHaveBeenCalled()
+})

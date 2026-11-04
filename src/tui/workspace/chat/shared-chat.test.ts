@@ -47,16 +47,40 @@ it('sends prepared documents and feature choices through shared jobs without mut
   expect(response?.messages[0]?.content).toContain('Prepared excerpt')
   expect(onText).toHaveBeenCalledWith('Answer')
 })
-it('cancels a server-owned job when the terminal turn is stopped', async () => {
+it('waits for server persistence when cancelled before chat.start returns', async () => {
   const controller = new AbortController()
   const read = vi.fn(async (operation: string) => {
     if (operation === 'chat.start') controller.abort()
-    return { id: 'job', state: 'generating', message: { role: 'assistant', content: '' } }
+    return {
+      id: 'job',
+      conversation_id: 'server-chat',
+      conversation_revision: 9,
+      state: operation === 'chat.progress' ? 'stopped' : 'stopping',
+      message: { role: 'assistant', content: 'Partial' },
+    }
   })
-  expect(
-    await sharedChat({ read } as unknown as WorkspaceRuntime, 'model', [], {}, controller.signal, () => {})
-  ).toBeUndefined()
-  expect(read).toHaveBeenCalledWith('chat.cancel', { id: 'job' })
+  const result = await sharedChat(
+    { read } as unknown as WorkspaceRuntime,
+    'model',
+    [],
+    {},
+    controller.signal,
+    () => {}
+  )
+  expect(result).toMatchObject({ conversation_id: 'server-chat', revision: 9, stopped: true })
+  expect(read.mock.calls.filter(([operation]) => operation === 'chat.cancel')).toHaveLength(1)
+  expect(read).toHaveBeenCalledWith('chat.progress', { id: 'job' })
+})
+it('reports cancellation failure instead of declaring the response stopped', async () => {
+  const controller = new AbortController()
+  const read = vi.fn(async (operation: string) => {
+    if (operation === 'chat.start') controller.abort()
+    if (operation === 'chat.cancel') throw new Error('Cancellation unavailable')
+    return { id: 'job', state: 'generating' }
+  })
+  await expect(
+    sharedChat({ read } as unknown as WorkspaceRuntime, 'model', [], {}, controller.signal, () => {})
+  ).rejects.toThrow('Cancellation unavailable')
 })
 it('applies the edited system prompt once without leaking internal draft fields to inference', async () => {
   const read = vi.fn(async () => ({

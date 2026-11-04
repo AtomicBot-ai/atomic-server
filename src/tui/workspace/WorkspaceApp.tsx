@@ -1,18 +1,14 @@
-import { readinessPatch } from './chat/readiness.js'
+import { turnActions } from './chat/turn-actions.js'
 import { copyWorkspaceText } from './copy.js'
-import { failedTurn } from './chat/failed-turn.js'
 import { useDownloadAttention } from './downloads/use-download-attention.js'
-import { chatFeatureRequest } from './chat/features.js'
 import { useSharedPanels } from './runtime/shared-panels.js'
 import { useOtherTurn } from './runtime/other-turn.js'
 import { useMediaJobs } from './media/media-effects.js'
 import { IntroScreen } from './intro/IntroScreen.js'
-import { messageText, type ChatMessage } from '../../terminal-service/index.js'
 import { useRuntimeData, useWaitingGame } from './runtime/runtime-effects.js'
 import { persistConversation } from './server/data-actions.js'
 import { startup } from './startup.js'
 import { isPicker } from './chat/picker.js'
-import { chosenEndpoint } from './chat/model-selection.js'
 import { useWorkspaceData } from './runtime/data-effects.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize, type Key } from 'ink'
@@ -143,98 +139,7 @@ function WorkspaceContent(props: ContentProps) {
   useWaitingGame(state, update)
   const downloadHighlight = useDownloadAttention(state.downloadAttention ?? 0, state.motion)
   const frame = workspaceFrame(state, columns, rows, seconds, 'fangs', downloadHighlight)
-  function cancel() {
-    if (!latest.current.generating) return
-    epoch.current++
-    controller.current?.cancel()
-    patch({ generating: false, message: 'Response stopped.' })
-  }
-  function send() {
-    const s = latest.current,
-      c = controller.current
-    if (
-      !c ||
-      s.generating ||
-      (!s.draft.trim() && !s.images.length && !s.documents?.length && s.messages.at(-1)?.role !== 'tool')
-    )
-      return
-    const blocked = readinessPatch(s)
-    if (blocked) {
-      patch(blocked)
-      return
-    }
-    const message: ChatMessage = {
-      role: 'user',
-      content: s.images.length
-        ? [
-            { type: 'text', text: s.draft.trim() },
-            ...s.images.map((image) => ({ type: 'image_url' as const, image_url: { url: image.url } })),
-          ]
-        : s.draft.trim(),
-    }
-    const messages =
-        s.draft.trim() || s.images.length || s.documents?.length ? [...s.messages, message] : s.messages,
-      id = ++epoch.current
-    patch({
-      conversation: s.conversation ?? {
-        ...c.history.create(chosenEndpoint(s) ?? '', s.model, process.cwd()),
-        title: s.draft.trim().replace(/\s+/g, ' ').slice(0, 70),
-      },
-      messages: [...messages, { role: 'assistant', content: '' }],
-      draft: '',
-      images: [],
-      documents: [],
-      cursor: 0,
-      generating: true,
-      message: '',
-      scroll: 0,
-    })
-    void c
-      .chat(
-        chosenEndpoint(s),
-        s.model,
-        messages,
-        (token) => {
-          if (epoch.current === id)
-            update((v) => ({
-              ...v,
-              messages: v.messages.map((m, i) =>
-                i === v.messages.length - 1 ? { ...m, content: messageText(m.content) + token } : m
-              ),
-            }))
-        },
-        chatFeatureRequest(s),
-        s.conversation?.id,
-        s.documents,
-        s.conversation?.revision
-      )
-      .then((response) => {
-        if (epoch.current === id)
-          update((v) => ({
-            ...v,
-            generating: false,
-            messages: response
-              ? [...(response.messages ?? v.messages.slice(0, -1)), response.message]
-              : v.messages,
-            conversation:
-              response && v.conversation
-                ? {
-                    ...v.conversation,
-                    id: response.conversation_id,
-                    ...(response.revision !== undefined ? { revision: response.revision } : {}),
-                    request_settings: chatFeatureRequest(s),
-                  }
-                : v.conversation,
-            ...(response?.message.tool_calls?.length
-              ? { overlay: 'chat-tools', focus: 'chat-tools-approve' }
-              : {}),
-          }))
-      })
-      .catch((e) => {
-        captureFailure(deps.base.errors, e, { component: 'tui', operation: 'chat.send' })
-        if (epoch.current === id) patch(failedTurn(latest.current, s, oneLine(e)))
-      })
-  }
+  const { send, cancel } = turnActions(latest, controller, epoch, update, deps.base.errors)
   const context = () => ({
     handoff: (launch: AgentLaunch) => {
       props.onLaunch?.(launch)

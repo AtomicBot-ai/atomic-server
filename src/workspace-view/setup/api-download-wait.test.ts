@@ -68,3 +68,19 @@ it.each(['loading', 'failed', 'stopped'])(
     expect(apiDownloadWait({ ...pending, services: [{ kind: 'audio', state }] as never })).not.toBeNull()
   }
 )
+
+it.each(['downloading', 'paused', 'failed', 'interrupted'])(
+  'ignores unrelated engine jobs in state %s, but still waits for the selected engine',
+  (stage) => {
+    const downloads = [{ id: 'audio', kind: 'engine', engine: 'audio-cpp', stage }]
+    expect(apiDownloadWait({ ...pending, setups: [], downloads })).toBeNull()
+    expect(apiDownloadWait({ setups: [], downloads })).toBeNull()
+    expect(
+      apiDownloadWait({
+        ...pending,
+        setups: [],
+        downloads: [...downloads, { id: 'text', kind: 'engine', engine: 'llamacpp-upstream', stage }],
+      })
+    ).not.toBeNull()
+  }
+)

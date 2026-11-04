@@ -9,7 +9,7 @@ export const SHORTCUTS = [
   ['Enter', 'Open or activate'],
   ['Esc', 'Close dialog or go back'],
   ['Alt+1 / 2 / 3 / 4', 'Server / Models / Settings / Playground'],
-  ['Ctrl+K', 'Keyboard shortcuts'],
+  ['Ctrl+K', 'Help'],
   ['F4', 'Server console'],
   ['Ctrl+N / Ctrl+P', 'New chat / history'],
   ['Ctrl+X', 'Mouse / text selection'],

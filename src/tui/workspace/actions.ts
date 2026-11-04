@@ -101,7 +101,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   }
   if (id === 'new') {
     await persistConversation(ctx)
-    ctx.cancel()
+    ctx.cancel(true)
     patch({
       page: 'chat',
       chatPreferences: undefined,

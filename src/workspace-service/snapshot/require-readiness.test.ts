@@ -73,3 +73,15 @@ it.each(['audio', 'image-video', 'embedding', 'decision'] as const)(
       await expect(requireReadiness(operation, {}, async () => snapshot)).resolves.toBeUndefined()
   }
 )
+
+it.each(['api.start', 'api.restart'])(
+  'allows %s during an unrelated audio engine download',
+  async (operation) => {
+    const snapshot = {
+      ...state(false),
+      selection: { model: 'qwen', engine: 'llamacpp-upstream|b1|cpu' },
+      downloads: [{ id: 'audio', kind: 'engine', engine: 'audio-cpp', stage: 'downloading' }],
+    }
+    await expect(requireReadiness(operation, {}, async () => snapshot)).resolves.toBeUndefined()
+  }
+)

@@ -79,8 +79,25 @@ it('ignores an engine download that is not the model’s own when the model is n
   expect(
     inferenceReadiness(snapshot({ setups: [waiting], downloads: [failedEngine] }), { model: 'qwen' })
   ).toMatchObject({ message: 'The engine is downloading. Wait until it is ready.', acquire: 'downloads' })
-  // No model named (the API start): any engine download still counts.
+  // No model named (the API start): only the selected engine counts.
   expect(inferenceReadiness(snapshot({ downloads: [failedEngine] }))).toMatchObject({
+    message: 'Choose and download a model to continue.',
+  })
+  expect(
+    inferenceReadiness(snapshot({ downloads: [failedEngine], selection: { model: '', engine: 'mlx' } }))
+  ).toMatchObject({
     message: 'Retry the engine download to continue.',
   })
+})
+
+it('does not describe an unrelated audio engine as a text readiness requirement', () => {
+  expect(
+    inferenceReadiness(
+      snapshot({
+        selection: { model: 'qwen', engine: 'llamacpp-upstream' },
+        setups: [job('ready')],
+        downloads: [{ id: 'audio', kind: 'engine', engine: 'audio-cpp', stage: 'downloading' }],
+      })
+    )
+  ).toMatchObject({ waiting: false, message: 'Load the downloaded model to continue.' })
 })

@@ -91,7 +91,8 @@ export class ChatJobs {
     const endpoint = publicEndpoint(object(status), this.options.config).endpoint
     let chat = input['conversation_id'] ? await this.history.load(String(input['conversation_id'])) : null
     const expectedRevision = chatBaseline(chat, input, request['messages'] as unknown[])
-    chat ??= this.history.create(endpoint, model, '')
+    // This job always belongs to the local server; its history must follow future API port changes.
+    chat ??= this.history.create('', model, '')
     const previous = chat.messages as unknown as Record<string, unknown>[]
     chat.messages = (request['messages'] as Record<string, unknown>[]).map((message, index) => {
       const { atomic_meta: meta, ...wire } = previous[index] ?? {}

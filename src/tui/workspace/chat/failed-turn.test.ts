@@ -10,7 +10,7 @@ const sent = {
   images: [],
 } as WorkspaceState
 const after = (messages: WorkspaceState['messages'], draft = '') =>
-  ({ ...sent, draft, generating: true, messages }) as WorkspaceState
+  ({ ...sent, draft, generating: true, stopping: true, messages }) as WorkspaceState
 
 // E2E B03: a failed turn left an empty "No text returned." answer behind.
 it('drops the empty answer a failed turn left, says why, and gives the sent text back', () => {
@@ -20,6 +20,7 @@ it('drops the empty answer a failed turn left, says why, and gives the sent text
   ])
   expect(failedTurn(now, sent, 'Unable to connect.')).toEqual({
     generating: false,
+    stopping: false,
     message: 'Unable to connect.',
     messages: sent.messages,
     conversation: sent.conversation,
@@ -40,6 +41,7 @@ it('keeps the part of an answer that arrived, and a draft typed meanwhile', () =
   )
   expect(failedTurn(now, sent, 'Stream ended.')).toEqual({
     generating: false,
+    stopping: false,
     message: 'Stream ended.',
     messages: now.messages,
   })

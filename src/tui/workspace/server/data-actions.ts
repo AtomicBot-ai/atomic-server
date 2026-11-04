@@ -15,20 +15,20 @@ export function persistConversation(
     .then(async () => {
       const s = ctx.get()
       if (!s.conversation || !s.messages.length) return
+      const local =
+        chosenEndpoint(s) === null || sameEndpoint(s.endpoint, await ctx.controller.localEndpoint())
       // The server owns local streaming history; the terminal must not write partial copies over it.
-      if (
-        s.generating &&
-        (chosenEndpoint(s) === null || sameEndpoint(s.endpoint, await ctx.controller.localEndpoint()))
-      )
+      if (s.generating && local) return
+      // Adopting the server's saved result is not an edit. Rewriting just its local address would
+      // advance the revision concurrently with an immediate follow-up sent by this terminal.
+      if (local && s.model === s.conversation.model && isDeepStrictEqual(s.messages, s.conversation.messages))
         return
       const chat = {
         ...s.conversation,
         endpoint: chosenEndpoint(s) ?? '',
         model: s.model,
         messages: s.messages,
-        interrupted:
-          s.generating ||
-          (s.conversation.interrupted && isDeepStrictEqual(s.messages, s.conversation.messages)),
+        interrupted: s.generating || s.conversation.interrupted,
       }
       // Reopening or quitting an unchanged copy must not try to write over a newer saved revision.
       if (isDeepStrictEqual(chat, s.conversation)) return
@@ -85,7 +85,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     await persistConversation(ctx)
     const chat = await c.history.load(id.slice(8))
     if (!chat) throw new Error('This conversation is no longer available.')
-    ctx.cancel()
+    ctx.cancel(true)
     markSynced(c, chat)
     const here = s.workspace?.api.endpoint ?? (await c.localEndpoint())
     const follows = !chat.endpoint || sameEndpoint(chat.endpoint, here)
@@ -109,7 +109,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     if (s.conversation) patch({ overlay: 'delete-chat', focus: 'close' })
   } else if (id === 'delete-chat-confirm') {
     if (s.conversation) await c.history.remove(s.conversation.id)
-    ctx.cancel()
+    ctx.cancel(true)
     patch({
       conversation: null,
       messages: [],

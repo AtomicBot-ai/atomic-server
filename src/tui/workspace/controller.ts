@@ -196,14 +196,23 @@ export class WorkspaceController {
     documents: { name: string; text: string }[] = [],
     revision?: number
   ): Promise<
-    { message: ChatMessage; conversation_id: string; messages?: ChatMessage[]; revision?: number } | undefined
+    | {
+        message: ChatMessage
+        conversation_id: string
+        messages?: ChatMessage[]
+        revision?: number
+        stopped?: boolean
+      }
+    | undefined
   > {
     if (!model.trim()) throw new Error('Choose a model to continue.')
     this.turn?.abort()
     const turn = new AbortController()
     this.turn = turn
+    let local = false
     try {
-      if (endpoint === null || sameEndpoint(endpoint, await this.localEndpoint()))
+      local = endpoint === null || sameEndpoint(endpoint, await this.localEndpoint())
+      if (local)
         return await sharedChat(
           this.runtime,
           model,
@@ -216,15 +225,16 @@ export class WorkspaceController {
           revision
         )
       await streamChat({
-        endpoint,
+        endpoint: endpoint!,
         model,
         messages,
-        key: await this.keyFor(endpoint),
+        key: await this.keyFor(endpoint!),
         request: this.deps.request,
         signal: AbortSignal.any([turn.signal, this.abort.signal, AbortSignal.timeout(600000)]),
         onText,
       })
     } catch (error) {
+      if (!local && turn.signal.aborted) return undefined
       // A managed engine's or Foundry Local's overflow: say the limit, the length and the setting to raise.
       const link = await this.deps.base.attach({ launch: false, log: this.log }).catch(() => undefined)
       const provider = (await link?.models.sessions().catch(() => []))?.find(

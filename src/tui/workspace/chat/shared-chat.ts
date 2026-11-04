@@ -49,15 +49,18 @@ export async function sharedChat(
   const id = String(initial['id'])
   let job = initial,
     shown = ''
+  let cancellation: Promise<unknown> | undefined
   const cancel = () => {
-    void runtime.read('chat.cancel', { id }).catch(() => {})
+    cancellation ??= runtime.read('chat.cancel', { id })
+    // The polling loop awaits this promise and reports a failed cancellation.
+    void cancellation.catch(() => {})
   }
   signal.addEventListener('abort', cancel, { once: true })
   try {
     while (true) {
       if (signal.aborted) {
         cancel()
-        return undefined
+        await cancellation
       }
       const message = job['message'] as ChatMessage,
         content = typeof message?.content === 'string' ? message.content : ''
@@ -69,6 +72,7 @@ export async function sharedChat(
         if (job['error']) throw remoteError(new Error(String(job['error'])))
         return {
           message,
+          stopped: job['state'] === 'stopped',
           conversation_id: String(job['conversation_id']),
           messages,
           ...(typeof job['conversation_revision'] === 'number'

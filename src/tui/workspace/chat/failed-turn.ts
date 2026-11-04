@@ -14,6 +14,7 @@ export function failedTurn(
   const empty = last?.role === 'assistant' && !messageText(last.content) && !last.tool_calls?.length
   return {
     generating: false,
+    stopping: false,
     message,
     messages: empty ? sent.messages : now.messages,
     ...(empty ? { conversation: sent.conversation } : {}),

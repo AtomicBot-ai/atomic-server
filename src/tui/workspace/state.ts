@@ -186,6 +186,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
   images: ChatImage[]
   messages: ChatMessage[]
   generating: boolean
+  stopping: boolean
   motion: boolean
   mouse: boolean
   requests: RequestRow[]
@@ -281,6 +282,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     messages: [],
     images: [],
     generating: false,
+    stopping: false,
     motion: true,
     mouse: true,
     requests: [],
