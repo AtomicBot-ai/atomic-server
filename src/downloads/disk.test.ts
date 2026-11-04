@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-core/src/downloads/disk.test.ts @ 8a38521 (v0.17.0); adapted: core contract types come from @atomic-chat/core/contracts.
+// Lifted from atomic-chat-core/src/downloads/disk.test.ts @ 8a38521 (v0.17.0), EFBIG cases from 8cbab27 (v0.21.2); adapted: core contract types come from @atomic-chat/core/contracts; write errors preserve their OS classification.
 import { describe, expect, it } from 'vitest'
 import {
   checkFreeSpace,
@@ -6,6 +6,7 @@ import {
   classifyIoError,
   diskErrToString,
   diskFaultMessage,
+  diskWriteErrToString,
   formatBytes,
   FREE_SPACE_HEADROOM,
   remainingBytes,
@@ -17,6 +18,7 @@ describe('classifyIoError / diskErrToString', () => {
   it.each([
     ['ENOSPC', 'disk_full'],
     ['EDQUOT', 'disk_full'],
+    ['EFBIG', 'disk_fs_limit'],
     ['EACCES', 'disk_permission'],
     ['EROFS', 'disk_permission'],
     ['ETXTBSY', 'disk_file_locked'],
@@ -33,6 +35,25 @@ describe('classifyIoError / diskErrToString', () => {
       'Error: [disk_full] no space left on device'
     )
     expect(diskFaultMessage('disk_io', 'd')).toBe('Error: [disk_io] d')
+  })
+})
+
+describe('write failures', () => {
+  it.each([
+    ['ENOSPC', 'disk_full'],
+    ['EDQUOT', 'disk_full'],
+    ['EINVAL', 'disk_io'],
+    ['EIO', 'disk_device_lost'],
+    ['EACCES', 'disk_permission'],
+    ['EBUSY', 'disk_file_locked'],
+  ])('preserves %s without inventing a filesystem limit', (code, tag) => {
+    expect(diskWriteErrToString(err(code))).toBe(`Error: [${tag}] ${code} happened`)
+  })
+
+  it('suggests checking file-size limits for EFBIG without asserting the filesystem type', () => {
+    expect(diskWriteErrToString(err('EFBIG', 'file too large'))).toBe(
+      'Error: [disk_fs_limit] file too large. The filesystem or process file-size limit was reached. Check that limit; if the drive is FAT32, move the data folder to a filesystem that supports larger files and retry.'
+    )
   })
 })
 

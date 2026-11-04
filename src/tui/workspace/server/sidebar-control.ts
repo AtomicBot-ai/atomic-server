@@ -35,7 +35,16 @@ export function drawSidebarControl(
       ? 'Stop API'
       : 'Start API'
   fill(c, x + 1, y + 1, 20, 1, background)
-  text(c, x + 1, y + 1, `${icon} ${waiting?.label ?? state}`, color, 20, background, true)
+  text(
+    c,
+    x + 1,
+    y + 1,
+    `${icon} ${waiting?.label.replace(/^(?:Model|Engine) (?:is |download )/, '') ?? state}`,
+    color,
+    20,
+    background,
+    true
+  )
   if (!changing)
     c.targets.push({
       id: 'api-toggle',

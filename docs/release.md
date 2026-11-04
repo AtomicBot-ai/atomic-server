@@ -238,7 +238,7 @@ Authenticode. `atc update` refuses a binary less trusted than the installed one 
 
 `atc` embeds the core as the npm package `@atomic-chat/core` (repo `atomic-chat-core`, published by its
 release workflow) at an **exact** version, never a caret: the protocol and version checks make a silently
-newer core unsafe. 0.21.0 is the pin. The Foundry Local and LiteRT-LM host entries (`./foundry-host`
+newer core unsafe. 0.21.3 is the pin. The Foundry Local and LiteRT-LM host entries (`./foundry-host`
 and `./litert-host`) run before command parsing in `src/bin.ts`, including in the compiled binary.
 The core also exports the provider setting schemas
 (`./settings`), `readWindowsAcl` in `./host`, and a PrismML catalog that picks the build for a file's
@@ -250,7 +250,7 @@ limit on remote GGUF reads (`remoteGgufTimeoutMs`); `startDaemon` passes both op
 
 ```jsonc
 // package.json
-"dependencies": { "@atomic-chat/core": "0.21.0" }
+"dependencies": { "@atomic-chat/core": "0.21.3" }
 ```
 
 To bump the core: `bun add --exact @atomic-chat/core@<version>`, run `npm run verify`, and commit the bump

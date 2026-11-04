@@ -3,10 +3,15 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { adminSession } from '../helpers/admin-browser.js'
 
-it('keeps both destination cards on Minesweeper when the engine has no model job yet', async () => {
+it('keeps both destination cards on Minesweeper when the selected engine has no model job yet', async () => {
   const s = await adminSession((folder) => {
     const directory = join(folder, 'atc', 'engine-downloads')
     mkdirSync(directory, { recursive: true })
+    // API controls wait for the selected engine; unrelated engine transfers must not block them.
+    writeFileSync(
+      join(folder, 'atc', 'engine-choice.json'),
+      JSON.stringify({ id: 'llamacpp-upstream|b1|cpu' })
+    )
     writeFileSync(
       join(directory, 'engine.json'),
       JSON.stringify({
@@ -26,6 +31,9 @@ it('keeps both destination cards on Minesweeper when the engine has no model job
   })
   try {
     const page = s.page
+    expect(JSON.parse(s.atc('control', 'watch', '--count', '1').out).snapshot.selection.engine).toBe(
+      'llamacpp-upstream|b1|cpu'
+    )
     await page.getByRole('button', { name: 'Skip setup', exact: true }).click()
     await page.getByRole('region', { name: 'Minesweeper' }).waitFor()
     for (const destination of ['Configure an endpoint', 'Connect an agent']) {

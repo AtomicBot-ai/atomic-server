@@ -34,14 +34,15 @@ it('loads the operations on a later refresh when the first read failed', async (
 
 it('empties the composer once the request is accepted, not when the answer ends', async () => {
   localStorage.setItem('atomic:playground:preferences:v1', JSON.stringify({ sidebar: true }))
-  let progress = 0
+  let progress = 0,
+    completed = false
   vi.spyOn(workspaceApi, 'execute').mockImplementation(async (name) => {
     if (name === 'chat.start' || name === 'chat.progress') {
       progress += 1
       return {
         id: 'job',
         conversation_id: 'c1',
-        state: 'generating',
+        state: completed ? 'complete' : 'generating',
         message: { role: 'assistant', content: 'thinking'.slice(0, progress) },
         started_at: 1,
         duration_ms: 1,
@@ -74,6 +75,11 @@ it('empties the composer once the request is accepted, not when the answer ends'
   await userEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() => expect(workspaceApi.execute).toHaveBeenCalledWith('chat.start', expect.anything()))
   await waitFor(() => expect(draft).toHaveValue(''))
+  expect(screen.getByRole('button', { name: 'Stop response' })).toBeInTheDocument()
+  // Finish the mocked turn before restoring execute or tearing down jsdom. The assertion above
+  // still proves that acceptance clears the draft while the answer is running.
+  completed = true
+  await screen.findByRole('button', { name: 'Send' })
 })
 
 it('tells a text-only model’s user that images need a vision model instead of parsing the PNG', async () => {

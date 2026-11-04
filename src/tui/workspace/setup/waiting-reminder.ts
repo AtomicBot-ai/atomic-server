@@ -39,7 +39,7 @@ export function drawWaitingReminder(
     c,
     'wait-save',
     x + width - 15,
-    y + 1,
+    y + 2,
     saving ? 'Saving...' : 'Notify me',
     'Email me when the model is ready',
     focus

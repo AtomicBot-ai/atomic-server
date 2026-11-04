@@ -141,6 +141,7 @@ it.each([
   [120, 36],
 ])('stops preparation animation and exposes retry/back after failure at %ix%i', (w, h) => {
   const s = createWorkspace('setup')
+  s.focus = 'setup-retry'
   s.setup = {
     ...newSetup('server'),
     stage: 'download',
@@ -158,7 +159,7 @@ it.each([
   expect(screen).not.toContain('Cancel preparation')
   expect(frame.targets.map((t) => t.id)).toEqual(expect.arrayContaining(['setup-retry', 'setup-cancel']))
   const retry = frame.targets.find((t) => t.id === 'setup-retry')!
-  expect(retry.height).toBe(3)
+  expect(retry.height).toBe(1)
   for (let row = retry.y; row < retry.y + retry.height; row++)
     for (let col = retry.x; col < retry.x + retry.width; col++)
       expect(frame.cells[row]![col]!.background).toBe(COLORS.accent)

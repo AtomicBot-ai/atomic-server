@@ -27,17 +27,18 @@ it.each([
   expect(providers.filter((t) => t.y === providers[0]!.y)).toHaveLength(columns!)
   expect(providers.length).toBeGreaterThanOrEqual(columns!)
   const next = frame.targets.find((t) => t.id === 'first-next')!
-  const strip = frame.targets.find((t) => t.id === 'download-status')!
-  expect(strip.y).toBe(width! < 80 ? 6 : 1)
-  expect(strip.x + strip.width).toBe(width! - 2)
+  const strip = frame.targets.find((t) => t.id === (height! <= 35 ? 'download-more' : 'download-status'))!
+  expect(strip.y).toBe(1)
+  if (height! <= 35) expect(strip.height).toBe(1)
+  else expect(strip.x + strip.width).toBe(width! - 2)
   expect(next.y).toBeGreaterThan(strip.y + strip.height)
   for (const provider of providers) {
     expect(provider.y).toBeGreaterThanOrEqual(strip.y + strip.height + 1)
     expect(provider.y + provider.height).toBeLessThan(next.y)
     expect(hit(frame, provider.x + 1, provider.y + Math.min(1, provider.height - 1))?.id).toBe(provider.id)
   }
-  expect(frame.targets.some((t) => t.id === 'download-pause:setup:download')).toBe(true)
-  expect(frame.targets.some((t) => t.id === 'download-remove:setup:download')).toBe(true)
+  expect(frame.targets.some((t) => t.id === 'download-pause:setup:download')).toBe(height! > 35)
+  expect(frame.targets.some((t) => t.id === 'download-remove:setup:download')).toBe(height! > 35)
 })
 
 it.each([

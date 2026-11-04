@@ -5,13 +5,16 @@ import { constants } from 'node:fs'
 import { lstat, open, realpath, statfs } from 'node:fs/promises'
 import type { FileHandle } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
-import { diskErrToString } from './disk.js'
+import { diskErrToString, diskWriteErrToString } from './disk.js'
 import { sidecarPath } from './protocol.js'
 
 export const DOWNLOAD_CANCELLED = 'Download cancelled'
 
 /** An fs error as the tagged `Error: [disk_*] …` the app's telemetry reads. */
 export const diskError = (e: unknown) => new Error(diskErrToString(e))
+
+/** A failed write with its OS classification, recovery advice and original cause. */
+export const diskWriteError = (e: unknown) => new Error(diskWriteErrToString(e), { cause: e })
 
 /** A cancel or a disk error: retrying the stream does not help. */
 export const isFinalError = (e: unknown) =>

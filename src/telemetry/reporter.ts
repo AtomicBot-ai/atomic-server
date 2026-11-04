@@ -17,6 +17,7 @@ import type { ErrorReport, ErrorSink, TelemetryControl } from '@atomic-chat/core
 import { ATC_GIT_SHA, ATC_VERSION, CORE_VERSION } from '../version.js'
 import { atcReportingConfig, BAKED_REPORTING } from './config.js'
 import type { BakedReporting } from './config.js'
+import { ATC_REPORT_TAG_KEYS } from './codes.js'
 import { flushWithin } from './flush.js'
 
 export class AtcErrorReporter implements ErrorSink {
@@ -111,6 +112,8 @@ export async function createAtcReporter(input: AtcReporterInput): Promise<AtcErr
     scrub: { dataFolder: input.dataFolder, homeDir: input.homeDir },
     fetch: input.fetch,
     onSendError: input.warn,
+    // Its part, operation and finite codes; the core's vocabulary has no word for atc's own parts.
+    hostTagKeys: ATC_REPORT_TAG_KEYS,
   })
   return new AtcErrorReporter(reporter, enabled, async () => {
     const stored = await readTelemetryFile(input.telemetryFile)

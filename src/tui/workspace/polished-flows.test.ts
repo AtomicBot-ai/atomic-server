@@ -4,6 +4,7 @@ import { workspaceFrame } from './frame.js'
 import { workspaceInput } from './input.js'
 import { drawIntroEngines } from './intro/intro-engines.js'
 import { COLORS, hit } from './draw/canvas.js'
+import { downloadListAction } from './downloads/download-list.js'
 import { sampleDownloads } from './downloads/download-rates.js'
 import { catalogFilterAction, catalogIndexes } from './library/catalog-filters.js'
 import { mediaSetupAction } from './setup/media-step.js'
@@ -40,13 +41,16 @@ it.each([
     }
     const frame = workspaceFrame(s, width!, height!, 0)
     const output = shown(frame)
-    if (step !== 'connect') expect(output).toContain('(o)(o)')
+    if (step !== 'connect') expect(output).toContain(height! <= 35 ? 'ATOMIC SERVER' : '(o)(o)')
     if (step !== 'connect') {
       expect(output).toContain('Qwen 4B')
       expect(output).toContain('~5 sec')
-      const download = frame.targets.find((t) => t.id === 'download-status')!
-      expect(download.y).toBe(width! < 80 ? 6 : 1)
-      expect(download.x + download.width).toBe(width! - 2)
+      const download = frame.targets.find(
+        (t) => t.id === (height! <= 35 ? 'download-more' : 'download-status')
+      )!
+      expect(download.y).toBe(1)
+      if (height! <= 35) expect(download.height).toBe(1)
+      else expect(download.x + download.width).toBe(width! - 2)
       expect(frame.targets.find((t) => t.id === 'first-next')!.y).toBeGreaterThan(
         download.y + download.height
       )
@@ -79,7 +83,16 @@ it.each(['cloud', 'media'] as const)(
     let s = createWorkspace('welcome')
     s.firstRun = step
     s.workspace = snapshot(500)
-    s.focus = 'download-status'
+    s.focus = 'download-more'
+    expect(workspaceFrame(s, 54, 24, 0).targets.some((t) => t.id === s.focus)).toBe(true)
+    const ctx = {
+      get: () => s,
+      update: (fn: (v: typeof s) => typeof s) => {
+        s = fn(s)
+      },
+    } as ActionContext
+    expect(downloadListAction('download-more', ctx)).toBe(true)
+    expect(s.overlay).toBe('download-list')
     for (const id of ['download-pause:setup:model-download', 'download-remove:setup:model-download']) {
       const input = workspaceInput('', { tab: true } as never, s, workspaceFrame(s, 54, 24, 0))
       s = { ...s, ...input.patch }
@@ -90,7 +103,7 @@ it.each(['cloud', 'media'] as const)(
     }
   }
 )
-it('renders the engine chooser as ASCII with whole-card click targets', () => {
+it('renders ASCII engine cards beneath the compact header with whole-card click targets', () => {
   const choices = ['llamacpp-upstream', 'llamacpp', 'atomic-prism'].map((provider) => ({
     id: provider,
     provider,
@@ -99,7 +112,7 @@ it('renders the engine chooser as ASCII with whole-card click targets', () => {
     installed: false,
   }))
   const frame = drawIntroEngines(54, 24, choices, 1, '', 0)
-  expect(shown(frame)).toMatch(/^[\x20-\x7E\n]*$/)
+  expect(shown(frame).split('\n').slice(3).join('\n')).toMatch(/^[\x20-\x7E\n]*$/)
   const target = frame.targets.find((t) => t.id === 'engine:1')!
   expect(hit(frame, target.x + target.width - 2, target.y + 1)?.id).toBe('engine:1')
   expect(shown(frame)).not.toContain('Press any key')
