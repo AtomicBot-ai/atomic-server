@@ -170,3 +170,4 @@ add a new one that says which record it supersedes.
 - **2026-11-04** — [Keep browser attachment validation local](2026-11-04-keep-browser-attachment-validation-local.md) — show expected input refusals locally while retaining sanitized defect reporting.
 - **2026-11-04** — [Classify selected package file refusals as usage](2026-11-04-classify-selected-package-file-refusals-as-usage.md) — keep known import/export path refusals out of defect reporting while preserving disk failures.
 - **2026-11-04** — [Pin core 0.21.3 and keep atc's report tags](2026-11-04-pin-core-0-21-3.md) — tensor-count fix and Windows GPU reliability from the core; atc names its report tags; diag line hidden from people; FAT32 `disk_fs_limit`.
+- **2026-11-04** — [Preserve download write error codes](2026-11-04-preserve-download-write-error-codes.md) — preserve disk-full, quota and unknown I/O failures beyond 4 GiB instead of inferring FAT32 from the write offset.

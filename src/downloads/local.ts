@@ -13,9 +13,8 @@ export const DOWNLOAD_CANCELLED = 'Download cancelled'
 /** An fs error as the tagged `Error: [disk_*] …` the app's telemetry reads. */
 export const diskError = (e: unknown) => new Error(diskErrToString(e))
 
-/** A failed write of `length` bytes at `offset`, which can be FAT32's 4 GiB limit (`writeFaultTag`). */
-export const diskWriteError = (e: unknown, offset: number, length: number) =>
-  new Error(diskWriteErrToString(e, offset, length), { cause: e })
+/** A failed write with its OS classification, recovery advice and original cause. */
+export const diskWriteError = (e: unknown) => new Error(diskWriteErrToString(e), { cause: e })
 
 /** A cancel or a disk error: retrying the stream does not help. */
 export const isFinalError = (e: unknown) =>

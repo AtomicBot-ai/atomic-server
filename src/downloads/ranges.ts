@@ -148,7 +148,7 @@ export async function downloadRanged(job: FileJob, streams: number): Promise<Ran
           if (ctx.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
           const take = Math.min(value.byteLength, span.end + 1 - span.next)
           await handle.write(value, 0, take, span.next).catch((e) => {
-            throw diskWriteError(e, span.next, take)
+            throw diskWriteError(e)
           })
           span.next += take
           sinceReset += take
