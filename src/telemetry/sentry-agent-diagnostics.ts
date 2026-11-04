@@ -1,6 +1,11 @@
-// SENTRY_AGENT_DIAGNOSTIC_CONFIG {"rules":[],"include_cause_codes":true}
+// SENTRY_AGENT_DIAGNOSTIC_CONFIG {"rules":[{"source":"src/workspace-service/chat/chat-stream.ts","message":"The engine returned an empty response.","code":"CHAT_STREAM_EMPTY_RESPONSE"},{"source":"src/workspace-service/chat/chat-stream.ts","message":"An engine stream frame exceeded 8 MB.","code":"CHAT_STREAM_FRAME_TOO_LARGE"},{"source":"src/workspace-service/chat/chat-stream.ts","message":"The stream ended unexpectedly. The partial answer is saved.","code":"CHAT_STREAM_ENDED_UNEXPECTEDLY"},{"source":"src/workspace-service/chat/chat-stream.ts","message":"Invalid tool-call index.","code":"CHAT_STREAM_INVALID_TOOL_CALL_INDEX"}],"include_cause_codes":true}
 // This generated observer only enriches an existing error event. It never sends or logs.
-const SENTRY_AGENT_MESSAGES = new Map<string, string>([])
+const SENTRY_AGENT_MESSAGES = new Map<string, string>([
+  ['The engine returned an empty response.', 'CHAT_STREAM_EMPTY_RESPONSE'],
+  ['An engine stream frame exceeded 8 MB.', 'CHAT_STREAM_FRAME_TOO_LARGE'],
+  ['The stream ended unexpectedly. The partial answer is saved.', 'CHAT_STREAM_ENDED_UNEXPECTEDLY'],
+  ['Invalid tool-call index.', 'CHAT_STREAM_INVALID_TOOL_CALL_INDEX'],
+])
 const SENTRY_AGENT_CAUSES = new Set<string>([
   'ENOENT',
   'ENOTDIR',
