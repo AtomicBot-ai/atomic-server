@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { ChevronDown, Square, WandSparkles } from 'lucide-react'
 import { audioPhaseText } from '@view'
+import { audioJobRequest } from '@view'
 import type { AudioControl } from '@view'
 import { Field } from '../Controls'
 import { DeleteConfirmation } from '../library/DeleteConfirmation'
@@ -34,6 +35,12 @@ function ControlField({
   disabled: boolean
   change: (value: unknown) => void
 }) {
+  const id = useId()
+  const effective = audioJobRequest({ [control.name]: value }, [control])[control.name]
+  const adjustment =
+    typeof value === 'number' && effective !== value
+      ? `This model will use ${effective}. Your entered value is kept.`
+      : ''
   if (control.kind === 'voice' && voices.length)
     return (
       <Field label={control.label}>
@@ -65,11 +72,14 @@ function ControlField({
       <input
         disabled={disabled}
         type={number ? 'number' : 'text'}
+        aria-label={control.label}
         min={control.min}
         max={control.max}
+        aria-describedby={adjustment ? id : undefined}
         value={text(value, '')}
         onChange={(e) => change(number && e.target.value !== '' ? Number(e.target.value) : e.target.value)}
       />
+      {adjustment && <small id={id}>{adjustment}</small>}
     </Field>
   )
 }
@@ -81,6 +91,7 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
   const [stopping, setStopping] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [failure, setFailure] = useState('')
+  const hintId = useId()
   const { model, name, mode, details, controls, values, pending } = studio
   const words = text(values.text, '')
   const busy = pending || submitting || studio.loading
@@ -104,7 +115,7 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
         <div className="media-prompt-card">
           <button className="media-model-trigger" disabled={busy} onClick={() => setModels(true)}>
             {model && <ModelMark model={{ name, icon: details?.icon }} />}
-            <span>{name || 'Choose a model'}</span>
+            <span>{name || 'Choose audio model'}</span>
             <ChevronDown size={16} />
           </button>
           {details?.attribution && <small className="audio-attribution">{details.attribution}</small>}
@@ -126,6 +137,7 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
               <button
                 className="ew-button primary"
                 disabled={busy || !model || !mode || !words.trim()}
+                aria-describedby={hintId}
                 aria-busy={submitting || undefined}
                 onClick={() => void run()}
               >
@@ -135,6 +147,15 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
             )}
           </div>
         </div>
+        <p id={hintId} className="ew-muted media-generation-hint">
+          {!model
+            ? 'Choose a downloaded model to generate audio.'
+            : busy
+              ? 'Wait for the current operation to finish.'
+              : !words.trim()
+                ? 'Enter text to generate audio.'
+                : ''}
+        </p>
         {pending && (
           <p role="status" className="ew-muted">
             {audioPhaseText(record(job).progress as Parameters<typeof audioPhaseText>[0])}
@@ -145,7 +166,6 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
             {studio.error || failure || jobError}
           </p>
         )}
-        {!model && <p className="ew-muted">Choose a downloaded model to generate audio.</p>}
         {controls.map((control) => (
           <ControlField
             key={control.name}

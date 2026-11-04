@@ -32,6 +32,7 @@ import './styles/desktop-parity.css'
 import './styles/desktop-controls.css'
 import './styles/workspace-brand.css'
 import './styles/workspace-theme.css'
+import './styles/workspace-sizing.css'
 
 export function WorkspaceApp() {
   const [intro, setIntro] = useState(true)
@@ -141,7 +142,10 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
           selectSection(value)
           setSidebarOpen(false)
         }}
-        selectTask={setTask}
+        selectTask={(value) => {
+          setTask(value)
+          setSidebarOpen(false)
+        }}
         connectAgent={connect}
         prepared={prepared}
         openHelp={() => setHelp(true)}
@@ -216,7 +220,7 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
             (task === 'chat' ? (
               <Chat
                 workspace={workspace}
-                onCatalog={() => models()}
+                onCatalog={(section) => models(section)}
                 historyContainer={historyContainer}
                 trySkill={trySkill}
                 onSkillStarted={() => setTrySkill(null)}

@@ -6,6 +6,55 @@ import { AudioStudio } from './AudioStudio'
 import { AdminApiError } from '@/services/admin-api'
 import { useAudioStudio } from './useAudioStudio'
 
+it('keeps a custom size outside the selected model range and explains the required correction inline', async () => {
+  const { workspace, execute } = workspaceFixture({
+    'media.image.gallery': [],
+    'media.capabilities': {
+      workflows: ['create'],
+      maxDim: 512,
+      defaults: { width: 512, height: 512, steps: 20 },
+    },
+  })
+  const view = render(<Media workspace={workspace} task="image" openCommand={vi.fn()} />)
+  fireEvent.change(screen.getByRole('textbox', { name: 'Prompt' }), { target: { value: 'Keep my picture' } })
+  fireEvent.change(screen.getByLabelText('Width'), { target: { value: '768' } })
+  view.rerender(
+    <Media
+      workspace={{
+        ...workspace,
+        snapshot: {
+          ...workspace.snapshot!,
+          services: [
+            {
+              id: 'image',
+              kind: 'image-video',
+              state: 'loaded',
+              provider: 'sdcpp-server',
+              model: 'small-model',
+              details: {},
+            },
+          ],
+        },
+      }}
+      task="image"
+      openCommand={vi.fn()}
+    />
+  )
+  await waitFor(() => expect(screen.getByLabelText('Width')).toHaveAttribute('aria-invalid', 'true'))
+  expect(screen.getByLabelText('Width')).toHaveValue(768)
+  expect(screen.getByLabelText('Width')).toHaveAccessibleDescription(
+    'Use a value from 64 to 512 for this model. Your value has been kept.'
+  )
+  expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Generate' })).toHaveAccessibleDescription(
+    'Check the highlighted settings before generating.'
+  )
+  expect(execute).not.toHaveBeenCalledWith('media.image.create', expect.anything())
+  fireEvent.change(screen.getByLabelText('Width'), { target: { value: '512' } })
+  expect(screen.getByRole('button', { name: 'Generate' })).toBeEnabled()
+  expect(screen.getByRole('textbox', { name: 'Prompt' })).toHaveValue('Keep my picture')
+})
+
 it.each(['image', 'video'])(
   'keeps edited %s fields while applying new defaults to untouched fields',
   async (task) => {

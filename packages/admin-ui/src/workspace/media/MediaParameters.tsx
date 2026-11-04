@@ -1,7 +1,8 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/images/ImagePromptForm.tsx @ 807b4d9; adapted: supported core capabilities and controlled request fields.
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Field } from '../Controls'
-import { record, text } from '../types'
+import { text } from '../types'
+import { mediaBounds, mediaFieldError } from './media-validation'
 import type { RecordValue } from '../types'
 
 export function MediaParameters({
@@ -17,13 +18,10 @@ export function MediaParameters({
   change: (name: string, value: unknown) => void
   disabled: boolean
 }) {
-  const number = (name: string, label: string, fallback: { min: number; max: number; step?: number }) => {
-    const limits = record(capabilities[name])
-    const range = record(capabilities.ranges)[name]
-    const bounds = Array.isArray(range) ? range : []
-    const min = Number(limits.min ?? bounds[0] ?? fallback.min),
-      max = Number(limits.max ?? bounds[1] ?? fallback.max)
-    const step = Number(limits.step ?? fallback.step ?? 1)
+  const id = useId()
+  const number = (name: string, label: string) => {
+    const { min, max, step } = mediaBounds(capabilities, name)
+    const error = mediaFieldError(capabilities, name, values[name])
     return (
       <label className="media-parameter" key={name}>
         <span>{label}</span>
@@ -40,6 +38,8 @@ export function MediaParameters({
         <input
           type="number"
           aria-label={label}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-${name}` : undefined}
           min={min}
           max={max}
           step={step}
@@ -47,6 +47,11 @@ export function MediaParameters({
           value={text(values[name], '')}
           onChange={(e) => change(name, e.target.value === '' ? undefined : Number(e.target.value))}
         />
+        {error && (
+          <span id={`${id}-${name}`} className="ew-error media-field-error">
+            {error}
+          </span>
+        )}
       </label>
     )
   }
@@ -77,38 +82,46 @@ export function MediaParameters({
               onChange={(value) => change('maskImage', value)}
             />
           )}
-          {task === 'image' && number('strength', 'Strength', { min: 0, max: 1, step: 0.05 })}
+          {task === 'image' && number('strength', 'Strength')}
         </div>
       )}
       <div className="media-size-fields">
-        {['width', 'height'].map((name) => (
-          <Field key={name} label={name === 'width' ? 'Width' : 'Height'}>
-            <input
-              type="number"
-              min={Number(record(capabilities[name]).min ?? capabilities.minDim ?? 64)}
-              max={Number(record(capabilities[name]).max ?? capabilities.maxDim ?? 8192)}
-              step={Number(record(capabilities[name]).step ?? capabilities.dimMultiple ?? 16)}
-              disabled={disabled}
-              value={text(values[name], '')}
-              onChange={(e) => change(name, e.target.value === '' ? undefined : Number(e.target.value))}
-            />
-          </Field>
-        ))}
+        {['width', 'height'].map((name) => {
+          const error = mediaFieldError(capabilities, name, values[name])
+          return (
+            <Field key={name} label={name === 'width' ? 'Width' : 'Height'}>
+              <input
+                type="number"
+                aria-label={name === 'width' ? 'Width' : 'Height'}
+                {...mediaBounds(capabilities, name)}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? `${id}-${name}` : undefined}
+                disabled={disabled}
+                value={text(values[name], '')}
+                onChange={(e) => change(name, e.target.value === '' ? undefined : Number(e.target.value))}
+              />
+              {error && (
+                <small id={`${id}-${name}`} className="ew-error">
+                  {error}
+                </small>
+              )}
+            </Field>
+          )
+        })}
       </div>
       {task === 'video' && (
         <div className="media-video-duration">
-          {number('frames', 'Frames', { min: 1, max: 161, step: 1 })}
+          {number('frames', 'Frames')}
           <span>
             {Number(values.fps ?? capabilities.fps ?? 24)} fps ·{' '}
             {(Number(values.frames ?? 0) / Number(values.fps ?? capabilities.fps ?? 24)).toFixed(1)}s
           </span>
         </div>
       )}
-      {number('steps', 'Steps', { min: 1, max: 50 })}
-      {number('cfgScale', 'CFG scale', { min: 1, max: 20, step: 0.5 })}
-      {Boolean(capabilities.supportsGuidance) &&
-        number('guidance', 'Guidance', { min: 0, max: 20, step: 0.5 })}
-      {task === 'image' && number('batchSize', 'Images', { min: 1, max: Number(capabilities.maxBatch ?? 1) })}
+      {number('steps', 'Steps')}
+      {number('cfgScale', 'CFG scale')}
+      {Boolean(capabilities.supportsGuidance) && number('guidance', 'Guidance')}
+      {task === 'image' && number('batchSize', 'Images')}
       <Field label="Seed">
         <input
           type="number"

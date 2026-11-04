@@ -4,6 +4,7 @@ import { rows } from '../types'
 import type { RecordValue } from '../types'
 import type { useChatSession } from './useChatSession'
 import { ChatTools } from './ChatTools'
+import { ChatFailure } from './ChatFailure'
 
 export function ChatTurnStatus({
   session: s,
@@ -18,7 +19,7 @@ export function ChatTurnStatus({
   bindings: ReturnType<typeof connectorToolBindings>
   serviceReady: boolean
   generate: (messages: RecordValue[]) => Promise<void>
-  onCatalog: () => void
+  onCatalog: (section?: string) => void
 }) {
   const last = messages.at(-1)
   const answer =
@@ -40,15 +41,7 @@ export function ChatTurnStatus({
           {s.job.duration_ms ? `${(Number(s.job.duration_ms) / 1000).toFixed(1)}s` : ''}
         </p>
       )}
-      {s.error && (
-        <div className="ew-error" role="alert">
-          {s.error}
-          <div className="ew-actions">
-            <Action onClick={onCatalog}>Engines & Models</Action>
-            <Action onClick={() => window.location.reload()}>Reconnect</Action>
-          </div>
-        </div>
-      )}
+      {s.error && <ChatFailure error={s.error} onCatalog={onCatalog} />}
       {toolsPending && !s.busy && (
         <ChatTools
           key={JSON.stringify(last.tool_calls)}

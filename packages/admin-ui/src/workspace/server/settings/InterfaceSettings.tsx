@@ -39,9 +39,7 @@ export function InterfaceSettings({ workspace }: { workspace: Workspace }) {
           <label>
             <strong>Reset to default</strong>
           </label>
-          <Action danger onClick={() => setTheme('dark')}>
-            Reset
-          </Action>
+          <Action onClick={() => setTheme('dark')}>Reset</Action>
         </div>
       </section>
       <details className="settings-card settings-advanced">

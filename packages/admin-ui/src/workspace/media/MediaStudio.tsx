@@ -1,11 +1,12 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/images/ImagePromptForm.tsx and videos/VideoPromptForm.tsx @ 807b4d9; adapted: real workspace jobs and capability-backed controls.
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { ChevronDown, RotateCcw, Square, WandSparkles } from 'lucide-react'
 import { Action, Field, JsonResult } from '../Controls'
 import { list, text } from '../types'
 import type { RecordValue } from '../types'
 import type { Workspace } from '../useWorkspace'
 import { MediaParameters } from './MediaParameters'
+import { mediaFormErrors } from './media-validation'
 import { MediaGallery } from './MediaGallery'
 import { MediaModelPicker } from './MediaModelPicker'
 import { DeleteConfirmation } from '../library/DeleteConfirmation'
@@ -60,9 +61,12 @@ export function MediaStudio({
   const [stopping, setStopping] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [failure, setFailure] = useState('')
+  const hintId = useId()
   const busy = pending || submitting || stopping
+  const invalid = Object.keys(mediaFormErrors(capabilities, values, task)).length > 0
   const canGenerate =
     !busy &&
+    !invalid &&
     Boolean(model) &&
     Array.isArray(capabilities.workflows) &&
     Boolean(text(values.prompt, '').trim())
@@ -108,7 +112,7 @@ export function MediaStudio({
         </Field>
         <div className="media-prompt-card">
           <button className="media-model-trigger" disabled={busy} onClick={() => setModels(true)}>
-            <span>{model || 'Choose a model'}</span>
+            <span>{model || `Choose ${task} model`}</span>
             <ChevronDown size={16} />
           </button>
           <Field label="Prompt">
@@ -135,6 +139,7 @@ export function MediaStudio({
               <button
                 className="ew-button primary"
                 disabled={!canGenerate}
+                aria-describedby={!canGenerate && !busy ? hintId : undefined}
                 aria-busy={submitting || undefined}
                 onClick={() => void run()}
               >
@@ -149,9 +154,15 @@ export function MediaStudio({
             {error || failure}
           </p>
         )}
-        {!model && (
-          <p className="ew-muted">
-            Choose a downloaded model to generate {task === 'video' ? 'videos' : 'images'}.
+        {!canGenerate && !busy && (
+          <p id={hintId} className="ew-muted media-generation-hint">
+            {!model
+              ? `Choose a downloaded model to generate ${task === 'video' ? 'videos' : 'images'}.`
+              : !Array.isArray(capabilities.workflows)
+                ? 'Waiting for model settings. Your draft is kept.'
+                : invalid
+                  ? 'Check the highlighted settings before generating.'
+                  : 'Enter a prompt to generate.'}
           </p>
         )}
         <div className="media-settings-heading">

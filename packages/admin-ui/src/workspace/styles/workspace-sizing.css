@@ -1,0 +1,158 @@
+@import './workspace-reflow.css';
+@import './workspace-dialogs.css';
+
+/* Shared web rhythm; component-specific content may grow rather than shrink its targets. */
+.desktop-workspace {
+  --control-height: 36px;
+  --primary-height: 40px;
+  --control-radius: 8px;
+  --panel-radius: 12px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.desktop-workspace .ew-button,
+.desktop-workspace .media-generate-slot .ew-button,
+.desktop-workspace .media-model-trigger,
+.desktop-workspace .server-detail-picker {
+  min-height: var(--control-height);
+  height: auto;
+  padding: 7px 12px;
+  border-radius: var(--control-radius);
+  line-height: 20px;
+  font-size: 14px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.desktop-workspace .ew-button.primary {
+  min-height: var(--primary-height);
+  padding-block: 9px;
+}
+.desktop-workspace .media-generate-slot {
+  height: auto;
+  min-height: 40px;
+}
+.desktop-workspace .ew-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.desktop-workspace :is(input:not([type='checkbox'], [type='radio'], [type='range']), select, textarea) {
+  min-height: var(--control-height);
+  border-radius: var(--control-radius);
+  padding: 7px 12px;
+  line-height: 20px;
+  font-size: 14px;
+  border-color: var(--atomic-control-border);
+}
+.desktop-workspace .ew-field {
+  gap: 8px;
+}
+.desktop-workspace .ew-field .ew-error {
+  color: var(--atomic-status-error);
+}
+.desktop-workspace :is(.hub-model-row, .compact-downloads) .ew-button {
+  min-height: 32px;
+  padding-block: 5px;
+}
+.desktop-workspace :is(.ew-field, .server-picker-field) > span {
+  font-size: 12px;
+  line-height: 16px;
+}
+.desktop-workspace :is(.settings-card, .server-settings-panel, .ew-panel, .connection-guide) {
+  padding: 16px;
+  border-radius: var(--panel-radius);
+}
+.desktop-workspace .settings-page {
+  gap: 24px;
+}
+.desktop-workspace .settings-page .page-heading {
+  margin: 0;
+}
+.desktop-workspace .settings-page > details {
+  margin: 0;
+}
+.desktop-workspace summary {
+  color: var(--atomic-muted);
+}
+.desktop-workspace h1 {
+  font-size: 24px;
+  line-height: 32px;
+}
+.desktop-workspace h2 {
+  font-size: 18px;
+  line-height: 24px;
+}
+.desktop-workspace :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--atomic-focus-ring);
+  outline-offset: 2px;
+}
+.desktop-workspace :is(button, a)[aria-pressed='true'] {
+  box-shadow: inset 0 -2px var(--atomic-accent);
+}
+.desktop-workspace .ew-button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.desktop-workspace .sidebar-sections button.active {
+  background: var(--atomic-focus);
+  color: var(--atomic-text);
+  box-shadow: inset 3px 0 var(--atomic-accent);
+}
+.desktop-workspace .rail-item {
+  background: transparent;
+  border-color: transparent;
+}
+.desktop-workspace .rail-item.active {
+  background: var(--atomic-focus);
+  border-color: transparent;
+  box-shadow: inset 3px 0 var(--atomic-accent);
+}
+.desktop-workspace .server-control-detail > svg {
+  color: var(--atomic-accent);
+}
+.desktop-workspace .media-parameter {
+  grid-template-columns: 80px minmax(40px, 1fr) 72px;
+}
+.desktop-workspace .media-parameter input[type='number'] {
+  width: 72px;
+  height: auto;
+  min-height: 36px;
+  padding: 7px 8px;
+  font-size: 14px;
+}
+.desktop-workspace .media-controls {
+  gap: 16px;
+  padding: 24px;
+}
+.desktop-workspace .media-settings-heading {
+  margin-top: 8px;
+}
+.desktop-workspace .media-prompt-card {
+  padding: 16px;
+  border-radius: 12px;
+}
+.desktop-workspace .media-generation-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+}
+.desktop-workspace .media-field-error {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  line-height: 16px;
+}
+.desktop-workspace .chat-failure-title {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+}
+.desktop-workspace .chat-failure-title svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.desktop-workspace .chat-failure details {
+  margin-block: 8px;
+  overflow-wrap: anywhere;
+}
+.desktop-workspace .chat-failure details pre {
+  white-space: pre-wrap;
+  font: inherit;
+}
