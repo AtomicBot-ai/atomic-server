@@ -44,7 +44,11 @@ export async function operationAction(id: string, ctx: ActionContext): Promise<b
     return true
   }
   if (id === 'help' || id === 'menu') {
-    patch({ overlay: id, focus: id === 'help' ? 'support:email' : 'page:server' })
+    patch({
+      overlayReturnFocus: s.overlay === id ? (s.overlayReturnFocus ?? s.focus) : s.focus,
+      overlay: id,
+      focus: id === 'help' ? 'support:email' : 'page:server',
+    })
     return true
   }
   if (id === 'agent-setup') {

@@ -1,3 +1,4 @@
+import { drawChatDetail } from './chat/recovery.js'
 import { drawChatFeatures } from './chat/features.js'
 import { drawFeatureOverlay } from './server/feature-panel.js'
 import { drawHelp } from './navigation/support.js'
@@ -31,7 +32,8 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
   c.popover = { x: 3, y: 3, width: c.width - 6, height: c.height - 6 }
   if (drawChatFeatures(c, s, focus)) return
   if (drawFeatureOverlay(c, s, focus)) return
-  if (s.overlay === 'help') return drawHelp(c, focus)
+  if (s.overlay === 'chat-detail') return drawChatDetail(c, s, focus)
+  if (s.overlay === 'help') return drawHelp(c, s, focus)
   if (s.overlay === 'stop') return drawApiConfirmation(c, s, focus)
   if (drawMediaOverlay(c, s, focus)) return
   if (s.overlay === 'setup-permission') return drawPermissionDialog(c, s, focus)

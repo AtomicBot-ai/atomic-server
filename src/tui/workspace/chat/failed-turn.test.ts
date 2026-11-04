@@ -22,6 +22,7 @@ it('drops the empty answer a failed turn left, says why, and gives the sent text
     generating: false,
     stopping: false,
     message: 'Unable to connect.',
+    chatNotice: { conflict: false, details: 'Unable to connect.', message: 'The request could not finish.' },
     messages: sent.messages,
     conversation: sent.conversation,
     draft: 'Reply with OK.',
@@ -43,6 +44,7 @@ it('keeps the part of an answer that arrived, and a draft typed meanwhile', () =
     generating: false,
     stopping: false,
     message: 'Stream ended.',
+    chatNotice: { conflict: false, details: 'Stream ended.', message: 'The request could not finish.' },
     messages: now.messages,
   })
 })

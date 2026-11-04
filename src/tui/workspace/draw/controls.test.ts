@@ -57,6 +57,6 @@ it.each([41, 83])('keeps Discard immediately before the primary Save action in a
   const discard = c.targets.find((t) => t.id === 'settings-discard')!
   expect(discard.x + discard.width).toBeLessThan(save.x)
   expect(save.x + save.width).toBe(11 + width)
-  expect(save.y + 1).toBe(discard.y)
+  expect(save.y).toBe(discard.y)
   expect(hit(c, save.x, save.y)?.id).toBe(save.id)
 })

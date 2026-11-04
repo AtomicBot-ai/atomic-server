@@ -1,4 +1,4 @@
-import { canvas, COLORS, text } from './canvas.js'
+import { COLORS, text } from './canvas.js'
 import type { Canvas } from './canvas.js'
 import { drawBrandMark } from './brand-mark.js'
 import type { BrandStatus } from './brand-mark.js'
@@ -6,7 +6,7 @@ import { SERVER_WORDMARK } from './brand-lettering.js'
 
 /** Reserve the complete symmetric contour before any screen controls. */
 export function brandHeaderRows(width: number, height: number) {
-  return height < 24 ? 2 : width >= 100 && height >= 30 ? 6 : 5
+  return height <= 35 ? 3 : width >= 100 ? 6 : 5
 }
 
 export function workspaceHeaderRows(c: Canvas) {
@@ -20,13 +20,17 @@ export function atomicHeader(
   motion = true,
   availableWidth = c.width
 ) {
-  if (c.height < 24) {
-    const mark = canvas(13, 4)
-    drawBrandMark(mark, 0, 0, 'small', status, seconds, motion)
-    mark.cells[2]!.forEach((cell, x) => {
-      c.cells[0]![x + 2] = { ...cell }
-    })
-    text(c, 18, 0, 'ATOMIC SERVER', COLORS.text, c.width - 20, undefined, true)
+  if (c.height <= 35) {
+    text(
+      c,
+      2,
+      0,
+      `ATOMIC SERVER · ${status === 'welcome' ? 'Setup' : status}`,
+      COLORS.text,
+      c.width - 4,
+      undefined,
+      true
+    )
     return
   }
   const full = brandHeaderRows(availableWidth, c.height) === 6

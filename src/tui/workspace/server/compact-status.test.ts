@@ -34,7 +34,7 @@ it.each([false, true])(
     expect(shown).toContain('ATOMIC SERVER')
     expect(shown).toContain('Running')
     expect(shown).not.toContain('Expand to at least')
-    expect(brandHeaderRows(60, 20)).toBe(2)
+    expect(brandHeaderRows(60, 20)).toBe(3)
     const ids = [
       'api-toggle',
       'page:models',
@@ -44,7 +44,7 @@ it.each([false, true])(
       'guide-open',
       'server-endpoint',
     ]
-    if (downloading) ids.push('download-pause:setup:job', 'download-remove:setup:job')
+    if (downloading) ids.push('download-more')
     for (const id of ids) {
       const target = frame.targets.find((target) => target.id === id)!
       expect(target, id).toBeDefined()
@@ -114,14 +114,10 @@ it.each([{ eta_seconds: 25 }, { progress: { eta_seconds: 25 } }, { bytes_per_sec
     const frame = workspaceFrame(s, 60, 20, 0)
     const more = frame.targets.find((target) => target.id === 'download-more')!
     expect(more).toBeDefined()
-    const card = frame.targets.find((target) => target.id === 'download-status')!
-    const lines = frame.cells
-      .slice(card.y, card.y + card.height)
-      .map((row) => row.map((cell) => cell.char).join(''))
-    expect(lines[1]).toContain('[ +1 more ]')
-    expect(lines[2]).toContain('~25 sec')
-    expect(frame.cells[more.y]![more.x - 1]!.char).toBe(' ')
-    expect(frame.cells[more.y]![card.x + card.width - 1]!.char).toBe('|')
+    const line = frame.cells[more.y]!.map((cell) => cell.char).join('')
+    expect(line).toContain('Downloads 2')
+    expect(line).toContain('~25 sec')
+    expect(more.height).toBe(1)
     expect(hit(frame, more.x, more.y)?.id).toBe('download-more')
   }
 )

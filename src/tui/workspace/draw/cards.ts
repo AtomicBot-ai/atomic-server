@@ -1,5 +1,5 @@
 /** Shared terminal cards: full-surface hit targets, clipped text and a quiet focus pulse. */
-import { COLORS, text, textWidth, wrap } from './canvas.js'
+import { button, COLORS, text, textWidth, wrap } from './canvas.js'
 import type { Canvas } from './canvas.js'
 export function panel(
   c: Canvas,
@@ -56,7 +56,7 @@ export function card(
 }
 export { atomicHeader } from './brand-header.js'
 
-/** A primary action occupies three rows, with a bright surface even before focus. */
+/** Compact primary actions; destructive confirmations can explicitly request a boxed control. */
 export function actionButton(
   c: Canvas,
   id: string,
@@ -64,8 +64,10 @@ export function actionButton(
   y: number,
   label: string,
   hint: string,
-  focus = ''
+  focus = '',
+  boxed = false
 ): number {
+  if (!boxed) return button(c, id, x, y, label, hint, focus, false, true)
   const width = Math.min(c.width - x, textWidth(label) + 6)
   const background = focus === id ? COLORS.composer : COLORS.accent
   for (let row = 0; row < 3 && y + row < c.height; row++)

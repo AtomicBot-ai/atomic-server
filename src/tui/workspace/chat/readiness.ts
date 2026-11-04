@@ -33,6 +33,15 @@ export function chatReadiness(s: WorkspaceState) {
 export function readinessPatch(s: WorkspaceState): Partial<WorkspaceState> | null {
   const readiness = chatReadiness(s)
   if (!readiness || readiness.ready) return null
+  if (
+    !readiness.waiting &&
+    (readiness.acquire === 'catalog' || s.loadError?.model === s.model) &&
+    s.installed.some((m) => m.id === s.model)
+  )
+    return {
+      message: 'The selected model is on disk. Choose Load & send to continue.',
+      focus: 'load-and-send',
+    }
   return {
     message: readiness.message,
     ...(readiness.waiting && !s.modelLoad ? { downloadAttention: (s.downloadAttention ?? 0) + 1 } : {}),

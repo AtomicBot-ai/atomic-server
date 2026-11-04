@@ -69,21 +69,34 @@ it.each([
   const c = canvas(width!, height!)
   atomicHeader(c, 'error')
   const headerRows = brandHeaderRows(width!, height!)
-  expect(c.cells[0]!.every((cell) => cell.char === ' ')).toBe(true)
-  expect(c.cells[4]!.some((cell) => cell.char.trim())).toBe(true)
-  if (headerRows === 6) expect(c.cells[5]!.every((cell) => cell.char === ' ')).toBe(true)
-  expect(c.cells[headerRows]!.every((cell) => cell.char === ' ')).toBe(true)
-  const title = headerRows === 6 ? SERVER_WORDMARK : ['/ ATOMIC SERVER /']
-  for (const row of title)
-    expect(c.cells.map((line) => line.map((cell) => cell.char).join('')).join('\n')).toContain(row.trimEnd())
-  const white = c.cells.flat().filter((cell) => cell.char.trim() && cell.color === COLORS.text)
-  expect(white.length).toBeGreaterThan(10)
-  expect(
-    c.cells.flatMap((row, y) =>
-      row.some((cell) => cell.char.trim() && cell.color === COLORS.text) ? [y] : []
-    )
-  ).toEqual(headerRows === 6 ? [1, 2, 3, 4] : [3])
-  expect(c.cells[3]!.map((cell) => cell.char).join('')).toContain('[_  (o)(o) _]')
+  if (height! <= 35) {
+    expect(headerRows).toBe(3)
+    expect(c.cells[0]!.map((cell) => cell.char).join('')).toContain('ATOMIC SERVER · error')
+    expect(
+      c.cells
+        .slice(1)
+        .flat()
+        .every((cell) => cell.char === ' ')
+    ).toBe(true)
+  } else {
+    expect(c.cells[0]!.every((cell) => cell.char === ' ')).toBe(true)
+    expect(c.cells[4]!.some((cell) => cell.char.trim())).toBe(true)
+    if (headerRows === 6) expect(c.cells[5]!.every((cell) => cell.char === ' ')).toBe(true)
+    expect(c.cells[headerRows]!.every((cell) => cell.char === ' ')).toBe(true)
+    const title = headerRows === 6 ? SERVER_WORDMARK : ['/ ATOMIC SERVER /']
+    for (const row of title)
+      expect(c.cells.map((line) => line.map((cell) => cell.char).join('')).join('\n')).toContain(
+        row.trimEnd()
+      )
+    const white = c.cells.flat().filter((cell) => cell.char.trim() && cell.color === COLORS.text)
+    expect(white.length).toBeGreaterThan(10)
+    expect(
+      c.cells.flatMap((row, y) =>
+        row.some((cell) => cell.char.trim() && cell.color === COLORS.text) ? [y] : []
+      )
+    ).toEqual(headerRows === 6 ? [1, 2, 3, 4] : [3])
+    expect(c.cells[3]!.map((cell) => cell.char).join('')).toContain('[_  (o)(o) _]')
+  }
   for (const page of ['server', 'chat', 'models', 'access', 'welcome'] as const) {
     const f = workspaceFrame(createWorkspace(page), width!, height!, 0)
     expect(f.targets.every((target) => target.y >= headerRows)).toBe(true)

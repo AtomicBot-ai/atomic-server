@@ -15,8 +15,8 @@ const frame = (s: ReturnType<typeof createWorkspace>, width: number, height: num
 }
 
 it.each([
-  [54, 24, 12],
-  [80, 24, 7],
+  [90, 24, 12],
+  [90, 24, 7],
   [90, 32, 7],
 ])('keeps every rail destination reachable at %i×%i with a %i-row header', (width, height, top) => {
   const s = createWorkspace('server')
@@ -51,14 +51,14 @@ it('scrolls the rail under the mouse without navigating or scrolling the page co
   s.mouse = true
   s.focus = 'server-agent:0'
   for (let i = 0; i < 5; i++) {
-    const c = frame(s, 54, 24, 12)
+    const c = frame(s, 90, 24, 12)
     const result = workspaceInput('[<65;5;15M', key(), s, c)
     expect(result.action).toBeUndefined()
     Object.assign(s, result.patch)
   }
   expect(s.focus).toBe('page:access')
   expect(s.page).toBe('server')
-  const c = frame(s, 54, 24, 12)
+  const c = frame(s, 90, 24, 12)
   const target = c.targets.find((item) => item.id === 'page:access')!
   expect(workspaceInput(`[<0;5;${target.y + 1}M`, key(), s, c).action).toBe('page:access')
   expect(railInput('[<65;30;15M', key(), s, c)).toBeNull()

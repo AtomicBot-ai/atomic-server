@@ -1,6 +1,15 @@
 import type { Drawing } from './art.js'
 import { WORKSPACE_COLORS } from '../../../workspace-view/index.js'
-export const COLORS = WORKSPACE_COLORS
+export const COLORS = {
+  ...WORKSPACE_COLORS,
+  ground: '#111918',
+  surface: '#1A2523',
+  header: '#1A2523',
+  text: '#EDF5F2',
+  muted: '#B0C2BA',
+  accent: '#69D3BD',
+  focus: '#264039',
+} as const
 
 export interface Cell {
   char: string
@@ -147,16 +156,16 @@ export function button(
   selected = false,
   bold = false
 ): number {
-  const shown = ` ${label} `,
+  const shown = `${focused === id ? '>' : selected ? '*' : ' '}${label} `,
     width = textWidth(shown)
   text(
     c,
     x,
     y,
     shown,
-    selected || focused === id ? COLORS.ground : COLORS.text,
+    focused === id ? COLORS.ground : COLORS.text,
     width,
-    selected || focused === id ? COLORS.accent : COLORS.surface,
+    focused === id ? COLORS.accent : selected ? COLORS.focus : COLORS.surface,
     bold
   )
   c.targets.push({ id, x, y, width: Math.min(width, c.width - x), height: 1, hint })

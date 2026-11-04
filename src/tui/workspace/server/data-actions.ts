@@ -91,6 +91,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     const follows = !chat.endpoint || sameEndpoint(chat.endpoint, here)
     patch({
       conversation: chat,
+      chatNotice: undefined,
       chatPreferences: chat.request_settings,
       messages: chat.messages,
       ...(s.conversation?.id === chat.id ? {} : { images: [], documents: [], draft: '', cursor: 0 }),
@@ -112,6 +113,7 @@ export async function dataAction(id: string, ctx: ActionContext): Promise<boolea
     ctx.cancel(true)
     patch({
       conversation: null,
+      chatNotice: undefined,
       messages: [],
       page: 'chat',
       overlay: null,
@@ -197,6 +199,7 @@ export async function saveDataEdit(ctx: ActionContext): Promise<boolean> {
     update((v) => ({
       ...v,
       conversation: chat,
+      chatNotice: undefined,
       chatPreferences: chat.request_settings,
       overlay: null,
       history: v.history.map((h) => (h.id === chat.id ? { ...h, title } : h)),

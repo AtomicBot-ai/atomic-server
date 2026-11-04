@@ -1,3 +1,4 @@
+import { chatNotice } from './recovery.js'
 import { messageText } from '../../../terminal-service/index.js'
 import type { WorkspaceState } from '../state.js'
 
@@ -16,6 +17,7 @@ export function failedTurn(
     generating: false,
     stopping: false,
     message,
+    chatNotice: chatNotice(message),
     messages: empty ? sent.messages : now.messages,
     ...(empty ? { conversation: sent.conversation } : {}),
     ...(now.draft

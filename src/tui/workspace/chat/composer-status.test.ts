@@ -47,7 +47,7 @@ it.each([
       )
       expect(cells.length).toBeGreaterThan(0)
       for (const cell of cells) {
-        expect(cell.background).toBe(COLORS.composer)
+        expect(cell.background).toBe(COLORS.ground)
         expect(contrast(cell.color, cell.background!)).toBeGreaterThanOrEqual(4.5)
       }
     }

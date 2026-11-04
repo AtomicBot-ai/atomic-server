@@ -69,7 +69,7 @@ it.each(['mouse', 'keyboard'])(
       expect(request.mock.calls.some(([url]) => String(url).includes('/chat/completions'))).toBe(false)
       expect(await history.list()).toEqual([])
       expect(terminal.stdout.text()).not.toContain('No text returned')
-      terminal.stdin.press('\u001b4')
+      terminal.stdin.press('\u001b2')
       await eventually(() => terminal.stdout.lastFrame().includes('Keep this draft'))
       expect(terminal.stdout.lastFrame()).toContain('Send ↑')
     } finally {

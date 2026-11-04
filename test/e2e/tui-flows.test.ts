@@ -54,7 +54,7 @@ describe.skipIf(process.platform === 'win32' || !hasPython())(`atc tui journeys 
     const result = runPty(
       [
         { wait: 'Agents & tools' },
-        { type: '\u001b2' },
+        { type: '\u001b3' },
         { wait: 'Filters' },
         { click: 'Filters' },
         { wait: 'Format: LiteRT-LM' },

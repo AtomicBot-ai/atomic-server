@@ -114,3 +114,49 @@ it('still refuses a genuinely unsaved transcript instead of overwriting a newer 
   expect(await history.load(newer.id)).toEqual(newer)
   expect(ctx.get().messages.at(-1)?.content).toBe('Keep this partial reply')
 })
+
+it.each(['chat-reopen', 'chat-retry'])(
+  'recovers through %s without saving the stale transcript or losing attachments',
+  async (action) => {
+    const { ctx, history, newer, sent } = await rejectedTurn()
+    ctx.update((s) => ({
+      ...s,
+      messages: [...s.messages, { role: 'assistant', content: 'Unsaved stale copy' }],
+    }))
+    const save = vi.spyOn(history, 'save')
+    await activate(action, ctx)
+    expect(save).not.toHaveBeenCalled()
+    expect(ctx.get()).toMatchObject({
+      conversation: newer,
+      messages: newer.messages,
+      draft: sent.draft,
+      cursor: sent.cursor,
+      documents: sent.documents,
+      focus: 'composer',
+      chatNotice: undefined,
+    })
+    expect(ctx.send).toHaveBeenCalledTimes(action === 'chat-retry' ? 1 : 0)
+    expect(await history.load(newer.id)).toEqual(newer)
+  }
+)
+
+it('keeps the draft and does not send when the conflicting chat was deleted', async () => {
+  const { ctx, history, newer, sent } = await rejectedTurn()
+  await history.remove(newer.id)
+  await activate('chat-retry', ctx)
+  expect(ctx.get().draft).toBe(sent.draft)
+  expect(ctx.get().chatNotice?.details).toContain('deleted')
+  expect(ctx.get().busy).toBe(false)
+  expect(ctx.send).not.toHaveBeenCalled()
+})
+
+it('does not send a draft edited during recovery', async () => {
+  const { ctx, history, newer } = await rejectedTurn()
+  vi.spyOn(history, 'load').mockImplementation(async () => {
+    ctx.update((s) => ({ ...s, draft: 'New text while reading' }))
+    return newer
+  })
+  await activate('chat-retry', ctx)
+  expect(ctx.get().draft).toBe('New text while reading')
+  expect(ctx.send).not.toHaveBeenCalled()
+})

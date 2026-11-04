@@ -1,3 +1,5 @@
+import { recoveryAction } from './chat/recovery.js'
+import { loadDraftAction } from './chat/draft-load.js'
 import { documentAction } from './chat/document-actions.js'
 import { selectEndpoint, selectEndpointModel } from './chat/model-selection.js'
 import type { ActionContext } from './action-types.js'
@@ -33,6 +35,8 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   const { update, controller, get } = ctx,
     s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
+  if (await recoveryAction(id, ctx)) return
+  if (await loadDraftAction(id, ctx)) return
   if (await documentAction(id, ctx)) return
   if (await chatFeatureAction(id, ctx)) return
   if (await featureAction(id, ctx)) return
@@ -77,6 +81,17 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
     return
   }
   if (id === 'close') {
+    if (['help', 'sections', 'chat-detail'].includes(s.overlay ?? '') && s.overlayReturnFocus) {
+      patch({
+        overlay: null,
+        focus: s.overlayReturnFocus,
+        overlayReturnFocus: undefined,
+        scroll: s.overlayReturnScroll ?? s.scroll,
+        overlayReturnScroll: undefined,
+        hover: '',
+      })
+      return
+    }
     if (s.overlay === 'agent' && s.connection) {
       patch({
         overlay: 'connection-guide',
@@ -109,6 +124,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
       messages: [],
       images: [],
       conversation: null,
+      chatNotice: undefined,
       draft: '',
       cursor: 0,
       focus: 'composer',

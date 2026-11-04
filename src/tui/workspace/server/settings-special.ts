@@ -1,3 +1,4 @@
+import { PAGES } from '../workspace-pages.js'
 import { COLORS, text } from '../draw/canvas.js'
 import { drawFeatureSettings } from './feature-panel.js'
 import { scrollTrack } from '../draw/controls.js'
@@ -8,7 +9,7 @@ export const SHORTCUTS = [
   ['Tab / Shift+Tab', 'Next / previous control'],
   ['Enter', 'Open or activate'],
   ['Esc', 'Close dialog or go back'],
-  ['Alt+1 / 2 / 3 / 4', 'Server / Models / Settings / Playground'],
+  ['Alt+1 / 2 / 3 / 4', PAGES.map((p) => p.name).join(' / ')],
   ['Ctrl+K', 'Help'],
   ['F4', 'Server console'],
   ['Ctrl+N / Ctrl+P', 'New chat / history'],

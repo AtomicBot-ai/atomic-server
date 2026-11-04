@@ -133,14 +133,14 @@ export function workspaceInput(
   if (cloudEdit) return cloudEdit
   if (input.startsWith('[<') || input.startsWith('\u001b[<')) return {}
   if (key.meta && ['1', '2', '3', '4'].includes(input))
-    return { action: `page:${['server', 'models', 'access', 'chat'][Number(input) - 1]}` }
+    return { action: `page:${PAGES[Number(input) - 1]!.id}` }
   if (input === '[S' || input === '\u001bOS') return { action: 'console' }
   if (key.ctrl && input === 'q') return { quit: true }
   if (key.ctrl && input === 'x') return { action: 'mouse' }
   if (key.ctrl && input === 'c')
     return { action: s.page === 'setup' ? (s.setup?.preparing ? 'setup-cancel' : 'setup-pause') : 'cancel' }
   if (key.ctrl && input === 'g') return { patch: { overlay: 'menu', focus: 'page:server' }, leader: true }
-  if (key.ctrl && input === 'k') return { patch: { overlay: 'help', focus: 'close' } }
+  if (key.ctrl && input === 'k') return { action: 'help' }
   if (leader) {
     const p = PAGES.find((p) => p.key === input.toLowerCase())
     return p ? { action: `page:${p.id}`, leader: false } : { leader: false }
@@ -221,7 +221,7 @@ export function workspaceInput(
   if (key.escape) return { action: escapeAction(s).id || undefined }
   if (s.page === 'chat' && !s.overlay && key.ctrl && input === 'p') return { action: 'page:history' }
   if (s.page === 'chat' && !s.overlay && key.ctrl && input === 'n') return { action: 'new' }
-  if (s.overlay === 'command' && (key.pageDown || key.pageUp))
+  if (['command', 'chat-detail'].includes(s.overlay ?? '') && (key.pageDown || key.pageUp))
     return { action: key.pageUp ? 'scroll-up' : 'scroll-down' }
   const cloud = cloudGridInput(key, s, frame)
   if (cloud) return cloud
@@ -283,7 +283,7 @@ export function workspaceInput(
   if (list) return list
   if (input === ' ' && s.focus.startsWith('setup-file:')) return { action: s.focus }
   if (key.return) return focused()
-  if (input === '?') return { patch: { overlay: 'help', focus: 'close' } }
+  if (input === '?') return { action: 'help' }
   if (key.upArrow || key.downArrow || key.leftArrow || key.rightArrow) {
     const delta = key.upArrow || key.leftArrow ? -1 : 1,
       index = frame.targets.findIndex((t) => t.id === s.focus),

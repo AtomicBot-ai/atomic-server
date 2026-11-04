@@ -38,17 +38,23 @@ export function CanvasRow({
                   ? r.color
                   : lightSurfaces.has(r.background ?? '')
                     ? 'white'
-                    : r.color === COLORS.accent
-                      ? 'cyan'
-                      : r.color === COLORS.ground
-                        ? 'black'
-                        : r.color === COLORS.text
-                          ? 'white'
-                          : r.color === COLORS.green
-                            ? 'cyan'
-                            : r.color === COLORS.muted || r.color === COLORS.line || r.color === COLORS.stone
-                              ? 'gray'
-                              : 'cyan',
+                    : r.color === COLORS.statusError || r.color === COLORS.composerError
+                      ? 'red'
+                      : r.color === COLORS.statusStarting
+                        ? 'yellow'
+                        : r.color === COLORS.accent
+                          ? 'cyan'
+                          : r.color === COLORS.ground
+                            ? 'black'
+                            : r.color === COLORS.text
+                              ? 'white'
+                              : r.color === COLORS.green
+                                ? 'cyan'
+                                : r.color === COLORS.muted ||
+                                    r.color === COLORS.line ||
+                                    r.color === COLORS.stone
+                                  ? 'gray'
+                                  : 'cyan',
               }
             : {})}
           {...(color && trueColor && r.background ? { backgroundColor: r.background } : {})}

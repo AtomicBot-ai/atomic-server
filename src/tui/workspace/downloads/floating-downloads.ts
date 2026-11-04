@@ -34,6 +34,26 @@ export function drawFloatingDownloads(
     status = downloadStateLabel(row.state),
     remaining = paused ? '' : eta !== undefined && eta >= 0 ? `~${formatEta(eta)}` : 'Estimating…'
   const targetId = row['pending'] ? 'first-downloads' : 'download-status'
+  if (height === 1) {
+    button(
+      c,
+      'download-more',
+      x,
+      y,
+      `Downloads ${rows.length}`,
+      'View all downloads and their controls',
+      focus
+    )
+    text(
+      c,
+      x + 16,
+      y,
+      `${status} ${percent === null ? '' : percent + '%'} · ${remaining ? remaining + ' · ' : ''}${name}`,
+      highlight ? COLORS.accent : COLORS.muted,
+      width - 16
+    )
+    return
+  }
   panel(c, x, y, width, height, highlight || focus === targetId)
   c.targets.push({
     id: targetId,

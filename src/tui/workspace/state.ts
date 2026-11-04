@@ -1,3 +1,4 @@
+import type { ChatNotice } from './chat/recovery.js'
 import type { FinalSetupState } from './setup/waiting-setup.js'
 import type { FeatureEditor } from './server/feature-model.js'
 import type { WorkspaceReturnState } from './navigation/navigation-return.js'
@@ -20,6 +21,8 @@ import type { ChatImage, ChatMessage, RequestRow } from '../../terminal-service/
 import type { CommandRow } from '../command-list.js'
 import { initialState, type TuiState } from '../state.js'
 export interface WorkspaceState extends WorkspaceReturnState {
+  chatNotice?: ChatNotice | undefined
+  chatDetail?: 'model' | 'error'
   apiPending?: 'starting' | 'stopping' | 'restarting' | undefined
   downloadAttention?: number
   downloadListReturn?: { overlay: WorkspaceState['overlay']; focus: string; selected: number } | null
@@ -125,6 +128,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
   base: TuiState
   page: Page
   overlay:
+    | 'chat-detail'
     | 'chat-features'
     | 'chat-tools'
     | 'feature-editor'

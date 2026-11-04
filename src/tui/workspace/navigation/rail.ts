@@ -1,3 +1,4 @@
+import { PAGES } from '../workspace-pages.js'
 import type { Key } from 'ink'
 import type { Canvas } from '../draw/canvas.js'
 import type { InputResult } from '../input-types.js'
@@ -35,6 +36,12 @@ export function railLayout(c: Canvas, s: WorkspaceState, bottom: number) {
 /** Scrolling moves focus only; Enter or a click activates the selected destination. */
 export function railInput(input: string, key: Key, s: WorkspaceState, frame: Canvas): InputResult | null {
   if (s.overlay || s.page === 'welcome' || s.page === 'setup') return null
+  if (frame.width < 90) {
+    const index = PAGES.findIndex((page) => `page:${page.id}` === s.focus)
+    if (index < 0 || !(key.leftArrow || key.rightArrow)) return null
+    const next = (index + (key.leftArrow ? -1 : 1) + PAGES.length) % PAGES.length
+    return { patch: { focus: `page:${PAGES[next]!.id}`, hover: '' } }
+  }
   const mouse = mouseReport(input)
   const wheel = Boolean(
     mouse &&

@@ -1,3 +1,4 @@
+import { drawChatRecovery } from './chat/recovery.js'
 import { drawCompactStatus } from './server/compact-status.js'
 import { floatingDownloadBounds } from './downloads/download-layout.js'
 import { dimBackdrop } from './draw/backdrop.js'
@@ -60,17 +61,8 @@ export function workspaceFrame(
     drawRail(c, s, shell.bottom, focus)
     if (shell.sidebar) drawSidebar(c, s, shell.rail + 1, shell.y, shell.bottom, focus, s.motion ? seconds : 0)
     else {
-      button(c, 'section-menu', x, y, 'Sections ▾', 'Choose a section', focus)
       if (!s.busy)
-        button(
-          c,
-          'api-toggle',
-          x + 14,
-          y,
-          serverRunning(s) ? 'Stop' : 'Start',
-          'Start or stop the server',
-          focus
-        )
+        button(c, 'api-toggle', x, y, serverRunning(s) ? 'Stop' : 'Start', 'Start or stop the server', focus)
       y += 2
     }
   }
@@ -83,8 +75,7 @@ export function workspaceFrame(
   } else if (s.page === 'chat') {
     button(c, 'chat-parameters', x + bodyWidth - 5, shell.y, '[=]', 'Request parameters', focus)
     if (!shell.sidebar) {
-      newChatButton(c, x + bodyWidth - 17, y, 16, focus)
-      y++
+      newChatButton(c, x + bodyWidth - 23, shell.y, 16, focus)
     } else y += 2
     // A reply another client is generating in this chat streams in after the saved messages.
     const messages = s.otherTurn ? [...s.messages, s.otherTurn.message] : s.messages
@@ -94,7 +85,7 @@ export function workspaceFrame(
           l.bottom - COMPOSER_HEIGHT + 1,
           Math.max(y + 5, Math.floor((y + l.bottom - COMPOSER_HEIGHT) / 2))
         )
-    if (!messages.length && height >= 24) {
+    if (!messages.length && !s.chatNotice && height >= 24) {
       text(
         c,
         x + Math.max(0, Math.floor((bodyWidth - 25) / 2)),
@@ -115,7 +106,7 @@ export function workspaceFrame(
           '',
         ])
       if (rows.at(-1) === '') rows.pop()
-      const available = Math.max(1, composerY - y - 1),
+      const available = Math.max(0, composerY - y - 1 - (s.chatNotice ? 3 : 0)),
         end = Math.max(available, rows.length - s.scroll)
       rows
         .slice(Math.max(0, end - available), end)
@@ -130,6 +121,7 @@ export function workspaceFrame(
           )
         )
     }
+    if (s.chatNotice) drawChatRecovery(c, s, x, composerY - 3, bodyWidth, focus)
     drawComposer(c, s, x, composerY, bodyWidth, focus, seconds)
   } else if (!drawCompactStatus(c, s, x, y, bodyWidth, focus))
     drawPanels(c, s, { x, y, width: bodyWidth, bottom: l.bottom }, focus)
@@ -142,11 +134,14 @@ export function workspaceFrame(
   else if (isPicker(s.overlay)) drawPicker(c, s, focus)
   else if (s.overlay) drawOverlay(c, s, focus, seconds)
   // The status line: what just happened, else what is in progress, else that a newer atc is out.
-  const status = s.message || s.base.busy || updateNotice(s.workspace?.atc)
+  const status =
+    (s.page === 'chat' && s.chatNotice ? '' : s.message) || s.base.busy || updateNotice(s.workspace?.atc)
   if (!s.overlay && status)
     text(c, l.inset, height - 2, status, s.message ? COLORS.accent : COLORS.muted, width - l.inset * 2)
   drawFooter(c, s, focus)
   // Never register invisible controls on an unusually narrow viewport.
-  c.targets = c.targets.filter((t) => t.width > 0 && t.y >= 0 && t.y < height && t.x < width)
+  c.targets = c.targets
+    .filter((t) => t.width > 0 && t.y >= 0 && t.y < height && t.x < width)
+    .sort((a, b) => a.y - b.y || a.x - b.x)
   return c
 }

@@ -1,3 +1,4 @@
+import { chatNotice } from '../chat/recovery.js'
 import { pollEvery } from './poll.js'
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
@@ -206,7 +207,8 @@ export function useWorkspaceData(
     if (!latest.current.conversation || !latest.current.messages.length) return
     const controller = c.current
     if (!controller) return
-    const save = () =>
+    const save = () => {
+      const conversationId = latest.current.conversation?.id
       void persistConversation({ get: () => latest.current, controller, update })
         .then(async () => {
           if (!latest.current.generating) {
@@ -214,7 +216,14 @@ export function useWorkspaceData(
             update((v) => ({ ...v, history }))
           }
         })
-        .catch((e) => update((v) => ({ ...v, message: `Chat could not be saved: ${String(e)}` })))
+        .catch((e) =>
+          update((v) =>
+            v.conversation?.id === conversationId
+              ? { ...v, chatNotice: chatNotice(`Chat could not be saved: ${String(e)}`) }
+              : v
+          )
+        )
+    }
     save()
     const timer = s.generating ? setInterval(save, 750) : undefined
     return () => {

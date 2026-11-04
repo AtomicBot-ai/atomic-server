@@ -59,7 +59,7 @@ it.skipIf(process.platform === 'win32' || !hasPython())(
       expect(verdicts.every((v) => !v.compatibility?.verdict.ok)).toBe(true)
       const steps = [
         { wait: 'Agents & tools' },
-        { type: '\u001b2' },
+        { type: '\u001b3' },
         { wait: 'Incompatible fixture' },
         { click: 'Incompatible fixture' },
         { click: 'Download' },

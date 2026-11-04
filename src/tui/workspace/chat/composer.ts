@@ -1,3 +1,4 @@
+import { draftLoadAvailable } from './draft-load.js'
 import { COLORS, graphemes, text, textWidth, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { fill } from '../draw/fortress.js'
@@ -16,8 +17,14 @@ export function drawComposer(
   focus: string,
   seconds = 0
 ) {
-  fill(c, x, y, width, COMPOSER_HEIGHT, COLORS.composerFrame)
-  fill(c, x + 2, y + 1, width - 4, COMPOSER_HEIGHT - 2, COLORS.composer)
+  fill(c, x, y, width, COMPOSER_HEIGHT, COLORS.ground)
+  const border = s.focus === 'composer' ? COLORS.accent : COLORS.line
+  text(c, x, y, '+' + '-'.repeat(Math.max(0, width - 2)) + '+', border, width)
+  text(c, x, y + COMPOSER_HEIGHT - 1, '+' + '-'.repeat(Math.max(0, width - 2)) + '+', border, width)
+  for (let row = 1; row < COMPOSER_HEIGHT - 1; row++) {
+    text(c, x, y + row, '|', border, 1)
+    text(c, x + width - 1, y + row, '|', border, 1)
+  }
   drawLoadLine(c, s, x + 3, y + 1, width - 6, focus, seconds)
   const control = (
     id: string,
@@ -33,11 +40,12 @@ export function drawComposer(
     const ending = label.endsWith('▾') ? '… ▾' : '…'
     const content =
       textWidth(label) > size - 2 ? (wrap(label, size - 2 - textWidth(ending))[0] ?? '') + ending : label
-    const shown = ' ' + content + ' '.repeat(Math.max(1, size - 1 - textWidth(content)))
-    text(c, left, row, shown, active ? background : ink, size, active ? ink : background, true)
+    const shown = (active ? '>' : ' ') + content + ' '.repeat(Math.max(1, size - 1 - textWidth(content)))
+    text(c, left, row, shown, active ? COLORS.ground : ink, size, active ? COLORS.accent : background, true)
     c.targets.push({ id, x: left, y: row, width: size, height: 1, hint })
   }
-  const editorWidth = width - 16,
+  const load = draftLoadAvailable(s)
+  const editorWidth = width - (load ? 23 : 16),
     chars = graphemes(s.draft)
   if (s.focus === 'composer' && !s.overlay) chars.splice(s.cursor, 0, '▏')
   const content = s.draft
@@ -48,15 +56,7 @@ export function drawComposer(
   wrap(content, editorWidth)
     .slice(-2)
     .forEach((row, i) =>
-      text(
-        c,
-        x + 3,
-        y + 2 + i,
-        row,
-        s.draft ? COLORS.composerInk : COLORS.stone,
-        editorWidth,
-        COLORS.composer
-      )
+      text(c, x + 3, y + 2 + i, row, s.draft ? COLORS.text : COLORS.muted, editorWidth, COLORS.ground)
     )
   c.targets.push({
     id: 'composer',
@@ -68,14 +68,29 @@ export function drawComposer(
   })
   if (s.generating || s.draft.trim() || s.documents?.length || s.images.length)
     control(
-      s.generating ? 'cancel' : 'send',
-      x + width - 11,
+      s.generating ? 'cancel' : load ? 'load-and-send' : 'send',
+      x + width - (load ? 18 : 11),
       y + 2,
-      8,
-      s.generating ? 'Stop' : 'Send ↑',
-      s.generating ? 'Ctrl+C Stop response' : 'Enter Send message',
+      load ? 15 : 8,
+      s.generating ? (s.stopping ? 'Stopping' : 'Stop') : load ? 'Load & send' : 'Send ↑',
+      s.generating
+        ? 'Ctrl+C Stop response'
+        : load
+          ? 'Load this installed model and send the retained draft'
+          : 'Enter Send message',
       COLORS.sendButton,
       COLORS.composerInk
+    )
+  if (s.model)
+    control(
+      'model-details',
+      x + width - 18,
+      y + 5,
+      15,
+      'Model details',
+      'Show the full model name and readiness',
+      COLORS.surface,
+      COLORS.text
     )
   control(
     'choose-model',
@@ -84,8 +99,8 @@ export function drawComposer(
     Math.max(15, width - (width < 65 ? 17 : 30)),
     s.model ? `${s.model} ▾` : 'Choose model ▾',
     s.model ? `${s.model} | Choose a model` : 'Choose a model from your library or endpoint',
-    COLORS.modelButton,
-    COLORS.composerInk
+    COLORS.surface,
+    COLORS.text
   )
   control(
     'chat-features',
@@ -94,8 +109,8 @@ export function drawComposer(
     11,
     'Tools ▾',
     'Choose assistant, skills and tools',
-    COLORS.engineButton,
-    COLORS.composer
+    COLORS.surface,
+    COLORS.text
   )
   control(
     'attachments',
@@ -106,7 +121,7 @@ export function drawComposer(
       ? `Files ${(s.documents?.length ?? 0) + s.images.length}`
       : '+ Files',
     'Attach documents or images',
-    COLORS.engineButton,
-    COLORS.composer
+    COLORS.surface,
+    COLORS.text
   )
 }

@@ -69,7 +69,7 @@ it('opens only the selected support destination with the system launcher', async
   } satisfies ActionContext
   await activate('help', context)
   const frame = workspaceFrame(state, 90, 32, 0)
-  expect(frame.popover?.height).toBe(13)
+  expect(frame.popover?.height).toBe(16)
   expect(frame.targets.some((t) => t.id === 'support:discord')).toBe(true)
   for (const link of SUPPORT_LINKS) {
     await activate(link.id, context)
@@ -82,7 +82,7 @@ it.each([false, true])('keeps the focused server button readable when running=%s
   s.workspace = { api: { running }, services: [] } as never
   const c = canvas(80, 30)
   drawSidebarControl(c, s, 2, 3, 'api-toggle')
-  const labels = c.cells.flat().filter((cell) => cell.background === COLORS.composer && cell.char.trim())
+  const labels = c.cells.flat().filter((cell) => cell.background === COLORS.accent && cell.char.trim())
   expect(labels.length).toBeGreaterThan(5)
   expect(labels.every((cell) => cell.color === COLORS.ground)).toBe(true)
 })

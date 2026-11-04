@@ -9,6 +9,14 @@ import type { Canvas } from '../draw/canvas.js'
 import { button, textWidth } from '../draw/canvas.js'
 import type { Page, WorkspaceState } from '../state.js'
 
+const SERVER_MENU = [
+  ...SERVER_NAVIGATION,
+  { id: 'model', label: 'Engine & model' },
+  { id: 'connect', label: 'Connections' },
+  { id: 'keys', label: 'API keys' },
+  { id: 'traffic', label: 'Requests' },
+]
+
 export function workspacePage(s: WorkspaceState): 'chat' | 'server' | 'models' | 'access' {
   const page = s.page === 'tools' ? s.operationReturn : s.page
   if (['configuration', 'remote', 'model', 'proxy'].includes(s.serverView)) return 'server'
@@ -50,7 +58,7 @@ export function drawSections(
     page === 'chat'
       ? PLAYGROUND_TASKS
       : page === 'server'
-        ? SERVER_NAVIGATION
+        ? SERVER_MENU
         : page === 'access'
           ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
           : LIBRARY_SECTIONS
@@ -119,7 +127,7 @@ export function sectionMenu(s: WorkspaceState) {
             : 'Playground',
     items:
       page === 'server'
-        ? SERVER_NAVIGATION
+        ? SERVER_MENU
         : page === 'models'
           ? LIBRARY_SECTIONS
           : page === 'access'

@@ -37,10 +37,12 @@ export function focusedTarget(
 }
 
 export function tabTarget(focus: string, targets: { id: string }[], backwards: boolean) {
-  const i = targets.findIndex((t) => t.id === focus)
+  // Repeated actions (Help in the rail and footer) share focus; visit their first visible location once.
+  const ordered = targets.filter((target, index) => targets.findIndex((t) => t.id === target.id) === index)
+  const i = ordered.findIndex((t) => t.id === focus)
   return {
     patch: {
-      focus: targets[(i + (backwards ? -1 : 1) + targets.length) % targets.length]?.id ?? '',
+      focus: ordered[(i + (backwards ? -1 : 1) + ordered.length) % ordered.length]?.id ?? '',
       hover: '',
       message: '',
     },

@@ -43,6 +43,7 @@ export function workspaceDownloadRows(s: WorkspaceState) {
 /** The status card shares the header, leaving every page's actions unobstructed. */
 export function floatingDownloadBounds(c: Canvas, s: WorkspaceState) {
   if (!workspaceDownloadRows(s).length) return null
+  if (c.height <= 35) return { x: 2, y: 1, width: c.width - 4, height: 1 }
   const stacked = c.width < 80
   const width = stacked ? c.width - 4 : Math.min(56, c.width - 38)
   return {

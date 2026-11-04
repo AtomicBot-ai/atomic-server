@@ -4,6 +4,7 @@
  * after a failed load, its error and View log (`models.logs`, the last attempt's log).
  */
 
+import { cancelDraftLoad } from './draft-load.js'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import { loadStageText } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
@@ -37,11 +38,11 @@ export function drawLoadLine(
   if (load || s.modelLoad) {
     const spinner = s.motion ? '|/-\\'[Math.floor(seconds * 6) % 4] : '·'
     const label = `${spinner} ${load ? `${load.model_id !== s.model ? `Loading ${load.model_id}: ` : ''}${loadStageText(load)}` : 'Loading model…'}`
-    text(c, x, y, label, COLORS.composerInk, Math.max(0, width - 14), COLORS.composer)
+    text(c, x, y, label, COLORS.text, Math.max(0, width - 14), COLORS.ground)
     button(c, 'cancel-load', x + width - 13, y, 'Cancel load', 'Stop this load', focus)
   } else if (s.loadError) {
     const label = `Load failed: ${s.loadError.message}`
-    text(c, x, y, label, COLORS.composerError, Math.max(0, width - 17), COLORS.composer)
+    text(c, x, y, label, COLORS.statusError, Math.max(0, width - 17), COLORS.ground)
     button(c, 'retry-load', x + width - 16, y, 'Retry', 'Retry loading this model', focus)
     button(c, 'load-log', x + width - 9, y, 'View log', 'The last attempt’s log', focus)
   }
@@ -58,6 +59,7 @@ export async function loadAction(id: string, ctx: ActionContext): Promise<boolea
     return true
   }
   if (id === 'cancel-load') {
+    cancelDraftLoad(ctx.controller)
     const load =
       currentLoad(s) ?? (s.modelLoad ? { provider: s.modelLoad.provider, model_id: s.modelLoad.model } : null)
     if (load)

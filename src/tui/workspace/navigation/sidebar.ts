@@ -1,3 +1,6 @@
+import { PAGES } from '../workspace-pages.js'
+import { button } from '../draw/canvas.js'
+import { workspaceHeaderRows } from '../draw/brand-header.js'
 import { railLayout } from './rail.js'
 import { drawSidebarControl } from '../server/sidebar-control.js'
 export { serverRunning } from '../server/server-status.js'
@@ -19,6 +22,23 @@ import type { WorkspaceState } from '../state.js'
 
 export const SERVER_SIDEBAR = SERVER_NAVIGATION
 export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: string) {
+  if (c.width < 90) {
+    let x = 2
+    PAGES.forEach((page, i) => {
+      x +=
+        button(
+          c,
+          `page:${page.id}`,
+          x,
+          workspaceHeaderRows(c),
+          `${i + 1} ${page.name}`,
+          page.hint,
+          focus,
+          workspacePage(s) === page.id
+        ) + 1
+    })
+    return
+  }
   const width = 13,
     { top, start, count, items } = railLayout(c, s, bottom)
   fill(c, 0, top, width + 1, bottom - top + 1, COLORS.header)
@@ -48,6 +68,7 @@ export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: st
       width,
       background
     )
+    text(c, 1, y, focus === id ? '>' : id === `page:${page}` ? '*' : ' ', COLORS.accent, 1, background)
     c.targets.push({ id, x: 0, y, width, height: 2, hint: label })
   }
   for (let row = top; row <= bottom; row++) text(c, width, row, '│', COLORS.line, 1)

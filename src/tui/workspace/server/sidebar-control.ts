@@ -22,25 +22,11 @@ export function drawSidebarControl(
     selected = serverSelection(s)
   const changing = Boolean(s.apiPending)
   const provider = s.engines.find((e) => e.id === selected.engine)?.provider ?? selected.engine.split('|')[0]
-  const compact = c.height < 30
-  panel(c, x, y, 22, compact ? 7 : 11, running, seconds)
-  const background = waiting
-    ? focus === 'api-toggle'
-      ? COLORS.header
-      : COLORS.surface
-    : focus === 'api-toggle'
-      ? COLORS.composer
-      : changing || running
-        ? COLORS.engineButton
-        : COLORS.accent
-  const color = waiting
-    ? COLORS.muted
-    : focus === 'api-toggle' || (!changing && !running)
-      ? COLORS.ground
-      : COLORS.text
-  fill(c, x + 1, y + 1, 20, compact ? 2 : 3, background)
+  panel(c, x, y, 22, 7, running, seconds)
+  const background = focus === 'api-toggle' ? COLORS.accent : COLORS.surface
+  const color = focus === 'api-toggle' ? COLORS.ground : COLORS.text
   const phase = s.motion ? Math.floor(seconds * 5) % 4 : 0
-  const icon = changing ? ['|', '/', '-', '\\'][phase] : running ? '[#]' : '[>]'
+  const icon = changing ? ['|', '/', '-', '\\'][phase] : focus === 'api-toggle' ? '>' : ' '
   const state = changing
     ? s.apiPending === 'stopping'
       ? 'Stopping…'
@@ -48,69 +34,26 @@ export function drawSidebarControl(
     : running
       ? 'Stop API'
       : 'Start API'
-  const label = `${icon} ${state}`
-  if (waiting) {
-    const lines = waiting.label
-      .replace(' is ', '\n')
-      .replace(' download paused', '\ndownload paused')
-      .split('\n')
-    lines.forEach((line, i) =>
-      text(c, x + 1 + Math.floor((20 - line.length) / 2), y + 1 + i, line, color, 20, background, true)
-    )
-  } else text(c, x + 1 + Math.floor((20 - label.length) / 2), y + 2, label, color, 20, background, true)
+  fill(c, x + 1, y + 1, 20, 1, background)
+  text(c, x + 1, y + 1, `${icon} ${waiting?.label ?? state}`, color, 20, background, true)
   if (!changing)
     c.targets.push({
       id: 'api-toggle',
       x: x + 1,
       y: y + 1,
       width: 20,
-      height: compact ? 2 : 3,
+      height: 1,
       hint: waiting?.message ?? state,
     })
-  if (running && s.motion) {
-    const position = Math.floor(seconds * 4) % 20
-    text(
-      c,
-      x + 1 + position,
-      y + (compact || phase < 2 ? 1 : 3),
-      '─',
-      focus === 'api-toggle' ? COLORS.ground : COLORS.composer,
-      1,
-      background
-    )
+  for (const [id, title, value, dy] of [
+    ['server-model-page:engine', 'Engine', provider ? engineName(provider) : 'Not selected', 3],
+    ['server-model-page:model', 'Model', selected.model || 'Not selected', 4],
+    ['server-section:connect', 'Connections', '›', 5],
+  ] as const) {
+    const bg = focus === id ? COLORS.focus : COLORS.surface
+    fill(c, x + 1, y + dy, 20, 1, bg)
+    text(c, x + 1, y + dy, `${focus === id ? '>' : ' '} ${title} ${value}`, COLORS.text, 20, bg)
+    c.targets.push({ id, x: x + 1, y: y + dy, width: 20, height: 1, hint: `${title}: ${value}` })
   }
-  if (compact) {
-    for (const [id, title, value, dy] of [
-      ['server-model-page:engine', 'Engine', provider ? engineName(provider) : 'Not selected', 3],
-      ['server-model-page:model', 'Model', selected.model || 'Not selected', 4],
-      ['server-section:connect', 'Connections', '›', 5],
-    ] as const) {
-      const bg = focus === id ? COLORS.header : running ? COLORS.focus : COLORS.surface
-      fill(c, x + 1, y + dy, 20, 1, bg)
-      text(c, x + 2, y + dy, `${title} ${value}`, COLORS.text, 18, bg)
-      c.targets.push({ id, x: x + 1, y: y + dy, width: 20, height: 1, hint: title })
-    }
-    return y + 8
-  }
-  const detail = (id: string, dy: number, title: string, value: string) => {
-    const bg = focus === id ? COLORS.header : running ? COLORS.focus : COLORS.surface
-    fill(c, x + 1, y + dy, 20, 2, bg)
-    text(c, x + 2, y + dy, title, COLORS.muted, 18, bg)
-    text(c, x + 2, y + dy + 1, value + ' ›', COLORS.text, 18, bg)
-    c.targets.push({ id, x: x + 1, y: y + dy, width: 20, height: 2, hint: title })
-  }
-  detail('server-model-page:engine', 4, 'Engine', provider ? engineName(provider) : 'Not selected')
-  detail('server-model-page:model', 6, 'Model', selected.model || 'Not selected')
-  const bg = focus === 'server-section:connect' ? COLORS.header : running ? COLORS.focus : COLORS.surface
-  fill(c, x + 1, y + 8, 20, 2, bg)
-  text(c, x + 2, y + 8, 'Connections       ›', COLORS.text, 18, bg)
-  c.targets.push({
-    id: 'server-section:connect',
-    x: x + 1,
-    y: y + 8,
-    width: 20,
-    height: 2,
-    hint: 'Connections',
-  })
-  return y + 12
+  return y + 8
 }

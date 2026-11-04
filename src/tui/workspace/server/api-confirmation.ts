@@ -33,6 +33,7 @@ export function drawApiConfirmation(c: Canvas, s: WorkspaceState, focus: string)
     y + height - 4,
     label,
     'Active requests may be interrupted',
-    focus
+    focus,
+    true
   )
 }

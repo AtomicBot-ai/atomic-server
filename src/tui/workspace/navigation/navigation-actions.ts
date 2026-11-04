@@ -40,7 +40,12 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
   }
   if (id === 'section-menu') {
     const menu = sectionMenu(s)
-    ctx.update((v) => ({ ...v, overlay: 'sections', focus: `${menu.prefix}:${menu.items[0]?.id}` }))
+    ctx.update((v) => ({
+      ...v,
+      overlayReturnFocus: v.focus,
+      overlay: 'sections',
+      focus: `${menu.prefix}:${menu.items[0]?.id}`,
+    }))
     return true
   }
   if (id === 'switch-mode') {

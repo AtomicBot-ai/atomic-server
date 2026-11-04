@@ -17,7 +17,7 @@ export function fieldControl(
   const active = focus === id
   const edge = active ? COLORS.accent : COLORS.stone
   text(c, x, y, ' '.repeat(width), COLORS.text, width, active ? COLORS.focus : COLORS.header)
-  text(c, x, y, '[', edge, 1)
+  text(c, x, y, active ? '>' : '[', edge, 1)
   text(c, x + 2, y, value, COLORS.text, width - (dropdown ? 7 : 4))
   if (dropdown) text(c, x + width - 4, y, 'v', active ? COLORS.accent : COLORS.muted, 1)
   text(c, x + width - 1, y, ']', edge, 1)
@@ -35,7 +35,16 @@ export function toggleControl(
 ) {
   const active = focus === id
   const surface = active ? COLORS.composer : on ? COLORS.accent : COLORS.header
-  text(c, x, y, on ? '[= On ]' : '[Off =]', active || on ? COLORS.ground : COLORS.muted, 7, surface, true)
+  text(
+    c,
+    x,
+    y,
+    active ? (on ? '> On  ]' : '> Off ]') : on ? '[= On ]' : '[Off =]',
+    active || on ? COLORS.ground : COLORS.muted,
+    7,
+    surface,
+    true
+  )
   c.targets.push({ id, x, y, width: 7, height: 1, hint })
 }
 
@@ -53,7 +62,7 @@ export function navigationRow(
   const active = focus === id
   const surface = active || selected ? COLORS.focus : COLORS.surface
   text(c, x, y, ' '.repeat(width), COLORS.text, width, surface)
-  text(c, x, y, active || selected ? '|' : ' ', COLORS.accent, 1)
+  text(c, x, y, active ? '>' : selected ? '*' : ' ', COLORS.accent, 1)
   text(c, x + 2, y, label, active || selected ? COLORS.text : COLORS.muted, width - 3, surface, selected)
   c.targets.push({ id, x, y, width, height: 1, hint })
 }
@@ -96,7 +105,7 @@ export function quietButton(
     c,
     x,
     y,
-    ` ${label} `,
+    `${focus === id ? '>' : ' '}${label} `,
     focus === id ? COLORS.text : COLORS.muted,
     width,
     focus === id ? COLORS.focus : COLORS.surface
@@ -115,8 +124,8 @@ export function saveActions(
   discard = 'settings-discard',
   hint = 'Apply these settings'
 ) {
-  const saveX = x + width - 18
+  const saveX = x + width - 14
   if (width >= 64) text(c, x, bottom - 1, 'Unsaved changes', COLORS.muted, width - 32)
   quietButton(c, discard, saveX - 11, bottom - 1, 'Discard', 'Discard pending settings', focus)
-  actionButton(c, save, saveX, bottom - 2, 'Save changes', hint, focus)
+  actionButton(c, save, saveX, bottom - 1, 'Save changes', hint, focus)
 }

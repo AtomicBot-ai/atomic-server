@@ -17,6 +17,8 @@ type Location = Pick<
   | 'toolGroup'
 >
 export interface WorkspaceReturnState {
+  overlayReturnScroll?: number | undefined
+  overlayReturnFocus?: string | undefined
   settingsReturn?: Location | undefined
   connectionReturn?: Location | undefined
 }
@@ -62,7 +64,13 @@ export function navigationReturnAction(id: string, ctx: ActionContext): boolean 
   }
   const page = id === 'page:access' ? 'access' : id === 'page:settings' ? 'settings' : undefined
   if (!s.setupComplete || (!page && !id.startsWith('settings-section:'))) return false
-  if (workspacePage(s) !== 'access') ctx.update((v) => ({ ...v, settingsReturn: workspaceLocation(s) }))
+  if (workspacePage(s) !== 'access')
+    ctx.update((v) => ({
+      ...v,
+      settingsReturn: workspaceLocation(
+        s.overlay === 'help' ? { ...s, focus: s.overlayReturnFocus ?? s.focus } : s
+      ),
+    }))
   if (!page) return false
   ctx.update((v) => ({
     ...v,

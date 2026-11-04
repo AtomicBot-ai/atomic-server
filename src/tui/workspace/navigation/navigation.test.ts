@@ -38,14 +38,14 @@ it('uses a rail and keeps contextual desktop navigation available inside detail 
   expect(PAGES.map((v) => v.name)).toEqual(WORKSPACE_NAVIGATION.map((v) => v.label))
   for (const page of ['server', 'requests', 'keys'] as const) {
     const state = { ...createWorkspace(page), operationReturn: 'logs' as const }
-    const frame = workspaceFrame(state, 100, 30, 0)
+    const frame = workspaceFrame(state, 110, 32, 0)
     for (const section of SERVER_SIDEBAR)
       expect(frame.targets.some((v) => v.id === `server-section:${section.id}`)).toBe(true)
     expect(workspacePage(state)).toBe('server')
   }
   for (const page of ['access', 'settings', 'logs', 'checks', 'tools'] as const) {
     const state = { ...createWorkspace(page), operationReturn: 'logs' as const }
-    const frame = workspaceFrame(state, 80, 30, 0)
+    const frame = workspaceFrame(state, 110, 32, 0)
     for (const section of SETTINGS_SECTIONS)
       expect(frame.targets.some((v) => v.id === `settings-section:${section.id}`)).toBe(true)
     expect(workspacePage(state)).toBe('access')
@@ -59,7 +59,7 @@ it('opens task-specific media forms directly from mouse and keyboard targets', a
     expect(ctx.get()).toMatchObject({ page: 'tools', operationReturn: 'chat', overlay: null })
     expect(playgroundTask(ctx.get())).toBe(task.id)
     expect(operationChoices(ctx.get()).every((v) => v.name.startsWith(`media.${task.id}.`))).toBe(true)
-    const frame = workspaceFrame(ctx.get(), 80, 24, 0)
+    const frame = workspaceFrame(ctx.get(), 110, 32, 0)
     for (const other of tasks)
       expect(frame.targets.some((v) => v.id === `playground-task:${other.id}`)).toBe(true)
     expect(frame.targets.some((v) => v.id === 'operation-field:request.workflow')).toBe(true)
@@ -85,7 +85,7 @@ it('opens the audio operations from the playground, and comes back to it', async
   })
   expect(playgroundTask(ctx.get())).toBe('audio')
   expect(operationChoices(ctx.get()).every((v) => v.group === 'audio')).toBe(true)
-  const frame = workspaceFrame(ctx.get(), 80, 24, 0)
+  const frame = workspaceFrame(ctx.get(), 110, 32, 0)
   expect(frame.targets.some((v) => v.id === 'playground-task:audio')).toBe(true)
   expect(frame.targets.some((v) => v.id === 'operation-field:request.text')).toBe(true)
 })
@@ -105,7 +105,7 @@ it('routes each server section and library child back to its shared parent', asy
   expect(ctx.get().settingsGroup).toBe('admin')
   expect(ctx.get().settingsExpanded).toContain('engines')
   ctx.update((s) => ({ ...s, page: 'tools', operationReturn: 'models' }))
-  const frame = workspaceFrame(ctx.get(), 80, 24, 0)
+  const frame = workspaceFrame(ctx.get(), 110, 32, 0)
   for (const section of LIBRARY_SECTIONS)
     expect(frame.targets.some((v) => v.id === `library:${section.id}`)).toBe(true)
   await activate('library:installed', ctx)

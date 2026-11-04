@@ -68,6 +68,7 @@ export function turnActions(
       cursor: 0,
       generating: true,
       stopping: false,
+      chatNotice: undefined,
       message: '',
       scroll: 0,
     })
