@@ -162,3 +162,4 @@ add a new one that says which record it supersedes.
 - **2026-11-02** — [Wait before server handoff](2026-11-02-wait-before-server-handoff.md) — shared download gate, Minesweeper before control-panel override, and inert explanatory API controls.
 
 - **2026-11-02** — [Preserve serving models and effective selection](2026-11-02-preserve-serving-models-and-selection.md) — keep non-chat APIs serving during downloads; restore a supported saved provider and preserve environment precedence.
+- **2026-11-04** — [Diagnose chat stream failures with finite tags](2026-11-04-diagnose-chat-stream-failures.md) — map the four uncoded `chat-stream.ts` `Error` messages to `diagnostic_code` and record approved `diagnostic_cause_code` tags on `chat.stream` reports without exposing text.
