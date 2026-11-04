@@ -11,6 +11,7 @@ import { dirname } from 'node:path'
 import {
   DOWNLOAD_CANCELLED,
   diskError,
+  diskWriteError,
   isFinalError,
   openSidecar,
   refuseSidecarWrite,
@@ -122,7 +123,7 @@ async function pump(job: FileJob, handle: FileHandle, first: Response, from: num
         if (done) break
         if (job.signal.aborted) throw new Error(DOWNLOAD_CANCELLED)
         await handle.write(value, 0, value.byteLength, written).catch((e) => {
-          throw diskError(e)
+          throw diskWriteError(e, written, value.byteLength)
         })
         written += value.byteLength
         sinceReset += value.byteLength

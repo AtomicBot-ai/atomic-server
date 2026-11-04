@@ -1,6 +1,6 @@
 import { AtomicCoreError } from '@atomic-chat/core'
 import { describe, expect, it } from 'vitest'
-import { AtcError, describeError, errorBody, exitCodeFor } from './errors.js'
+import { AtcError, describeError, errorBody, exitCodeFor, readableDetails } from './errors.js'
 
 describe('errors', () => {
   it('maps usage and stubs to their exit codes, everything else to 1', () => {
@@ -45,4 +45,27 @@ it("rewrites the core's CLI commands in its messages to atc's", () => {
   // The default data folder is named after the core's CLI: a path is not a command.
   const path = '/Users/u/Library/Application Support/atomic-chat-cli/data/llamacpp/models/m/model.yml'
   expect(errorBody(new AtomicCoreError('MODEL_NOT_FOUND', 'gone', path)).details).toBe(path)
+})
+
+// Core 0.21.2 ends a failed load's details with a machine line for the desktop app's telemetry.
+describe("the core's load-diag line", () => {
+  const diag = 'atomic-core-diag {"exit_code":"0xC0000135","stage":"spawn","backend":"win-cuda-13.3-x64"}'
+  const failed = new AtomicCoreError('ENGINE_BINARY_BROKEN', 'The engine could not start.', `tail\n${diag}`)
+
+  it('is left out of the text people read', () => {
+    expect(describeError(failed)).toBe('The engine could not start.\n  tail [ENGINE_BINARY_BROKEN]')
+    expect(describeError(new AtomicCoreError('ENGINE_BINARY_BROKEN', 'm', diag))).toBe(
+      'm\n  [ENGINE_BINARY_BROKEN]'
+    )
+  })
+
+  it('stays in the JSON body', () => {
+    expect(errorBody(failed).details).toBe(`tail\n${diag}`)
+  })
+
+  it('leaves details without it as they are, apart from surrounding blank lines', () => {
+    expect(readableDetails('a\nb')).toBe('a\nb')
+    expect(readableDetails('')).toBeUndefined()
+    expect(readableDetails(undefined)).toBeUndefined()
+  })
 })

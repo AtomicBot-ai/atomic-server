@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-core/src/downloads/disk.test.ts @ 8a38521 (v0.17.0); adapted: core contract types come from @atomic-chat/core/contracts.
+// Lifted from atomic-chat-core/src/downloads/disk.test.ts @ 8a38521 (v0.17.0), FAT32 cases from 8cbab27 (v0.21.2); adapted: core contract types come from @atomic-chat/core/contracts; writes are checked by where they end.
 import { describe, expect, it } from 'vitest'
 import {
   checkFreeSpace,
@@ -6,9 +6,12 @@ import {
   classifyIoError,
   diskErrToString,
   diskFaultMessage,
+  diskWriteErrToString,
+  FAT32_MAX_FILE_BYTES,
   formatBytes,
   FREE_SPACE_HEADROOM,
   remainingBytes,
+  writeFaultTag,
 } from './disk.js'
 
 const err = (code: string, message = `${code} happened`) => Object.assign(new Error(message), { code })
@@ -17,6 +20,7 @@ describe('classifyIoError / diskErrToString', () => {
   it.each([
     ['ENOSPC', 'disk_full'],
     ['EDQUOT', 'disk_full'],
+    ['EFBIG', 'disk_fs_limit'],
     ['EACCES', 'disk_permission'],
     ['EROFS', 'disk_permission'],
     ['ETXTBSY', 'disk_file_locked'],
@@ -33,6 +37,26 @@ describe('classifyIoError / diskErrToString', () => {
       'Error: [disk_full] no space left on device'
     )
     expect(diskFaultMessage('disk_io', 'd')).toBe('Error: [disk_io] d')
+  })
+})
+
+describe("FAT32's 4 GiB file limit", () => {
+  const line = FAT32_MAX_FILE_BYTES
+  it.each([
+    ['a full disk while crossing the line', 'ENOSPC', line - 10, 64, 'disk_fs_limit'],
+    ['an unnamed error while crossing it', 'EINVAL', line - 10, 64, 'disk_fs_limit'],
+    ['a range written wholly past it', 'ENOSPC', line + 1024, 64, 'disk_fs_limit'],
+    ['a full disk below it', 'ENOSPC', 1024, 64, 'disk_full'],
+    ['a denial past it', 'EACCES', line + 1024, 64, 'disk_permission'],
+    ['a lock past it', 'EBUSY', line + 1024, 64, 'disk_file_locked'],
+    ['too large anywhere', 'EFBIG', 0, 64, 'disk_fs_limit'],
+  ])('%s', (_name, code, offset, length, tag) => expect(writeFaultTag(err(code), offset, length)).toBe(tag))
+
+  it('says what to do when the drive is the limit, and nothing more otherwise', () => {
+    expect(diskWriteErrToString(err('EFBIG', 'EFBIG: file too large, write'), 0, 1)).toBe(
+      'Error: [disk_fs_limit] EFBIG: file too large, write. This drive cannot store a file of 4 GB or more (FAT32). Move the data folder to an NTFS, exFAT or ext4 drive and retry.'
+    )
+    expect(diskWriteErrToString(err('ENOSPC', 'no space'), 0, 1)).toBe('Error: [disk_full] no space')
   })
 })
 

@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-core/src/downloads/disk.ts @ 8a38521 (v0.17.0); adapted: core contract types come from @atomic-chat/core/contracts; user text says "data folder", not "Jan data folder".
+// Lifted from atomic-chat-core/src/downloads/disk.ts @ 8a38521 (v0.17.0), FAT32 rule from 8cbab27 (v0.21.2); adapted: core contract types come from @atomic-chat/core/contracts; user text says "data folder", not "Jan data folder"; a write is checked by where it ends, since parallel ranges write past 4 GiB out of order, and the FAT32 refusal says what to do.
 /**
  * Disk-failure tagging and preflight checks. Port of `src-tauri/src/core/downloads/disk.rs`.
  *
@@ -16,7 +16,8 @@ import type { DiskErrorTag } from '@atomic-chat/core/contracts'
 const CODE_TO_TAG: Record<string, DiskErrorTag> = {
   ENOSPC: 'disk_full',
   EDQUOT: 'disk_full',
-  EFBIG: 'disk_full',
+  // "File too large": the volume's own size limit for one file (FAT32's 4 GiB), not a full disk.
+  EFBIG: 'disk_fs_limit',
   EACCES: 'disk_permission',
   EPERM: 'disk_permission',
   EROFS: 'disk_permission',
@@ -41,6 +42,32 @@ export function classifyIoError(error: unknown): DiskErrorTag {
 export function diskErrToString(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
   return `Error: [${classifyIoError(error)}] ${message}`
+}
+
+/** The largest file a FAT/FAT32 volume can hold: 4 GiB minus one byte. */
+export const FAT32_MAX_FILE_BYTES = 2 ** 32 - 1
+
+const FS_LIMIT_ADVICE =
+  'This drive cannot store a file of 4 GB or more (FAT32). Move the data folder to an NTFS, exFAT or ext4 drive and retry.'
+
+/**
+ * The tag of a failed write of `length` bytes at `offset`. FAT32 refuses a write that takes a file
+ * past 4 GiB − 1, and Windows words that refusal as a full disk (or an error libuv has no name for).
+ * Parallel ranges write past that line out of order, so a write that ends beyond it and fails as
+ * anything but a permission or a lock is the volume's file-size limit (free space was checked
+ * before the first byte). Every other failed write is tagged as `classifyIoError` tags it.
+ */
+export function writeFaultTag(error: unknown, offset: number, length: number): DiskErrorTag {
+  const tag = classifyIoError(error)
+  const past = offset + length > FAT32_MAX_FILE_BYTES
+  return past && (tag === 'disk_full' || tag === 'disk_io' || tag === 'disk_fs_limit') ? 'disk_fs_limit' : tag
+}
+
+/** `diskErrToString` for a failed write, with the FAT32 rule of `writeFaultTag` and its advice. */
+export function diskWriteErrToString(error: unknown, offset: number, length: number): string {
+  const message = error instanceof Error ? error.message : String(error)
+  const tag = writeFaultTag(error, offset, length)
+  return `Error: [${tag}] ${message}${tag === 'disk_fs_limit' ? `. ${FS_LIMIT_ADVICE}` : ''}`
 }
 
 /** Same shape for a preflight refusal that has no fs error behind it. */
