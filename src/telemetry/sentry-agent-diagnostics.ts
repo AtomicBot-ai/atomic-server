@@ -12,6 +12,7 @@ const SENTRY_AGENT_CAUSES = new Set<string>([
   'EBUSY',
   'ENOMEM',
   'ECONNREFUSED',
+  'ConnectionRefused',
   'ECONNRESET',
   'ENETUNREACH',
   'EHOSTUNREACH',

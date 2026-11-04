@@ -22,7 +22,7 @@ title: "Diagnose workspace read transport cause codes"
   `Error` instances) carries an allowlisted OS or transport code. Keep existing message scrubbing,
   filtering, severity, consent, and reporting boundaries unchanged.
 - **Consequences:** Future `workspace.read` and other boundary error reports will expose allowlisted
-  cause codes such as `ECONNREFUSED`, `ECONNRESET`, `EPIPE`, `ETIMEDOUT`, or `UND_ERR_SOCKET` without
+  cause codes such as Bun's reproduced `ConnectionRefused`, Node's `ECONNREFUSED`, `ECONNRESET`, `EPIPE`, `ETIMEDOUT`, or `UND_ERR_SOCKET` without
   emitting raw exception messages, file paths, or payloads. Once new events identify the specific
   transport or OS cause, this diagnostic observer can be removed or superseded by targeted handling.
 - **Alternatives:** Guessing a fix in `createWorkspaceClient` or `WorkspaceRuntime.read` without
@@ -32,3 +32,5 @@ title: "Diagnose workspace read transport cause codes"
 - **Links:** [Sentry ATOMIC-CHAT-SERVER-H](https://atomic-chat.sentry.io/issues/7823689836/),
   `src/tui/workspace/runtime/runtime.ts`, `src/workspace-service/client.ts`,
   `src/telemetry/failures.ts`, `src/telemetry/native-diagnostics.ts`.
+
+The regression also observes the final Sentry envelope through the pinned core reporter with an injected transport; the finite Bun code survives while private exception messages remain absent.
