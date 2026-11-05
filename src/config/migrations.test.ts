@@ -8,7 +8,10 @@ describe('migrateConfig', () => {
     expect(migrateConfig({ version: CONFIG_VERSION, a: 1 })).toEqual({
       raw: { version: CONFIG_VERSION, a: 1 },
     })
-    expect(migrateConfig({ a: 1 })).toEqual({ raw: { version: CONFIG_VERSION, a: 1 }, migratedFrom: 1 })
+    expect(migrateConfig({ a: 1 })).toEqual({
+      raw: { version: CONFIG_VERSION, a: 1, api: { port: 1337 } },
+      migratedFrom: 1,
+    })
   })
 
   it.each(['llamacpp-upstream', 'llamacpp', 'mlx'])(
@@ -29,7 +32,7 @@ describe('migrateConfig', () => {
     [
       'engines.provider wins over serve.engine and is renamed',
       { version: 1, serve: { engine: 'mlx' }, engines: { provider: 'llamacpp', autoInstall: false } },
-      { version: CONFIG_VERSION, engines: { default: 'llamacpp', autoInstall: false } },
+      { version: CONFIG_VERSION, engines: { default: 'llamacpp', autoInstall: false }, api: { port: 1337 } },
     ],
     [
       'a file without either is left as it was',
@@ -47,7 +50,7 @@ describe('migrateConfig', () => {
       { api: { port: 9 } },
     ],
     ['an api without it is left as it was', { version: 3, api: { port: 9 } }, { api: { port: 9 } }],
-    ['no api at all', { version: 3, tui: { model: 'm' } }, { tui: { model: 'm' } }],
+    ['no api at all', { version: 3, tui: { model: 'm' } }, { tui: { model: 'm' }, api: { port: 1337 } }],
   ])('3 → 4: %s', (_name, from, to) => {
     expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 3 })
   })
@@ -56,7 +59,7 @@ describe('migrateConfig', () => {
     [
       'tui.mode is dropped, the rest of tui kept',
       { version: 4, tui: { mode: 'personal', model: 'm' } },
-      { tui: { model: 'm' } },
+      { tui: { model: 'm' }, api: { port: 1337 } },
     ],
     [
       'a tui left empty goes too',
@@ -66,6 +69,19 @@ describe('migrateConfig', () => {
     ['a file without it is left as it was', { version: 4, api: { port: 9 } }, { api: { port: 9 } }],
   ])('4 → 5: %s', (_name, from, to) => {
     expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 4 })
+  })
+
+  it.each([0, 1337, 8000])('keeps port %i and upgrades the saved follow-server endpoint', (port) => {
+    expect(
+      migrateConfig({ version: 5, api: { port }, tui: { endpoint: 'http://127.0.0.1:1337/v1' } }).raw
+    ).toMatchObject({ version: CONFIG_VERSION, api: { port }, tui: { endpoint: '' } })
+  })
+  it('preserves an explicit chat target even if its port is the new server default', () => {
+    const endpoint = 'http://127.0.0.1:1339/v1'
+    expect(migrateConfig({ version: 5, tui: { endpoint } }).raw).toMatchObject({
+      api: { port: 1337 },
+      tui: { endpoint },
+    })
   })
 
   it('refuses a newer file with an update hint', () => {

@@ -1,3 +1,4 @@
+import { DEFAULT_API_PORT } from '../../../contract/index.js'
 import { serverSelection } from './server-status.js'
 import { engineName, modelProvider } from '../../../terminal-setup/index.js'
 import { engineChoiceDetail } from '../chat/picker.js'
@@ -84,7 +85,16 @@ export function drawServerSettings(
     const half = Math.floor(width / 2)
     text(c, x, y, 'Port', COLORS.muted, half)
     text(c, x + half, y++, 'API prefix', COLORS.muted, width - half)
-    fieldControl(c, 'setting:api.port', x, y, half - 1, value('api.port', '1337'), 'Server port', focus)
+    fieldControl(
+      c,
+      'setting:api.port',
+      x,
+      y,
+      half - 1,
+      value('api.port', String(DEFAULT_API_PORT)),
+      'Server port',
+      focus
+    )
     fieldControl(
       c,
       'setting:api.prefix',

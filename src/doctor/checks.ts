@@ -127,7 +127,7 @@ export const CHECKS: Check[] = [
         ? { status: 'ok', message: `${busy.join(', ')} in use (the server)` }
         : {
             status: 'warn',
-            message: `${busy.join(', ')} in use by another program (the Atomic Chat desktop app serves 0.0.0.0:1337)`,
+            message: `${busy.join(', ')} in use by another program`,
             hint: 'stop that program, or `atc config set api.port <port>` / `admin.port`',
           }
     },

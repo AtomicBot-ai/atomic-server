@@ -12,7 +12,7 @@ describe('shared API operations', () => {
     await startApi(link, config, 'local-key')
     expect(link.calls[0]).toMatchObject({
       path: '/server/start',
-      body: { port: 1337, api_key: 'local-key', fallback_port: false },
+      body: { port: 1339, api_key: 'local-key', fallback_port: false },
     })
   })
   it('accepts only finished request metadata and never retains prompt bodies', () => {
@@ -43,7 +43,7 @@ describe('startApi and a port another program holds', () => {
     const link = fakeCoreLink()
     await expect(
       startApi(link, defaultConfig(), 'k', { probePort: async () => 'busy' })
-    ).rejects.toMatchObject({ code: 'ATC_PORT_BUSY', message: expect.stringContaining('1337') })
+    ).rejects.toMatchObject({ code: 'ATC_PORT_BUSY', message: expect.stringContaining('1339') })
     expect(link.calls.find((c) => c.path === '/server/start')).toBeUndefined()
   })
 
@@ -52,7 +52,7 @@ describe('startApi and a port another program holds', () => {
     let probed = false
     await startApi(link, defaultConfig(), 'k', {
       probePort: async () => ((probed = true), 'busy'),
-      status: { running: true, host: '127.0.0.1', port: 1337 },
+      status: { running: true, host: '127.0.0.1', port: 1339 },
     })
     expect(probed).toBe(false)
     expect(link.calls.find((c) => c.path === '/server/start')).toBeDefined()

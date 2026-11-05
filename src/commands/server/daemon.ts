@@ -1,5 +1,6 @@
 import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
+import { initializeProfileDefaults } from '../../config/index.js'
 import { runDaemon } from '../../daemon/index.js'
 import { createLogger, fileSink, tee } from '../../output/index.js'
 import type { LogSink, Logger } from '../../output/index.js'
@@ -35,6 +36,7 @@ export async function runServerInPlace(
   mode: 'spawned' | 'foreground' = 'spawned'
 ): Promise<number> {
   const config = await ctx.config()
+  await initializeProfileDefaults(ctx.paths)
   // The server writes and rotates its own log. In the foreground the same lines also go to stderr,
   // where journald, launchd or `docker logs` collect them; spawned, stderr is `daemon.out.log`.
   const file = fileSink(ctx.paths.daemonLog, {

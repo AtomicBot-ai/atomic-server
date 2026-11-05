@@ -115,7 +115,7 @@ describe('api.start on a port another program holds', () => {
     ;(p as { options: Record<string, unknown> }).options['probePort'] = async () => 'busy'
     await expect(serverOperation(p, 'api.start', {})).rejects.toMatchObject({
       code: 'ATC_PORT_BUSY',
-      message: expect.stringContaining('1337'),
+      message: expect.stringContaining('1339'),
     })
     expect(link.calls.find((c) => c.path === '/server/start')).toBeUndefined()
   })

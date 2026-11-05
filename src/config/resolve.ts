@@ -13,6 +13,8 @@ export type ConfigSource = 'default' | 'file' | 'env' | 'flag'
 
 export interface ResolvedConfig {
   values: AtcConfig
+  /** Values to persist on a config edit, before applying environment and flag overrides. */
+  fileValues: AtcConfig
   sources: Record<string, ConfigSource>
   /** What the file held, for writing it back without losing unknown keys. */
   file: ParsedConfig | undefined
@@ -20,12 +22,14 @@ export interface ResolvedConfig {
 }
 
 export function resolveConfig(input: {
+  defaults?: AtcConfig
   fileText?: string | undefined
   env: NodeJS.ProcessEnv
   /** Overrides a command derived from its own flags, by field path. */
   flags?: Record<string, unknown>
 }): ResolvedConfig {
-  const values = defaultConfig() as unknown as Record<string, unknown>
+  const defaults = input.defaults ?? defaultConfig()
+  const values = structuredClone(defaults) as unknown as Record<string, unknown>
   const sources: Record<string, ConfigSource> = {}
   const warnings: string[] = []
   for (const field of FIELDS) sources[field.path] = 'default'
@@ -55,5 +59,11 @@ export function resolveConfig(input: {
     setAt(values, path, value)
     sources[path] = 'flag'
   }
-  return { values: values as unknown as AtcConfig, sources, file, warnings }
+  return {
+    values: values as unknown as AtcConfig,
+    sources,
+    file,
+    fileValues: file?.config ?? defaults,
+    warnings,
+  }
 }

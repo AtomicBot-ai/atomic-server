@@ -4,7 +4,7 @@ import type { CommandRun } from '../../cli/index.js'
 import { ClientKeys } from '../../terminal-data/index.js'
 import { startApi, streamChat, listChatModels, followsLocalServer } from '../../terminal-service/index.js'
 import { workspace } from '../server/control.js'
-import { contextExceeded } from '../../workspace-service/index.js'
+import { contextExceeded, publicEndpoint } from '../../workspace-service/index.js'
 export const apiStart: CommandRun = async (inv, ctx) => {
   const config = structuredClone((await ctx.config()).values)
   if (typeof inv.values['host'] === 'string') config.api.host = inv.values['host']
@@ -79,7 +79,8 @@ export const chatCommand = defineCommand({
       .catch(() => null)
     const useLocal = inv.values['endpoint'] === undefined && followsLocalServer(config)
     const endpoint = String(
-      inv.values['endpoint'] ?? (useLocal && local ? local.api.endpoint : config.values.tui.endpoint)
+      inv.values['endpoint'] ??
+        (useLocal ? (local?.api ?? publicEndpoint({}, config.values)).endpoint : config.values.tui.endpoint)
     )
     if (useLocal && local && !local.api.running)
       throw new AtcError('ATC_USAGE', 'Start the API before chatting.', { hint: 'atc api start' })

@@ -1,7 +1,7 @@
 /**
  * Is a port free to bind? A listen attempt is the only honest answer, and on BSD sockets (macOS)
  * one attempt is not enough: a loopback bind succeeds beside a wildcard listener and the reverse,
- * so a program on `0.0.0.0:1337` (the Atomic Chat desktop app's default) would read as free from
+ * so a program on `0.0.0.0:1337` (a desktop API with LAN access enabled) would read as free from
  * `127.0.0.1`. The port is free only when every address that can shadow the asked one binds too.
  */
 

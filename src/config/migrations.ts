@@ -13,6 +13,19 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 /** Key N migrates a version-N document to N+1. */
 export const MIGRATIONS: Record<number, Migration> = {
+  // An omitted port meant 1337. The old default chat URL meant "follow this server",
+  // including when a config edit had written that URL alongside a custom API port.
+  5: (raw) => {
+    const api = isObject(raw['api']) ? raw['api'] : {}
+    const tui = raw['tui']
+    return {
+      ...raw,
+      api: { ...api, port: api['port'] ?? 1337 },
+      ...(isObject(tui) && tui['endpoint'] === 'http://127.0.0.1:1337/v1'
+        ? { tui: { ...tui, endpoint: '' } }
+        : {}),
+    }
+  },
   /**
    * 4 → 5: `tui.mode` is gone. The terminal UI always opens on Server and Playground is a page of it
    * (ADR "Adapt the desktop structure to a server-first workspace"); nothing read the value any more.
