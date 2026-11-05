@@ -25,6 +25,7 @@ import { storeModels } from './managed-store.js'
 import { registeredEngines, withProviders } from './model-providers.js'
 import { foundryStoreModels, removeFoundryModel } from '../foundry/foundry-store.js'
 import { liteRtStoreModels, removeLiteRtModel } from '../litert/litert-store.js'
+import { removeStoreVariant } from './store-variants.js'
 import { NOT_CORE } from '../not-core.js'
 import type { WorkspaceServiceOptions } from '../service-options.js'
 import { importedModelId, modelIdPath, segment } from '../validation.js'
@@ -146,12 +147,26 @@ export async function modelOperation(
           })),
           ...(await storeModels(link, registered ?? undefined)),
           ...(await foundryStoreModels(paths.layout)),
+          ...(await new ModelRegistry(paths.layout, 'geniex').list()).map(({ id, yml }) => ({
+            id,
+            name: String(yml.name ?? id),
+            provider: 'geniex',
+            store: 'geniex',
+            size_bytes: yml.size_bytes,
+            backend: yml.geniex?.backend,
+            plugin: yml.geniex?.plugin,
+          })),
           ...(await liteRtStoreModels(paths.layout)),
         ],
         registered
       )
     }
     case 'models.remove': {
+      if (input['store'] === 'geniex') {
+        const removed = await removeStoreVariant(link, paths.layout, 'geniex', String(input['model_id']))
+        if (!removed) throw new AtcError('ATC_USAGE', 'This GenieX model is no longer installed.')
+        return removed
+      }
       const id = String(input['model_id']),
         local = new ModelRegistry(paths.layout),
         mlx = new ModelRegistry(paths.layout, 'mlx'),
@@ -161,6 +176,7 @@ export async function modelOperation(
         return (
           (await removeFoundryModel(link, paths.layout, id)) ??
           (await removeLiteRtModel(link, paths.layout, id)) ??
+          (await removeStoreVariant(link, paths.layout, 'geniex', id)) ??
           NOT_CORE
         )
       if ((await link.models.sessions()).some((s) => s.model_id === id))

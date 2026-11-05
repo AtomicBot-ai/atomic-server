@@ -74,7 +74,8 @@ export function InstalledModels({
         installed
           .filter((m) => JSON.stringify(m).toLowerCase().includes(query.toLowerCase()))
           .map((row, i) => {
-            const id = text(row.id ?? row.model_id, String(i))
+            const rowId = text(row.id ?? row.model_id, String(i))
+            const id = row.store === 'geniex' ? `geniex:${rowId}` : rowId
             // The providers the core says list this model (`models.installed`), never a list kept here.
             const providers = modelProviders(row)
             const selectedEngine = chosen[id] ?? providers[0] ?? ''
@@ -223,7 +224,11 @@ export function InstalledModels({
           onConfirm={async () => {
             if (removing.category || record(removing.plan).category)
               await w.execute('downloads.remove', { id: removing.id, owner: 'artifacts', installed: true })
-            else await w.execute('models.remove', { model_id: removing.model_id ?? removing.id })
+            else
+              await w.execute('models.remove', {
+                model_id: removing.model_id ?? removing.id,
+                ...(removing.store === 'geniex' ? { store: 'geniex' } : {}),
+              })
             onChanged?.()
           }}
         />

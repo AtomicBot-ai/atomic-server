@@ -14,6 +14,7 @@ describe('catalog formats', () => {
     ['vllm', 'safetensors'],
     ['foundry-local', 'foundry'],
     ['litert-lm', 'litert'],
+    ['geniex', 'geniex'],
     ['an-engine-of-tomorrow', 'gguf'],
   ])('%s runs the %s format', (engine, format) => {
     expect(engineCatalogFormat(engine)).toBe(format)
@@ -45,7 +46,8 @@ describe('catalog formats', () => {
       safetensors: 'Safetensors',
       foundry: 'Foundry Local',
       litert: 'LiteRT-LM',
+      geniex: 'GenieX',
     })
-    expect(FORMAT_ENGINE).toEqual({ foundry: 'foundry-local', litert: 'litert-lm' })
+    expect(FORMAT_ENGINE).toEqual({ foundry: 'foundry-local', litert: 'litert-lm', geniex: 'geniex' })
   })
 })

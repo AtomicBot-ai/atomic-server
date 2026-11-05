@@ -10,6 +10,7 @@ import type { RecordValue } from '../types'
 import { useDialog } from '../useDialog'
 import { ModelInstall } from '../library/install/ModelInstall'
 import { FoundryLocal } from '../library/engines/FoundryLocal'
+import { EngineSettings } from '../library/engines/EngineSettings'
 import { LiteRtLm } from '../library/engines/LiteRtLm'
 import { SetupReview } from './SetupReview'
 import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
@@ -271,6 +272,9 @@ export function SetupWizard({
         )}
         {engineDialog === 'foundry-local' && (
           <FoundryLocal workspace={w} onClose={() => setEngineDialog('')} />
+        )}
+        {engineDialog === 'geniex' && (
+          <EngineSettings workspace={w} provider="geniex" onClose={() => setEngineDialog('')} />
         )}
         {engineDialog === 'litert-lm' && <LiteRtLm workspace={w} onClose={() => setEngineDialog('')} />}
       </section>

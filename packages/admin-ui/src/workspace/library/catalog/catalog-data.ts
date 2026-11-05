@@ -19,14 +19,14 @@ export function catalogFormats(engines: readonly RecordValue[]): CatalogFormat[]
 export function catalogCards(result: unknown, format: CatalogFormat, engine = ''): RecordValue[] {
   if (format === 'gguf' || format === 'mlx') return rows(result)
   const r = record(result)
-  if (format === 'litert')
+  if (format === 'litert' || format === 'geniex')
     return rows(r.models).map((m) => ({
       id: m.model_id,
       title: m.name,
       summary: `${text(m.default_variant, 'no variant runs here')}${m.unverified ? ' · Hugging Face, not verified by Atomic Chat' : ''}${m.gated ? ' · gated' : ''}`,
-      format: 'LiteRT-LM',
-      providers: ['litert-lm'],
-      litert: m,
+      format: format === 'geniex' ? 'GenieX' : 'LiteRT-LM',
+      providers: [format === 'geniex' ? 'geniex' : 'litert-lm'],
+      [format]: m,
     }))
   if (format === 'foundry')
     return rows(r.models).map((m) => ({

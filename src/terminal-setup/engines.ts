@@ -57,7 +57,8 @@ export class EngineSelection {
     const panels = orderEngines(
       engines
         .filter(
-          (e) => e.engine === 'mlx' || ['managed', 'foundry', 'litert'].includes(engineFamily(e.engine))
+          (e) =>
+            e.engine === 'mlx' || ['managed', 'foundry', 'litert', 'geniex'].includes(engineFamily(e.engine))
         )
         .map((e) => e.engine as string)
     ).map((engine) => {

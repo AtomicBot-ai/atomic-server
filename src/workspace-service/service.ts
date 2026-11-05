@@ -18,6 +18,7 @@ import { coreOperation, NOT_CORE } from './core-operations.js'
 import { withRemoteSetup } from './remote-setup.js'
 import { cloudOperation } from './cloud/cloud-connections.js'
 import { modelOperation } from './models/model-operations.js'
+import { genieCatalog } from './geniex/catalog.js'
 import { WorkspaceCatalog } from './models/catalog.js'
 import { withAudioDuration } from './audio/audio-duration.js'
 import { downloadProxy } from './models/download-proxy.js'
@@ -111,6 +112,7 @@ export class WorkspaceService {
       ...(await this.downloads.artifacts.list()),
       ...(await this.downloads.managed.list()),
       ...(await this.downloads.foundry.list()),
+      ...(await this.downloads.geniex.journal.list()),
       ...(await this.downloads.litert.models.list())
     )
     result.features = await this.features.view()
@@ -167,6 +169,17 @@ export class WorkspaceService {
     if (feature !== NOT_CORE) return feature
     const cloud = await cloudOperation(link, paths, this.request, operation, input)
     if (cloud !== NOT_CORE) return sanitized(cloud)
+    const genie = this.downloads.geniex
+    if ((operation === 'models.search' || operation === 'models.catalog') && input['engine'] === 'geniex')
+      return genieCatalog(this.options, String(input['query'] ?? ''), operation === 'models.search')
+    if (operation === 'geniex.accelerators') return link.request('GET', '/runtimes/geniex/accelerators')
+    if (operation === 'geniex.plan')
+      return genie.plan(
+        String(input['model']),
+        typeof input['variant'] === 'string' ? input['variant'] : undefined
+      )
+    if (operation === 'geniex.cancel') return genie.journal.cancel(String(input['id']))
+    if (operation === 'geniex.install') return genie.journal.install(input)
     const model = await modelOperation(
       {
         options: this.options,

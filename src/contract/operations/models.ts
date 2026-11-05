@@ -97,8 +97,11 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'models.remove',
     'Remove managed model',
     'configure',
-    'Remove an installed model from the data folder. Unload it first; loaded-model protection applies.',
-    { properties: { model_id: { type: 'string' } }, required: ['model_id'] }
+    'Remove an installed model from the data folder. Select the GenieX store explicitly for a GenieX row.',
+    {
+      properties: { model_id: { type: 'string' }, store: { type: 'string', enum: ['geniex'] } },
+      required: ['model_id'],
+    }
   ),
   operation(
     'models.import',
@@ -170,7 +173,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     {
       properties: {
         id: { type: 'string' },
-        owner: { type: 'string', enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert'] },
+        owner: { type: 'string', enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert', 'geniex'] },
         installed: { type: 'boolean' },
       },
       required: ['id', 'owner'],

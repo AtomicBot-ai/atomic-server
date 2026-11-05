@@ -9,6 +9,7 @@ import { record } from './library-model.js'
  */
 const VARIANT_CATALOGS = {
   foundry: { engine: 'foundry-local', ops: 'foundry' },
+  geniex: { engine: 'geniex', ops: 'geniex' },
   litert: { engine: 'litert-lm', ops: 'litert' },
 } as const
 export type VariantFormat = keyof typeof VARIANT_CATALOGS

@@ -11,6 +11,7 @@ import { humanLines } from '../server/human-output.js'
 import { listInstalled, removeInstalled } from './installed-models.js'
 import { modelLogs, runModel } from './managed-run.js'
 import { pullFoundryModel } from './foundry-commands.js'
+import { pullGenieModel } from './geniex-commands.js'
 import { pullLiteRtModel } from './litert-commands.js'
 import { engineListing } from './engine-listing.js'
 import { chooseLoadEngine, installedEngines } from '../../workspace-view/index.js'
@@ -53,6 +54,7 @@ function printPlan(ctx: CommandContext, plan: unknown) {
 const CANCEL: Record<string, string> = {
   'foundry-local': 'foundry.cancel',
   'litert-lm': 'litert.cancel',
+  'geniex': 'geniex.cancel',
   'mlx': 'artifacts.cancel',
 }
 const engineOption = {
@@ -123,7 +125,7 @@ export const modelsCommand = defineCommand({
       positionals: [
         {
           name: 'query',
-          description: 'Search words or owner/repo (optional for foundry-local and litert-lm)',
+          description: 'Search words or owner/repo (optional for foundry-local, litert-lm and geniex)',
         },
       ],
       options: engineOption,
@@ -156,8 +158,7 @@ export const modelsCommand = defineCommand({
       options: {
         'engine': {
           type: 'string',
-          description:
-            'mlx: a catalog checkpoint; a managed engine: the safetensors checkpoint into its shared store',
+          description: 'Engine provider ID for an engine-specific model download',
           placeholder: 'engine',
         },
         'detach': { type: 'boolean', description: 'Start a managed download without following it' },
@@ -168,12 +169,12 @@ export const modelsCommand = defineCommand({
         },
         'backend': {
           type: 'string',
-          description: 'LiteRT-LM: the variant for npu, gpu or cpu',
+          description: 'Device for LiteRT-LM or GenieX, or an exact GenieX variant ID',
           placeholder: 'backend',
         },
         'cancel': {
           type: 'string',
-          description: 'Cancel a managed, Foundry Local or LiteRT-LM download (with its --engine)',
+          description: 'Cancel a managed, Foundry Local, LiteRT-LM or GenieX download (with its --engine)',
           placeholder: 'request-id',
         },
         'file': { type: 'string', description: 'Exact filename in the repository' },
@@ -190,6 +191,7 @@ export const modelsCommand = defineCommand({
         if (!inv.positionals[0]) throw new AtcError('ATC_USAGE', 'Name the model to download.')
         if (inv.values['engine'] === 'foundry-local')
           return pullFoundryModel(ctx, inv.positionals[0], inv.values)
+        if (inv.values.engine === 'geniex') return pullGenieModel(ctx, inv.positionals[0], inv.values)
         if (inv.values['engine'] === 'litert-lm') return pullLiteRtModel(ctx, inv.positionals[0], inv.values)
         if (inv.values['engine'] === 'mlx') return pullMlxModel(ctx, inv.positionals[0], inv.values)
         if (

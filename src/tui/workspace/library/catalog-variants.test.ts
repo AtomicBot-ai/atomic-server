@@ -97,6 +97,17 @@ describe.each(ENGINES)('$engine in Local models', ({ format, engine, ops }) => {
     expect(t.get().busy).toBe(false)
   })
 })
+it('routes a GenieX device selection to its own installer', async () => {
+  const t = fixture('geniex')
+  const libraryRows = await loadVariantCatalog(t.ctx, 'geniex')
+  t.ctx.update((s) => ({ ...s, libraryRows, catalogVariant: 'model-cpu' }))
+  await variantCatalogAction('catalog-download:0', t.ctx)
+  expect(t.execute).toHaveBeenCalledWith('geniex.plan', { model: 'model', variant: 'model-cpu' })
+  expect(t.execute).toHaveBeenCalledWith('geniex.install', {
+    request_id: 'terminal-checked-plan',
+    plan_digest: 'checked-plan',
+  })
+})
 it('leaves a GGUF row to the plain download', async () => {
   const t = fixture('foundry')
   t.ctx.update((s) => ({

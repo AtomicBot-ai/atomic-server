@@ -8,7 +8,8 @@ import { IntroScreen } from './IntroScreen'
 /** A llama.cpp build to download, or an engine already installed that guided setup can continue with. */
 const offered = (e: RecordValue) =>
   (engineFamily(text(e.engine)) === 'llamacpp' && Boolean(e.latest)) ||
-  (Boolean(e.active) && ['llamacpp', 'managed', 'foundry', 'litert'].includes(engineFamily(text(e.engine))))
+  (Boolean(e.active) &&
+    ['llamacpp', 'managed', 'foundry', 'litert', 'geniex'].includes(engineFamily(text(e.engine))))
 
 export function EngineIntro({ onContinue, replay = false }: { onContinue: () => void; replay?: boolean }) {
   const w = useWorkspace()

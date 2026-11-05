@@ -83,6 +83,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
     returnOverlay?: WorkspaceState['overlay']
   } | null
   libraryRemove: string
+  removeGenieModel?: boolean
   modelLoad?: { provider: string; model: string } | null
   modelVision: boolean | null
   loadError: { provider: string; model: string; message: string } | null
