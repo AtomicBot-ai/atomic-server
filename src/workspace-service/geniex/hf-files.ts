@@ -1,5 +1,7 @@
 // File selection follows Atomic Chat's services/geniex/huggingface.ts (250aa30ae).
-import type { GeniexHubFile } from './list.js'
+import type { GeniexDevice } from '@atomic-chat/core/contracts'
+import { HF_HUB } from '../models/hf-revision.js'
+import type { GeniexHubFile, GeniexModel } from './list.js'
 export type GgufFileClass = { kind: 'model'; quantization: string } | { kind: 'mmproj' }
 
 /** `-00001-of-00002`: one model split over several files, which the host does not load. */
@@ -76,5 +78,59 @@ export function hfGgufFiles(
     quantization,
     file: models.get(quantization) as GeniexHubFile,
     ...(mmproj ? { mmproj } : {}),
+  }
+}
+
+export const validRepo = (repo: string) => /^[\w-][\w.-]*\/[\w-][\w.-]*$/.test(repo)
+export async function hfCandidate(
+  repo: string,
+  devices: GeniexDevice[],
+  quants: string[],
+  request: typeof fetch
+): Promise<{ origin: 'huggingface'; model: GeniexModel } | null> {
+  if (!validRepo(repo) || !devices.length) return null
+  const response = await request(`${HF_HUB}/api/models/${repo}/revision/main?blobs=true`, {
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!response.ok) throw new Error(`Hugging Face returned HTTP ${response.status}`)
+  const tree = (await response.json()) as {
+    sha: string
+    siblings: HfSibling[]
+    gated?: unknown
+    cardData?: { license?: string }
+  }
+  if (!/^[a-f0-9]{40}$/.test(tree.sha) || !Array.isArray(tree.siblings)) return null
+  const pick = hfGgufFiles(
+    tree.siblings.filter(
+      (s) =>
+        /^[\w.-]+(?:\/[\w.-]+)*$/.test(s.rfilename) &&
+        !s.rfilename.split('/').some((p) => p === '..' || p === '.')
+    ),
+    quants
+  )
+  if (!pick) return null
+  return {
+    origin: 'huggingface',
+    model: {
+      id: repo,
+      name: repo,
+      kind: 'gguf',
+      task: 'chat',
+      license: tree.cardData?.license ?? '',
+      description: 'Hugging Face · not verified by Atomic Chat',
+      context_length: 4096,
+      tools: false,
+      reasoning: false,
+      vision: !!pick.mmproj,
+      gguf: {
+        repo,
+        revision: tree.sha,
+        gated: !!tree.gated,
+        file: pick.file,
+        ...(pick.mmproj ? { mmproj: pick.mmproj } : {}),
+        devices,
+        platforms: ['win-arm64'],
+      },
+    },
   }
 }

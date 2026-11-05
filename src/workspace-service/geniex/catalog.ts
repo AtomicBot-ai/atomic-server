@@ -10,8 +10,8 @@ import type { WorkspaceServiceOptions } from '../service-options.js'
 import { AtcError } from '../../errors/index.js'
 import { searchHub } from '../../terminal-setup/index.js'
 import { geniexList, type GeniexModel, type GeniexHubFile } from './list.js'
-import { hfGgufFiles, type HfSibling } from './hf-files.js'
-import { resolveUrl, HF_HUB } from '../models/hf-revision.js'
+import { hfCandidate, validRepo } from './hf-files.js'
+import { resolveUrl } from '../models/hf-revision.js'
 
 import { qualcommSearch } from './qualcomm.js'
 
@@ -27,60 +27,6 @@ export interface GenieVariant {
   min_runtime_version?: string
 }
 type Candidate = { model: GeniexModel; origin: 'curated' | 'huggingface' | 'qualcomm' }
-const validRepo = (repo: string) => /^[\w-][\w.-]*\/[\w-][\w.-]*$/.test(repo)
-async function hfCandidate(
-  repo: string,
-  devices: GeniexDevice[],
-  quants: string[],
-  request: typeof fetch
-): Promise<Candidate | null> {
-  if (!validRepo(repo) || !devices.length) return null
-  const response = await request(`${HF_HUB}/api/models/${repo}/revision/main?blobs=true`, {
-    signal: AbortSignal.timeout(10000),
-  })
-  if (!response.ok) throw new Error(`Hugging Face returned HTTP ${response.status}`)
-  const tree = (await response.json()) as {
-    sha: string
-    siblings: HfSibling[]
-    gated?: unknown
-    cardData?: { license?: string }
-  }
-  if (!/^[a-f0-9]{40}$/.test(tree.sha) || !Array.isArray(tree.siblings)) return null
-  const pick = hfGgufFiles(
-    tree.siblings.filter(
-      (s) =>
-        /^[\w.-]+(?:\/[\w.-]+)*$/.test(s.rfilename) &&
-        !s.rfilename.split('/').some((p) => p === '..' || p === '.')
-    ),
-    quants
-  )
-  if (!pick) return null
-  return {
-    origin: 'huggingface',
-    model: {
-      id: repo,
-      name: repo,
-      kind: 'gguf',
-      task: 'chat',
-      license: tree.cardData?.license ?? '',
-      description: 'Hugging Face · not verified by Atomic Chat',
-      context_length: 4096,
-      tools: false,
-      reasoning: false,
-      vision: !!pick.mmproj,
-      gguf: {
-        repo,
-        revision: tree.sha,
-        gated: !!tree.gated,
-        file: pick.file,
-        ...(pick.mmproj ? { mmproj: pick.mmproj } : {}),
-        devices,
-        platforms: ['win-arm64'],
-      },
-    },
-  }
-}
-
 export async function genieCatalog(o: WorkspaceServiceOptions, query: string, includeHub: boolean) {
   const registered = await o.link.request<{ engines: { engine: string }[] }>('POST', '/engines/versions', {})
   if (!registered.engines.some((e) => e.engine === 'geniex'))
@@ -105,7 +51,7 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
     .map((model) => ({ model, origin: 'curated' }))
   let qualcommError: string | null = null
   const qualcomm = async () => {
-    if (!includeHub || !hardware.chip) return []
+    if (!includeHub || !hardware.chip) return { models: [], ggufs: [] }
     let search = qualcommClients.get(request)
     if (!search) {
       search = qualcommSearch(request)
@@ -116,7 +62,7 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
     )
     const result = await search(query, hardware.chip, excluded)
     if (result.unavailable) qualcommError = 'Some Qualcomm AI Hub results could not be loaded.'
-    return result.models
+    return result
   }
   const external = qualcomm()
   let hubError: string | null = null
@@ -147,7 +93,37 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
       hubError = String(error)
     }
   }
-  for (const m of await external) {
+  const vendor = await external
+  const devices = listed.list.huggingface.backends['win-arm64'] ?? []
+  for (const g of vendor.ggufs) {
+    if (
+      !devices.length ||
+      candidates.some(
+        ({ model: m }) =>
+          m.kind === 'gguf' &&
+          m.gguf.repo.toLowerCase() === g.repo.toLowerCase() &&
+          m.gguf.file.path === g.file.path
+      )
+    )
+      continue
+    candidates.push({
+      origin: 'qualcomm',
+      model: {
+        id: g.id,
+        name: g.name,
+        kind: 'gguf',
+        description: 'Qualcomm AI Hub · Hugging Face',
+        task: 'chat',
+        license: g.license,
+        context_length: 4096,
+        tools: false,
+        reasoning: false,
+        vision: !!g.mmproj,
+        gguf: { ...g, devices, platforms: ['win-arm64'] },
+      },
+    })
+  }
+  for (const m of vendor.models) {
     candidates.push({
       origin: 'qualcomm',
       model: {
@@ -192,7 +168,12 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
       reasoning: m.reasoning,
       vision: m.vision,
       // Core 0.21.4 groups vendor QAIRT bundles under "curated". The row and pinned URL retain the publisher.
-      source: origin === 'qualcomm' ? ('curated' as const) : origin,
+      source:
+        origin === 'qualcomm'
+          ? m.kind === 'gguf'
+            ? ('huggingface' as const)
+            : ('curated' as const)
+          : origin,
     }
     let variants: GenieVariant[]
     if (m.kind === 'gguf') {
@@ -207,7 +188,7 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
         projector = g.mmproj ? file(g.mmproj) : undefined
       const files = projector ? [main, projector] : [main]
       const installedId =
-        origin === 'curated'
+        origin !== 'huggingface'
           ? m.id
           : `hf-${createHash('sha256').update(g.repo.toLowerCase()).digest('hex').slice(0, 16)}-${g.repo.split('/')[1]?.slice(0, 65)}`.toLowerCase()
       variants = await Promise.all(
