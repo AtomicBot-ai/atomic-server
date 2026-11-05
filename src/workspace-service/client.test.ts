@@ -5,6 +5,7 @@ import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
 import { defaultConfig } from '../config/index.js'
 import { writeDaemonRecord } from '../core-link/index.js'
 import type { DaemonRecord } from '../core-link/index.js'
+import { captureFailure } from '../telemetry/index.js'
 import { AtcError } from '../errors/index.js'
 import { createWorkspaceClient } from './client.js'
 const cleanup: Array<() => void> = []
@@ -80,6 +81,80 @@ it('waits for a starting server and then sends operations to its admin', async (
   await client.execute('models.install', { request: {}, plan_digest: 'one', request_id: 'job' })
   expect(request.mock.calls[0]?.[0]).toBe('http://127.0.0.1:15555/api/workspace/execute')
 })
+it('replaces a cached admin client and maps loopback connection refusal in workspace.read to ATC_DAEMON_NOT_RUNNING without reporting an unexpected failure', async () => {
+  const tmp = tmpDataFolder()
+  cleanup.push(tmp.cleanup)
+  await mkdir(tmp.paths.runDir, { recursive: true })
+  await writeFile(
+    tmp.paths.daemonRecord,
+    JSON.stringify({
+      schema_version: 1,
+      instance_id: 'fake-instance',
+      pid: 4242,
+      admin_url: 'http://127.0.0.1:15555',
+    })
+  )
+  await writeFile(tmp.paths.adminToken, 'admin-private-token')
+  const captured: unknown[] = []
+  const sink = {
+    capture: (report: unknown) => {
+      captured.push(report)
+    },
+    flush: async () => true,
+    close: async () => true,
+  }
+  const refused = Object.assign(new Error('Unable to connect. Is the computer able to access the url?'), {
+    code: 'ConnectionRefused',
+  })
+  const nodeRefused = new TypeError('fetch failed', {
+    cause: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:15555'), { code: 'ECONNREFUSED' }),
+  })
+  const request = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'first' }])))
+    .mockRejectedValueOnce(refused)
+    .mockRejectedValueOnce(nodeRefused)
+    .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'recovered' }])))
+  const client = await createWorkspaceClient({
+    link: fakeCoreLink(),
+    paths: tmp.paths,
+    config: defaultConfig(),
+    fetch: request,
+  })
+  const read = async () => {
+    try {
+      return await client.execute('models.installed')
+    } catch (error) {
+      captureFailure(sink, error, { component: 'tui', operation: 'workspace.read' })
+      throw error
+    }
+  }
+  expect(await read()).toEqual([{ id: 'first' }])
+  await expect(read()).rejects.toMatchObject({
+    name: 'AtcError',
+    code: 'ATC_DAEMON_NOT_RUNNING',
+  })
+  await expect(read()).rejects.toMatchObject({
+    name: 'AtcError',
+    code: 'ATC_DAEMON_NOT_RUNNING',
+  })
+  await writeFile(
+    tmp.paths.daemonRecord,
+    JSON.stringify({
+      schema_version: 1,
+      instance_id: 'fake-instance',
+      pid: 4242,
+      admin_url: 'http://127.0.0.1:15556',
+    })
+  )
+  await writeFile(tmp.paths.adminToken, 'rotated-admin-token')
+  expect(await read()).toEqual([{ id: 'recovered' }])
+  expect(request.mock.calls[3]?.[0]).toBe('http://127.0.0.1:15556/api/workspace/execute')
+  expect(request.mock.calls[3]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer rotated-admin-token' })
+  expect(request).toHaveBeenCalledTimes(4)
+  expect(captured).toEqual([])
+})
+
 it('maps a refused admin loopback connection to ATC_DAEMON_NOT_RUNNING', async () => {
   const tmp = tmpDataFolder()
   cleanup.push(tmp.cleanup)

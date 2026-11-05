@@ -13,12 +13,29 @@ export interface WorkspaceClient {
   execute(operation: string, input?: WorkspaceInput): Promise<unknown>
 }
 function isConnectionRefused(error: unknown): boolean {
-  for (let depth = 0, current = error; current && typeof current === 'object' && depth < 5; depth++) {
+  const seen = new Set<unknown>()
+  for (
+    let current = error, depth = 0;
+    current && typeof current === 'object' && depth < 5 && !seen.has(current);
+    depth++
+  ) {
+    seen.add(current)
     const code = (current as { code?: unknown }).code
     if (code === 'ConnectionRefused' || code === 'ECONNREFUSED') return true
     current = (current as { cause?: unknown }).cause
   }
   return false
+}
+function parseAdminUrl(raw: string): URL {
+  const url = new URL(raw)
+  if (
+    url.protocol !== 'http:' ||
+    !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
+    url.username ||
+    url.password
+  )
+    throw new AtcError('ATC_USAGE', 'The admin address must be local.')
+  return url
 }
 /** Daemon-owned jobs survive terminal/browser exits. The token never leaves the loopback listener. */
 export async function createWorkspaceClient(options: WorkspaceServiceOptions): Promise<WorkspaceClient> {
@@ -33,20 +50,30 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
       })
   }
   if (record?.instance_id === options.link.endpoint.instanceId && record.admin_url) {
-    const url = new URL(record.admin_url)
-    if (
-      url.protocol !== 'http:' ||
-      !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
-      url.username ||
-      url.password
-    )
-      throw new AtcError('ATC_USAGE', 'The admin address must be local.')
-    const token = (await readFile(options.paths.adminToken, 'utf8')).trim()
+    let admin: { origin: string; token: string } | undefined = {
+      origin: parseAdminUrl(record.admin_url).origin,
+      token: (await readFile(options.paths.adminToken, 'utf8')).trim(),
+    }
+    const target = async () => {
+      if (admin) return admin
+      const latest = await readDaemonRecord(options.paths.daemonRecord)
+      if (latest?.instance_id !== options.link.endpoint.instanceId || !latest.admin_url)
+        throw new AtcError('ATC_DAEMON_NOT_RUNNING', 'Atomic Server is not running for this data folder.', {
+          details: options.paths.dataFolder,
+          hint: 'start it with `atc start`',
+        })
+      admin = {
+        origin: parseAdminUrl(latest.admin_url).origin,
+        token: (await readFile(options.paths.adminToken, 'utf8')).trim(),
+      }
+      return admin
+    }
     const call = async (path: string, body?: unknown) => {
+      const { origin, token } = await target()
       // Its own 15-minute signal ends a call, not the runtime's 300 s (a long load, a prepare).
       let response: Response
       try {
-        response = await patientFetch(options.fetch ?? fetch)(`${url.origin}${path}`, {
+        response = await patientFetch(options.fetch ?? fetch)(`${origin}${path}`, {
           method: body ? 'POST' : 'GET',
           redirect: 'error',
           headers: {
@@ -58,11 +85,13 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
           signal: AbortSignal.timeout(900000),
         })
       } catch (error) {
-        if (isConnectionRefused(error))
+        if (isConnectionRefused(error)) {
+          admin = undefined
           throw new AtcError('ATC_DAEMON_NOT_RUNNING', 'Atomic Server is not running for this data folder.', {
             details: options.paths.dataFolder,
             hint: 'start it with `atc start`',
           })
+        }
         throw error
       }
       const result = await response.json()
