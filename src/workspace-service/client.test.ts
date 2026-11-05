@@ -6,6 +6,7 @@ import { defaultConfig } from '../config/index.js'
 import { writeDaemonRecord } from '../core-link/index.js'
 import type { DaemonRecord } from '../core-link/index.js'
 import { captureFailure } from '../telemetry/index.js'
+import { AtcError } from '../errors/index.js'
 import { createWorkspaceClient } from './client.js'
 const cleanup: Array<() => void> = []
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()))
@@ -146,7 +147,47 @@ it('replaces a cached admin client and maps loopback connection refusal in works
       admin_url: 'http://127.0.0.1:15556',
     })
   )
+  await writeFile(tmp.paths.adminToken, 'rotated-admin-token')
   expect(await read()).toEqual([{ id: 'recovered' }])
   expect(request.mock.calls[3]?.[0]).toBe('http://127.0.0.1:15556/api/workspace/execute')
+  expect(request.mock.calls[3]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer rotated-admin-token' })
+  expect(request).toHaveBeenCalledTimes(4)
   expect(captured).toEqual([])
+})
+
+it('maps a refused admin loopback connection to ATC_DAEMON_NOT_RUNNING', async () => {
+  const tmp = tmpDataFolder()
+  cleanup.push(tmp.cleanup)
+  await mkdir(tmp.paths.runDir, { recursive: true })
+  await writeFile(
+    tmp.paths.daemonRecord,
+    JSON.stringify({
+      schema_version: 1,
+      instance_id: 'fake-instance',
+      pid: 4242,
+      admin_url: 'http://127.0.0.1:15555',
+    })
+  )
+  await writeFile(tmp.paths.adminToken, 'admin-private-token')
+  const bunRefused = Object.assign(new Error('Unable to connect'), { code: 'ConnectionRefused' })
+  const nodeRefused = new TypeError('fetch failed', {
+    cause: Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }),
+  })
+  const request = vi.fn<typeof fetch>().mockRejectedValueOnce(bunRefused).mockRejectedValueOnce(nodeRefused)
+  const client = await createWorkspaceClient({
+    link: fakeCoreLink(),
+    paths: tmp.paths,
+    config: defaultConfig(),
+    fetch: request,
+  })
+  await expect(client.snapshot()).rejects.toMatchObject(
+    new AtcError('ATC_DAEMON_NOT_RUNNING', 'Atomic Server is not running for this data folder.', {
+      details: tmp.paths.dataFolder,
+      hint: 'start it with `atc start`',
+    })
+  )
+  await expect(client.execute('models.list')).rejects.toMatchObject({
+    code: 'ATC_DAEMON_NOT_RUNNING',
+    details: tmp.paths.dataFolder,
+  })
 })
