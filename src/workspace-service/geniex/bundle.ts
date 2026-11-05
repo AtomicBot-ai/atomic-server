@@ -1,10 +1,12 @@
 import { createReadStream, closeSync, mkdirSync, openSync, writeSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { Crc64Nvme } from './crc64.js'
 import { Unzip, UnzipInflate } from 'fflate'
 
 /** Extract regular files into a new private directory. Qualcomm ZIPs commonly wrap the model in one folder. */
-export async function unpackBundle(archive: string, root: string, cancelled: () => boolean) {
+export async function unpackBundle(archive: string, root: string, cancelled: () => boolean, crc64?: string) {
+  const checksum = crc64 ? new Crc64Nvme() : undefined
   const handles = new Set<number>()
   let bytes = 0
   const unzip = new Unzip((entry) => {
@@ -45,9 +47,11 @@ export async function unpackBundle(archive: string, root: string, cancelled: () 
   try {
     for await (const chunk of createReadStream(archive)) {
       if (cancelled()) throw new Error('Extraction cancelled.')
+      checksum?.update(chunk as Buffer)
       unzip.push(chunk as Buffer)
     }
     unzip.push(new Uint8Array(0), true)
+    if (checksum && checksum.hex() !== crc64) throw new Error('Qualcomm archive checksum mismatch.')
     if (handles.size || !bytes) throw new Error('Incomplete GenieX bundle.')
     const entries = await readdir(root, { withFileTypes: true })
     return {

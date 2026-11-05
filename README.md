@@ -276,7 +276,7 @@ hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
 On Windows arm64 with Snapdragon X, select **GenieX** in the Local models catalog or run
 `atc models catalog --engine geniex` for curated GGUF models and Qualcomm AI Hub bundles for your chip.
-`atc models search qwen --engine geniex` also checks Hugging Face. Download a listed model with
+`atc models search qwen --engine geniex` also searches Hugging Face and the current Qualcomm AI Hub release for compatible text-generation bundles. Use the returned model ID (for example, `qai-smollm2_1_7b_it`) with `atc models pull --engine geniex`. Download a listed model with
 `atc models pull qwen3-4b --engine geniex --backend npu`, then run it with
 `atc run qwen3-4b --engine geniex`. Gated GGUF repositories require accepted terms and the server's
 `HF_TOKEN`. Bundle downloads use Qualcomm's storage.

@@ -5,16 +5,19 @@ import { followSetup } from './managed-model-commands.js'
 
 export async function genieListing(ctx: CommandContext, op: string, query: string) {
   const result = (await (await workspace(ctx)).execute(op, { engine: 'geniex', query })) as {
+    qualcomm_error: string | null
     list_error: string | null
     huggingface_error: string | null
     models: {
       model_id: string
       name: string
+      origin: string
       unverified: boolean
       variants: { id: string; verdict: { verdict: string } }[]
     }[]
   }
   ctx.out.result(result, () => {
+    if (result.qualcomm_error) ctx.out.note(result.qualcomm_error)
     if (result.list_error) ctx.out.note(result.list_error)
     if (result.huggingface_error) ctx.out.note(result.huggingface_error)
     ctx.out.table(
@@ -22,7 +25,7 @@ export async function genieListing(ctx: CommandContext, op: string, query: strin
       result.models.map((m) => [
         m.model_id,
         m.variants.map((v) => v.id + ' (' + v.verdict.verdict + ')').join(', '),
-        m.unverified ? 'Hugging Face (unverified)' : 'Curated',
+        m.origin === 'qualcomm' ? 'Qualcomm AI Hub' : m.unverified ? 'Hugging Face (unverified)' : 'Curated',
       ])
     )
   })

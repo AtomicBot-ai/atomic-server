@@ -13,7 +13,10 @@ import { geniexList, type GeniexModel, type GeniexHubFile } from './list.js'
 import { hfGgufFiles, type HfSibling } from './hf-files.js'
 import { resolveUrl, HF_HUB } from '../models/hf-revision.js'
 
-type SourceFile = Omit<GeniexHubFile, 'path'> & { url: string; name: string }
+import { qualcommSearch } from './qualcomm.js'
+
+const qualcommClients = new WeakMap<typeof fetch, ReturnType<typeof qualcommSearch>>()
+type SourceFile = { size: number; sha256?: string; crc64?: string; url: string; name: string }
 export interface GenieVariant {
   id: string
   backend: GeniexDevice
@@ -23,7 +26,7 @@ export interface GenieVariant {
   files: SourceFile[]
   min_runtime_version?: string
 }
-type Candidate = { model: GeniexModel; origin: 'curated' | 'huggingface' }
+type Candidate = { model: GeniexModel; origin: 'curated' | 'huggingface' | 'qualcomm' }
 const validRepo = (repo: string) => /^[\w-][\w.-]*\/[\w-][\w.-]*$/.test(repo)
 async function hfCandidate(
   repo: string,
@@ -100,8 +103,24 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
         (m.kind === 'qairt' && m.variants.some((v) => v.id === query))
     )
     .map((model) => ({ model, origin: 'curated' }))
+  let qualcommError: string | null = null
+  const qualcomm = async () => {
+    if (!includeHub || !hardware.chip) return []
+    let search = qualcommClients.get(request)
+    if (!search) {
+      search = qualcommSearch(request)
+      qualcommClients.set(request, search)
+    }
+    const excluded = new Set(
+      curated.flatMap((m) => (m.kind === 'qairt' ? m.variants.map((v) => v.bundle.url) : []))
+    )
+    const result = await search(query, hardware.chip, excluded)
+    if (result.unavailable) qualcommError = 'Some Qualcomm AI Hub results could not be loaded.'
+    return result.models
+  }
+  const external = qualcomm()
   let hubError: string | null = null
-  if (includeHub) {
+  if (includeHub && !query.startsWith('qai-')) {
     const existing = new Set(curated.flatMap((m) => (m.kind === 'gguf' ? [m.gguf.repo.toLowerCase()] : [])))
     try {
       const repos = validRepo(query) ? [query] : (await searchHub(query, request)).map((r) => r.id)
@@ -127,6 +146,22 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
     } catch (error) {
       hubError = String(error)
     }
+  }
+  for (const m of await external) {
+    candidates.push({
+      origin: 'qualcomm',
+      model: {
+        ...m,
+        kind: 'qairt',
+        description: 'Qualcomm AI Hub',
+        task: 'chat',
+        license: '',
+        context_length: 4096,
+        tools: false,
+        reasoning: false,
+        vision: false,
+      },
+    })
   }
   const checks = new Map<string, Promise<GeniexCheckResult>>()
   async function variant(record: ModelYmlGeniex, files: SourceFile[], min?: string): Promise<GenieVariant> {
@@ -156,7 +191,8 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
       tools: m.tools,
       reasoning: m.reasoning,
       vision: m.vision,
-      source: origin,
+      // Core 0.21.4 groups vendor QAIRT bundles under "curated". The row and pinned URL retain the publisher.
+      source: origin === 'qualcomm' ? ('curated' as const) : origin,
     }
     let variants: GenieVariant[]
     if (m.kind === 'gguf') {
@@ -228,5 +264,11 @@ export async function genieCatalog(o: WorkspaceServiceOptions, query: string, in
       default_variant: preferred?.id ?? null,
     })
   }
-  return { models, list_source: listed.source, list_error: listed.error ?? null, huggingface_error: hubError }
+  return {
+    models,
+    list_source: listed.source,
+    list_error: listed.error ?? null,
+    huggingface_error: hubError,
+    qualcomm_error: qualcommError,
+  }
 }

@@ -10,11 +10,14 @@ import { WorkspaceService } from '../../src/workspace-service/index.js'
 import { fakeCoreLink } from '../helpers/fake-core-link.js'
 import { tmpDataFolder } from '../helpers/tmp-data-folder.js'
 
+import { Crc64Nvme } from '../../src/workspace-service/geniex/crc64.js'
 const cleanups: (() => void)[] = []
 afterEach(() => {
   while (cleanups.length) cleanups.pop()!()
 })
-async function fixture(options: { gated?: boolean; refuse?: boolean; unsafe?: boolean } = {}) {
+async function fixture(
+  options: { gated?: boolean; refuse?: boolean; unsafe?: boolean; corruptChecksum?: boolean } = {}
+) {
   const { paths, cleanup } = tmpDataFolder()
   cleanups.push(cleanup)
   await mkdir(paths.atcDir, { recursive: true })
@@ -80,6 +83,48 @@ async function fixture(options: { gated?: boolean; refuse?: boolean; unsafe?: bo
   })
   const fetcher = vi.fn(async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const req = String(input)
+    const base =
+      'https://qaihub-public-assets.s3.us-west-2.amazonaws.com/qai-hub-models/models/smollm/releases/v0.66.0/'
+    const vendorZip = base + 'smollm.zip'
+    const chipset = 'qualcomm-snapdragon-x-elite',
+      runtime = 'RUNTIME_GENIEX_QAIRT'
+    if (req.startsWith('https://pypi.org/')) return Response.json({ info: { version: '0.66.0' } })
+    if (req.endsWith('/manifest.json'))
+      return Response.json({
+        version: '0.66.0',
+        models: [
+          {
+            id: 'smollm',
+            display_name: 'SmolLM',
+            supported_chipsets: [chipset],
+            supported_runtimes: [runtime],
+            use_case: 'MODEL_USE_CASE_TEXT_GENERATION',
+          },
+        ],
+      })
+    if (req === base + 'release-assets.json')
+      return Response.json({
+        model_id: 'smollm',
+        aihm_version: '0.66.0',
+        assets: [{ runtime, chipset, precision: 'PRECISION_W4A16', download_url: vendorZip }],
+      })
+    if (req === vendorZip && init?.method === 'HEAD') {
+      const checksum = new Crc64Nvme()
+      checksum.update(zip)
+      return new Response(null, {
+        headers: {
+          'content-length': String(zip.length),
+          'x-amz-version-id': 'test-version',
+          'x-amz-checksum-type': 'FULL_OBJECT',
+          'x-amz-checksum-crc64nvme': Buffer.from(
+            options.corruptChecksum ? '0000000000000000' : checksum.hex(),
+            'hex'
+          ).toString('base64'),
+        },
+      })
+    }
+    if (req === vendorZip + '?versionId=test-version')
+      return new Response(new Uint8Array(zip), { headers: { 'content-length': String(zip.length) } })
     if (req.includes('/api/models?')) return Response.json([{ id: 'third/example' }])
     if (req.includes('/revision/main?'))
       return Response.json({
@@ -127,7 +172,12 @@ it('lists curated models first and restricts Qualcomm bundles to the chip, with 
   })
   expect(fetcher).not.toHaveBeenCalled()
   expect(await service.execute('models.search', { engine: 'geniex' })).toMatchObject({
-    models: [{}, {}, { model_id: 'third/example', unverified: true }],
+    models: [
+      {},
+      {},
+      { model_id: 'third/example', unverified: true },
+      { model_id: 'qai-smollm', origin: 'qualcomm' },
+    ],
   })
 })
 it.each([
@@ -174,5 +224,23 @@ it.each([
 ] as const)('never registers refused %s files', async (model, options, reason) => {
   const { install, registry } = await fixture(options)
   await expect(install(model)).rejects.toThrow(reason)
+  expect(await registry.list()).toEqual([])
+})
+
+it('installs a model outside the curated list from a versioned Qualcomm ZIP', async () => {
+  const { registry, install, service } = await fixture()
+  expect(await service.execute('models.search', { engine: 'geniex', query: 'smollm' })).toMatchObject({
+    models: expect.arrayContaining([expect.objectContaining({ origin: 'qualcomm', model_id: 'qai-smollm' })]),
+  })
+  await install('qai-smollm')
+  expect((await registry.list())[0]?.yml.geniex).toMatchObject({
+    plugin: 'qairt',
+    chip: 'x-elite',
+    bundle_url: expect.stringContaining('?versionId=test-version'),
+  })
+})
+it('rejects a Qualcomm ZIP when its bytes disagree with S3', async () => {
+  const { registry, install } = await fixture({ corruptChecksum: true })
+  await expect(install('qai-smollm')).rejects.toThrow(/checksum mismatch/)
   expect(await registry.list()).toEqual([])
 })

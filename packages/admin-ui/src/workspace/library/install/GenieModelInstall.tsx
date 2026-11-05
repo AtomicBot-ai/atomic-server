@@ -63,6 +63,7 @@ export function GenieModelInstall({
           ))}
         </select>
       </Field>
+      {model.origin === 'qualcomm' && <p>Qualcomm AI Hub</p>}
       {model.unverified === true && <p>Hugging Face · not verified by Atomic Chat</p>}
       {model.gated === true && <p>Accept the model terms on Hugging Face and set HF_TOKEN on the server.</p>}
       {verdict.verdict === 'ok' ? (

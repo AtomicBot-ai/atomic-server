@@ -1,3 +1,4 @@
+import type { QualcommBundle } from './qualcomm.js'
 // Catalog parser shared in behavior with Atomic Chat's services/geniex/curated.ts (250aa30ae).
 import { GENIEX_CHIPS, GENIEX_DEVICES, type GeniexChip, type GeniexDevice } from '@atomic-chat/core/contracts'
 import { projectAtomicModelCollection } from '@atomic-chat/core/client'
@@ -45,7 +46,7 @@ export interface GeniexBundleVariant {
   /** Unique across the list: names the download and the folder `<data>/geniex/models/<id>`. */
   id: string
   chip: GeniexChip
-  bundle: { url: string; size: number; sha256: string }
+  bundle: { url: string; size: number; sha256: string } | QualcommBundle
   precision: string
   /** Oldest GenieX the bundle loads in, when conf knows it before download. */
   min_runtime_version?: string

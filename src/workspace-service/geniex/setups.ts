@@ -19,8 +19,10 @@ async function planDownload(o: WorkspaceServiceOptions, model: string, choice?: 
   let row = (await genieCatalog(o, model, false)).models.find(
     (m) => m.model_id === model || m.variants.some((v) => v.id === model)
   )
-  if (!row && model.includes('/'))
-    row = (await genieCatalog(o, model, true)).models.find((m) => m.model_id === model)
+  if (!row && (model.includes('/') || model.startsWith('qai-')))
+    row = (await genieCatalog(o, model, true)).models.find(
+      (m) => m.model_id === model || m.variants.some((v) => v.id === model)
+    )
   if (!row)
     throw new AtcError('ATC_USAGE', 'No matching GenieX model. See atc models search --engine geniex.')
   const selected = choice ?? (row.model_id !== model ? model : row.default_variant)
@@ -129,7 +131,7 @@ export class GenieSetups {
         v.files.map((f) => ({
           url: f.url,
           size: f.size,
-          sha256: f.sha256,
+          ...(f.sha256 ? { sha256: f.sha256 } : {}),
           save_path: join(bundle ? cache : stage, f.name),
           ...(proxy ? { proxy } : {}),
         })),
@@ -141,7 +143,12 @@ export class GenieSetups {
       if (bundle) {
         await rm(stage, { recursive: true, force: true })
         await mkdir(stage, { recursive: true })
-        const unpacked = await unpackBundle(join(cache, 'bundle.zip'), stage, () => worker.cancelled)
+        const unpacked = await unpackBundle(
+          join(cache, 'bundle.zip'),
+          stage,
+          () => worker.cancelled,
+          v.files[0]?.crc64
+        )
         bytes = unpacked.bytes
         path = unpacked.dir
       }
@@ -155,6 +162,8 @@ export class GenieSetups {
         record.context_length = metadata.max_context_tokens ?? 4096
         record.vision = !!record.mmproj || metadata.vision
       }
+      if (metadata?.kind === 'qairt' && v.files[0]?.crc64)
+        record.context_length = metadata.max_context_tokens ?? 4096
       if (metadata?.kind === 'qairt' && metadata.precision) record.precision = metadata.precision
       await rename(bundle ? path : stage, publish)
       const relative = `geniex/models/${plan.variant_id}`
@@ -175,6 +184,8 @@ export class GenieSetups {
       await rm(cache, { recursive: true, force: true })
       await this.journal.write(job, 'ready')
     } catch (error) {
+      if (bundle && error instanceof Error && error.message === 'Qualcomm archive checksum mismatch.')
+        await rm(join(cache, 'bundle.zip'), { force: true })
       let failure = error
       if (!bundle && /HTTP status 40[13]\b/.test(String(error))) {
         await rm(stage, { recursive: true, force: true })
