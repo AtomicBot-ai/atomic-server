@@ -68,7 +68,9 @@ export function drawSetupBrowser(
         if (bottom - y >= 17) put(row++, `    ${build.version} / ${build.backend}  •  Recommended`)
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
-    for (const engine of registered.filter((e) => ['managed', 'foundry', 'litert'].includes(engineFamily(e))))
+    for (const engine of registered.filter((e) =>
+      ['managed', 'foundry', 'litert', 'geniex'].includes(engineFamily(e))
+    ))
       b(
         `setup-engine:${engine}`,
         row++,

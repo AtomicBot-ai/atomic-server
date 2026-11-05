@@ -11,6 +11,7 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-05** — [Install GenieX models in Atomic Server](2026-11-05-install-geniex-models-in-atc.md) — separate GGUF and Qualcomm bundle installs, shared by all clients.
 - **2026-11-03** — [Pin core 0.21.0 for agent serving](2026-11-03-pin-core-0-21-0.md) — the advertised window, request window and cached tokens, agent-friendly engine defaults; the tensor-count patch moves to 0.21.0 until atomic-chat-core#67 ships.
 
 - **2026-11-03** — [Tell launched agents the served window](2026-11-03-tell-agents-the-served-window.md) — profiles carry the window `/v1/models` names, a known window under 32K refuses, Windows `.cmd` shims run through cmd.exe.

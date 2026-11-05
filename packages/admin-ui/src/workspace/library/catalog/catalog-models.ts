@@ -42,6 +42,7 @@ export function modelFormat(model: RecordValue): string {
   const providers = modelProviders(model)
   if (providers.includes('mlx')) return 'mlx'
   if (providers.includes('foundry-local')) return 'foundry'
+  if (providers.includes('geniex')) return 'geniex'
   if (providers.includes('litert-lm')) return 'litert'
   if (model.store === 'managed' || providers.some((p) => ['vllm', 'sglang', 'tensorrt-llm'].includes(p)))
     return 'safetensors'

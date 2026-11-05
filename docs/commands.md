@@ -634,7 +634,7 @@ Usage: atc models search [query] [options]
 Search model repositories
 
 Arguments:
-  [query]  Search words or owner/repo (optional for foundry-local and litert-lm)
+  [query]  Search words or owner/repo (optional for foundry-local, litert-lm and geniex)
 
 Options:
       --engine <provider>  Engine provider ID
@@ -735,12 +735,11 @@ Arguments:
   [model]  owner/repo[:file.gguf], or owner/repo[@revision] with --engine
 
 Options:
-      --engine <engine>      mlx: a catalog checkpoint; a managed engine: the safetensors checkpoint
-                             into its shared store
+      --engine <engine>      Engine provider ID for an engine-specific model download
       --detach               Start a managed download without following it
       --device <device>      Foundry Local: the variant for npu, gpu or cpu
-      --backend <backend>    LiteRT-LM: the variant for npu, gpu or cpu
-      --cancel <request-id>  Cancel a managed, Foundry Local or LiteRT-LM download (with its
+      --backend <backend>    Device for LiteRT-LM or GenieX, or an exact GenieX variant ID
+      --cancel <request-id>  Cancel a managed, Foundry Local, LiteRT-LM or GenieX download (with its
                              --engine)
       --file <value>         Exact filename in the repository
       --quant <value>        Select an unambiguous quantization

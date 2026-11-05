@@ -31,7 +31,11 @@ export function connectionDownload(setups: readonly unknown[], model = '') {
 }
 
 /** Variant jobs load as their variant, on their own engine. */
-const VARIANT_JOBS: Record<string, string> = { 'foundry-model': 'foundry-local', 'litert-model': 'litert-lm' }
+const VARIANT_JOBS: Record<string, string> = {
+  'foundry-model': 'foundry-local',
+  'litert-model': 'litert-lm',
+  'geniex-model': 'geniex',
+}
 
 export function connectionDownloadTarget(job: unknown) {
   const row = record(job),

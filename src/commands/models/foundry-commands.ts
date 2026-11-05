@@ -72,6 +72,21 @@ export const acceleratorsCommand = defineCommand({
     'atc engines accelerators litert-lm --prepare',
   ],
   run: async (inv, ctx) => {
+    if (inv.positionals[0] === 'geniex') {
+      const { service } = await attachWorkspace(ctx)
+      const view = (await service.execute('geniex.accelerators')) as {
+        chip: string | null
+        accelerators: { device: string }[]
+      }
+      ctx.out.result(view, () => {
+        ctx.out.line(
+          [view.chip, ...view.accelerators.map((a) => a.device)].filter(Boolean).join(' · ') ||
+            'No active GenieX build.'
+        )
+        if (inv.values.prepare) ctx.out.line('GenieX devices need no preparation.')
+      })
+      return 0
+    }
     if (inv.positionals[0] === 'litert-lm')
       return inv.values['prepare']
         ? prepareLiteRtAccelerators(ctx, inv.positionals.slice(1))

@@ -21,13 +21,15 @@ export function withInstalledRows(rows: LibraryRow[], state: WorkspaceState): Li
         installed: true,
         engine: model.provider,
         format:
-          model.provider === 'mlx'
-            ? 'mlx'
-            : model.store === 'managed'
-              ? 'safetensors'
-              : model.provider === 'foundry-local'
-                ? 'foundry'
-                : 'gguf',
+          model.provider === 'geniex'
+            ? 'geniex'
+            : model.provider === 'mlx'
+              ? 'mlx'
+              : model.store === 'managed'
+                ? 'safetensors'
+                : model.provider === 'foundry-local'
+                  ? 'foundry'
+                  : 'gguf',
       },
     })),
     ...rows,

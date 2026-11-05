@@ -6,9 +6,11 @@ import { engineFamily } from '@view'
 import type { RecordValue } from '../types'
 
 /** Which install dialog an engine's models take, by the core's kinds: a checkpoint, a Foundry or a LiteRT-LM variant. */
-export const engineDialog = (engine: string): 'managed' | 'foundry' | 'litert' | null => {
+export const engineDialog = (engine: string): 'managed' | 'foundry' | 'litert' | 'geniex' | null => {
   const family = engineFamily(engine)
-  return family === 'managed' || family === 'foundry' || family === 'litert' ? family : null
+  return family === 'managed' || family === 'foundry' || family === 'litert' || family === 'geniex'
+    ? family
+    : null
 }
 
 /** Setup's models for `engine`: its own catalog for a managed engine, Foundry Local or LiteRT-LM, else the category's. */
@@ -20,7 +22,7 @@ export async function setupModels(
   const kind = engineDialog(engine)
   if (kind === 'managed')
     return catalogCards(await execute('models.catalog', { engine }), 'safetensors', engine)
-  if (kind === 'foundry' || kind === 'litert')
+  if (kind === 'foundry' || kind === 'litert' || kind === 'geniex')
     return catalogCards(await execute('models.search', { engine, query: '' }), kind)
   return rows(await execute('models.catalog', { category }))
 }
@@ -31,7 +33,7 @@ export function engineModels(models: RecordValue[], engine: string, category: st
     const source = record(model.source)
     // A managed engine's checkpoints and Foundry Local's and LiteRT-LM's variants come from their own catalogs.
     if (engineDialog(engine))
-      return ['safetensors', 'Foundry Local', 'LiteRT-LM'].includes(text(model.format))
+      return ['safetensors', 'Foundry Local', 'LiteRT-LM', 'GenieX'].includes(text(model.format))
     if (category === 'text') return (source.format === 'mlx') === (engine === 'mlx')
     if (category === 'image' || category === 'video') return engine === 'sd-cpp'
     if (category === 'audio') return modelProviders(model).includes(engine)

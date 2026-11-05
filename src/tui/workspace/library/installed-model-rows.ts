@@ -7,7 +7,10 @@ export function installedModelRows(s: WorkspaceState) {
   return [
     ...s.installed.map((model, index) => ({
       id: `installed:${index}`,
-      remove: `installed-delete:${encodeURIComponent(model.id)}`,
+      remove:
+        model.store === 'geniex'
+          ? `geniex-delete:${encodeURIComponent(model.id)}`
+          : `installed-delete:${encodeURIComponent(model.id)}`,
       name: `${model.name || model.id}${model.providers?.length ? '  ' + model.providers.join(', ') : ''}`,
       status: localModelStatus(
         s.workspace,

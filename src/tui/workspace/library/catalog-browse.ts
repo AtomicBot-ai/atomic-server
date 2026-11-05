@@ -61,13 +61,18 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
   }
   patch({ catalogOpen: row.id, catalogVariants: [], catalogVariant: '', selected, busy: true })
   try {
-    if (s.installed.some((item) => item.id === row.id)) return true
+    if (
+      s.installed.some(
+        (item) => item.id === row.id && (row.source?.['format'] !== 'geniex' || item.provider === 'geniex')
+      )
+    )
+      return true
     const source = row.source ?? {},
       transformer = record(source['transformer'])
     const raw = source['variants'] ?? transformer['quants'] ?? source['quants']
     const variants =
       s.libraryCategory === 'text' &&
-      !['mlx', 'safetensors', 'foundry', 'litert'].includes(String(source['format'] ?? 'gguf'))
+      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex'].includes(String(source['format'] ?? 'gguf'))
         ? (await ctx.controller.files(row.id)).map((file) => ({
             value: file.filename,
             label: `${file.filename} · ${bytes(file.size)}`,

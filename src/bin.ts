@@ -14,6 +14,7 @@ const crash = (write: (text: string) => void) => (error: unknown) => {
 // (`foundryHostCommand`, `liteRtHostCommand`). Those modes are the core's own entries: they run before
 // atc parses a command or builds its I/O, so a host's stdout carries protocol lines alone.
 const hostMain: Record<string, () => Promise<(argv: string[]) => Promise<number>>> = {
+  'geniex-host': () => import('@atomic-chat/core/geniex-host').then((m) => m.runGeniexHostMain),
   'foundry-host': () => import('@atomic-chat/core/foundry-host').then((m) => m.runFoundryHostMain),
   'litert-host': () =>
     import('@atomic-chat/core/litert-host').then((m) => (argv) => m.runLiteRtHostMain(argv)),
