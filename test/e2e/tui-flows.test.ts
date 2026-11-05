@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
+import { CONFIG_VERSION } from '../../src/config/index.js'
 import { ATC, ROOT, runAtc } from '../helpers/binary.js'
 import { hasPython, runPty } from '../helpers/pty-driver.js'
 import { readyWorkspace } from '../helpers/ready-workspace.js'
@@ -96,9 +97,8 @@ describe.skipIf(process.platform === 'win32' || !hasPython())(`atc tui journeys 
     expect(result.code).toBe(0)
     const list = runAtc(['config', 'list', '--json', '--data-folder', folder])
     expect(list.code, list.err).toBe(0)
-    const config = JSON.parse(list.out) as { values: { version: number; tui: Record<string, unknown> } }
-    expect(config.values.version).toBe(5)
-    expect(config.values.tui).not.toHaveProperty('mode')
-    expect(config.values.tui['motion']).toBe(false)
+    const { values } = JSON.parse(list.out)
+    expect(values).toMatchObject({ version: CONFIG_VERSION, api: { port: 1337 }, tui: { motion: false } })
+    expect(values.tui).not.toHaveProperty('mode')
   })
 })
