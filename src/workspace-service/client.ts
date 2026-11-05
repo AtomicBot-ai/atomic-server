@@ -12,6 +12,14 @@ export interface WorkspaceClient {
   snapshot(): Promise<WorkspaceSnapshot>
   execute(operation: string, input?: WorkspaceInput): Promise<unknown>
 }
+function isConnectionRefused(error: unknown): boolean {
+  for (let depth = 0, current = error; current && typeof current === 'object' && depth < 5; depth++) {
+    const code = (current as { code?: unknown }).code
+    if (code === 'ConnectionRefused' || code === 'ECONNREFUSED') return true
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
 /** Daemon-owned jobs survive terminal/browser exits. The token never leaves the loopback listener. */
 export async function createWorkspaceClient(options: WorkspaceServiceOptions): Promise<WorkspaceClient> {
   let record = await readDaemonRecord(options.paths.daemonRecord)
@@ -36,17 +44,27 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
     const token = (await readFile(options.paths.adminToken, 'utf8')).trim()
     const call = async (path: string, body?: unknown) => {
       // Its own 15-minute signal ends a call, not the runtime's 300 s (a long load, a prepare).
-      const response = await patientFetch(options.fetch ?? fetch)(`${url.origin}${path}`, {
-        method: body ? 'POST' : 'GET',
-        redirect: 'error',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-atc-admin': '1',
-          'Content-Type': 'application/json',
-        },
-        ...(body ? { body: JSON.stringify(body) } : {}),
-        signal: AbortSignal.timeout(900000),
-      })
+      let response: Response
+      try {
+        response = await patientFetch(options.fetch ?? fetch)(`${url.origin}${path}`, {
+          method: body ? 'POST' : 'GET',
+          redirect: 'error',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'x-atc-admin': '1',
+            'Content-Type': 'application/json',
+          },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+          signal: AbortSignal.timeout(900000),
+        })
+      } catch (error) {
+        if (isConnectionRefused(error))
+          throw new AtcError('ATC_DAEMON_NOT_RUNNING', 'Atomic Server is not running for this data folder.', {
+            details: options.paths.dataFolder,
+            hint: 'start it with `atc start`',
+          })
+        throw error
+      }
       const result = await response.json()
       if (!response.ok) {
         const error = object(object(result)['error'])
