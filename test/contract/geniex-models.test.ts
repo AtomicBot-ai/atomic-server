@@ -96,6 +96,7 @@ async function fixture(
           {
             id: 'smollm',
             display_name: 'SmolLM',
+            manifest_urls: { release_assets: base + 'release-assets.json' },
             supported_chipsets: [chipset],
             supported_runtimes: [runtime],
             use_case: 'MODEL_USE_CASE_TEXT_GENERATION',
