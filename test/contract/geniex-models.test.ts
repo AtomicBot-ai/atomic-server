@@ -106,7 +106,14 @@ async function fixture(
       return Response.json({
         model_id: 'smollm',
         aihm_version: '0.66.0',
-        assets: [{ runtime, chipset, precision: 'PRECISION_W4A16', download_url: vendorZip }],
+        assets: [
+          { runtime, chipset, precision: 'PRECISION_W4A16', download_url: vendorZip },
+          {
+            runtime: 'RUNTIME_GENIEX_LLAMACPP',
+            precision: 'PRECISION_Q4_0',
+            download_url: 'https://huggingface.co/publisher/qualcomm-gguf/resolve/main/weights.gguf',
+          },
+        ],
       })
     if (req === vendorZip && init?.method === 'HEAD') {
       const checksum = new Crc64Nvme()
@@ -243,4 +250,18 @@ it('rejects a Qualcomm ZIP when its bytes disagree with S3', async () => {
   const { registry, install } = await fixture({ corruptChecksum: true })
   await expect(install('qai-smollm')).rejects.toThrow(/checksum mismatch/)
   expect(await registry.list()).toEqual([])
+})
+
+it('keeps vendor GGUF links out of Qualcomm results while the normal HF search remains available', async () => {
+  const { service, fetcher } = await fixture()
+  const result = (await service.execute('models.search', { engine: 'geniex', query: 'smollm' })) as {
+    models: { origin: string; variants: { record: { plugin: string } }[] }[]
+  }
+  expect(
+    result.models
+      .filter((m) => m.origin === 'qualcomm')
+      .flatMap((m) => m.variants.map((v) => v.record.plugin))
+  ).toEqual(['qairt'])
+  expect(result.models.some((m) => m.origin === 'huggingface')).toBe(true)
+  expect(fetcher.mock.calls.some(([url]) => String(url).includes('publisher/qualcomm-gguf'))).toBe(false)
 })
