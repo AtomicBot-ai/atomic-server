@@ -4,6 +4,7 @@
  * it, so a field is added in exactly one place.
  */
 
+import { DEFAULT_API_PORT } from '../contract/index.js'
 import { LOCAL_PROVIDER_IDS } from '@atomic-chat/core/settings'
 import type { LocalProviderId } from '@atomic-chat/core/contracts'
 
@@ -23,7 +24,7 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 5
+export const CONFIG_VERSION = 6
 
 export interface AtcConfig {
   version: number
@@ -58,8 +59,8 @@ export const FIELDS: readonly FieldSpec[] = [
   {
     path: 'tui.endpoint',
     type: 'string',
-    default: 'http://127.0.0.1:1337/v1',
-    description: 'OpenAI-compatible endpoint for terminal chat',
+    default: '',
+    description: 'OpenAI-compatible endpoint for terminal chat (empty follows this server)',
   },
   { path: 'tui.model', type: 'string', default: '', description: 'Last selected chat model' },
   { path: 'tui.motion', type: 'boolean', default: true, description: 'Animate the eye on an empty chat' },
@@ -78,7 +79,7 @@ export const FIELDS: readonly FieldSpec[] = [
   {
     path: 'api.port',
     type: 'number',
-    default: 1337,
+    default: DEFAULT_API_PORT,
     min: 0,
     max: 65535,
     description: 'Port of the OpenAI-compatible API',

@@ -42,9 +42,9 @@ describe('config edits', () => {
     const after = resolveConfig({ fileText: readFileSync(file, 'utf8'), env: {} })
     expect(await unsetConfigValue(file, after, 'api.port')).toEqual({
       key: 'api.port',
-      value: 1337,
+      value: 1339,
       overriddenByEnv: false,
     })
-    expect(read()['api']?.['port']).toBe(1337)
+    expect(read()['api']?.['port']).toBe(1339)
   })
 })

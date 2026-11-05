@@ -6,7 +6,7 @@
 import { join } from 'node:path'
 import { adminLoginUrl, ensureAdminToken } from '../../admin/index.js'
 import { AtcError, defineCommand } from '../../cli/index.js'
-import { readTextFile, resolveConfig } from '../../config/index.js'
+import { initializeProfileDefaults, loadProfileConfig } from '../../config/index.js'
 import { CHECKS, coreHardware, runChecks } from '../../doctor/index.js'
 import { managedFacts } from '../system/doctor.js'
 import { HostStepJournal, copyToClipboard } from '../../host/index.js'
@@ -56,8 +56,9 @@ export const tuiCommand = defineCommand({
         hint: 'in scripts use `atc status --json`; for a browser, `atc admin`',
       })
     const { paths, io } = ctx
-    const loadConfig = async () =>
-      resolveConfig({ fileText: await readTextFile(paths.configFile), env: io.env })
+    // The terminal can create a client key before starting its server.
+    await initializeProfileDefaults(paths)
+    const loadConfig = () => loadProfileConfig(paths, io.env)
     const { runTui } = await importProductionTui()
     const notice = await takeTelemetryNotice({ config: await ctx.config(), paths, env: io.env })
     return runTui({

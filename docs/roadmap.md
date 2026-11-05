@@ -22,7 +22,7 @@ The iterations below are history: how the server was assembled. They are not a l
 ### Iteration 2 — a first model answering
 
 The product's promise. **Goal:** on a clean server, `atc engines install`, `atc models pull <repo>` and
-`atc run <model>` end with a working `http://127.0.0.1:1337/v1` — three steps, as in the desktop app.
+`atc run <model>` end with a working `http://127.0.0.1:1339/v1` — three steps, as in the desktop app.
 
 - `engines install [engine]`: the llama.cpp build the core recommends for this hardware (the core's
   `POST /backends/:provider/install`), or a named `--build`; progress on the terminal.
@@ -208,7 +208,7 @@ it never stops the server. The decision and its limits are in
 │    ▀████████▀       Local models behind an OpenAI-compatible API                              │
 │  ▄▄▄████████▄▄▄                                                                               │
 │  ▀▀▀████████▀▀▀     atc 0.1.0 · core 0.5.1                                                    │
-│    ▄████████▄       ● server up 2h 14m · API http://0.0.0.0:1337/v1                           │
+│    ▄████████▄       ● server up 2h 14m · API http://0.0.0.0:1339/v1                           │
 │   ▀█▀  ██  ▀█▀      data /home/u/.local/share/atomic-chat-cli/data                            │
 │        ▀▀           a web admin  ? keys  q quit                                               │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -217,7 +217,7 @@ it never stops the server. The decision and its limits are in
 │ ● Server              pid 4121 · up 2h 14m · started 2026-09-25 09:27                         │
 │                       data folder /home/u/.local/share/atomic-chat-cli/data                   │
 │ ● Core                0.5.1 · instance 26ff4101… · protocol 1 · pid 4121                      │
-│ ● API                 http://0.0.0.0:1337/v1 · key required · pid 4121                        │
+│ ● API                 http://0.0.0.0:1339/v1 · key required · pid 4121                        │
 │ ● Loaded models       qwen3-8b · llamacpp-upstream · :8001 · pid 4180                         │
 │   Pending host steps  none                                                                    │
 │ ● Admin               http://127.0.0.1:1338 · atc 0.1.0 · a for a login link                  │
@@ -305,7 +305,7 @@ scope. This section is what they mean on a server.
   `wsl.exe -d <distro> --exec`; no Docker Desktop, and other distributions are left alone.
 - A model container gets no Docker socket, no privileged mode, `--restart=no`, read-only model and
   entrypoint mounts, a bounded `--shm-size`, one GPU and a port published on `127.0.0.1` only.
-  `trtllm-serve` enforces no API key: `atc`'s key protects port 1337, not the engine's loopback port,
+  `trtllm-serve` enforces no API key: `atc`'s key protects port 1339, not the engine's loopback port,
   which any local user of a shared host can reach.
 - A watchdog, not a supervisor: the container's entrypoint is a verified shell script that kills
   `trtllm-serve` once the heartbeat file the core touches every few seconds goes stale, and it cannot be

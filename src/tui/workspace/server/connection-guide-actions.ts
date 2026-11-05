@@ -1,5 +1,5 @@
 import type { ConnectionDraft } from '../../../contract/index.js'
-import { CONNECTION_AGENTS, PROFILE_AGENTS } from '../../../contract/index.js'
+import { CONNECTION_AGENTS, DEFAULT_API_PORT, PROFILE_AGENTS } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
 import { workspaceLocation } from '../navigation/navigation-return.js'
 import { record } from '../library/library-model.js'
@@ -68,7 +68,7 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
         agent: agent || 'claude',
         model: chosen?.id ?? preferred ?? '',
         provider: selected.provider,
-        port: String(v.workspace?.api.port || 1337),
+        port: String(v.workspace?.api.port || DEFAULT_API_PORT),
         more: false,
         agentPage: 0,
         status: '',

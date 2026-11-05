@@ -6,7 +6,7 @@
 
 import { nodeDataFolderEnv } from '@atomic-chat/core/host'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
-import { readTextFile, resolveAtcPaths, resolveConfig } from '../config/index.js'
+import { loadProfileConfig, resolveAtcPaths } from '../config/index.js'
 import type { CoreLink } from '../core-link/index.js'
 import { attachCore } from '../core-link/index.js'
 import { AtcError } from '../errors/index.js'
@@ -95,8 +95,7 @@ export function createContext(deps: ContextDeps): CommandContext {
   const loadConfig =
     deps.loadConfig ??
     (async () => {
-      const text = await readTextFile(paths.configFile)
-      const resolved = resolveConfig({ fileText: text, env: io.env })
+      const resolved = await loadProfileConfig(paths, io.env)
       for (const warning of resolved.warnings) log.warn(warning)
       return resolved
     })

@@ -10,7 +10,7 @@ import { DownloadGame } from '../../games/DownloadGame'
 import { jobOperations } from '../../library/downloads/download-data'
 import { AgentChoices, ConnectionChoices } from './ConnectionChoices'
 import { useState } from 'react'
-import { CONNECTION_AGENTS, PROFILE_AGENTS } from '@contract'
+import { CONNECTION_AGENTS, DEFAULT_API_PORT, PROFILE_AGENTS } from '@contract'
 import { useConnectionStep } from './useConnectionStep'
 import { useConnectionEscape } from './useConnectionEscape'
 import { Action, Copy, Field } from '../../Controls'
@@ -50,7 +50,7 @@ export function ConnectionGuide({
     setProvider,
   } = useConnectionModel(w, preferredModel, preferredProvider)
   const retryFocus = useConnectionRetryFocus(checking, modelError, retryModels)
-  const [port, setPort] = useState(String(w.snapshot?.api.port || 1337))
+  const [port, setPort] = useState(String(w.snapshot?.api.port || DEFAULT_API_PORT))
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [profile, setProfile] = useState<RecordValue | null>(null)

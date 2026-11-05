@@ -2,15 +2,7 @@
 import { CORE_VERSION } from '@atomic-chat/core'
 import type { LocalProviderId } from '@atomic-chat/core/contracts'
 import { LOCAL_PROVIDER_IDS, settingsSchema } from '@atomic-chat/core/settings'
-import {
-  FIELDS,
-  checkValue,
-  fieldFor,
-  readTextFile,
-  resolveConfig,
-  setAt,
-  writeConfigFile,
-} from '../config/index.js'
+import { FIELDS, checkValue, fieldFor, loadProfileConfig, setAt, writeConfigFile } from '../config/index.js'
 import type { AtcPaths, AtcConfig } from '../config/index.js'
 import { AtcError } from '../errors/index.js'
 const isLocalProvider = (provider: string): provider is LocalProviderId =>
@@ -35,8 +27,8 @@ export async function updateWorkspaceConfig(
     const problem = checkValue(field, value)
     if (problem) throw new AtcError('ATC_USAGE', problem)
   }
-  const resolved = resolveConfig({ fileText: await readTextFile(paths.configFile), env: {} }),
-    next = resolved.file?.config ?? structuredClone(config)
+  const resolved = await loadProfileConfig(paths, {}),
+    next = resolved.fileValues
   for (const [key, value] of Object.entries(values))
     setAt(next as unknown as Record<string, unknown>, key, value)
   await writeConfigFile(paths.configFile, next, resolved.file?.extra ?? {})

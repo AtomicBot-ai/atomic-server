@@ -176,3 +176,4 @@ add a new one that says which record it supersedes.
 - **2026-11-04** — [Unify web workspace sizing and recovery](2026-11-04-unify-web-workspace-rhythm.md) — compact header and responsive navigation; shared control sizes; visible dialog actions, inline parameter guidance and typing-safe shortcuts.
 - **2026-11-04** — [Await the complete model-load operation in the terminal contract](2026-11-04-await-complete-model-load-in-terminal-contract.md) — wait for API initialization and keyring writes before endpoint assertions and fixture cleanup.
 - **2026-11-05** — [Recover refused workspace clients](2026-11-05-recover-refused-workspace-clients.md) — invalidate failed admin targets without replaying commands or weakening loopback and instance checks.
+- **2026-11-05** — [Give new Atomic Server profiles their own API port](2026-11-05-separate-server-api-port.md) — use 1339 for new APIs and preserve existing profile ports.

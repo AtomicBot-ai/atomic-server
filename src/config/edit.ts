@@ -8,7 +8,7 @@ import { AtcError } from '../errors/index.js'
 import { writeConfigFile } from './file.js'
 import { checkValue, coerceValue } from './parse.js'
 import type { ResolvedConfig } from './resolve.js'
-import { defaultConfig, fieldFor, setAt } from './schema.js'
+import { fieldFor, setAt } from './schema.js'
 import type { AtcConfig, FieldSpec } from './schema.js'
 
 export interface ConfigEdit {
@@ -31,7 +31,7 @@ async function writeKey(
   key: string,
   value: unknown
 ): Promise<ConfigEdit> {
-  const fileConfig: AtcConfig = current.file?.config ?? defaultConfig()
+  const fileConfig: AtcConfig = structuredClone(current.fileValues)
   setAt(fileConfig as unknown as Record<string, unknown>, key, value)
   await writeConfigFile(configFile, fileConfig, current.file?.extra ?? {})
   return { key, value, overriddenByEnv: current.sources[key] === 'env' }

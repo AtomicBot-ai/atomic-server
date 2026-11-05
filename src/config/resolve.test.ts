@@ -19,7 +19,7 @@ describe('resolveConfig', () => {
   })
 
   it('works without a file and surfaces invalid files', () => {
-    expect(resolveConfig({ env: {} }).values.api.port).toBe(1337)
+    expect(resolveConfig({ env: {} }).values.api.port).toBe(1339)
     expect(() => resolveConfig({ fileText: '{"api":{"port":"x"}}', env: {} })).toThrow(/invalid values/)
   })
 })

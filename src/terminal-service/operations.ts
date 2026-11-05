@@ -45,7 +45,7 @@ async function assertPortFree({ probePort, status }: StartApiOptions, host: stri
   if (status?.running && status.host === host && status.port === port) return
   if ((await probePort(host, port)) === 'free') return
   throw new AtcError('ATC_PORT_BUSY', `Port ${port} on ${host} is in use by another program.`, {
-    details: 'The Atomic Chat desktop app serves its API on 0.0.0.0:1337 by default.',
+    ...(port === 1337 ? { details: 'Atomic Chat also uses API port 1337 by default.' } : {}),
     hint: 'stop that program, or `atc config set api.port <port>`',
   })
 }

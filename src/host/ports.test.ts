@@ -23,7 +23,7 @@ describe('probePort', () => {
   })
 
   // BSD sockets (macOS) let a loopback bind succeed beside a wildcard listener and the reverse: a
-  // program on `0.0.0.0:1337` (the Atomic Chat desktop app's default) would otherwise read as free.
+  // program on `0.0.0.0:1337` (a desktop API with LAN access enabled) would otherwise read as free.
   // Linux: a dual-stack `::` bind covers IPv4, so the probes must not collide with each other.
   it.each(['127.0.0.1', '0.0.0.0', '::'])(
     'reads a port nobody holds as free when asked about %s',

@@ -32,7 +32,7 @@ const set = defineCommand({
     { name: 'value', description: 'Value as text (lists comma-separated)', required: true },
   ],
   examples: [
-    'atc config set api.port 1337',
+    'atc config set api.port 1339',
     'atc config set models.autoLoad qwen3-8b,gemma-4b',
     'atc config set engine.tensorrt-llm.context_length 16384',
   ],

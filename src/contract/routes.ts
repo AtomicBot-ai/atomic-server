@@ -1,3 +1,6 @@
+/** Public API port for a new Atomic Server profile. */
+export const DEFAULT_API_PORT = 1339
+
 /** Paths the SPA calls, in one place on both sides. */
 export const ADMIN_API = {
   status: '/api/status',
