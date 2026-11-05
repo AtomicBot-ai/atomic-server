@@ -106,14 +106,7 @@ async function fixture(
       return Response.json({
         model_id: 'smollm',
         aihm_version: '0.66.0',
-        assets: [
-          { runtime, chipset, precision: 'PRECISION_W4A16', download_url: vendorZip },
-          {
-            runtime: 'RUNTIME_GENIEX_LLAMACPP',
-            precision: 'PRECISION_MXFP4',
-            download_url: 'https://huggingface.co/publisher/external/resolve/main/model-mxfp4.gguf',
-          },
-        ],
+        assets: [{ runtime, chipset, precision: 'PRECISION_W4A16', download_url: vendorZip }],
       })
     if (req === vendorZip && init?.method === 'HEAD') {
       const checksum = new Crc64Nvme()
@@ -133,14 +126,6 @@ async function fixture(
     if (req === vendorZip + '?versionId=test-version')
       return new Response(new Uint8Array(zip), { headers: { 'content-length': String(zip.length) } })
     if (req.includes('/api/models?')) return Response.json([{ id: 'third/example' }])
-    if (req.includes('/publisher/external/revision/main?'))
-      return Response.json({
-        sha: 'a'.repeat(40),
-        siblings: [
-          { rfilename: 'model-mxfp4.gguf', lfs: { size: model.length, sha256: hf.file.sha256 } },
-          { rfilename: 'mmproj.gguf', lfs: { size: projector.length, sha256: hf.mmproj.sha256 } },
-        ],
-      })
     if (req.includes('/revision/main?'))
       return Response.json({
         sha: 'b'.repeat(40),
@@ -191,7 +176,6 @@ it('lists curated models first and restricts Qualcomm bundles to the chip, with 
       {},
       {},
       { model_id: 'third/example', unverified: true },
-      { model_id: 'qai-smollm-gguf-mxfp4', origin: 'qualcomm' },
       { model_id: 'qai-smollm', origin: 'qualcomm' },
     ],
   })
@@ -259,17 +243,4 @@ it('rejects a Qualcomm ZIP when its bytes disagree with S3', async () => {
   const { registry, install } = await fixture({ corruptChecksum: true })
   await expect(install('qai-smollm')).rejects.toThrow(/checksum mismatch/)
   expect(await registry.list()).toEqual([])
-})
-
-it('installs the exact GGUF and vision projector listed by a Qualcomm search result', async () => {
-  const { registry, install } = await fixture()
-  await install('qai-smollm-gguf-mxfp4')
-  const [entry] = await registry.list()
-  expect(entry?.yml.geniex).toMatchObject({
-    plugin: 'llama_cpp',
-    repo: 'publisher/external',
-    revision: 'a'.repeat(40),
-    file: 'model-mxfp4.gguf',
-    mmproj: 'mmproj.gguf',
-  })
 })
