@@ -157,6 +157,8 @@ function engineStateModel(
     say(p.summary || 'Not installed', 'muted')
     const note = engineTaskNote(p.engine)
     if (note) say(note, 'muted')
+    if (p.inSetup && p.buildInstalled && p.engine === 'geniex')
+      add('setup-path-continue', 'Choose models >', 'Select a GenieX model for this chip')
     if (p.buildInstalled === false)
       add('engine-install', 'Install engine', 'Install the core-recommended build')
     return end()

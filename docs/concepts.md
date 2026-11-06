@@ -30,7 +30,7 @@ the core's CLI, not `atc`. Both would own the same data folder, so `atc` refuses
 | **model** | Weights in the data folder: GGUF for llama.cpp, a safetensors snapshot for TensorRT-LLM and MLX. Downloading a model does not start it. | A running model. |
 | **running model** | A model loaded on an engine and answering through the API. `atc run <model>` starts it, `atc unload <model>` stops it — the desktop app's Run and Stop (its "Unload from memory"). | The server, which keeps running with no model. |
 | **active engine** | The engine `atc run` uses when none is named: the one running now, else the one last chosen (`engines.default`). | The engine build, which the core picks. |
-| **API** | The OpenAI-compatible endpoint, `http://<host>:1337/v1`, with an optional key. `atc api start` / `stop` / `status`, `atc api key`. The desktop app calls it "Local API Server". | The server as a whole. |
+| **API** | The OpenAI-compatible endpoint, `http://<host>:1339/v1`, with an optional key. `atc api start` / `stop` / `status`, `atc api key`. The desktop app calls it "Local API Server". | The server as a whole. |
 | **web admin** | The browser front end on `127.0.0.1:1338`, signed in with a link from `atc admin`. | The API. |
 | **terminal UI** | The full-screen front end bare `atc` opens on a terminal (`atc tui`). | Plain command output. |
 | **data folder** | Where everything lives: models, engine builds, config, logs (`--data-folder`). | The desktop app's folder, which is separate. |

@@ -1,6 +1,5 @@
 /** Draws guided setup's steps for a managed engine, Foundry Local or LiteRT-LM: models, review, download. */
 
-import type { FoundryModelPlan, LiteRtModelPlan, ManagedModelPlan } from '../../../contract/index.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
 import {
   formatSize,
@@ -48,7 +47,14 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
   button(c, 'setup-query', a.x + 13, a.bottom, 'Search', 'Search more models.', a.focus)
 }
 
-function planLinesOf(plan: ManagedModelPlan | FoundryModelPlan | LiteRtModelPlan): string[] {
+function planLinesOf(plan: NonNullable<NonNullable<SetupView['path']>['plan']>): string[] {
+  if ('variant' in plan)
+    return [
+      plan.name,
+      plan.variant.backend.toUpperCase(),
+      plan.variant.verdict.reason ?? plan.variant.verdict.verdict,
+      formatSize(plan.download_bytes),
+    ]
   if ('backend' in plan)
     return [
       `${plan.name}: ${plan.variant_id} (${liteRtVariantLabel(plan)})`,
@@ -88,7 +94,14 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
     .forEach((l, i) => text(c, a.x, a.y + 5 + i, l, COLORS.text, a.width))
   if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.statusError, a.width)
   const litert = 'backend' in plan
-  const waits = 'variant_id' in plan ? (litert ? LITERT_STEP : FOUNDRY_STEP)[plan.verdict.verdict] : undefined
+  const genie = 'variant' in plan
+  const waits = genie
+    ? plan.variant.verdict.verdict === 'engine-not-installed'
+      ? 'Install GenieX'
+      : undefined
+    : 'variant_id' in plan
+      ? (litert ? LITERT_STEP : FOUNDRY_STEP)[plan.verdict.verdict]
+      : undefined
   let bx = a.x
   if (!plan.blockers.length)
     bx += button(c, 'setup-path-install', bx, a.bottom, 'Download', 'Download in the server', a.focus) + 1
@@ -96,11 +109,11 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
     bx +=
       button(
         c,
-        litert ? 'setup-path-litert' : 'setup-path-foundry',
+        genie ? 'setup-path-geniex' : litert ? 'setup-path-litert' : 'setup-path-foundry',
         bx,
         a.bottom,
         waits,
-        litert ? 'Open LiteRT-LM' : 'Open Foundry Local',
+        genie ? 'Open GenieX' : litert ? 'Open LiteRT-LM' : 'Open Foundry Local',
         a.focus
       ) + 1
   button(c, 'setup-back', bx, a.bottom, 'Back', 'Return without downloading', a.focus)

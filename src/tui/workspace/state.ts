@@ -1,3 +1,4 @@
+import { DEFAULT_API_PORT } from '../../contract/index.js'
 import type { ChatNotice } from './chat/recovery.js'
 import type { FinalSetupState } from './setup/waiting-setup.js'
 import type { FeatureEditor } from './server/feature-model.js'
@@ -83,6 +84,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
     returnOverlay?: WorkspaceState['overlay']
   } | null
   libraryRemove: string
+  removeGenieModel?: boolean
   modelLoad?: { provider: string; model: string } | null
   modelVision: boolean | null
   loadError: { provider: string; model: string; message: string } | null
@@ -278,7 +280,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     cursor: 0,
     edit: '',
     editValue: '',
-    endpoint: 'http://127.0.0.1:1337/v1',
+    endpoint: `http://127.0.0.1:${DEFAULT_API_PORT}/v1`,
     endpointFollowsServer: true,
     model: '',
     models: [],

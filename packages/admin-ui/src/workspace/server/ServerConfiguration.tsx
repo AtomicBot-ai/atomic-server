@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/Settings.tsx @ 5043013; adapted: persistent API settings and named keyring.
+import { DEFAULT_API_PORT } from '@contract'
 import { apiPrefixError } from '@view'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { useEffect, useId, useRef, useState } from 'react'
@@ -101,7 +102,7 @@ export function ServerConfiguration({
                     step={1}
                     aria-invalid={Boolean(portError)}
                     aria-describedby={portError ? `${fieldId}-port-error` : undefined}
-                    value={String(draft.port ?? 1337)}
+                    value={String(draft.port ?? DEFAULT_API_PORT)}
                     onWheel={(event) => event.currentTarget.blur()}
                     onChange={(e) => change('port', e.target.value)}
                   />

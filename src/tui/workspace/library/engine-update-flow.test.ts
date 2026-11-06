@@ -117,7 +117,7 @@ it.each([
   drawEnginePanel(c, t.get(), 'engine-settings-save')
   for (const id of ['engine-refresh', 'engine-settings-save', 'close']) {
     const target = c.targets.find((t) => t.id === id)!
-    expect(target.height).toBe(3)
+    expect(target.height).toBe(1)
     expect(target.y + target.height).toBeLessThanOrEqual(height)
     expect(target.x + target.width).toBeLessThanOrEqual(width)
   }

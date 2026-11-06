@@ -17,6 +17,7 @@ const ORDER = [
   'tensorrt-llm',
   'foundry-local',
   'litert-lm',
+  'geniex',
 ] as const
 
 const NAMES: Readonly<Record<string, string>> = {
@@ -29,6 +30,7 @@ const NAMES: Readonly<Record<string, string>> = {
   'tensorrt-llm': 'TensorRT-LLM',
   'foundry-local': 'Foundry Local',
   'litert-lm': 'LiteRT-LM',
+  'geniex': 'GenieX',
   'sd-cpp': 'stable-diffusion.cpp',
   'audio-cpp': 'audio.cpp',
 }
@@ -59,8 +61,9 @@ export function orderEngines<T extends string>(ids: readonly T[]): T[] {
  * What kind of engine `id` is, by the core's `ENGINE_KINDS`: llama.cpp's family, a managed engine
  * (container, plan, consent), Foundry Local or LiteRT-LM (accelerators, variants), or an engine of builds.
  */
-export function engineFamily(id: string): 'llamacpp' | 'managed' | 'foundry' | 'litert' | 'build' {
+export function engineFamily(id: string): 'llamacpp' | 'managed' | 'foundry' | 'litert' | 'geniex' | 'build' {
   if (id === 'foundry-local') return 'foundry'
+  if (id === 'geniex') return 'geniex'
   if (id === 'litert-lm') return 'litert'
   const kind = (ENGINE_KINDS as Readonly<Record<string, string>>)[id]
   return kind === 'llamacpp' ? 'llamacpp' : kind === 'managed' ? 'managed' : 'build'

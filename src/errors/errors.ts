@@ -5,6 +5,7 @@
  */
 
 import { AtomicCoreError } from '@atomic-chat/core'
+import { stripLoadDiag } from '@atomic-chat/core/contracts'
 
 export const ATC_ERROR_CODES = [
   'ATC_NOT_IMPLEMENTED',
@@ -95,11 +96,22 @@ export function exitCodeFor(error: unknown): number {
   return EXIT.ERROR
 }
 
+/**
+ * `details` as a person reads them. A failed model load ends its details with the core's
+ * `atomic-core-diag {…}` line (exit code, stage, backend, build), written for the desktop app's
+ * telemetry; text for people leaves it out, `--json` and the admin API keep it.
+ */
+export function readableDetails(details: string | undefined): string | undefined {
+  if (details === undefined) return undefined
+  return stripLoadDiag(details).trim() || undefined
+}
+
 /** The human rendering: `message`, an indented `details` line with the code, then the hint. */
 export function describeError(error: unknown): string {
   const body = errorBody(error)
+  const details = readableDetails(body.details)
   const lines = [body.message]
-  lines.push(body.details !== undefined ? `  ${body.details} [${body.code}]` : `  [${body.code}]`)
+  lines.push(details !== undefined ? `  ${details} [${body.code}]` : `  [${body.code}]`)
   if (body.hint !== undefined) lines.push(`  hint: ${body.hint}`)
   return lines.join('\n')
 }

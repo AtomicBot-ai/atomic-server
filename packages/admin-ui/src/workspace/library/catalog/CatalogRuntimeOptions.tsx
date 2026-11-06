@@ -7,7 +7,9 @@ import { Action } from '../../Controls'
 import { describeError } from '@/services/admin-api'
 import { ManagedModelInstall } from '../install/ManagedModelInstall'
 import { FoundryModelInstall } from '../install/FoundryModelInstall'
+import { GenieModelInstall } from '../install/GenieModelInstall'
 import { LiteRtModelInstall } from '../install/LiteRtModelInstall'
+import { EngineSettings } from '../engines/EngineSettings'
 import { EngineSetup } from '../engines/EngineSetup'
 import { FoundryLocal } from '../engines/FoundryLocal'
 import { LiteRtLm } from '../engines/LiteRtLm'
@@ -16,6 +18,7 @@ import { modelId } from './catalog-models'
 /** The engines whose models carry variants with the core's verdicts, read again from their own catalog. */
 const VARIANT_ENGINES = [
   { key: 'foundry', engine: 'foundry-local', catalog: 'Foundry' },
+  { key: 'geniex', engine: 'geniex', catalog: 'GenieX' },
   { key: 'litert', engine: 'litert-lm', catalog: 'LiteRT-LM' },
 ] as const
 
@@ -67,7 +70,14 @@ export function CatalogRuntimeOptions({
               {error} <Action onClick={refreshVariants}>Retry</Action>
             </p>
           )}
-          {variants.key === 'foundry' ? (
+          {variants.key === 'geniex' ? (
+            <GenieModelInstall
+              workspace={workspace}
+              model={current}
+              onStarted={onStarted}
+              onEngine={() => setEngineDialog(true)}
+            />
+          ) : variants.key === 'foundry' ? (
             <FoundryModelInstall
               embedded
               workspace={workspace}
@@ -107,6 +117,9 @@ export function CatalogRuntimeOptions({
             setRevision((value) => value + 1)
           }}
         />
+      )}
+      {engineDialog && variants?.key === 'geniex' && (
+        <EngineSettings workspace={workspace} provider="geniex" onClose={closeEngineDialog} />
       )}
       {engineDialog && variants?.key === 'foundry' && (
         <FoundryLocal workspace={workspace} onClose={closeEngineDialog} />

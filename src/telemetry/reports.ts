@@ -4,13 +4,9 @@
  * `component` tag says which part of atc it came from.
  */
 
-import {
-  errorCodeOf,
-  internalErrorReport,
-  isCancellation,
-  processFailureReport,
-} from '@atomic-chat/core/host'
+import { internalErrorReport, isCancellation, processFailureReport } from '@atomic-chat/core/host'
 import type { ErrorReport, ReportLevel } from '@atomic-chat/core/host'
+import type { FailureDiagnostic } from '@atomic-chat/core/contracts'
 import {
   DOWNLOAD_CANCELLED,
   DownloadRequestError,
@@ -19,6 +15,7 @@ import {
   VALIDATION_CANCELLED_MESSAGE,
 } from '../downloads/index.js'
 import { AtcError } from '../errors/index.js'
+import { reportCodeOf } from './codes.js'
 import { expectedFailure } from './failures.js'
 
 /** An `AtcError` is an answer atc gives on purpose, unless it says atc itself is broken. */
@@ -99,7 +96,7 @@ const NETWORK_CODES = new Set([
  */
 export function downloadFailureReason(error: unknown): DownloadFailureReason {
   const message = error instanceof Error ? error.message : String(error)
-  const code = errorCodeOf(error) ?? errorCodeOf((error as { cause?: unknown } | undefined)?.cause)
+  const code = reportCodeOf(error) ?? reportCodeOf((error as { cause?: unknown } | undefined)?.cause)
   // Not `isClientAbort`: a reset connection is the network failing a download, not a client leaving.
   if (message === DOWNLOAD_CANCELLED || message === VALIDATION_CANCELLED_MESSAGE || isCancellation(error))
     return 'cancelled'
@@ -130,32 +127,50 @@ function httpStatusOf(error: unknown): number | undefined {
   return match?.[1] ? Number(match[1]) : undefined
 }
 
-/** Fixed by the person (a token, free space) or by stopping: nothing for an issue. */
+/** Fixed by the person (a token, free space, a FAT32 drive) or by stopping: nothing for an issue. */
 const NOT_REPORTED: ReadonlySet<DownloadFailureReason> = new Set([
   'cancelled',
   'http_401_auth',
   'disk_full',
+  'disk_fs_limit',
   'proxy_config',
 ])
 /** Their machine or network rather than our code: counted, at `warning`. */
 const ENVIRONMENT = (reason: DownloadFailureReason) =>
   reason === 'network' || reason === 'proxy' || reason === 'http_5xx' || reason.startsWith('disk_')
 
+/** The core's word for a download failure reason; its event groups by it. */
+function coreReason(reason: DownloadFailureReason): FailureDiagnostic['reason'] {
+  if (reason.startsWith('disk_')) return reason as FailureDiagnostic['reason']
+  if (reason === 'network' || reason === 'proxy') return 'network'
+  if (reason === 'http_5xx' || reason === 'http_other') return 'upstream'
+  if (reason === 'http_404') return 'not_found'
+  if (reason === 'checksum_mismatch' || reason === 'size_mismatch') return 'integrity'
+  if (reason === 'path_guard') return 'invalid_request'
+  return undefined
+}
+
 /** A model download that failed: one issue per known cause, an unknown one grouped by its stack. */
 export function downloadFailureReport(error: unknown): ErrorReport | null {
   const reason = downloadFailureReason(error)
   if (NOT_REPORTED.has(reason)) return null
   const level: ReportLevel = ENVIRONMENT(reason) ? 'warning' : 'error'
+  const grouped = coreReason(reason)
   return {
     source: 'model_load',
     level,
     error,
-    ...(reason === 'unknown' ? {} : { fingerprint: ['download-failure', reason] }),
+    diagnostic: {
+      component: 'downloads',
+      operation: 'download',
+      ...(grouped ? { reason: grouped } : {}),
+      ...(level === 'warning' ? { category: 'operational' as const } : {}),
+    },
     tags: {
       component: 'downloads',
       failure_reason: reason,
       http_status: httpStatusOf(error),
-      error_code: errorCodeOf(error),
+      error_code: reportCodeOf(error),
     },
   }
 }

@@ -178,3 +178,27 @@ it.each([false, true])(
     } else expect(api).toHaveBeenCalledWith(true, true)
   }
 )
+
+it.each([
+  ['model', 'downloading_model', 'downloading...', 'Wait for the model'],
+  ['model', 'paused', 'paused', 'Resume the model'],
+  ['engine', 'downloading', 'downloading...', 'Wait for the engine'],
+  ['engine', 'interrupted', 'paused', 'Resume the engine'],
+])('fits the entire %s %s label inside the sidebar action', (kind, stage, label, hint) => {
+  const s = createWorkspace('server')
+  s.setupComplete = true
+  s.workspace = {
+    api: { running: false },
+    services: [],
+    selection: { engine: 'llamacpp-upstream|b1|cpu', model: 'q' },
+    setups: kind === 'model' ? [{ setup_id: 'd', stage, plan: { model_id: 'q' } }] : [],
+    downloads: kind === 'engine' ? [{ id: 'd', kind, engine: 'llamacpp-upstream', stage }] : [],
+  } as unknown as WorkspaceSnapshot
+  const frame = workspaceFrame(s, 120, 36, 0)
+  const control = frame.targets.find((target) => target.id === 'api-toggle')!
+  const text = frame.cells[control.y]!.slice(control.x, control.x + control.width)
+    .map((cell) => cell.char)
+    .join('')
+  expect(text).toContain(label)
+  expect(control.hint).toContain(hint)
+})

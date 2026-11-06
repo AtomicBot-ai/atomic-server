@@ -13,6 +13,7 @@ describe('downloadFailureReport', () => {
     ['a gated repository without a token', new Error('Failed to download: HTTP status 401, '), null],
     ['a refused repository', new Error('Failed to download: HTTP status 403, nope'), null],
     ['a full disk', new Error('Error: [disk_full] Not enough free disk space: 5 GB needed'), null],
+    ['a FAT32 drive', new Error('Error: [disk_fs_limit] EFBIG: file too large, write'), null],
     ['a missing file', new Error('Failed to download: HTTP status 404, '), 'error http_404'],
     [
       'a server failing past the retries',
@@ -69,12 +70,29 @@ describe('downloadFailureReport', () => {
     expect(report && `${report.level} ${String(report.tags?.['failure_reason'])}`).toBe(expected)
   })
 
+  // The core groups by the diagnostic's reason; an unknown reason groups by the stack.
   it('groups a known cause as one issue and leaves an unknown one to its stack', () => {
     expect(downloadFailureReport(new Error('Failed to download: HTTP status 404, '))).toMatchObject({
-      fingerprint: ['download-failure', 'http_404'],
+      diagnostic: { component: 'downloads', operation: 'download', reason: 'not_found' },
       tags: { component: 'downloads', http_status: 404 },
     })
-    expect(downloadFailureReport(new Error('boom'))?.fingerprint).toBeUndefined()
+    expect(downloadFailureReport(new Error('Error: [disk_io] EIO: i/o error'))?.diagnostic).toEqual({
+      component: 'downloads',
+      operation: 'download',
+      reason: 'disk_io',
+      category: 'operational',
+    })
+    expect(downloadFailureReport(new Error('boom'))?.diagnostic).toEqual({
+      component: 'downloads',
+      operation: 'download',
+    })
+  })
+
+  it("tags atc's own codes, which the core's list does not hold", () => {
+    const hub = Object.assign(new Error('Failed to download: HTTP status 404, '), { code: 'HF_HTTP_404' })
+    expect(downloadFailureReport(hub)?.tags).toMatchObject({ error_code: 'HF_HTTP_404' })
+    const other = Object.assign(new Error('boom'), { code: 'SOME_PRIVATE_THING' })
+    expect(downloadFailureReport(other)?.tags?.['error_code']).toBeUndefined()
   })
 })
 

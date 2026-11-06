@@ -3,6 +3,7 @@ import type { WorkspaceClient } from '../../../workspace-service/index.js'
 import { createWorkspaceClient, readWorkspaceSetup } from '../../../workspace-service/index.js'
 import type { AtcConfig } from '../../../config/index.js'
 import { atcPathsFor } from '../../../config/index.js'
+import { AtcError } from '../../../errors/index.js'
 import { createLogger } from '../../../output/index.js'
 import { readDaemonRecord } from '../../../core-link/index.js'
 import type { TuiDeps } from '../../controller.js'
@@ -56,6 +57,10 @@ export class WorkspaceRuntime {
     try {
       return await work()
     } catch (error) {
+      if (error instanceof AtcError && error.code === 'ATC_DAEMON_NOT_RUNNING') {
+        this.service = undefined
+        this.instance = ''
+      }
       captureFailure(this.deps.errors, error, { component: 'tui', operation })
       throw error
     }

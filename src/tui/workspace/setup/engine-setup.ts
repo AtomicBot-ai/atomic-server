@@ -39,11 +39,14 @@ export const pathKind = (engine: string): EngineSetupPath['kind'] | null =>
       ? 'foundry'
       : engine === 'litert-lm'
         ? 'litert'
-        : null
+        : engine === 'geniex'
+          ? 'geniex'
+          : null
 
 /** The operations of a path's own downloads: plan, install. */
 const OPS = {
   foundry: { plan: 'foundry.plan', install: 'foundry.install', job: 'foundry-model' },
+  geniex: { plan: 'geniex.plan', install: 'geniex.install', job: 'geniex-model' },
   litert: { plan: 'litert.plan', install: 'litert.install', job: 'litert-model' },
   managed: { plan: 'managed.plan', install: 'managed.install', job: 'managed-model' },
 } as const
@@ -51,6 +54,7 @@ const JOB_INSTALL: Record<EngineSetupJob['kind'], string> = {
   'managed-model': 'managed.install',
   'foundry-model': 'foundry.install',
   'litert-model': 'litert.install',
+  'geniex-model': 'geniex.install',
 }
 
 /** The job's state as the snapshot shows it: its stage, and its bytes while it downloads. */
@@ -82,7 +86,7 @@ async function rows(
   path: EngineSetupPath,
   query: string
 ): Promise<EngineSetupRow[]> {
-  if (path.kind === 'foundry' || path.kind === 'litert') {
+  if (path.kind === 'foundry' || path.kind === 'litert' || path.kind === 'geniex') {
     const found = (await c.runtime.execute('models.search', { engine: path.engine, query })) as {
       models: Array<{ model_id: string; name: string; default_variant: string | null; unverified: boolean }>
     }
@@ -177,6 +181,7 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   if (!current || !id.startsWith('setup-')) return false
   // A variant that waits on Foundry Local or LiteRT-LM itself: its panel installs it or prepares the accelerator.
   if (id === 'setup-path-foundry') return openPanel('foundry-local')
+  if (id === 'setup-path-geniex') return openPanel('geniex')
   if (id === 'setup-path-litert') return openPanel('litert-lm')
   if (id === 'setup-search' && view.stage === 'models')
     return run(async () => path({ rows: await rows(c, current, view.query) }))

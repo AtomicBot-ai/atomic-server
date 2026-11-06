@@ -1,3 +1,4 @@
+import { DEFAULT_API_PORT } from '../../../contract/index.js'
 import type { WorkspaceState } from '../state.js'
 export function serverEndpoint(s: WorkspaceState): string {
   if (s.workspace) return s.workspace.api.endpoint
@@ -9,7 +10,7 @@ export function serverEndpoint(s: WorkspaceState): string {
     s.base.config.rows.find((r) => r.path === key)?.value ?? fallback
   let host = api?.host ?? value('api.host', '127.0.0.1')
   if (host === '0.0.0.0' || host === '::') host = '127.0.0.1'
-  return `http://${host.includes(':') ? '[' + host + ']' : host}:${api?.port ?? value('api.port', '1337')}${api?.prefix ?? value('api.prefix', '/v1')}`
+  return `http://${host.includes(':') ? '[' + host + ']' : host}:${api?.port ?? value('api.port', String(DEFAULT_API_PORT))}${api?.prefix ?? value('api.prefix', '/v1')}`
 }
 export function example(s: WorkspaceState): string {
   if (s.connectionLanguage === 'python')

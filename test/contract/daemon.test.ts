@@ -116,7 +116,7 @@ describe('the daemon owns the folder', () => {
     expect((await fetch(`${adminUrl}/api/core/server/start`, { method: 'POST', headers })).status).toBe(403)
     const bearer = await fetch(`${adminUrl}/api/config`, { headers: { authorization: `Bearer ${token}` } })
     expect(bearer.status).toBe(200)
-    expect(((await bearer.json()) as { values: { api: { port: number } } }).values.api.port).toBe(1337)
+    expect(((await bearer.json()) as { values: { api: { port: number } } }).values.api.port).toBe(1339)
     expect((await fetch(`${adminUrl}/api/setup/state`, { headers })).status).toBe(501)
   })
 

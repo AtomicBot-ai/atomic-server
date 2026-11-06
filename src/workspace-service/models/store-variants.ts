@@ -13,7 +13,7 @@ import { bytesUnder } from './managed-store.js'
 export async function removeStoreVariant(
   link: CoreLink,
   layout: DataLayout,
-  provider: 'foundry-local' | 'litert-lm',
+  provider: 'foundry-local' | 'litert-lm' | 'geniex',
   id: string
 ) {
   const registry = new ModelRegistry(layout, provider)
@@ -32,9 +32,10 @@ export async function chatAbilities(
   provider: string,
   model: string
 ): Promise<{ tools?: boolean; vision?: boolean }> {
-  if (provider !== 'foundry-local' && provider !== 'litert-lm') return {}
+  if (provider !== 'foundry-local' && provider !== 'litert-lm' && provider !== 'geniex') return {}
   const entry = await new ModelRegistry(layout, provider).find(model).catch(() => undefined)
   const yml = (entry?.yml ?? {}) as Record<string, { tools?: unknown; vision?: unknown } | undefined>
   if (provider === 'foundry-local') return { tools: yml['foundry_local']?.tools === true }
-  return { tools: yml['litert_lm']?.tools === true, vision: yml['litert_lm']?.vision === true }
+  const record = yml[provider === 'geniex' ? 'geniex' : 'litert_lm']
+  return { tools: record?.tools === true, vision: record?.vision === true }
 }

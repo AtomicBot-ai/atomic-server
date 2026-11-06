@@ -1,4 +1,4 @@
-// Lifted from atomic-chat-core/src/downloads/disk.ts @ 8a38521 (v0.17.0); adapted: core contract types come from @atomic-chat/core/contracts; user text says "data folder", not "Jan data folder".
+// Lifted from atomic-chat-core/src/downloads/disk.ts @ 8a38521 (v0.17.0), EFBIG tag from 8cbab27 (v0.21.2); adapted: core contract types come from @atomic-chat/core/contracts; user text says "data folder", not "Jan data folder"; write errors keep their OS classification regardless of offset; file-size refusals include recovery advice.
 /**
  * Disk-failure tagging and preflight checks. Port of `src-tauri/src/core/downloads/disk.rs`.
  *
@@ -16,7 +16,8 @@ import type { DiskErrorTag } from '@atomic-chat/core/contracts'
 const CODE_TO_TAG: Record<string, DiskErrorTag> = {
   ENOSPC: 'disk_full',
   EDQUOT: 'disk_full',
-  EFBIG: 'disk_full',
+  // "File too large": a filesystem or process file-size limit, not a full disk.
+  EFBIG: 'disk_fs_limit',
   EACCES: 'disk_permission',
   EPERM: 'disk_permission',
   EROFS: 'disk_permission',
@@ -41,6 +42,19 @@ export function classifyIoError(error: unknown): DiskErrorTag {
 export function diskErrToString(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
   return `Error: [${classifyIoError(error)}] ${message}`
+}
+
+const FS_LIMIT_ADVICE =
+  'The filesystem or process file-size limit was reached. Check that limit; if the drive is FAT32, move the data folder to a filesystem that supports larger files and retry.'
+
+/**
+ * A failed write keeps its OS classification. Its offset cannot identify FAT32: free space and
+ * quotas can run out at any point, even after preflight. Only EFBIG identifies a file-size limit.
+ */
+export function diskWriteErrToString(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  const tag = classifyIoError(error)
+  return `Error: [${tag}] ${message}${tag === 'disk_fs_limit' ? `. ${FS_LIMIT_ADVICE}` : ''}`
 }
 
 /** Same shape for a preflight refusal that has no fs error behind it. */

@@ -64,7 +64,7 @@ afterAll(async () => {
 describe.skipIf(process.platform === 'win32')(`managed engines (${ATC.join(' ')})`, () => {
   it('refuses without consent and without a terminal, printing the plan, and begins no operation', async () => {
     const res = await atc('engines', 'install', 'vllm')
-    expect(res.code, res.err).toBe(2)
+    expect(res.code, `${res.out}\n${res.err}`).toBe(2)
     expect(res.out).toMatch(/Plan digest: sha256:[0-9a-f]{64}/)
     expect(res.out).toContain('No system changes')
     expect((await status()).engines[0]?.managed.operation).toBeNull()

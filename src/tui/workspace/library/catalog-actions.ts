@@ -122,17 +122,34 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
     }
     return true
   }
-  if ((id === 'library-remove' && s.libraryView === 'installed') || id.startsWith('installed-delete:')) {
-    const model = id.startsWith('installed-delete:')
-      ? s.installed.find((m) => m.id === decodeURIComponent(id.slice(17)))
-      : s.installed[s.selected]
-    if (model) patch({ overlay: 'remove-model', libraryRemove: model.id, focus: 'close' })
+  if (
+    (id === 'library-remove' && s.libraryView === 'installed') ||
+    id.startsWith('geniex-delete:') ||
+    id.startsWith('installed-delete:')
+  ) {
+    const model = id.startsWith('geniex-delete:')
+      ? s.installed.find(
+          (m) => m.store === 'geniex' && m.id === decodeURIComponent(id.slice('geniex-delete:'.length))
+        )
+      : id.startsWith('installed-delete:')
+        ? s.installed.find((m) => m.id === decodeURIComponent(id.slice(17)))
+        : s.installed[s.selected]
+    if (model)
+      patch({
+        overlay: 'remove-model',
+        libraryRemove: model.id,
+        removeGenieModel: model.store === 'geniex',
+        focus: 'close',
+      })
     return true
   }
   if (id === 'remove-model-confirm' && s.libraryRemove) {
     patch({ overlay: null, busy: true, message: `Removing ${s.libraryRemove}…` })
     try {
-      await c.runtime.execute('models.remove', { model_id: s.libraryRemove })
+      await c.runtime.execute('models.remove', {
+        model_id: s.libraryRemove,
+        ...(s.removeGenieModel ? { store: 'geniex' } : {}),
+      })
       patch({
         installed: await c.installed(),
         libraryRows: s.libraryRows.filter((row) => row.id !== s.libraryRemove || !row.source?.['installed']),
@@ -169,6 +186,7 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
 const JOB_TOOLS: Readonly<Record<string, string>> = {
   'managed-model': 'managed',
   'foundry-model': 'foundry',
+  'geniex-model': 'geniex',
   'litert-model': 'litert',
 }
 

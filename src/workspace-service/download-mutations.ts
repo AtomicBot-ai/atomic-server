@@ -4,6 +4,7 @@ const writes = new Set([
   'artifacts.install',
   'managed.install',
   'foundry.install',
+  'geniex.install',
   'setup.resume',
   'artifacts.resume',
   'downloads.remove',

@@ -1,8 +1,9 @@
 import { AtomicCoreError } from '@atomic-chat/core'
-import { errorCodeOf, isCancellation } from '@atomic-chat/core/host'
+import { isCancellation } from '@atomic-chat/core/host'
 import type { ErrorReport, ErrorSink } from '@atomic-chat/core/host'
 import { AtcError, isRemoteError, markReported, wasReported } from '../errors/index.js'
 import { CLIENT_ERROR_NAMES } from '../contract/index.js'
+import { reportCodeOf } from './codes.js'
 import { nativeFailureTags } from './native-diagnostics.js'
 
 const OPERATIONAL = new Set([
@@ -52,7 +53,7 @@ export function failureReport(error: unknown, context: FailureContext): ErrorRep
     source: 'event_listener',
     level: 'error',
     error: technicalError(error, context.operation),
-    tags: { ...context, error_code: errorCodeOf(error), ...nativeFailureTags(error) },
+    tags: { ...context, error_code: reportCodeOf(error), ...nativeFailureTags(error) },
   }
 }
 

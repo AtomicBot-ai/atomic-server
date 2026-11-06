@@ -11,14 +11,16 @@ import { AtcError } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { matchesEngineFilter, modelEngines } from '../../workspace-view/index.js'
 import { operation, printOperation, workspace } from '../server/control.js'
+import { genieListing } from './geniex-commands.js'
 import { litertListing } from './litert-commands.js'
 import { foundryListing } from './foundry-commands.js'
 import { managedListing } from './managed-model-commands.js'
 
-export type ListingRoute = 'all' | 'litert' | 'foundry' | 'managed' | 'local'
+export type ListingRoute = 'all' | 'geniex' | 'litert' | 'foundry' | 'managed' | 'local'
 
 export function listingRoute(engine: string | undefined): ListingRoute {
   if (engine === undefined) return 'all'
+  if (engine === 'geniex') return 'geniex'
   if (engine === 'litert-lm') return 'litert'
   if (engine === 'foundry-local') return 'foundry'
   const kind = ENGINE_KINDS[engine as EngineId]
@@ -71,6 +73,8 @@ export function engineListing(
 ) {
   const named = typeof engine === 'string' ? engine : undefined
   switch (listingRoute(named)) {
+    case 'geniex':
+      return genieListing(ctx, op, query)
     case 'litert':
       return litertListing(ctx, op, query)
     case 'foundry':

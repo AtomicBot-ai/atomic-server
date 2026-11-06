@@ -137,7 +137,7 @@ it('keeps the connection action visible on a compact terminal and preserves focu
     key: 'fixture',
   })
   const editor = workspaceFrame(state, 54, 24, 0)
-  expect(editor.targets.find((t) => t.id === 'cloud-save')).toMatchObject({ height: 3 })
+  expect(editor.targets.find((t) => t.id === 'cloud-save')).toMatchObject({ height: 1 })
   expect(editor.targets.every((t) => t.x + t.width <= 54 && t.y + t.height <= 24)).toBe(true)
   state.cloud.editing = false
   state.cloud.providers = [{ provider: 'openai', connected: true }]

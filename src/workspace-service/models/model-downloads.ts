@@ -11,6 +11,7 @@ import { hubOf } from '../managed/managed-models.js'
 import { ArtifactService } from './artifacts.js'
 import type { WorkspaceCatalog } from './catalog.js'
 import { downloadProxy } from './download-proxy.js'
+import { GenieSetups } from '../geniex/setups.js'
 import { ModelSetups } from './model-setups.js'
 import type { WorkspaceServiceOptions } from '../service-options.js'
 
@@ -33,6 +34,7 @@ export function modelDownloads(
   })
   return {
     downloader,
+    geniex: new GenieSetups(options, downloader),
     artifacts: new ArtifactService(options, catalog, request, downloader, engines?.ensure.bind(engines)),
     managed: new ManagedModelSetups({
       ...(options.errors ? { errors: options.errors } : {}),

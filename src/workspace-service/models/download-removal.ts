@@ -125,6 +125,23 @@ export async function removeDownload(
       options,
       installed
     )
+  if (owner === 'geniex') {
+    const journal = downloads.geniex.journal
+    return journal.remove(id, async (job) => {
+      if (await registeredIn(job.plan.dir)) completed()
+      const filesOf = (j: typeof job) =>
+        j.plan.variant.files.map((f) =>
+          join(
+            j.plan.variant.record.plugin === 'qairt'
+              ? join(options.paths.layout.provider('geniex').modelsDir, '..', 'transfers', j.plan.digest)
+              : join(options.paths.layout.provider('geniex').modelsDir, '.stage-' + j.plan.digest),
+            f.name
+          )
+        )
+      const others = (await journal.list()).filter((j) => j.id !== id)
+      await discardDownloadFiles(root, filesOf(job), others.flatMap(filesOf))
+    })
+  }
   if (owner === 'litert')
     return removeCoreModel(
       {

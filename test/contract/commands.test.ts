@@ -52,7 +52,7 @@ describe('config', () => {
     expect(await t.run(['config', 'unset', 'api.port'])).toBe(0)
     t.io.out.length = 0
     expect(await t.run(['config', 'get', 'api.port'])).toBe(0)
-    expect(t.io.out.join('')).toBe('1337\n')
+    expect(t.io.out.join('')).toBe('1339\n')
     expect(await t.run(['config', 'set', 'api.port', 'many'])).toBe(1)
     expect(await t.run(['config', 'get', 'nope.key'])).toBe(2)
     // A provider this server does not register (the fake core lists none): engine.* is test/contract/config-engine.test.ts.

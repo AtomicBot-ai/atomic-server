@@ -21,15 +21,18 @@ interface InstalledRow {
   device?: string
   execution_provider?: string
   backend?: string
+  plugin?: string
   npu?: string
 }
 
 const providersOf = (m: InstalledRow) =>
-  m.store === 'foundry-local' && m.device && m.execution_provider
-    ? `foundry-local (${variantLabel({ device: m.device, execution_provider: m.execution_provider })})`
-    : m.store === 'litert-lm' && m.backend
-      ? `litert-lm (${liteRtVariantLabel({ backend: m.backend, npu: m.npu })})`
-      : (m.providers ?? [m.provider]).join(', ') || '(none lists it)'
+  m.store === 'geniex'
+    ? `GenieX (${m.plugin}, ${m.backend})`
+    : m.store === 'foundry-local' && m.device && m.execution_provider
+      ? `foundry-local (${variantLabel({ device: m.device, execution_provider: m.execution_provider })})`
+      : m.store === 'litert-lm' && m.backend
+        ? `litert-lm (${liteRtVariantLabel({ backend: m.backend, npu: m.npu })})`
+        : (m.providers ?? [m.provider]).join(', ') || '(none lists it)'
 
 export async function listInstalled(ctx: CommandContext): Promise<number> {
   const result = (await (await workspace(ctx)).execute('models.installed')) as InstalledRow[]
@@ -53,7 +56,10 @@ export async function removeInstalled(ctx: CommandContext, id: string): Promise<
   if (!(await ctx.prompt.confirm(`Delete model ${id}?`, { danger: true }))) return 0
   let result: unknown
   try {
-    result = await service.execute('models.remove', { model_id: id })
+    result = await service.execute('models.remove', {
+      model_id: id,
+      ...(row?.store === 'geniex' ? { store: 'geniex' } : {}),
+    })
   } catch (error) {
     if (error instanceof AtomicCoreError && error.code === 'MANAGED_STOP_UNCONFIRMED')
       throw AtomicCoreError.fromBody({
@@ -64,7 +70,7 @@ export async function removeInstalled(ctx: CommandContext, id: string): Promise<
     throw error
   }
   const deletion =
-    row?.store && ['managed', 'foundry-local', 'litert-lm'].includes(row.store)
+    row?.store && ['managed', 'foundry-local', 'litert-lm', 'geniex'].includes(row.store)
       ? (result as ManagedModelDeletion)
       : undefined
   ctx.out.result(result, () =>

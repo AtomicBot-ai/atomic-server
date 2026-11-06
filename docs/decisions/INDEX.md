@@ -11,6 +11,7 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-05** — [Install GenieX models in Atomic Server](2026-11-05-install-geniex-models-in-atc.md) — separate GGUF and Qualcomm bundle installs, shared by all clients.
 - **2026-11-03** — [Pin core 0.21.0 for agent serving](2026-11-03-pin-core-0-21-0.md) — the advertised window, request window and cached tokens, agent-friendly engine defaults; the tensor-count patch moves to 0.21.0 until atomic-chat-core#67 ships.
 
 - **2026-11-03** — [Tell launched agents the served window](2026-11-03-tell-agents-the-served-window.md) — profiles carry the window `/v1/models` names, a known window under 32K refuses, Windows `.cmd` shims run through cmd.exe.
@@ -169,5 +170,11 @@ add a new one that says which record it supersedes.
 - **2026-11-04** — [Keep terminal space and recovery beside the draft](2026-11-04-compact-terminal-workspace-and-chat-recovery.md) — responsive navigation and dark composer; explicit conflict recovery and Load & send; shared Alt order and contextual Help (C1–C7).
 - **2026-11-04** — [Keep browser attachment validation local](2026-11-04-keep-browser-attachment-validation-local.md) — show expected input refusals locally while retaining sanitized defect reporting.
 - **2026-11-04** — [Classify selected package file refusals as usage](2026-11-04-classify-selected-package-file-refusals-as-usage.md) — keep known import/export path refusals out of defect reporting while preserving disk failures.
+- **2026-11-04** — [Pin core 0.21.3 and keep atc's report tags](2026-11-04-pin-core-0-21-3.md) — tensor-count fix and Windows GPU reliability from the core; atc names its report tags; diag line hidden from people; FAT32 `disk_fs_limit`.
+- **2026-11-04** — [Preserve download write error codes](2026-11-04-preserve-download-write-error-codes.md) — preserve disk-full, quota and unknown I/O failures beyond 4 GiB instead of inferring FAT32 from the write offset.
 - **2026-11-04** — [Preserve browser profile sessions and studio drafts](2026-11-04-preserve-web-profile-and-studio-state.md) — isolate local profile cookies; retain first-load drafts; align media navigation, live model discovery, light surfaces and recipe dialogs.
+- **2026-11-04** — [Keep terminal regression checks aligned with the compact layout](2026-11-04-align-terminal-regressions-with-compact-layout.md) — preserve behavioral checks for compact controls and recovery; remove ambiguous test input and fix clipped or misaligned actions.
 - **2026-11-04** — [Unify web workspace sizing and recovery](2026-11-04-unify-web-workspace-rhythm.md) — compact header and responsive navigation; shared control sizes; visible dialog actions, inline parameter guidance and typing-safe shortcuts.
+- **2026-11-04** — [Await the complete model-load operation in the terminal contract](2026-11-04-await-complete-model-load-in-terminal-contract.md) — wait for API initialization and keyring writes before endpoint assertions and fixture cleanup.
+- **2026-11-05** — [Recover refused workspace clients](2026-11-05-recover-refused-workspace-clients.md) — invalidate failed admin targets without replaying commands or weakening loopback and instance checks.
+- **2026-11-05** — [Give new Atomic Server profiles their own API port](2026-11-05-separate-server-api-port.md) — use 1339 for new APIs and preserve existing profile ports.

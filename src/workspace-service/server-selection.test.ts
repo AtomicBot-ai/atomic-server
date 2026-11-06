@@ -25,6 +25,7 @@ async function fixture(
   const config = resolveConfig({ fileText: JSON.stringify(saved), env: options.env ?? {} }).values
   await new EngineSelection(tmp.paths.atcDir, async () => link).remember(options.engine ?? 'llamacpp|b1|cpu')
   await new ClientKeys(tmp.paths.atcDir).initialize('test-key')
+  link.snapshotValue.server.port = config.api.port
   link.snapshotValue.server.running = running
   for (const provider of ['llamacpp', 'llamacpp-upstream', 'atomic-prism'])
     link.responses[`GET /backends/${provider}`] = { backends: [{ version: 'b1', variant: 'cpu' }] }

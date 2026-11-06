@@ -77,7 +77,7 @@ describe('TuiController', () => {
     await eventually(() => last('daemon')?.daemon.kind === 'up', 'daemon up')
     await eventually(() => last('config-rows') !== undefined, 'config rows')
     await eventually(() => last('logs-reset') !== undefined, 'log')
-    expect(last('config-rows')?.rows.find((r) => r.path === 'api.port')?.value).toBe('1337')
+    expect(last('config-rows')?.rows.find((r) => r.path === 'api.port')?.value).toBe('1339')
   })
 
   it('says down when no server runs, and starts one on request', async () => {
@@ -150,7 +150,7 @@ describe('TuiController', () => {
     })
 
     await controller.run({ name: 'config-unset', key: 'api.port' })
-    expect(JSON.parse(readFileSync(paths.configFile, 'utf8')).api.port).toBe(1337)
+    expect(JSON.parse(readFileSync(paths.configFile, 'utf8')).api.port).toBe(1339)
   })
 
   it('runs doctor, and builds the admin link only when the server has an admin', async () => {

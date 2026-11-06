@@ -52,6 +52,7 @@ export interface SetupJournalDeps<P extends SetupPlan, J extends SetupJob<P>> {
   noSuch: string
   /** The stored plan is one this provider can install (`files` or `file`). */
   hasPlan: (plan: P) => boolean
+  isInstalled?: (plan: P) => Promise<boolean>
   downloader: Pick<Downloader, 'cancel'> & Partial<Pick<Downloader, 'snapshot'>>
   run: (job: J, worker: Worker) => Promise<void>
 }
@@ -161,7 +162,8 @@ export class SetupJournal<P extends SetupPlan, J extends SetupJob<P>> {
 
   /** `write`, `start` and `step` stay callable: the provider's `run` drives the stages through them. */
   async start(job: J): Promise<J> {
-    if (job.stage === 'ready' || this.running.has(job.id)) return job
+    if (this.running.has(job.id)) return job
+    if (job.stage === 'ready' && (!this.d.isInstalled || (await this.d.isInstalled(job.plan)))) return job
     const worker: Worker = { cancelled: false, done: Promise.resolve() }
     this.running.set(job.id, worker)
     await this.write(job, 'queued')

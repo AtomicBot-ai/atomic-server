@@ -29,7 +29,7 @@ and the background server continue. **Ctrl+K** shows shortcuts.
 ## Server foundation
 
 **Atomic Server** keeps models on a machine — Linux, Windows or macOS, usually a headless server — and
-serves them over an OpenAI-compatible API on `http://127.0.0.1:1337/v1`. Its command is **`atc`**. It
+serves them over an OpenAI-compatible API on `http://127.0.0.1:1339/v1`. Its command is **`atc`**. It
 embeds [`atomic-chat-core`](https://github.com/AtomicBot-ai/atomic-chat-core) as a library and ships as
 one binary per platform, with no engine inside: engines are installed on demand, and the core picks the
 build for the hardware. The same server has a web admin on `127.0.0.1:1338` and a terminal UI (bare `atc`)
@@ -127,7 +127,7 @@ atc status           # pid, versions, API endpoint, running models, admin URL   
 atc api start        # the OpenAI-compatible API; every client needs a key from atc/client-keys.json
 atc admin            # prints http://127.0.0.1:1338/#token=… and opens a browser
 atc update           # the next release, checked against SHA256SUMS and the signature (packages: apt/dnf/yay)
-atc doctor           # versions, data folder, config, ports 1337/1338, PATH, GPU driver
+atc doctor           # versions, data folder, config, ports 1339/1338, PATH, GPU driver
 ```
 
 `atc start` / `atc stop` run the server in the background without a service; `atc start --foreground`
@@ -272,9 +272,18 @@ resumes, is checked by the core, and writes `model.yml` last; a folder without i
 model answers one request at a time: several clients are served in turn. The list is cached for an
 hour; `ATC_LITERT_LM_MODELS_URL` names another one.
 
+## GenieX
+
+On Windows arm64 with Snapdragon X, select **GenieX** in the Local models catalog or run
+`atc models catalog --engine geniex` for curated GGUF models and Qualcomm AI Hub bundles for your chip.
+`atc models search qwen --engine geniex` also searches Hugging Face and the current Qualcomm AI Hub release for compatible text-generation bundles. Use the returned model ID (for example, `qai-smollm2_1_7b_it`) with `atc models pull --engine geniex`. Download a listed model with
+`atc models pull qwen3-4b --engine geniex --backend npu`, then run it with
+`atc run qwen3-4b --engine geniex`. Gated GGUF repositories require accepted terms and the server's
+`HF_TOKEN`. Bundle downloads use Qualcomm's storage.
+
 ## Audio generation
 
-Audio runs on audio.cpp, one model at a time, through the embedded core 0.21.0. The catalog holds MOSS-TTS-Nano 100M and
+Audio runs on audio.cpp, one model at a time, through the embedded core 0.21.4. The catalog holds MOSS-TTS-Nano 100M and
 Qwen3-TTS 1.7B for speech, ACE-Step 1.5 Turbo for music and Stable Audio 3 Small SFX for effects:
 
 ```bash
@@ -328,7 +337,7 @@ Precedence: command flags > `ATC_<SECTION>_<KEY>` environment variables > `<data
 defaults. `atc config list` shows every key with its value and where it came from.
 
 ```sh
-atc config set api.port 1337              # written to config.json
+atc config set api.port 1339              # written to config.json
 ATC_API_HOST=0.0.0.0 atc status           # api.host from the environment for this run
 atc config set models.autoLoad qwen3-8b,gemma-4b
 atc config path
@@ -397,7 +406,7 @@ To develop against a local core checkout, build it there (`npm run build`), run 
 the pinned version back. `node dist/bin.js …` runs the CLI from source after `npm run build`; `npm run dev` in
 `packages/admin-ui` runs the SPA against a server started with `atc admin --no-open`.
 
-Note: the core's own CLI defaults its public API to port 6767; `atc` uses 1337, like the desktop app.
+Note: the core's own CLI defaults its public API to port 6767; new Atomic Server profiles use 1339, and Atomic Chat uses 1337. Existing server profiles keep their previous port, including 1337 when they used the old default.
 
 ## Documentation
 

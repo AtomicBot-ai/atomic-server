@@ -198,7 +198,11 @@ export function drawCatalogBrowser(
       .forEach((line, i) => text(c, x + 2, rowY + i, line, COLORS.muted, width - 4))
     const ready = job?.['stage'] === 'ready',
       loaded = s.installed.find(
-        (item) => item.id === model.id || item.id === record(job?.['plan'])['model_id']
+        (item) =>
+          (model.source?.['engine'] !== 'geniex' || item.provider === 'geniex') &&
+          (item.id === model.id ||
+            item.id === record(job?.['plan'])['variant_id'] ||
+            item.id === record(job?.['plan'])['model_id'])
       )
     if (job && !ready && available >= downloadCardHeight(c.height)) {
       const downloadIndex = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? []).findIndex(
@@ -228,7 +232,11 @@ export function drawCatalogBrowser(
       )
       button(
         c,
-        mediaReady ? `media-delete:${job?.['id']}` : `installed-delete:${encodeURIComponent(loaded!.id)}`,
+        mediaReady
+          ? `media-delete:${job?.['id']}`
+          : loaded!.store === 'geniex'
+            ? `geniex-delete:${encodeURIComponent(loaded!.id)}`
+            : `installed-delete:${encodeURIComponent(loaded!.id)}`,
         x + 17,
         controlY,
         'X Delete',

@@ -14,7 +14,7 @@ describe('schema', () => {
     const paths = FIELDS.map((f) => f.path)
     expect(new Set(paths).size).toBe(paths.length)
     const config = defaultConfig()
-    expect(config.api.port).toBe(1337)
+    expect(config.api.port).toBe(1339)
     expect(config.admin.port).toBe(1338)
     expect(config.engines.default).toBe('llamacpp-upstream')
     expect(config.proxy.url).toBeUndefined()

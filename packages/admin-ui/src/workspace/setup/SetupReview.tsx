@@ -1,5 +1,6 @@
 import { engineDialog } from './setup-data'
 import { FoundryModelInstall } from '../library/install/FoundryModelInstall'
+import { GenieModelInstall } from '../library/install/GenieModelInstall'
 import { LiteRtModelInstall } from '../library/install/LiteRtModelInstall'
 import { ManagedModelInstall } from '../library/install/ManagedModelInstall'
 import { ModelInstall } from '../library/install/ModelInstall'
@@ -52,6 +53,15 @@ export function SetupReview({
         onClose={onClose}
         onStarted={onStarted}
         onFoundry={() => onEngine('foundry-local')}
+      />
+    )
+  if (kind === 'geniex')
+    return (
+      <GenieModelInstall
+        workspace={w}
+        model={record(model.geniex)}
+        onEngine={() => onEngine('geniex')}
+        onStarted={onStarted}
       />
     )
   if (kind === 'litert')

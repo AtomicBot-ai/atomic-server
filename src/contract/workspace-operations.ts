@@ -5,6 +5,7 @@ import { MODEL_OPERATIONS } from './operations/models.js'
 import { ENGINE_OPERATIONS } from './operations/engines.js'
 import { MANAGED_MODEL_OPERATIONS } from './operations/managed-models.js'
 import { FOUNDRY_OPERATIONS } from './operations/foundry.js'
+import { GENIEX_OPERATIONS } from './operations/geniex.js'
 import { LITERT_OPERATIONS } from './operations/litert.js'
 import { PLAYGROUND_OPERATIONS } from './operations/playground.js'
 import { MEDIA_OPERATIONS } from './operations/media.js'
@@ -18,6 +19,7 @@ export const WORKSPACE_OPERATIONS = [
   ...MANAGED_MODEL_OPERATIONS,
   ...FOUNDRY_OPERATIONS,
   ...LITERT_OPERATIONS,
+  ...GENIEX_OPERATIONS,
   ...ENGINE_OPERATIONS,
   ...PLAYGROUND_OPERATIONS,
   ...MEDIA_OPERATIONS,

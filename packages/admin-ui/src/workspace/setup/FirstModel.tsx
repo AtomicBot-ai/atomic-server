@@ -78,7 +78,10 @@ export function FirstModel({
               const repo = text(m.id ?? m.model_id, '')
               // A Foundry Local or LiteRT-LM family is installed as one of its variants; a GGUF
               // download under its file name is its catalog row (the registry names the repository).
-              const variants = rows(record(m.litert ?? m.foundry).variants).map((v) => text(v.id, ''))
+              if (m.geniex && l.provider !== 'geniex') return false
+              const variants = rows(record(m.geniex ?? m.litert ?? m.foundry).variants).map((v) =>
+                text(m.geniex ? record(v.record).variant_id : v.id, '')
+              )
               return (
                 catalogModelMatches(id, repo, undefined, text(l.repository, '') || undefined) ||
                 variants.includes(id)

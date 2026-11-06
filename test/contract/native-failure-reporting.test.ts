@@ -45,7 +45,8 @@ it('flushes a scrubbed, diagnosed fatal report before exiting with code 1', asyn
         values: [
           {
             type: 'TypeError',
-            value: 'Unexpected failure in uncaught_exception',
+            // Messages never leave; the event is named by atc's part (core 0.21.3 host tags).
+            value: 'process event: unknown',
             mechanism: { type: 'uncaught_exception', handled: false },
           },
         ],
