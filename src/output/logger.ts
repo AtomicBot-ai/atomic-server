@@ -96,7 +96,8 @@ export interface FileSinkOptions {
  * follows the file sees it shrink and continues in `file.1` (`followLog`).
  */
 export function fileSink(path: string, options: FileSinkOptions): LogSink {
-  mkdirSync(dirname(path), { recursive: true })
+  const dir = dirname(path)
+  mkdirSync(dir, { recursive: true })
   const maxFiles = Math.max(1, Math.floor(options.maxFiles))
   const rotate = () => {
     if (maxFiles === 1) {
@@ -124,7 +125,13 @@ export function fileSink(path: string, options: FileSinkOptions): LogSink {
     } catch {
       /* first write */
     }
-    appendFileSync(path, line)
+    try {
+      appendFileSync(path, line)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      mkdirSync(dir, { recursive: true })
+      appendFileSync(path, line)
+    }
   }
 }
 
