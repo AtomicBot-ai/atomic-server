@@ -1,3 +1,4 @@
+import { catalogReadGuard } from './catalog-read.js'
 import type { ActionContext } from '../actions.js'
 import { engineAction } from './engine-actions.js'
 import { record } from './library-model.js'
@@ -9,6 +10,7 @@ import { record } from './library-model.js'
  */
 const VARIANT_CATALOGS = {
   foundry: { engine: 'foundry-local', ops: 'foundry' },
+  fastflowlm: { engine: 'fastflowlm', ops: 'fastflowlm' },
   geniex: { engine: 'geniex', ops: 'geniex' },
   litert: { engine: 'litert-lm', ops: 'litert' },
 } as const
@@ -43,12 +45,13 @@ export function variantNext(source: Record<string, unknown> | undefined, selecte
   const verdict = record(variant?.['verdict'])['verdict']
   return {
     variant,
-    action:
-      verdict === 'engine-not-installed'
-        ? 'engine'
-        : verdict === 'accelerator-not-prepared'
-          ? 'prepare'
-          : 'download',
+    action: ['engine-not-installed', 'environment-not-ready', 'requires-newer-engine'].includes(
+      String(verdict)
+    )
+      ? 'engine'
+      : verdict === 'accelerator-not-prepared'
+        ? 'prepare'
+        : 'download',
   }
 }
 export async function variantCatalogAction(id: string, ctx: ActionContext) {
@@ -60,12 +63,14 @@ export async function variantCatalogAction(id: string, ctx: ActionContext) {
   const { engine, ops } = VARIANT_CATALOGS[format]
   const { variant, action } = variantNext(row.source, s.catalogVariant)
   if (action === 'engine') return engineAction(`engine-open:${engine}`, ctx)
+  const fresh = catalogReadGuard(ctx)
   ctx.update((v) => ({ ...v, busy: true, message: '' }))
   try {
     if (action === 'prepare') {
       await ctx.controller.runtime.execute(`${ops}.prepare`, {})
+      if (!fresh()) return true
       const libraryRows = await loadVariantCatalog(ctx, format)
-      ctx.update((v) => ({ ...v, libraryRows }))
+      if (fresh()) ctx.update((v) => ({ ...v, libraryRows }))
       return true
     }
     if (!variant) throw new Error('No compatible variant is available for this model.')
@@ -80,9 +85,11 @@ export async function variantCatalogAction(id: string, ctx: ActionContext) {
       plan_digest: plan['digest'],
     })
     const workspace = await ctx.controller.runtime.snapshot()
-    ctx.update((v) => ({ ...v, workspace, overlay: null, libraryView: 'catalog' }))
+    if (fresh()) ctx.update((v) => ({ ...v, workspace, overlay: null, libraryView: 'catalog' }))
+  } catch (error) {
+    if (fresh()) throw error
   } finally {
-    ctx.update((v) => ({ ...v, busy: false }))
+    if (fresh()) ctx.update((v) => ({ ...v, busy: false }))
   }
   return true
 }

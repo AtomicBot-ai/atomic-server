@@ -106,14 +106,14 @@ it('keeps Foundry variants inline, returns from accelerator preparation, and dow
   render(<Catalog workspace={workspace} openCommand={vi.fn()} />)
   await format('Foundry Local')
   await userEvent.click(await screen.findByText('Phi', { selector: 'strong' }))
-  expect(screen.getByLabelText('Variant')).toHaveValue('phi-npu')
+  expect(screen.getByRole('radio', { name: /OpenVINO NPU/ })).toBeChecked()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Prepare OpenVINO NPU' }))
   const dialog = within(await screen.findByRole('dialog', { name: 'Foundry Local', exact: true }))
   await userEvent.click(await dialog.findByRole('button', { name: 'Prepare OpenVINO NPU' }))
   await userEvent.click(dialog.getByRole('button', { name: 'Close' }))
   await userEvent.click(await screen.findByRole('button', { name: 'Download', exact: true }))
-  expect(screen.getByLabelText('Variant')).toHaveValue('phi-npu')
+  expect(screen.getByRole('radio', { name: /OpenVINO NPU/ })).toBeChecked()
   expect(execute).toHaveBeenCalledWith('foundry.plan', { model: 'phi', variant: 'phi-npu' })
   expect(execute).toHaveBeenCalledWith('foundry.install', {
     request_id: expect.stringMatching(/^admin-/),
@@ -161,7 +161,7 @@ it('keeps a blocked Foundry variant editable and retries a failed install withou
   blocked = false
   await userEvent.click(screen.getByRole('button', { name: 'Download' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Lost connection')
-  expect(screen.getByLabelText('Variant')).toHaveValue('cpu')
+  expect(screen.getByRole('radio', { name: /CPU/ })).toBeChecked()
   fail = false
   await userEvent.click(screen.getByRole('button', { name: 'Download' }))
   await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())

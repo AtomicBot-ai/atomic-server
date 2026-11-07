@@ -1,4 +1,5 @@
 // Lifted from atomic-chat-ui/web-app/src/routes/endpoints.tsx @ 807b4d9; adapted: real provider state and concise empty state.
+import { StatusIndicator } from '../../StatusIndicator'
 import { Network, Plus } from 'lucide-react'
 import type { RecordValue } from '../../types'
 import { text } from '../../types'
@@ -32,9 +33,9 @@ export function CustomProviderSummary({
               <div className="custom-endpoint-info">
                 <h2>{text(provider.provider)}</h2>
                 <code>{text(provider.base_url)}</code>
-                <span className="custom-endpoint-status">
-                  {provider.connected === true ? '✓ Connected' : 'Not checked'}
-                </span>
+                <StatusIndicator tone={provider.connected === true ? 'positive' : 'neutral'}>
+                  {provider.connected === true ? 'Connected' : 'Not checked'}
+                </StatusIndicator>
                 {Array.isArray(provider.models) && provider.models.length > 0 && (
                   <p>{provider.models.map(String).join(', ')}</p>
                 )}

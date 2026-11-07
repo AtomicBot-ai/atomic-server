@@ -1,0 +1,252 @@
+@import './engine-lifecycle.css';
+
+.desktop-workspace .engine-settings-dialog {
+  width: min(880px, 100%, calc(100vw - 32px));
+  max-width: 880px;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ew-bg);
+  border: 1px solid var(--ew-line);
+  border-radius: 14px;
+  box-shadow: 0 24px 80px #0006;
+  outline: none;
+}
+.engine-settings-dialog > .panel-heading {
+  padding: 20px 24px 12px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.engine-settings-dialog > .panel-heading h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+.engine-tabs {
+  display: flex;
+  padding: 0 24px;
+  gap: 24px;
+  border-bottom: 1px solid var(--ew-line);
+  flex-shrink: 0;
+}
+.engine-tabs [role='tab'] {
+  padding: 12px 0;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--ew-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.engine-tabs [aria-selected='true'] {
+  color: var(--ew-text);
+  border-bottom-color: var(--ew-teal);
+}
+.engine-change-count {
+  margin-left: 8px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: var(--ew-raised);
+  font-size: 12px;
+}
+.engine-dialog-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding: 20px 24px;
+}
+.engine-dialog-body [hidden] {
+  display: none;
+}
+.engine-overview {
+  display: grid;
+  gap: 24px;
+}
+.engine-overview h3 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.engine-overview .engine-builds .panel-heading {
+  margin: 0 0 12px;
+  align-items: center;
+}
+.engine-overview .installed-row {
+  padding: 12px 0;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--ew-line);
+}
+.engine-overview .installed-row small {
+  display: block;
+  color: var(--ew-muted);
+  margin-top: 4px;
+}
+.desktop-workspace .settings-dialog.engine-settings-dialog .ew-button {
+  border-radius: 7px;
+  min-height: 34px;
+  min-width: 0;
+  padding: 6px 12px;
+}
+.engine-settings-dialog .form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 20px 0;
+}
+.engine-settings-dialog .engine-dialog-footer {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 12px 24px;
+  background: var(--ew-bg);
+  border-top: 1px solid var(--ew-line);
+  border-radius: 0;
+}
+.engine-dialog-footer:empty {
+  display: none;
+}
+.engine-transfer {
+  margin-top: 24px;
+  border-top: 1px solid var(--ew-line);
+  padding-top: 16px;
+}
+.engine-transfer summary {
+  cursor: pointer;
+  color: var(--ew-muted);
+}
+.engine-transfer .action-wrap {
+  margin: 12px 0;
+}
+.accelerator-list {
+  display: grid;
+  gap: 0;
+  margin: 12px 0;
+}
+.accelerator-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ew-line);
+}
+.accelerator-row > div {
+  min-width: 0;
+}
+.accelerator-row small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ew-muted);
+}
+.accelerator-row p,
+.engine-diagnostics {
+  overflow-wrap: anywhere;
+}
+.engine-diagnostics {
+  margin-top: 12px;
+  color: var(--ew-muted);
+  font-size: 12px;
+}
+.engine-diagnostics pre {
+  white-space: pre-wrap;
+}
+.engine-readiness {
+  padding: 12px 0;
+}
+.engine-readiness p {
+  color: var(--ew-muted);
+  margin: 6px 0;
+}
+@media (max-width: 600px) {
+  .desktop-workspace .engine-settings-dialog {
+    max-height: calc(100dvh - 16px);
+    width: min(100%, calc(100vw - 16px));
+  }
+  .engine-dialog-body,
+  .engine-settings-dialog > .panel-heading {
+    padding: 16px;
+  }
+  .engine-tabs {
+    padding: 0 16px;
+  }
+  .accelerator-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+.desktop-workspace .engine-settings-dialog input:not([type='checkbox']):not([type='radio']),
+.desktop-workspace .engine-settings-dialog select,
+.desktop-workspace .engine-settings-dialog textarea {
+  background: var(--ew-panel);
+  color: var(--ew-text);
+  border-color: var(--ew-line);
+}
+.engine-settings-dialog .engine-setting {
+  border-color: var(--ew-line);
+}
+
+.engine-settings-dialog .engine-setting {
+  padding: 4px 0 12px;
+  min-width: 0;
+}
+.engine-settings-dialog .engine-setting.setting-changed {
+  padding-left: 12px;
+  border-left-color: var(--ew-teal);
+}
+.engine-settings-dialog .engine-setting details {
+  margin: 0;
+  color: var(--ew-muted);
+  line-height: 18px;
+}
+.engine-settings-dialog .engine-setting p,
+.engine-settings-dialog .engine-setting code {
+  overflow-wrap: anywhere;
+}
+.engine-settings-dialog .engine-settings-note {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.engine-settings-dialog .setting-groups {
+  gap: 4px;
+  margin: 16px 0;
+}
+.engine-settings-dialog .setting-groups button {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 6px 10px;
+}
+.engine-settings-dialog .engine-dialog-footer p {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.engine-settings-dialog .engine-dialog-footer p:last-child {
+  margin-bottom: 0;
+}
+@media (max-width: 600px) {
+  .engine-settings-dialog .engine-dialog-footer {
+    padding: 12px 16px;
+  }
+}
+.desktop-workspace .engine-settings-dialog .ew-actions {
+  margin: 0;
+}
+.engine-settings-dialog .engine-versions {
+  margin: 16px 0 0;
+}
+.engine-settings-dialog .engine-diagnostics {
+  margin: 12px 0 0;
+}
+.engine-settings-dialog .engine-transfer {
+  margin: 16px 0 0;
+}
+.engine-settings-dialog .engine-setting:last-child {
+  border-bottom: 0;
+}
+.desktop-workspace .engine-settings-dialog .engine-managed-content > .ew-actions {
+  margin-top: 20px;
+}

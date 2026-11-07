@@ -36,29 +36,34 @@ export function ChatMessages({
                 .map((x) => x.text ?? '[Image]')
                 .join('\n')
         return (
-          <article className={`chat-message message-${message.role}`} key={index}>
+          <article
+            className={`chat-message message-${message.role} ${editing === index ? 'message-editing' : ''}`}
+            key={index}
+          >
             <span className="message-role sr-only">
               {text(message.role)} {meta.provider ? `· ${text(meta.provider)} · ${text(meta.model)}` : ''}
             </span>
             <div className="message-content">
               {editing === index ? (
-                <>
+                <div className="message-edit-form settings-form">
                   <Field label="Edit message in a new branch">
                     <textarea value={draft} onChange={(e) => setDraft(e.target.value)} />
                   </Field>
-                  <Action
-                    disabled={busy}
-                    onClick={async () => {
-                      await edit(index, draft)
-                      setEditing(-1)
-                    }}
-                  >
-                    Save branch
-                  </Action>
-                  <button className="ew-button" onClick={() => setEditing(-1)}>
-                    Cancel edit
-                  </button>
-                </>
+                  <div className="ew-actions">
+                    <Action
+                      disabled={busy}
+                      onClick={async () => {
+                        await edit(index, draft)
+                        setEditing(-1)
+                      }}
+                    >
+                      Save branch
+                    </Action>
+                    <button className="ew-button" onClick={() => setEditing(-1)}>
+                      Cancel edit
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <Message message={message} markdown={preferences.markdown} />
               )}

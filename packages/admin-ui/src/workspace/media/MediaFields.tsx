@@ -1,3 +1,4 @@
+import { FileInput } from '../FileInput'
 import { useState } from 'react'
 import { Field } from '../Controls'
 import { list, record, text } from '../types'
@@ -143,23 +144,22 @@ export function MediaFields({
 function ImageInput({ label, onChange }: { label: string; onChange: (value: { base64: string }) => void }) {
   const [error, setError] = useState('')
   return (
-    <Field label={label} hint={error}>
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          if (file.size > 10 * 1024 * 1024) {
-            setError('Choose an image below 10 MB.')
-            return
-          }
-          setError('')
-          const reader = new FileReader()
-          reader.onload = () => onChange({ base64: String(reader.result) })
-          reader.readAsDataURL(file)
-        }}
-      />
-    </Field>
+    <FileInput
+      label={label}
+      hint={error}
+      accept="image/png,image/jpeg,image/webp"
+      onChange={(e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (file.size > 10 * 1024 * 1024) {
+          setError('Choose an image below 10 MB.')
+          return
+        }
+        setError('')
+        const reader = new FileReader()
+        reader.onload = () => onChange({ base64: String(reader.result) })
+        reader.readAsDataURL(file)
+      }}
+    />
   )
 }

@@ -40,7 +40,10 @@ it('starts a selected media download automatically after compatibility checks', 
     update: (fn) => {
       state = fn(state)
     },
-    controller: { runtime: { execute, snapshot: async () => null } } as unknown as WorkspaceController,
+    controller: {
+      runtime: { execute, snapshot: async () => null },
+      setup: { engines: async () => [] },
+    } as unknown as WorkspaceController,
     send: vi.fn(),
     cancel: vi.fn(),
     copy: vi.fn(),
@@ -75,7 +78,10 @@ it('does not throw when a media plan has compatibility blockers', async () => {
     update: (fn) => {
       state = fn(state)
     },
-    controller: { runtime: { execute, snapshot: async () => null } } as unknown as WorkspaceController,
+    controller: {
+      runtime: { execute, snapshot: async () => null },
+      setup: { engines: async () => [] },
+    } as unknown as WorkspaceController,
     send: vi.fn(),
     cancel: vi.fn(),
     copy: vi.fn(),

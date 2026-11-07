@@ -4,6 +4,43 @@ import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { FirstModel } from './FirstModel'
 
+it('uses FLM recommendation metadata instead of a three-card limit', async () => {
+  const { workspace } = workspaceFixture({
+    'engines.selected': { engine: 'fastflowlm' },
+    'models.installed': [],
+    'models.search': {
+      models: Array.from({ length: 5 }, (_, i) => ({
+        model_id: String(i),
+        name: `Model ${i}`,
+        recommended: i < 4,
+        variants: [],
+      })),
+    },
+  })
+  render(<FirstModel workspace={workspace} select={vi.fn()} />)
+  const heading = await screen.findByRole('heading', { name: 'Recommended' })
+  expect(within(heading.nextElementSibling as HTMLElement).getAllByRole('button')).toHaveLength(4)
+  expect(screen.getByRole('heading', { name: 'More models' })).toBeInTheDocument()
+})
+
+it.each(['fastflowlm', 'mlx', 'atomic-prism'])('keeps downloaded models scoped to %s', async (engine) => {
+  const { workspace } = workspaceFixture({
+    'engines.selected': { engine },
+    'models.installed': [
+      { id: 'foreign', name: 'Foreign model', provider: 'llamacpp-upstream' },
+      { id: 'mine', name: 'My model', provider: engine },
+      { id: 'unusable', name: 'Unusable model', provider: engine, providers: [] },
+      { id: 'excluded', name: 'Excluded model', provider: engine, providers: ['another-engine'] },
+    ],
+    'models.search': { models: [] },
+    'models.catalog': [],
+  })
+  render(<FirstModel workspace={workspace} select={vi.fn()} />)
+  await screen.findByRole('button', { name: /My model/ })
+  expect(screen.queryByRole('button', { name: /Foreign model/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Unusable model|Excluded model/ })).not.toBeInTheDocument()
+})
+
 it('shows the chosen model only in its card and continues with the shared engine', async () => {
   const { workspace } = workspaceFixture({
     'engines.selected': { engine: 'llamacpp', id: 'llamacpp|b3|cpu' },
@@ -69,3 +106,34 @@ it('does not recommend a catalog model again when its download is installed unde
   expect(screen.getByRole('button', { name: /LFM2-1.2B-Q4_K_M/ })).toHaveTextContent('Downloaded')
   expect(screen.queryByRole('button', { name: /^LFM2 1\.2B/ })).not.toBeInTheDocument()
 })
+
+it.each(['fastflowlm', 'geniex', 'litert-lm', 'foundry-local'])(
+  'keeps the downloaded %s variant selected when returning from a later step',
+  async (engine) => {
+    const { workspace } = workspaceFixture({
+      'engines.selected': { engine },
+      'models.installed': [
+        { id: 'older', name: 'Older model', provider: engine },
+        { id: 'chosen-native', name: 'Chosen downloaded model', provider: engine },
+      ],
+      'models.search': {
+        models: [
+          {
+            model_id: 'chosen-family',
+            name: 'Chosen family',
+            default_variant: 'chosen-native',
+            variants: [{ id: 'chosen-native', record: { variant_id: 'chosen-native' } }],
+          },
+        ],
+      },
+    })
+    const select = vi.fn()
+    render(<FirstModel workspace={workspace} select={select} initialChoice="catalog:chosen-family" />)
+    expect(await screen.findByRole('button', { name: /Chosen downloaded model/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(select).toHaveBeenCalledWith(expect.objectContaining({ id: 'chosen-native' }), true)
+  }
+)

@@ -1,0 +1,67 @@
+.variant-choices {
+  border: 0;
+  padding: 0;
+  margin: 16px 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 8px;
+}
+.variant-choices legend {
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.variant-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--ew-line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.variant-choice.selected {
+  background: var(--ew-raised);
+  border-color: var(--ew-teal);
+}
+.variant-choice:focus-within {
+  outline: 2px solid var(--ew-teal);
+  outline-offset: 2px;
+}
+.variant-choice input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  accent-color: var(--ew-teal);
+}
+.variant-choice strong,
+.variant-choice small {
+  display: block;
+}
+.variant-choice small {
+  color: var(--ew-muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.variant-size {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--ew-muted);
+  font-size: 12px;
+}
+.variant-explanation {
+  border-left: 2px solid var(--ew-line);
+  padding: 8px 12px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.variant-explanation p {
+  margin: 4px 0 0;
+  color: var(--ew-muted);
+}
+.model-install-options {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

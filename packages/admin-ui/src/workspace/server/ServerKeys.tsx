@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Workspace } from '../useWorkspace'
 import { Action, Copy } from '../Controls'
+import { SettingsField } from '../SettingsForm'
 import { record, text } from '../types'
 import { DeleteConfirmation } from '../library/DeleteConfirmation'
 export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
@@ -9,8 +10,21 @@ export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
   const [revoke, setRevoke] = useState<{ id: string; name: string } | null>(null)
   const [revoking, setRevoking] = useState(false)
   return (
-    <section className="ew-panel" aria-label="API keys">
-      <div className="key-create">
+    <section className="ew-panel settings-form" aria-label="API keys">
+      <SettingsField
+        label="New API key name"
+        actions={
+          <Action
+            disabled={!keyName.trim()}
+            onClick={async () => {
+              await w.execute('keys.create', { name: keyName.trim() })
+              setKeyName('')
+            }}
+          >
+            Create key
+          </Action>
+        }
+      >
         <input
           aria-label="New API key name"
           placeholder="Key name"
@@ -18,16 +32,7 @@ export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
           value={keyName}
           onChange={(e) => setKeyName(e.target.value)}
         />
-        <Action
-          disabled={!keyName.trim()}
-          onClick={async () => {
-            await w.execute('keys.create', { name: keyName.trim() })
-            setKeyName('')
-          }}
-        >
-          Create key
-        </Action>
-      </div>
+      </SettingsField>
       <div className="table-scroll">
         <table>
           <thead>
@@ -45,7 +50,7 @@ export function ServerKeys({ workspace: w }: { workspace: Workspace }) {
                 <td>
                   <code>{key.preview}</code>
                 </td>
-                <td>{new Date(key.createdAt).toLocaleDateString()}</td>
+                <td>{new Date(key.createdAt).toLocaleDateString('en-US')}</td>
                 <td>
                   <div className="ew-actions">
                     <Copy

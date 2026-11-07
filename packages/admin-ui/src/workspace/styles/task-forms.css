@@ -1,0 +1,237 @@
+/* Task forms share settings typography while retaining their workflow-specific controls. */
+.desktop-workspace .media-controls.settings-form {
+  display: flex;
+  max-width: none;
+  gap: 20px;
+  padding: 20px 24px;
+}
+.desktop-workspace .media-controls.settings-form > * {
+  flex-shrink: 0;
+}
+.desktop-workspace .media-controls.settings-form h1 {
+  font-size: 20px;
+  line-height: 28px;
+}
+.desktop-workspace .media-settings-heading {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+.desktop-workspace .media-settings-heading .ew-button {
+  min-height: 32px;
+  font-size: 12px;
+  line-height: 20px;
+  padding: 5px 9px;
+}
+.desktop-workspace .media-prompt-card {
+  gap: 16px;
+  border-radius: 10px;
+}
+.desktop-workspace .media-model-trigger {
+  font-size: 13px;
+}
+.desktop-workspace .media-size-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.desktop-workspace .media-range-field .settings-field-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 8px 16px;
+  align-items: center;
+}
+.desktop-workspace .media-range-field .settings-field-input {
+  grid-column: 2;
+  grid-row: 1;
+}
+.desktop-workspace .media-range-field .settings-field-actions {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+}
+html .desktop-workspace .media-range-field input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  accent-color: var(--ew-teal);
+}
+html .desktop-workspace .media-range-field input[type='number'] {
+  width: 100%;
+}
+.desktop-workspace .media-range-field .settings-field-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.desktop-workspace .media-video-duration > span {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desktop-workspace .media-advanced {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+}
+.desktop-workspace .media-controls summary {
+  font-size: 13px;
+  line-height: 20px;
+}
+.desktop-workspace .connection-guide.settings-form {
+  padding: 24px;
+  border-radius: 10px;
+  gap: 20px;
+}
+.desktop-workspace .connection-guide .connection-heading {
+  margin: 0;
+}
+.desktop-workspace .connection-guide.settings-form h2 {
+  font-size: 18px;
+  line-height: 26px;
+}
+.desktop-workspace .connection-guide .settings-section {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+html .desktop-workspace .connection-port input {
+  width: 120px;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.desktop-workspace .connection-guide .server-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+.desktop-workspace .connection-guide .server-engine-model {
+  gap: 16px;
+}
+.desktop-workspace .connection-guide .server-detail-picker {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.desktop-workspace .connection-guide .server-picker-field > span {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.desktop-workspace .connection-guide .server-review-summary {
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+  background: var(--ew-bg);
+}
+.desktop-workspace .connection-guide .server-review-summary :is(ol, p) {
+  margin: 8px 0;
+}
+.desktop-workspace .connection-guide .server-review-summary code {
+  overflow-wrap: anywhere;
+}
+.desktop-workspace .connection-guide.settings-form > .wizard-bottom {
+  justify-content: space-between;
+}
+.desktop-workspace .connection-help {
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.desktop-workspace .connection-help .ew-actions {
+  justify-content: flex-start;
+}
+.desktop-workspace .connection-guide .intent-card {
+  padding: 16px;
+  gap: 8px;
+}
+.desktop-workspace .command-dock {
+  background: var(--ew-panel);
+  color: var(--ew-text);
+  border-color: var(--ew-line);
+  padding: 20px 24px;
+}
+.desktop-workspace .command-dock-content {
+  margin-inline: auto;
+}
+.desktop-workspace .command-dock .command-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  margin: 0;
+}
+.desktop-workspace .command-controls .settings-field {
+  margin: 0;
+}
+.desktop-workspace .command-discovery {
+  grid-column: 1 / -1;
+}
+.desktop-workspace .command-dock .operation-form {
+  padding-top: 20px;
+  border-top: 1px solid var(--ew-line);
+}
+.desktop-workspace .rename-conversation-dialog.settings-form {
+  width: min(480px, calc(100vw - 32px));
+  padding: 24px;
+}
+.desktop-workspace .rename-conversation-dialog .settings-field {
+  margin: 0;
+}
+.desktop-workspace .rename-conversation-dialog .ew-actions {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.desktop-workspace .tool-review.settings-form {
+  padding: 20px;
+  color: var(--ew-text);
+  background: var(--ew-panel);
+  border-color: var(--ew-line);
+  border-radius: 10px;
+}
+.desktop-workspace .tool-review h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+.desktop-workspace .tool-review header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+}
+.desktop-workspace .tool-review-call {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.desktop-workspace .tool-review-call > strong {
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.desktop-workspace .tool-review-call .settings-field,
+.desktop-workspace .tool-review .ew-actions,
+.desktop-workspace .tool-review .json-result {
+  margin: 0;
+}
+.desktop-workspace .tool-review-call > .ew-actions {
+  justify-content: flex-start;
+}
+@container (max-width: 560px) {
+  .desktop-workspace .command-dock .command-controls,
+  .desktop-workspace .connection-guide .connection-choice-grid,
+  .desktop-workspace .connection-guide .server-engine-model {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .desktop-workspace .connection-guide.settings-form,
+  .desktop-workspace .rename-conversation-dialog.settings-form,
+  .desktop-workspace .media-controls.settings-form,
+  .desktop-workspace .command-dock {
+    padding: 16px;
+  }
+}

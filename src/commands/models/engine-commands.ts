@@ -1,3 +1,5 @@
+import { flmAccelerators } from './fastflowlm-commands.js'
+import { workspace } from '../server/control.js'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import { operation } from '../server/control.js'
@@ -61,6 +63,10 @@ export const enginesCommand = defineCommand({
           placeholder: 'operation',
         },
         'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
+        'prepare': {
+          type: 'boolean',
+          description: 'FastFlowLM: review NPU preparation after installing the engine',
+        },
         'no-accelerators': {
           type: 'boolean',
           description: 'Foundry Local, LiteRT-LM: do not prepare accelerators after it',
@@ -73,6 +79,16 @@ export const enginesCommand = defineCommand({
       ],
       run: async (inv, ctx) => {
         if (
+          inv.positionals[0] === 'fastflowlm' &&
+          (inv.values.prepare || inv.values.resume || inv.values.cancel)
+        ) {
+          if (!inv.values['dry-run'] && !inv.values.resume && !inv.values.cancel)
+            await (
+              await workspace(ctx)
+            ).execute('engines.install', { engine: 'fastflowlm', request: buildRequest(inv.values) })
+          return flmAccelerators(ctx, { ...inv.values, prepare: true })
+        }
+        if (
           typeof inv.values['resume'] === 'string' ||
           typeof inv.values['cancel'] === 'string' ||
           isManaged(inv.positionals[0])
@@ -80,12 +96,7 @@ export const enginesCommand = defineCommand({
           return installManagedEngine(ctx, inv.positionals[0], inv.values)
         const engine = inv.positionals[0] ?? 'llamacpp-upstream'
         if (inv.values['dry-run']) return operation(ctx, 'engines.catalog', { engine })
-        let request = {}
-        if (typeof inv.values['build'] === 'string') {
-          const [version, ...variant] = inv.values['build'].split('/')
-          if (!version || !variant.length) throw new AtcError('ATC_USAGE', 'Use --build version/variant.')
-          request = { target: { version, variant: variant.join('/') } }
-        }
+        const request = buildRequest(inv.values)
         const code = await operation(ctx, 'engines.install', { engine, request })
         // Foundry Local runs a variant only on a prepared accelerator, and LiteRT-LM an NPU variant only
         // on a prepared openvino: prepare them now, as the app does.
@@ -113,6 +124,16 @@ export const enginesCommand = defineCommand({
         'request-id': { type: 'string', description: 'Stable ID that makes a retry join the same operation' },
       },
       run: async (inv, ctx) => {
+        if (
+          inv.positionals[0] === 'fastflowlm' &&
+          (inv.values.prepare || inv.values.resume || inv.values.cancel)
+        ) {
+          if (!inv.values['dry-run'] && !inv.values.resume && !inv.values.cancel)
+            await (
+              await workspace(ctx)
+            ).execute('engines.install', { engine: 'fastflowlm', request: buildRequest(inv.values) })
+          return flmAccelerators(ctx, { ...inv.values, prepare: true })
+        }
         if (isManaged(inv.positionals[0])) return removeManagedEngine(ctx, inv.positionals[0]!, inv.values)
         const [version, ...variant] = String(inv.values['build'] ?? '').split('/')
         if (!version || !variant.length)
@@ -149,3 +170,10 @@ export const hardwareCommand = defineCommand({
     }),
   ],
 })
+
+function buildRequest(values: Record<string, unknown>) {
+  if (typeof values['build'] !== 'string') return {}
+  const [version, ...variant] = values['build'].split('/')
+  if (!version || !variant.length) throw new AtcError('ATC_USAGE', 'Use --build version/variant.')
+  return { target: { version, variant: variant.join('/') } }
+}

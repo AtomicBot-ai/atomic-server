@@ -18,6 +18,7 @@ import { SetupWizard } from './setup/SetupWizard'
 import { WorkspaceNavigation } from './WorkspaceNavigation'
 import { useWorkspaceSidebar } from './useWorkspaceSidebar'
 import { useWorkspaceNavigation } from './useWorkspaceNavigation'
+import { useCatalogNavigation } from './useCatalogNavigation'
 import { useWorkspaceShortcuts } from './useWorkspaceShortcuts'
 import { Action } from './Controls'
 import { HelpMenu } from './HelpMenu'
@@ -33,22 +34,15 @@ import './styles/desktop-controls.css'
 import './styles/workspace-brand.css'
 import './styles/workspace-theme.css'
 import './styles/workspace-sizing.css'
+import './styles/settings-screens.css'
+import './styles/task-forms.css'
+import './styles/secondary-forms.css'
 
 export function WorkspaceApp() {
   const [intro, setIntro] = useState(true)
-  const [replay, setReplay] = useState(false)
-  return intro ? (
-    <EngineIntro replay={replay} onContinue={() => setIntro(false)} />
-  ) : (
-    <WorkspaceContent
-      onWelcome={() => {
-        setReplay(true)
-        setIntro(true)
-      }}
-    />
-  )
+  return intro ? <EngineIntro onContinue={() => setIntro(false)} /> : <WorkspaceContent />
 }
-function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
+function WorkspaceContent() {
   const theme = useThemeStore((state) => state.theme)
   const workspace = useWorkspace()
   const navigation = useWorkspaceNavigation()
@@ -69,8 +63,7 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const [connectionGuide, setConnectionGuide] = useState(false)
   const [prepared, setPrepared] = useState<string[]>([])
   const [command, setCommand] = useState<string | null>(null)
-  const [catalogCategory, setCatalogCategory] = useState('text')
-  const [catalogFor, setCatalogFor] = useState<{ engine: string; opened: number } | null>(null)
+  const { catalogCategory, catalogFor, openCatalog } = useCatalogNavigation(page)
   const [wizard, setWizard] = useState(false)
   const [setupDismissed, setSetupDismissed] = useState(false)
   const [help, setHelp] = useState(false)
@@ -104,11 +97,10 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
   const section = page === 'server' ? serverSection : page === 'catalog' ? catalogSection : settingsSection
   const selectSection =
     page === 'server' ? setServerSection : page === 'catalog' ? setCatalogSection : setSettingsSection
-  const models = (section = 'catalog', engine?: string, category = 'text') => {
-    setCatalogCategory(category)
+  const models = (section = 'catalog', engine?: string, category?: string) => {
     setCatalogSection(section)
     // A new key opens the catalog afresh, so it takes the engine's format and filter every time.
-    setCatalogFor(engine ? { engine, opened: Date.now() } : null)
+    openCatalog(engine, category)
     setPage('catalog')
   }
   const settings = () => {
@@ -265,7 +257,6 @@ function WorkspaceContent({ onWelcome }: { onWelcome: () => void }) {
       )}
       {openWizard && (
         <SetupWizard
-          onWelcome={onWelcome}
           onDestination={(destination) => {
             setWizard(false)
             setSetupDismissed(true)

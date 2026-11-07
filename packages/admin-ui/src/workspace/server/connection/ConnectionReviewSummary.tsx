@@ -2,11 +2,11 @@
 export function ConnectionReviewSummary({
   agent,
   endpoint,
-  running,
+  restarting,
 }: {
   agent?: string
   endpoint: string
-  running: boolean
+  restarting: boolean
 }) {
   return (
     <aside className="server-review-summary">
@@ -18,7 +18,7 @@ export function ConnectionReviewSummary({
       </ol>
       <code>{endpoint}</code>
       <small>Local access · API key required</small>
-      {running && <p>Applying this connection restarts the API and interrupts active requests.</p>}
+      {restarting && <p>Applying this connection restarts the API and interrupts active requests.</p>}
     </aside>
   )
 }

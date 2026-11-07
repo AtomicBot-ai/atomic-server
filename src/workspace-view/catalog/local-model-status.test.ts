@@ -90,3 +90,13 @@ it.each([
 ])('ties %s to the catalog row %s (repository %s): %s', (id, family, repository, expected) => {
   expect(catalogModelMatches(id, family, [], repository)).toBe(expected)
 })
+it('matches declared FLM variants only inside the FLM provider', async () => {
+  const { fastFlowLmFamilyMatches } = await import('./local-model-status.js')
+  expect(
+    fastFlowLmFamilyMatches('arbitrary-variant', 'fastflowlm', 'family', [{ id: 'arbitrary-variant' }])
+  ).toBe(true)
+  expect(fastFlowLmFamilyMatches('family-npu2', 'fastflowlm', 'family', [])).toBe(false)
+  expect(
+    fastFlowLmFamilyMatches('arbitrary-variant', 'llamacpp-upstream', 'family', [{ id: 'arbitrary-variant' }])
+  ).toBe(false)
+})

@@ -20,7 +20,7 @@ it('shows a pending connection until validation finishes and then mutes the conn
   await userEvent.click(screen.getByRole('button', { name: 'Connect', exact: true }))
   expect(screen.getByRole('button', { name: /Checking connection/ })).toBeDisabled()
   expect(screen.getByRole('button', { name: 'OpenAI', exact: true })).toBeDisabled()
-  expect(screen.queryByText('✓ Connected')).not.toBeInTheDocument()
+  expect(screen.queryByText('Connected')).not.toBeInTheDocument()
   const saved = {
     provider: 'openai',
     base_url: 'https://api.openai.com/v1',
@@ -32,7 +32,7 @@ it('shows a pending connection until validation finishes and then mutes the conn
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'OpenAI', exact: true })).toHaveClass('connected')
   )
-  expect(screen.getByText('✓ Connected')).toBeInTheDocument()
+  expect(screen.getByText('Connected')).toBeInTheDocument()
   expect(screen.queryByDisplayValue('fixture-secret')).not.toBeInTheDocument()
   expect(execute.mock.calls.filter(([name]) => name === 'cloud.connect')).toHaveLength(1)
 })
@@ -51,5 +51,5 @@ it('keeps failed settings editable without marking the provider connected', asyn
   await userEvent.click(screen.getByRole('button', { name: 'Connect', exact: true }))
   expect(await screen.findByRole('alert')).toHaveTextContent('rejected this API key')
   expect(screen.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled()
-  expect(screen.queryByText('✓ Connected')).not.toBeInTheDocument()
+  expect(screen.queryByText('Connected')).not.toBeInTheDocument()
 })

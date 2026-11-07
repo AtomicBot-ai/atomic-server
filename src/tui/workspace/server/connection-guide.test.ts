@@ -58,6 +58,14 @@ it('returns failed inference to review without a success state or agent command'
   expect(ctx.get().connection).toMatchObject({ step: 'review', error: 'Inference failed', command: '' })
   expect(execute.mock.calls.map(([name]) => name)).not.toContain('connection.profile')
 })
+it('reuses the running API when connecting on its current listener', async () => {
+  const { ctx, execute } = fixture()
+  ctx.update((s) => ({ ...s, workspace: { api: { running: true, host: '127.0.0.1', port: 1339 } } as never }))
+  await activate('guide-agent:poolside', ctx)
+  await activate('guide-configure', ctx)
+  expect(execute).toHaveBeenCalledWith('api.start', { request: { host: '127.0.0.1', port: 1339 } })
+  expect(execute).not.toHaveBeenCalledWith('api.restart', expect.anything())
+})
 // E2E B04: 70000 reached the review and was refused only by Configure & start.
 it('refuses an invalid port in its own step, keeps it for correcting, and says what a port is', async () => {
   const { ctx, execute } = fixture()

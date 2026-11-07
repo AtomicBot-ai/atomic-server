@@ -32,6 +32,10 @@ export async function chatAbilities(
   provider: string,
   model: string
 ): Promise<{ tools?: boolean; vision?: boolean }> {
+  if (provider === 'fastflowlm') {
+    const entry = await new ModelRegistry(layout, 'fastflowlm').find(model).catch(() => undefined)
+    return { tools: entry?.yml.fastflowlm?.capabilities.tools === true, vision: false }
+  }
   if (provider !== 'foundry-local' && provider !== 'litert-lm' && provider !== 'geniex') return {}
   const entry = await new ModelRegistry(layout, provider).find(model).catch(() => undefined)
   const yml = (entry?.yml ?? {}) as Record<string, { tools?: unknown; vision?: unknown } | undefined>

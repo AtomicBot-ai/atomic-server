@@ -1,5 +1,5 @@
 /** Foundry Local in the admin (spec foundry-local-server, «Подготовка NPU из admin»). */
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { FoundryAcceleratorsView } from '@contract'
@@ -37,7 +37,7 @@ describe('Foundry Local in the admin', () => {
       'foundry.prepare': () => (current = view({ preparing: true })),
     })
     const ui = render(<FoundryLocal workspace={workspace} onClose={() => {}} />)
-    expect(await screen.findByText('OpenVINO NPU: not prepared', { exact: false })).toBeInTheDocument()
+    expect(await screen.findByText('Needs preparation')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Prepare OpenVINO NPU' }))
     expect(execute).toHaveBeenCalledWith('foundry.prepare', { accelerators: ['OpenVINOExecutionProvider'] })
     current = view({
@@ -46,11 +46,13 @@ describe('Foundry Local in the admin', () => {
     })
     workspace.snapshot = snapshotFixture({ captured_at: 2 })
     await act(async () => ui.rerender(<FoundryLocal workspace={{ ...workspace }} onClose={() => {}} />))
-    expect(await screen.findByText(`${NPU.name}: downloading 50%`)).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('status')).findByText(`${NPU.name}: downloading 50%`)
+    ).toBeInTheDocument()
     current = view({ accelerators: [{ ...NPU, prepared: true }] })
     workspace.snapshot = snapshotFixture({ captured_at: 3 })
     await act(async () => ui.rerender(<FoundryLocal workspace={{ ...workspace }} onClose={() => {}} />))
-    expect(await screen.findByText('OpenVINO NPU: prepared')).toBeInTheDocument()
+    expect(await screen.findByText('Ready')).toBeInTheDocument()
   })
 
   it('installs Foundry Local when it is absent, then prepares its accelerators', async () => {
@@ -60,7 +62,10 @@ describe('Foundry Local in the admin', () => {
     })
     render(<FoundryLocal workspace={workspace} onClose={() => {}} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Install Foundry Local' }))
-    expect(execute).toHaveBeenCalledWith('engines.install', { engine: 'foundry-local' })
+    expect(execute).toHaveBeenCalledWith('engines.install', {
+      engine: 'foundry-local',
+      request: { task_id: expect.any(String) },
+    })
     expect(execute).toHaveBeenCalledWith('foundry.prepare', {})
   })
 
@@ -71,7 +76,10 @@ describe('Foundry Local in the admin', () => {
     })
     render(<FoundryLocal workspace={workspace} onClose={() => {}} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Update build' }))
-    expect(execute).toHaveBeenCalledWith('engines.install', { engine: 'foundry-local' })
+    expect(execute).toHaveBeenCalledWith('engines.install', {
+      engine: 'foundry-local',
+      request: { task_id: expect.any(String) },
+    })
     expect(execute).toHaveBeenCalledWith('foundry.prepare', {})
   })
 
@@ -84,10 +92,13 @@ describe('Foundry Local in the admin', () => {
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'Inference engines' }))
-    await userEvent.click((await screen.findAllByRole('button', { name: 'Engine settings' })).at(-1)!)
+    await userEvent.click(await screen.findByRole('button', { name: 'Foundry Local', exact: true }))
     expect(await screen.findByRole('dialog', { name: 'foundry-local settings' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Foundry Local' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check for updates' })).toBeInTheDocument()
-    expect(execute).not.toHaveBeenCalledWith('engines.install', { engine: 'foundry-local' })
+    expect(execute).not.toHaveBeenCalledWith('engines.install', {
+      engine: 'foundry-local',
+      request: { task_id: expect.any(String) },
+    })
   })
 })

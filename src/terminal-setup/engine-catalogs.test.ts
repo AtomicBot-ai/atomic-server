@@ -16,13 +16,15 @@ describe('engineCatalogs', () => {
     await expect(engineCatalogs(link)).rejects.toThrow('ECONNREFUSED')
   })
 
-  it('says no engine fits when the checks answered without a build', async () => {
+  it('keeps non-llama engines available when the llama catalog has no compatible build', async () => {
     const link = fakeCoreLink()
-    link.responses['POST /engines/versions'] = { engines: [{ engine: 'llamacpp-upstream' }] }
+    link.responses['POST /engines/versions'] = {
+      engines: [{ engine: 'llamacpp-upstream' }, { engine: 'vllm' }],
+    }
     link.responses['POST /backends/llamacpp-upstream/catalog'] = {
       provider: 'llamacpp-upstream',
       available: [],
     }
-    await expect(engineCatalogs(link)).rejects.toThrow('No compatible engine could be found')
+    await expect(engineCatalogs(link)).resolves.toEqual([])
   })
 })

@@ -116,3 +116,14 @@ it('leaves a GGUF row to the plain download', async () => {
   }))
   expect(await variantCatalogAction('catalog-download:0', t.ctx)).toBe(false)
 })
+
+it('routes FastFlowLM through its pinned server installer', async () => {
+  const t = fixture('fastflowlm')
+  const libraryRows = await loadVariantCatalog(t.ctx, 'fastflowlm')
+  t.ctx.update((s) => ({ ...s, libraryRows, catalogVariant: 'model-cpu' }))
+  await variantCatalogAction('catalog-download:0', t.ctx)
+  expect(t.execute).toHaveBeenCalledWith('fastflowlm.install', {
+    request_id: 'terminal-checked-plan',
+    plan_digest: 'checked-plan',
+  })
+})

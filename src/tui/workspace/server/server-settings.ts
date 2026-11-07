@@ -226,6 +226,6 @@ export function drawServerChoice(c: Canvas, s: WorkspaceState, focus: string) {
       text(c, x + 3, y + 4 + i * 3, choice.detail, COLORS.muted, width - 6)
     })
   if (!s.pickerBusy && !choices.length)
-    button(c, 'library:catalog', x + 2, y + 3, 'Download a model', 'Open the model catalog', focus)
+    button(c, 'server-download-model', x + 2, y + 3, 'Download a model', 'Open the model catalog', focus)
   if (s.pickerError) text(c, x + 2, y + height - 2, s.pickerError, COLORS.statusError, width - 4)
 }

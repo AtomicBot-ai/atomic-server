@@ -179,8 +179,7 @@
   align-items: flex-end;
   gap: 5px;
 }
-.desktop-workspace .compact-downloads .ew-button,
-.desktop-workspace .compact-downloads .ew-button.primary {
+.desktop-workspace .compact-downloads .ew-button {
   min-height: 36px;
   padding: 6px 12px;
   border-radius: 8px;

@@ -1,3 +1,5 @@
+import type { WorkspaceOverlay } from './overlay-types.js'
+import type { VariantModelChoice } from './setup/variant-model-choice.js'
 import { DEFAULT_API_PORT } from '../../contract/index.js'
 import type { ChatNotice } from './chat/recovery.js'
 import type { FinalSetupState } from './setup/waiting-setup.js'
@@ -84,7 +86,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
     returnOverlay?: WorkspaceState['overlay']
   } | null
   libraryRemove: string
-  removeGenieModel?: boolean
+  removeModelStore?: 'geniex' | 'fastflowlm' | undefined
   modelLoad?: { provider: string; model: string } | null
   modelVision: boolean | null
   loadError: { provider: string; model: string; message: string } | null
@@ -129,52 +131,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   commands: CommandRow[]
   base: TuiState
   page: Page
-  overlay:
-    | 'chat-detail'
-    | 'chat-features'
-    | 'chat-tools'
-    | 'feature-editor'
-    | 'feature-delete'
-    | 'media-models'
-    | 'media-stop'
-    | 'media-preview'
-    | 'setup-permission'
-    | 'waiting-game'
-    | 'connection-model'
-    | 'connection-engine'
-    | 'config-choice'
-    | 'server-choice'
-    | 'engine-picker'
-    | 'model-picker'
-    | 'workspace'
-    | 'help'
-    | 'endpoint'
-    | 'stop'
-    | 'detail'
-    | 'examples'
-    | 'menu'
-    | 'command'
-    | 'agent'
-    | 'revoke-key'
-    | 'delete-chat'
-    | 'credential'
-    | 'operation-choice'
-    | 'console'
-    | 'agent-setup'
-    | 'download-detail'
-    | 'download-list'
-    | 'download-remove'
-    | 'catalog-filters'
-    | 'catalog-menu'
-    | 'install-review'
-    | 'engine-panel'
-    | 'remove-model'
-    | 'images'
-    | 'cloud'
-    | 'sections'
-    | 'connection-guide'
-    | 'setup-goal'
-    | null
+  variantModelChoice?: VariantModelChoice | null
+  overlay: WorkspaceOverlay
   focus: string
   hover: string
   message: string

@@ -74,7 +74,7 @@ it('opens model selection on Send without losing the draft or duplicating acquis
   expect(screen.getByRole('dialog', { name: 'Chat model' })).toBeInTheDocument()
   expect(screen.getByText('Choose and download a model to continue.')).toBeInTheDocument()
   expect(screen.getByLabelText('Message')).toHaveValue('Keep my question')
-  expect(screen.getAllByRole('button', { name: 'Manage models' })).toHaveLength(1)
+  expect(screen.getAllByRole('button', { name: 'Browse model catalog' })).toHaveLength(1)
   expect(execute).not.toHaveBeenCalledWith('chat.start', expect.anything())
   await userEvent.keyboard('{Escape}')
   expect(screen.queryByRole('dialog', { name: 'Chat model' })).not.toBeInTheDocument()

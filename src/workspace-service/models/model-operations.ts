@@ -1,3 +1,4 @@
+import { flmInstalled } from '../fastflowlm/operations.js'
 /**
  * The `models.*` operations of the workspace: the catalog, Hub search (Foundry Local's and LiteRT-LM's
  * models among them), installed models of every provider (Foundry Local variants among them), removal
@@ -140,6 +141,7 @@ export async function modelOperation(
         paths.layout,
         [
           ...(await installedModels(paths.layout)),
+          ...(await flmInstalled(d.options)),
           ...(await new ModelRegistry(paths.layout, 'mlx').list()).map((m) => ({
             id: m.id,
             name: String(m.yml.name ?? m.id),

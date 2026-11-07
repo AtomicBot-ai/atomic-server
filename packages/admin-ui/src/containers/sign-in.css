@@ -1,0 +1,28 @@
+.admin-sign-in {
+  --ew-bg: var(--background);
+  --ew-line: var(--border);
+  --ew-text: var(--foreground);
+  --ew-muted: var(--muted-foreground);
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: 24px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.admin-sign-in-card {
+  width: 100%;
+  max-width: 480px;
+  min-width: 0;
+}
+.admin-sign-in .settings-field-stacked {
+  margin: 0;
+}
+.admin-sign-in-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.admin-sign-in-actions button {
+  min-height: 36px;
+  font-size: 13px;
+}

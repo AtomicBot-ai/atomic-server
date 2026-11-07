@@ -35,10 +35,10 @@ it.each([
   expect(screen.getByLabelText('API key', { exact: false })).toHaveValue('fixture-key')
   expect(screen.getByLabelText('Model IDs', { exact: false })).toHaveValue('requested-model')
   expect(screen.getByLabelText('Base URL', { exact: false })).toHaveValue('https://api.openai.com/v1')
-  expect(screen.queryByText('✓ Connected')).not.toBeInTheDocument()
+  expect(screen.queryByText('Connected')).not.toBeInTheDocument()
   fail = false
   await userEvent.click(screen.getByRole('button', { name: 'Connect', exact: true }))
-  expect(await screen.findByText('✓ Connected')).toBeInTheDocument()
+  expect(await screen.findByText('Connected')).toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   expect(execute.mock.calls.filter(([name]) => name === 'cloud.connect')).toHaveLength(2)
 })
@@ -82,7 +82,7 @@ it('shows a provider-list failure and lets the user retry it', async () => {
   })
   render(<CloudProviders workspace={workspace} />)
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Server connection lost'))
-  expect(screen.queryByText('✓ Connected')).not.toBeInTheDocument()
+  expect(screen.queryByText('Connected')).not.toBeInTheDocument()
   fail = false
   await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
   await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())

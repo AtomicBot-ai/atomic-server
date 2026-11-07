@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/Card.tsx @ 5043013; adapted: accessible controls from the server configuration schema.
-import { useId } from 'react'
+import { SettingsField } from '../../SettingsForm'
 import { SETTING_LABELS } from '@contract'
 import { engineName } from '@view'
 import { text } from '../../types'
@@ -33,7 +33,6 @@ export function RuntimeSettingRow({
   disabled: boolean
   update: (value: unknown, arrayText?: string) => void
 }) {
-  const id = useId()
   const path = text(field.path)
   const label = SETTING_LABELS[path] ?? path.split('.').slice(1).join('.')
   const options = Array.isArray(field.values) ? field.values : []
@@ -41,62 +40,48 @@ export function RuntimeSettingRow({
   const hint = hints[path]
   const error = runtimeSettingError(field, value)
   const controlProps = {
-    id,
     disabled,
-    'aria-labelledby': `${id}-label`,
     'aria-invalid': Boolean(error),
-    'aria-describedby': [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined,
   }
   return (
-    <div className="settings-item">
-      <label htmlFor={id}>
-        <strong id={`${id}-label`}>{label}</strong>
-        {hint && <small id={`${id}-hint`}>{hint}</small>}
-      </label>
-      <div className="settings-item-control">
-        {options.length ? (
-          <select {...controlProps} value={text(value, '')} onChange={(e) => update(e.target.value)}>
-            {options.map((option) => (
-              <option key={text(option)} value={text(option)}>
-                {path === 'engines.default' ? engineName(text(option)) : text(option)}
-              </option>
-            ))}
-          </select>
-        ) : type === 'boolean' ? (
-          <input
-            {...controlProps}
-            type="checkbox"
-            role="switch"
-            checked={Boolean(value)}
-            onChange={(e) => update(e.target.checked)}
-          />
-        ) : (
-          <input
-            {...controlProps}
-            type={type === 'number' ? 'number' : /token|password/.test(path) ? 'password' : 'text'}
-            min={typeof field.min === 'number' ? field.min : undefined}
-            max={typeof field.max === 'number' ? field.max : undefined}
-            value={Array.isArray(value) ? (arrayText ?? value.join(', ')) : text(value, '')}
-            onWheel={type === 'number' ? (event) => event.currentTarget.blur() : undefined}
-            onChange={(e) =>
-              update(
-                Array.isArray(value)
-                  ? e.target.value
-                      .split(',')
-                      .map((item) => item.trim())
-                      .filter(Boolean)
-                  : e.target.value,
-                Array.isArray(value) ? e.target.value : undefined
-              )
-            }
-          />
-        )}
-        {error && (
-          <p id={`${id}-error`} className="ew-error" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
-    </div>
+    <SettingsField label={label} hint={hint} error={error}>
+      {options.length ? (
+        <select {...controlProps} value={text(value, '')} onChange={(e) => update(e.target.value)}>
+          {options.map((option) => (
+            <option key={text(option)} value={text(option)}>
+              {path === 'engines.default' ? engineName(text(option)) : text(option)}
+            </option>
+          ))}
+        </select>
+      ) : type === 'boolean' ? (
+        <input
+          {...controlProps}
+          type="checkbox"
+          role="switch"
+          checked={Boolean(value)}
+          onChange={(e) => update(e.target.checked)}
+        />
+      ) : (
+        <input
+          {...controlProps}
+          type={type === 'number' ? 'number' : /token|password/.test(path) ? 'password' : 'text'}
+          min={typeof field.min === 'number' ? field.min : undefined}
+          max={typeof field.max === 'number' ? field.max : undefined}
+          value={Array.isArray(value) ? (arrayText ?? value.join(', ')) : text(value, '')}
+          onWheel={type === 'number' ? (event) => event.currentTarget.blur() : undefined}
+          onChange={(e) =>
+            update(
+              Array.isArray(value)
+                ? e.target.value
+                    .split(',')
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                : e.target.value,
+              Array.isArray(value) ? e.target.value : undefined
+            )
+          }
+        />
+      )}
+    </SettingsField>
   )
 }

@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/Setup.tsx @ 5043013; adapted: real server operations and download readiness.
-import { downloadStopped } from '@view'
+import { connectionApiOperation, downloadStopped } from '@view'
 import { ConnectionHelp } from './ConnectionHelp'
 import { ConnectionModelPicker } from './ConnectionModelPicker'
 import { ConnectionModelFields } from './ConnectionModelFields'
@@ -13,11 +13,12 @@ import { useState } from 'react'
 import { CONNECTION_AGENTS, DEFAULT_API_PORT, PROFILE_AGENTS } from '@contract'
 import { useConnectionStep } from './useConnectionStep'
 import { useConnectionEscape } from './useConnectionEscape'
-import { Action, Copy, Field } from '../../Controls'
+import { Action, Copy } from '../../Controls'
 import { record, rows, text } from '../../types'
 import type { RecordValue } from '../../types'
 import type { ConnectionGuideProps } from './connection-guide-types'
 import { describeError } from '@/services/admin-api'
+import { ConnectionEndpoint } from './ConnectionEndpoint'
 import { ConnectionHeading } from './ConnectionHeading'
 
 export function ConnectionGuide({
@@ -81,7 +82,7 @@ export function ConnectionGuide({
       // The network the person chose (Remote access) stays; only the port is this guide's.
       const host = w.snapshot?.api.host || '127.0.0.1'
       await execute('config.update', { values: { 'api.port': Number(port) } })
-      await execute(w.snapshot?.api.running ? 'api.restart' : 'api.start', {
+      await execute(connectionApiOperation(w.snapshot?.api, { host, port: Number(port) }), {
         request: { host, port: Number(port) },
       })
       setStatus('Testing model response')
@@ -106,7 +107,7 @@ export function ConnectionGuide({
     setStep('review')
   }
   return (
-    <section ref={retryFocus.ref} className="connection-guide" aria-label="Server setup">
+    <section ref={retryFocus.ref} className="connection-guide settings-form" aria-label="Server setup">
       <ConnectionHeading
         workspace={w}
         step={step}
@@ -136,30 +137,7 @@ export function ConnectionGuide({
       )}
       {step === 'agent' && <AgentChoices more={more} toggle={() => setMore(!more)} select={chooseAgent} />}
       {step === 'endpoint' && (
-        <>
-          <div className="form-grid">
-            <Field label="Access">
-              <input
-                readOnly
-                value={
-                  w.snapshot?.api.host && w.snapshot.api.host !== '127.0.0.1'
-                    ? `Local network · ${w.snapshot.api.host}`
-                    : 'This device only · 127.0.0.1'
-                }
-              />
-            </Field>
-            <Field label="Server port">
-              <input
-                inputMode="numeric"
-                value={port}
-                aria-invalid={!validPort}
-                onChange={(e) => setPort(e.target.value)}
-              />
-            </Field>
-          </div>
-          {!validPort && <p role="alert">Choose a port between 1 and 65535.</p>}
-          <p>Enable network access later from Server configuration.</p>
-        </>
+        <ConnectionEndpoint host={w.snapshot?.api.host} port={port} valid={validPort} setPort={setPort} />
       )}
       {step === 'review' && (
         <div className="server-review-grid">
@@ -194,7 +172,12 @@ export function ConnectionGuide({
           <ConnectionReviewSummary
             agent={path === 'agent' ? name : undefined}
             endpoint={`http://127.0.0.1:${port}${w.snapshot?.api.prefix ?? '/v1'}`}
-            running={Boolean(w.snapshot?.api.running)}
+            restarting={
+              connectionApiOperation(w.snapshot?.api, {
+                host: w.snapshot?.api.host || '127.0.0.1',
+                port: Number(port),
+              }) === 'api.restart'
+            }
           />
         </div>
       )}

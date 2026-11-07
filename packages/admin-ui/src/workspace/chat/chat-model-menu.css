@@ -1,0 +1,203 @@
+.desktop-workspace .chat-model-menu {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  background: var(--ew-panel);
+  color: var(--ew-text);
+  border: 1px solid var(--ew-line);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px #0005;
+}
+.model-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 16px 8px;
+  flex-shrink: 0;
+}
+.chat-model-menu .model-picker-heading h2 {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+.model-picker-heading > button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: var(--ew-muted);
+  border: 0;
+  border-radius: 6px;
+}
+.model-picker-heading > button:hover {
+  background: var(--ew-raised);
+}
+.chat-model-menu .chat-model-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ew-muted);
+  margin: 0 16px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--ew-line);
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+.chat-model-menu .chat-model-search:focus-within {
+  outline: 2px solid var(--atomic-focus-ring);
+  outline-offset: 1px;
+}
+.chat-model-menu .chat-model-search input {
+  min-width: 0;
+  width: 100%;
+  color: var(--ew-text);
+  font-size: 13px;
+  line-height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  outline: 0;
+  box-shadow: none;
+  min-height: 20px;
+}
+.model-picker-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 8px;
+}
+.chat-model-menu .chat-model-options,
+.chat-model-menu .installed-load {
+  padding: 12px 0;
+}
+.chat-model-menu .installed-load {
+  border-top: 1px solid var(--ew-line);
+}
+.chat-model-menu h3 {
+  margin: 0 8px 6px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--ew-muted);
+}
+.chat-model-menu .model-picker-note {
+  margin: 0;
+  padding: 8px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ew-muted);
+}
+.chat-model-menu .chat-model-option {
+  display: flex;
+  border-radius: 7px;
+  align-items: stretch;
+}
+.chat-model-menu .chat-model-option button,
+.chat-model-menu .downloaded-model-row {
+  background: transparent;
+  border: 0;
+  color: var(--ew-text);
+  cursor: pointer;
+}
+.chat-model-menu .chat-model-option > button:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding: 10px 8px;
+}
+.chat-model-menu .downloaded-model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 10px 8px;
+  border-radius: 7px;
+  text-align: left;
+}
+.chat-model-menu .downloaded-model-row:hover,
+.chat-model-menu .chat-model-option:hover {
+  background: var(--ew-raised);
+}
+.chat-model-menu :is(.downloaded-model-row, .chat-model-option > button) > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.chat-model-menu :is(.downloaded-model-row, .chat-model-option) strong {
+  display: block;
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+}
+.chat-model-menu :is(.downloaded-model-row, .chat-model-option) small {
+  display: block;
+  font-size: 12px;
+  line-height: 18px;
+  margin-top: 2px;
+  color: var(--ew-muted);
+}
+.model-row-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ew-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chat-model-menu .chat-model-favorite {
+  flex-shrink: 0;
+  padding: 10px;
+  color: var(--ew-muted);
+}
+.chat-model-menu .model-picker-feedback {
+  padding: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.chat-model-menu .model-picker-feedback p {
+  margin: 0 0 8px;
+}
+.chat-model-menu .chat-model-manage {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 0;
+  border-top: 1px solid var(--ew-line);
+  background: transparent;
+  color: var(--ew-text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chat-model-menu button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.chat-model-menu button:focus-visible {
+  outline: 2px solid var(--atomic-focus-ring);
+  outline-offset: -2px;
+}
+
+@media (max-height: 420px) {
+  .desktop-workspace .chat-model-menu {
+    overflow-y: auto;
+  }
+  .chat-model-menu .model-picker-scroll {
+    overflow: visible;
+    flex-shrink: 0;
+  }
+}

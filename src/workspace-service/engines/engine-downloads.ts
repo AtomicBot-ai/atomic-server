@@ -130,19 +130,13 @@ export class EngineDownloads {
           throw new AtcError('ATC_USAGE', 'Choose an engine build with a version and variant.')
         target = { version: target['version'], variant: target['variant'] }
       }
-      const existing = [...this.jobs.values()].find(
-        (job) =>
-          job.engine === engine &&
-          this.runs.has(job.id) &&
-          job.target['version'] === target['version'] &&
-          job.target['variant'] === target['variant']
-      )
+      const matches = (job: EngineJob) =>
+        job.engine === engine &&
+        (kind === 'engine-build' ||
+          (job.target['version'] === target['version'] && job.target['variant'] === target['variant']))
+      const existing = [...this.jobs.values()].find((job) => matches(job) && this.runs.has(job.id))
       const stopped = [...this.jobs.values()].find(
-        (job) =>
-          job.engine === engine &&
-          ['failed', 'interrupted'].includes(job.stage) &&
-          job.target['version'] === target['version'] &&
-          job.target['variant'] === target['variant']
+        (job) => matches(job) && ['failed', 'interrupted'].includes(job.stage)
       )
       const now = this.now()
       const id = randomUUID()
@@ -225,6 +219,7 @@ export class EngineDownloads {
         job.engine === engine &&
         this.runs.has(job.id) &&
         (!target ||
+          engineKind(engine) === 'engine-build' ||
           (job.target['version'] === target['version'] && job.target['variant'] === target['variant']))
     )
     if (pending) {
@@ -232,7 +227,7 @@ export class EngineDownloads {
       if (pending.stage !== 'ready') fail(pending)
       return
     }
-    if (target) {
+    if (target && engineKind(engine) === 'llamacpp') {
       const result = await this.link.request<{ backends: Array<{ version: string; backend: string }> }>(
         'GET',
         `/backends/${engine}`

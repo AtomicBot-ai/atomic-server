@@ -36,7 +36,7 @@ export function Activity({ workspace: w }: { workspace: Workspace }) {
             <tbody>
               {s.requests.map((row) => (
                 <tr key={row.id}>
-                  <td>{new Date(row.finished_at).toLocaleTimeString()}</td>
+                  <td>{new Date(row.finished_at).toLocaleTimeString('en-US')}</td>
                   <td>{row.model}</td>
                   <td>{row.endpoint}</td>
                   <td>{text(row.status)}</td>

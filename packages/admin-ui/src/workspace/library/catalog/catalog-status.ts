@@ -1,7 +1,13 @@
 import { catalogModelMatches, localModelStatus } from '@view'
 import type { WorkspaceSnapshot } from '@contract'
 import type { RecordValue } from '../../types'
-import { modelCategory, modelFormat, modelId, modelProviders } from './catalog-models'
+import {
+  modelCategory,
+  modelFormat,
+  modelId,
+  modelProviders,
+  installedCatalogMatches,
+} from './catalog-models'
 
 export function catalogStatus(
   snapshot: WorkspaceSnapshot | null | undefined,
@@ -19,7 +25,7 @@ export function catalogStatus(
       typeof repository === 'string' ? repository : undefined
     )
   const files = installed.filter(
-    (row) => modelCategory(row) === category && matches(modelId(row), row.repository)
+    (row) => modelCategory(row) === category && installedCatalogMatches(row, model, snapshot?.setups)
   )
   const kind = category === 'text' ? 'chat' : ['image', 'video'].includes(category) ? 'image-video' : category
   if (!['chat', 'image-video', 'audio', 'embedding', 'decision'].includes(kind)) return ''

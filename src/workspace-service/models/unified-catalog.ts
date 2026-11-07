@@ -1,4 +1,5 @@
 /** One complete conf document, shared by every server-side collection adapter. */
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -31,7 +32,9 @@ export async function unifiedCatalog(
   force = false,
   url = ATOMIC_MODEL_CATALOG_URL
 ): Promise<UnifiedCatalogResult> {
-  const path = join(directory, 'atomic-model-catalog-v1.json')
+  const suffix =
+    url === ATOMIC_MODEL_CATALOG_URL ? '' : '-' + createHash('sha256').update(url).digest('hex').slice(0, 16)
+  const path = join(directory, `atomic-model-catalog-v1${suffix}.json`)
   const key = `${path}|${url}`
   const running = inFlight.get(key)
   if (running && !force) return running

@@ -1,0 +1,84 @@
+/* Secondary editors share field geometry without changing their owning workflows. */
+.desktop-workspace .settings-field-group {
+  min-width: 0;
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid var(--ew-line);
+  border-radius: 8px;
+}
+.desktop-workspace .settings-field-group > legend {
+  padding: 0 6px;
+  color: var(--ew-text);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.desktop-workspace .settings-field-group > p {
+  margin: 0 0 12px;
+  color: var(--ew-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.desktop-workspace .settings-field-group .nested-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.desktop-workspace .settings-field-group .form-grid {
+  gap: 12px;
+}
+.desktop-workspace .settings-field-group details > summary {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+  margin: 12px 0;
+}
+.desktop-workspace .chat-message.message-editing .message-content {
+  width: min(100%, 680px);
+  max-width: 100%;
+}
+.desktop-workspace .settings-form.message-edit-form {
+  gap: 12px;
+}
+.desktop-workspace .message-edit-form > .settings-field {
+  margin: 0;
+  padding: 0;
+}
+.desktop-workspace .message-edit-form > .ew-actions {
+  margin: 0;
+  flex-wrap: wrap;
+}
+.desktop-workspace .confirmation-dialog.settings-form {
+  width: min(480px, calc(100vw - 32px));
+  padding: 24px;
+}
+.desktop-workspace .confirmation-content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.desktop-workspace .confirmation-content > :is(p, .settings-field) {
+  margin: 0;
+}
+.desktop-workspace .media-layout.settings-form > .ew-panel {
+  margin: 0;
+  padding: 20px 24px;
+  min-width: 0;
+}
+.desktop-workspace .media-layout.settings-form > .ew-panel > details {
+  padding: 16px 0;
+  margin: 0 0 16px;
+  border-block: 1px solid var(--ew-line);
+}
+@media (max-width: 560px) {
+  .desktop-workspace .confirmation-dialog.settings-form,
+  .desktop-workspace .media-layout.settings-form > .ew-panel {
+    padding: 16px;
+  }
+}

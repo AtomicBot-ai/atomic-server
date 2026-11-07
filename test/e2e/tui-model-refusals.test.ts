@@ -1,5 +1,4 @@
-import { catalogFixture } from '../helpers/model-catalog-fixture.js'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { ATC } from '../helpers/binary.js'
@@ -19,8 +18,24 @@ it.skipIf(process.platform === 'win32' || !hasPython())(
       machine = await fakeManagedMachine(),
       hf = new FixtureHttpServer(),
       collector = await reportCollector()
-    const repository = 'fixture/incompatible-model'
+    const repository = 'fixture/bad-model'
     serveRepository(hf, repository, qwenFiles({ architectures: ['UnsupportedFixtureForCausalLM'] }))
+    const expand = new URLSearchParams()
+    for (const field of ['config', 'safetensors', 'downloads', 'likes', 'tags'])
+      expand.append('expand[]', field)
+    hf.files.set(`/api/models/${repository}?${expand}`, {
+      body: Buffer.from(
+        JSON.stringify({ id: repository, config: { architectures: ['UnsupportedFixtureForCausalLM'] } })
+      ),
+    })
+    const search = new URLSearchParams({
+      search: repository,
+      filter: 'safetensors',
+      limit: '50',
+      sort: 'downloads',
+    })
+    for (const [key, value] of expand) search.append(key, value)
+    hf.files.set(`/api/models?${search}`, { body: Buffer.from('[]') })
     const env = {
       ...process.env,
       ...machine.env,
@@ -35,16 +50,13 @@ it.skipIf(process.platform === 'win32' || !hasPython())(
     const run = (...args: string[]) =>
       runAtcAsync([...args, '--data-folder', tmp.paths.dataFolder, '--json'], { env })
     readyWorkspace(tmp.paths.dataFolder)
-    mkdirSync(tmp.paths.cacheDir, { recursive: true })
     writeFileSync(
-      join(tmp.paths.cacheDir, 'atomic-model-catalog-v1.json'),
+      join(tmp.paths.atcDir, 'tui-catalog.json'),
       JSON.stringify({
-        at: Date.now(),
-        catalog: catalogFixture({
-          'staff-picks': {
-            picks: [{ model_name: repository, title: 'Incompatible fixture', format: 'safetensors' }],
-          },
-        }),
+        libraryCategory: 'text',
+        libraryFormat: 'safetensors',
+        libraryQuery: repository,
+        catalogFilters: { engine: 'vllm' },
       })
     )
     try {
@@ -60,8 +72,8 @@ it.skipIf(process.platform === 'win32' || !hasPython())(
       const steps = [
         { wait: 'Agents & tools' },
         { type: '\u001b3' },
-        { wait: 'Incompatible fixture' },
-        { click: 'Incompatible fixture' },
+        { wait: repository },
+        { click: repository },
         { click: 'Download' },
         { wait: 'refused', fresh: true },
         { type: '\u001b1' },

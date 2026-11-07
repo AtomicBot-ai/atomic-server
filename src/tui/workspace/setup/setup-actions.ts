@@ -5,6 +5,7 @@ import type { WorkspaceController } from '../controller.js'
 import { explained } from '../../controller.js'
 import { engineSetupAction, isPathAction, pathKind } from './engine-setup.js'
 import { returnToConnection } from '../server/connection-model-return.js'
+import { setupEngineChoice } from './setup-engine-choice.js'
 const operations = new WeakMap<WorkspaceController, AbortController>()
 export async function setupAction(
   id: string,
@@ -138,13 +139,7 @@ export async function setupAction(
         Promise.all([c.setup.catalogs(), c.setup.engines(), c.setup.installed()]),
         20000
       )
-      const first =
-        catalogs.find((cat) => cat.provider === 'llamacpp-upstream' && cat.available.length) ??
-        catalogs.find((cat) => cat.available.length)
-      const build =
-        first?.available.find((b) => `${b.version}/${b.backend}` === first.recommended) ?? first?.available[0]
-      const engine =
-        view.engine || (first && build ? `${first.provider}|${build.version}|${build.backend}` : '')
+      const engine = setupEngineChoice(view.engine, catalogs)
       patch({ catalogs, registered, installed, engine })
       if (!operation.signal.aborted) focus(engine ? `setup-engine:${engine}` : 'setup-refresh')
     } else if (id.startsWith('setup-engine:')) {
@@ -154,9 +149,14 @@ export async function setupAction(
       const query = id === 'setup-catalog' ? '' : view.query
       patch({ stage: 'models', repository: '', files: [], query })
       const repositories = await wait(
-        c.hub(query, operation.signal, (rows) => {
-          if (!get().setup?.repository && get().setup?.query === query) patch({ repositories: rows })
-        }),
+        c.hub(
+          query,
+          operation.signal,
+          (rows) => {
+            if (!get().setup?.repository && get().setup?.query === query) patch({ repositories: rows })
+          },
+          view.engine
+        ),
         22000
       )
       patch({ repositories })

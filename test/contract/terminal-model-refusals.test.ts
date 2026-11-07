@@ -1,4 +1,6 @@
 import { createElement } from 'react'
+import { writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { render } from 'ink'
 import { expect, it, vi } from 'vitest'
 import { resolveConfig } from '../../src/config/index.js'
@@ -17,6 +19,10 @@ it.each(['refused', 'empty', 'failure'])(
       link = fakeCoreLink(),
       capture = vi.fn()
     readyWorkspace(tmp.paths.dataFolder)
+    await writeFile(
+      join(tmp.paths.atcDir, 'tui-catalog.json'),
+      JSON.stringify({ libraryCategory: 'text', libraryFormat: 'safetensors' })
+    )
     const execute = WorkspaceRuntime.prototype.execute
     const snapshot = vi.spyOn(WorkspaceRuntime.prototype, 'snapshot')
     const operations = vi.spyOn(WorkspaceRuntime.prototype, 'execute').mockImplementation(async function (
@@ -26,7 +32,14 @@ it.each(['refused', 'empty', 'failure'])(
     ) {
       if (name === 'models.catalog')
         return {
-          rows: [{ id: 'fixture/model', name: 'Fixture model', source: { format: 'safetensors' } }],
+          rows: [
+            {
+              id: 'fixture/model',
+              name: 'Fixture model',
+              category: 'text',
+              source: { format: 'safetensors' },
+            },
+          ],
         }
       if (name === 'models.check') {
         if (scenario === 'failure') throw new Error('Fixture model check failed.')

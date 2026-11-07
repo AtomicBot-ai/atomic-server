@@ -4,7 +4,8 @@ import type { FormEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { SettingsField } from '@/workspace/SettingsField'
+import './sign-in.css'
 import { useServiceHub } from '@/hooks/useServiceHub'
 import { describeError } from '@/services/admin-api'
 import { useStatusStore } from '@/stores/status-store'
@@ -39,8 +40,8 @@ export function SignIn({ refused = false }: SignInProps) {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background p-6 text-foreground">
-      <Card className="w-full max-w-md">
+    <div className="settings-surface admin-sign-in">
+      <Card className="admin-sign-in-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <KeyRound className="size-5" aria-hidden />
@@ -55,12 +56,9 @@ export function SignIn({ refused = false }: SignInProps) {
             </li>
             <li>Open the link it prints. It carries a one-time token that signs this browser in.</li>
           </ol>
-          <form onSubmit={submit} className="space-y-3">
-            <label htmlFor="admin-token" className="block text-muted-foreground">
-              Or paste the token here
-            </label>
-            <div className="flex gap-2">
-              <Input
+          <form onSubmit={submit} className="settings-form" aria-busy={busy || undefined}>
+            <SettingsField label="Or paste the token here" layout="stacked" error={error ?? undefined}>
+              <input
                 id="admin-token"
                 name="token"
                 autoComplete="off"
@@ -70,15 +68,12 @@ export function SignIn({ refused = false }: SignInProps) {
                 onChange={(event) => setToken(event.target.value)}
                 disabled={busy}
               />
+            </SettingsField>
+            <div className="admin-sign-in-actions">
               <Button type="submit" disabled={busy || !token.trim()}>
-                Sign in
+                {busy ? 'Signing in…' : 'Sign in'}
               </Button>
             </div>
-            {error ? (
-              <p role="alert" className="text-destructive">
-                {error}
-              </p>
-            ) : null}
           </form>
         </CardContent>
       </Card>

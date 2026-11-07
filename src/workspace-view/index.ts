@@ -1,6 +1,10 @@
 /** Browser-safe view selectors shared with the terminal. */
 export { downloadRows } from './downloads/downloads.js'
-export { localModelStatus, catalogModelMatches } from './catalog/local-model-status.js'
+export {
+  localModelStatus,
+  catalogModelMatches,
+  fastFlowLmFamilyMatches,
+} from './catalog/local-model-status.js'
 export type { LocalModelIdentity, ModelDeviceStatus } from './catalog/local-model-status.js'
 export { apiDownloadWait } from './setup/api-download-wait.js'
 export { inferenceReadiness, setupModelPending } from './setup/inference-readiness.js'
@@ -47,6 +51,7 @@ export {
   connectionModelState,
   serverPanelSelection,
 } from './setup/connection-model.js'
+export { connectionApiOperation } from './setup/connection-api.js'
 export {
   blockerLines,
   engineView,
@@ -137,4 +142,9 @@ export { engineStatus } from './engines/engine-status.js'
 export { settingValuesError } from './engines/settings-validation.js'
 
 export { apiPrefixError } from './api-prefix.js'
+export { onboardingModelMatchesEngine } from './setup/model-engine.js'
 export { conversationSearchText } from './chat/conversation-search.js'
+export { flmPreparationModel, currentFlmOperation, flmDriverSetupLines } from './engines/fastflowlm.js'
+export type { FlmPreparationView } from './engines/fastflowlm.js'
+
+export { engineVariantStatus } from './engines/variant-status.js'

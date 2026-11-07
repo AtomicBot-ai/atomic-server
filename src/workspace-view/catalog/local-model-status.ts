@@ -69,3 +69,17 @@ export function catalogModelMatches(
     return plan['model_id'] === candidate && (plan['repository'] === family || request['repo'] === family)
   })
 }
+
+/** FLM families are declared by exact variant IDs, never by a guessed suffix. */
+export function fastFlowLmFamilyMatches(
+  candidate: string,
+  provider: string,
+  family: string,
+  variants: unknown
+): boolean {
+  if (provider !== 'fastflowlm') return false
+  return (
+    candidate === family ||
+    (Array.isArray(variants) && variants.some((v) => v && typeof v === 'object' && v.id === candidate))
+  )
+}

@@ -1,0 +1,14 @@
+---
+date: 2026-11-06
+title: "Keep FastFlowLM model transfers and recovery in the server"
+---
+
+# 2026-11-06 — Keep FastFlowLM model transfers and recovery in the server
+
+- **Context:** FastFlowLM loads only complete, pinned native installations. The core owns compatibility, NPU preparation and the runtime; clients own model bytes. Downloads must survive a disconnected CLI or browser, and a replacement must not race a new model load.
+- **Decision:** All clients call the same workspace operations. A durable plan stores the complete catalog descriptor, source commits and hashes. The shared downloader writes into an isolated staging data layout. The exported core config builder and registry validate it; `model.yml` is written last. A separate filesystem journal obtains the core maintenance guard before publishing or removing a directory, retaining the previous installation until acceptance. Directory publication and rollback use the existing bounded filesystem retry for transient Windows sharing locks, without releasing maintenance early. Replaying the journal uses the same maintenance request ID, including a lost completion response. Catalog override URLs have separate caches so a production cache cannot silently replace local test inputs.
+- **Decision:** Preparation displays the core's real server account, launch mode, service, package pins and changes. Consent binds its digest and revision. The foreground CLI and background server use the existing elevator and the core's FLM request/receipt helpers. A private request written after a successful claim records local authorization. An already claimed snapshot without that record never launches a helper; it waits for the receipt or confirmed reboot recovery. An exclusive launch marker prevents a second privileged transaction; a recovered result can still be posted after cancellation. Manual elevation instructions are visible to all clients. The operation persists independently of a UI connection.
+- **Consequences:** A replacement temporarily needs space for old and new files. Partial transfers remain resumable. UI listing reads completion metadata; full verification remains at installation and core load, avoiding a client-side hash of all weights on every refresh. Windows/Linux NPU acceptance and a published core package remain separate release gates, not substitutes for fixture tests. Production environment manifests currently contain no qualified automatic installation recipes.
+- **Alternatives:** Direct writes into the live model folder would expose partial files; a core model downloader would violate ownership. Reconstructing a plan on Resume could silently change commits. Running a second helper after restart could repeat an unfinished package transaction. None are used.
+- **Owner:** team.
+- **Links:** [FastFlowLM server guide](../fastflowlm.md), OpenSpec `add-fastflowlm-runtime`, tasks 7.1–7.9.

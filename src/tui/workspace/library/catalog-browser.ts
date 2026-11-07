@@ -1,6 +1,13 @@
+import { variantNext } from './catalog-variants.js'
 import { drawCatalogDownloadRows } from './catalog-download-rows.js'
 import { downloadCardHeight, drawDownloadCard } from '../setup/download-card.js'
-import { attributionOf, downloadRows, downloadOwner, downloadStopped } from '../../../workspace-view/index.js'
+import {
+  CATALOG_FORMAT_LABELS,
+  attributionOf,
+  downloadRows,
+  downloadOwner,
+  downloadStopped,
+} from '../../../workspace-view/index.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text, wrap, rule } from '../draw/canvas.js'
 import { fieldControl, scrollTrack } from '../draw/controls.js'
@@ -10,7 +17,7 @@ import { catalogWindow } from './catalog-window.js'
 import { catalogIndexes } from './catalog-filters.js'
 import { CATEGORY_NAMES } from './catalog-menu.js'
 import { catalogColumns, drawCatalogColumns, drawCatalogMetadata } from './catalog-table.js'
-import { modelJob, modelInstalled, catalogDeviceStatus } from './model-job.js'
+import { modelJob, modelInstalled, catalogDeviceStatus, matchesCatalogInstallation } from './model-job.js'
 import { record } from './library-model.js'
 
 export function drawCatalogBrowser(
@@ -36,7 +43,7 @@ export function drawCatalogBrowser(
       ? [
           [
             'library-filters',
-            `Filters${[s.catalogFilters.engine, s.catalogFilters.downloaded, s.catalogFilters.uncensored, s.catalogFilters.liked].filter(Boolean).length ? ' *' : ''}`,
+            `Filters: ${CATALOG_FORMAT_LABELS[s.libraryFormat]}${[s.catalogFilters.engine, s.catalogFilters.downloaded, s.catalogFilters.uncensored, s.catalogFilters.liked].filter(Boolean).length ? ' *' : ''}`,
             'Engine, format and model filters',
           ],
           ['catalog-sort', 'Sort v', 'Sort models'],
@@ -169,7 +176,16 @@ export function drawCatalogBrowser(
     rowY += rowHeight
     if (!open) return
     const available = bottom - rowY,
-      detail = wrap(model.description || model.id, width - 4)
+      detail = wrap(
+        String(
+          (model.source?.['format'] === 'fastflowlm'
+            ? variantNext(model.source, s.catalogVariant).variant?.['summary']
+            : '') ||
+            model.description ||
+            model.id
+        ),
+        width - 4
+      )
     const job = modelJob(s, model.id)
     if (job && job['stage'] !== 'ready' && available < downloadCardHeight(c.height)) {
       const transfer = downloadRows(s.workspace?.setups ?? [], s.workspace?.downloads ?? []).find(
@@ -199,8 +215,9 @@ export function drawCatalogBrowser(
     const ready = job?.['stage'] === 'ready',
       loaded = s.installed.find(
         (item) =>
-          (model.source?.['engine'] !== 'geniex' || item.provider === 'geniex') &&
-          (item.id === model.id ||
+          (!['geniex', 'fastflowlm'].includes(String(model.source?.['engine'])) ||
+            item.provider === model.source?.['engine']) &&
+          (matchesCatalogInstallation(model, item, s.workspace?.setups) ||
             item.id === record(job?.['plan'])['variant_id'] ||
             item.id === record(job?.['plan'])['model_id'])
       )
@@ -234,9 +251,11 @@ export function drawCatalogBrowser(
         c,
         mediaReady
           ? `media-delete:${job?.['id']}`
-          : loaded!.store === 'geniex'
-            ? `geniex-delete:${encodeURIComponent(loaded!.id)}`
-            : `installed-delete:${encodeURIComponent(loaded!.id)}`,
+          : loaded!.store === 'fastflowlm'
+            ? `fastflowlm-delete:${encodeURIComponent(loaded!.id)}`
+            : loaded!.store === 'geniex'
+              ? `geniex-delete:${encodeURIComponent(loaded!.id)}`
+              : `installed-delete:${encodeURIComponent(loaded!.id)}`,
         x + 17,
         controlY,
         'X Delete',

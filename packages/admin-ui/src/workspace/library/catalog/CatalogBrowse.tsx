@@ -9,6 +9,7 @@ import { CatalogMedia } from './CatalogMedia'
 import { CatalogTable } from './CatalogTable'
 import {
   installedModels,
+  installedCatalogMatches,
   modelCategory,
   modelFormat,
   modelId,
@@ -20,7 +21,10 @@ import { CatalogRuntimeOptions } from './CatalogRuntimeOptions'
 import type { CatalogFormat } from './catalog-data'
 import { CatalogToolbar } from './CatalogToolbar'
 import { initialCatalogFilters } from './catalog-models'
-import { catalogModelMatches, matchesEngineFilter, mentionsUncensored, modelEngines, toggleLike } from '@view'
+import { matchesEngineFilter, mentionsUncensored, modelEngines, toggleLike } from '@view'
+import { watchSharedRead } from '../../watch-shared-read'
+import { readInstalledModels } from './installed-model-read'
+import type { CatalogFilters } from './catalog-models'
 import { catalogStatus } from './catalog-status'
 import './catalog-desktop.css'
 export function CatalogBrowse({
@@ -43,9 +47,17 @@ export function CatalogBrowse({
   onStarted,
   onEngine,
   engine,
+  filters: controlledFilters,
+  onFilters,
+  sort: controlledSort,
+  onSort,
 }: {
   /** The engine filter it opens with (Server → Browse models). */
   engine?: string
+  filters?: CatalogFilters
+  onFilters?: (filters: CatalogFilters) => void
+  sort?: string
+  onSort?: (sort: string) => void
   managedRepository?: string
   onStarted?: () => void
   onEngine?: (engine: string) => void
@@ -65,11 +77,14 @@ export function CatalogBrowse({
   importFile: () => void
   onNoGguf?: (repository: string) => void
 }) {
-  const [textFilters, setFilters] = useState(() =>
+  const [localFilters, setLocalFilters] = useState(() =>
     engine ? { ...initialCatalogFilters, engine } : initialCatalogFilters
   )
-  const filters = category === 'text' ? textFilters : initialCatalogFilters
-  const [sort, setSort] = useState('recommended')
+  const filters = category === 'text' ? (controlledFilters ?? localFilters) : initialCatalogFilters
+  const setFilters = onFilters ?? setLocalFilters
+  const [localSort, setLocalSort] = useState('recommended')
+  const sort = controlledSort ?? localSort
+  const setSort = onSort ?? setLocalSort
   const [expanded, setExpanded] = useState('')
   const [liked, setLiked] = useState<string[]>(() => {
     try {
@@ -81,29 +96,26 @@ export function CatalogBrowse({
   const [revision, setRevision] = useState(0)
   const [installed, setInstalled] = useState<RecordValue[]>([])
   useEffect(() => {
-    let live = true
-    void Promise.all([execute('models.installed'), execute('artifacts.list')])
-      .then(([chat, media]) => {
-        if (live) setInstalled(installedModels(chat, media))
-      })
-      .catch(() => {})
-    return () => {
-      live = false
-    }
-    // A new snapshot object arrives every poll; only its revision says something changed.
-  }, [execute, catalog, revision, workspace?.snapshot?.captured_at])
+    let changed = revision > 0
+    return watchSharedRead(
+      () => {
+        const force = changed
+        changed = false
+        return readInstalledModels(execute, force)
+      },
+      ({ chat, media }) => setInstalled(installedModels(chat, media)),
+      () => {}
+    )
+  }, [execute, revision])
   const idOf = modelId
-  const repoOf = (m: RecordValue) => (typeof m.repository === 'string' ? m.repository : undefined)
   const isInstalled = (id: string) =>
-    installed.some((m) => catalogModelMatches(idOf(m), id, undefined, repoOf(m)))
+    installed.some((m) => installedCatalogMatches(m, catalog.find((row) => idOf(row) === id) ?? { id }))
   const deviceStatus = (model: RecordValue) =>
     catalogStatus(workspace?.snapshot, model, installed, category, filters.engine)
   const available = [
     ...catalog,
     ...installed.filter(
-      (m) =>
-        !catalog.some((c) => catalogModelMatches(idOf(m), idOf(c), undefined, repoOf(m))) &&
-        modelCategory(m) === category
+      (m) => !catalog.some((c) => installedCatalogMatches(m, c)) && modelCategory(m) === category
     ),
   ]
   const visible = available
@@ -111,7 +123,12 @@ export function CatalogBrowse({
       const id = idOf(m)
       const engines = modelEngines(modelProviders(m), modelFormat(m), id)
       return (
-        JSON.stringify(m).toLowerCase().includes(query.toLowerCase()) &&
+        ((category === 'text' && catalog.includes(m)) ||
+          query
+            .toLowerCase()
+            .trim()
+            .split(/\s+/)
+            .every((word) => JSON.stringify(m).toLowerCase().includes(word))) &&
         matchesEngineFilter(filters.engine, engines) &&
         (!filters.liked || liked.includes(id)) &&
         (!filters.downloaded || isInstalled(id)) &&
@@ -138,7 +155,7 @@ export function CatalogBrowse({
         <InstalledModels
           compact
           workspace={workspace}
-          installed={installed.filter((m) => catalogModelMatches(idOf(m), idOf(model), undefined, repoOf(m)))}
+          installed={installed.filter((m) => installedCatalogMatches(m, model))}
           loading={false}
           browse={() => {}}
           openCommand={importFile}
@@ -147,7 +164,7 @@ export function CatalogBrowse({
       ) : isInstalled(idOf(model)) ? (
         <span>Downloaded</span>
       ) : workspace &&
-        (['safetensors', 'foundry', 'litert', 'geniex'].includes(modelFormat(model)) ||
+        (['safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(modelFormat(model)) ||
           managedRepository === idOf(model)) ? (
         <CatalogRuntimeOptions workspace={workspace} model={model} onStarted={onStarted} />
       ) : (

@@ -84,7 +84,10 @@ it('invalidates pending work when the parent changes the active tab', async () =
   const { workspace } = workspaceFixture({
     ...answers,
     'models.catalog': [],
-    'models.search': () => search.promise,
+    'models.search': vi
+      .fn()
+      .mockImplementationOnce(() => search.promise)
+      .mockResolvedValue({ rows: [] }),
   })
   const view = render(<Catalog section="catalog" workspace={workspace} openCommand={vi.fn()} />)
   await userEvent.type(screen.getByLabelText('Search for models'), 'old{Enter}')

@@ -1,3 +1,4 @@
+import { engineVariantStatus } from './variant-status.js'
 import { describe, expect, it } from 'vitest'
 import type { FoundryAcceleratorsView } from '../../contract/index.js'
 import { acceleratorLines, foundryVerdictText, prepareResultLines, variantLabel } from './foundry.js'
@@ -160,4 +161,13 @@ describe('foundryVerdictText', () => {
     ],
     [{ verdict: 'platform-unsupported', reason: 'not here' }, 'platform-unsupported — not here'],
   ])('%j', (v, text) => expect(foundryVerdictText(v)).toBe(text))
+})
+
+it.each([
+  ['ok', 'Ready'],
+  ['accelerator-not-prepared', 'Needs preparation'],
+  ['engine-not-installed', 'Install engine first'],
+  ['accelerator-unavailable', 'Unavailable on this device'],
+])('labels variant readiness %s without diagnostic codes', (verdict, label) => {
+  expect(engineVariantStatus(verdict)).toBe(label)
 })

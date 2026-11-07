@@ -7,10 +7,12 @@ import type { AgentHost, AgentLaunch } from '../agent-launch/index.js'
 import { runAgent } from '../agent-launch/index.js'
 import { WorkspaceApp } from './workspace/index.js'
 import type { Page } from './workspace/index.js'
+import type { WorkspaceState } from './workspace/state.js'
 import { oneLine } from './controller.js'
 import type { TuiDeps } from './controller.js'
 import type { TabId } from './state.js'
 export interface RunTuiOptions {
+  authorizeHostStep?: (operation: string) => Promise<void>
   terminal: TerminalStreams
   deps: TuiDeps
   screen: TabId | Page | undefined
@@ -48,17 +50,24 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
     signalled = false,
     showIntro = true,
     message = options.notice ?? ''
+  let resume: WorkspaceState | undefined
   void options.waitForShutdown(async () => {
     signalled = true
     instance?.unmount()
   })
   while (!signalled) {
     let handoff: AgentLaunch | undefined
+    let hostStep: string | undefined
     const write = (value: string) => {
       terminal.stdout.write(value)
     }
     instance = render(
       <WorkspaceApp
+        {...(resume ? { initialState: resume } : {})}
+        onHostStep={(operation, state) => {
+          hostStep = operation
+          resume = state
+        }}
         showIntro={showIntro}
         deps={workspaceDeps}
         root={options.root}
@@ -86,7 +95,19 @@ export async function runTui(options: RunTuiOptions): Promise<number> {
     } finally {
       terminal.stdout.write('\u001b[?1000l\u001b[?1003l\u001b[?1006l')
     }
-    if (!handoff || signalled) break
+    if (signalled) break
+    if (hostStep) {
+      showIntro = false
+      try {
+        if (!options.authorizeHostStep) throw new Error('Host authorization is unavailable in this terminal.')
+        await options.authorizeHostStep(hostStep)
+      } catch (error) {
+        if (resume) resume = { ...resume, message: oneLine(error) }
+      }
+      continue
+    }
+    if (!handoff) break
+    resume = undefined
     showIntro = false
     try {
       await (options.launchAgent ?? runAgent)(handoff)

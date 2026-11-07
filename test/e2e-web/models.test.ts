@@ -51,7 +51,8 @@ it('lists LiteRT-LM families with their variants inline and opens the engine’s
   await formats.getByRole('radio', { name: 'LiteRT-LM', exact: true }).check()
   await page.keyboard.press('Escape')
   await page.getByText('Gemma 4 E4B', { exact: true }).first().click()
-  await expect.poll(() => page.getByLabel('Variant').inputValue()).toBe('gemma-4-e4b-gpu')
+  const devices = page.getByRole('group', { name: 'Run on' })
+  await expect.poll(() => devices.getByRole('radio', { name: /^GPU\b/ }).isChecked()).toBe(true)
   await page.getByRole('button', { name: 'Install LiteRT-LM' }).click()
   await expect.poll(() => page.getByRole('dialog', { name: 'LiteRT-LM' }).isVisible()).toBe(true)
   await page.getByRole('dialog', { name: 'LiteRT-LM' }).getByRole('button', { name: 'Close' }).click()
@@ -60,8 +61,7 @@ it('lists LiteRT-LM families with their variants inline and opens the engine’s
 it('shows LiteRT-LM’s own controls inside its Engine settings, without a build install around openvino', async () => {
   const page = s.page
   await page.getByRole('button', { name: 'Inference engines' }).click()
-  const card = page.getByRole('heading', { name: 'LiteRT-LM', level: 2 }).locator('xpath=..')
-  await card.getByRole('button', { name: 'Engine settings' }).click()
+  await page.getByRole('button', { name: 'LiteRT-LM', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'litert-lm settings' })
   await expect.poll(() => dialog.getByRole('region', { name: 'LiteRT-LM' }).isVisible()).toBe(true)
   expect(await dialog.getByRole('button', { name: 'Install latest build' }).count()).toBe(0)
@@ -81,22 +81,17 @@ it('asks before the command dock runs a connector program on the server’s host
   expect(await confirm.count()).toBe(0)
 })
 
-it('keeps the engine settings note below what comes before it, not pulled up onto a button', async () => {
-  // `.ew-modal > .ew-muted` pulls a dialog's subtitle up under its heading (-5px); the note after an
-  // engine's builds and setup is no subtitle, and it climbed onto SGLang's "Agree and install".
+it('keeps the engine settings note separated from the tab navigation', async () => {
   const page = s.page
   await page.getByRole('button', { name: 'Inference engines' }).click()
-  const card = page.getByRole('heading', { name: 'llama.cpp', level: 2, exact: true }).locator('xpath=..')
-  await card.getByRole('button', { name: 'Engine settings' }).click()
+  await page.getByRole('button', { name: 'llama.cpp', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'llamacpp-upstream settings' })
+  await dialog.getByRole('tab', { name: 'Settings', exact: true }).click()
   const note = dialog.getByText('Settings apply on the next model load.')
-  const gap = await note.evaluate((p) => {
-    type Box = { getBoundingClientRect(): { top: number; bottom: number } }
-    const before = (p as unknown as { previousElementSibling: Box | null }).previousElementSibling
-    return before
-      ? (p as unknown as Box).getBoundingClientRect().top - before.getBoundingClientRect().bottom
-      : null
-  })
-  expect(gap).toBeGreaterThanOrEqual(8)
+  const tabs = await dialog.getByRole('tablist', { name: 'Engine sections' }).boundingBox()
+  const bounds = await note.boundingBox()
+  expect(tabs).not.toBeNull()
+  expect(bounds).not.toBeNull()
+  expect(bounds!.y - (tabs!.y + tabs!.height)).toBeGreaterThanOrEqual(8)
   await dialog.getByRole('button', { name: 'Close' }).first().click()
 })

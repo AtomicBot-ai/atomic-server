@@ -95,7 +95,7 @@ async function chooseImport(s: ReturnType<typeof useChatSession>) {
   })
   await userEvent.upload(input, file)
   await screen.findByRole('dialog', { name: 'Import 1 conversation?' })
-  return input
+  return screen.getByRole('button', { name: 'Choose file Import conversations (JSON / JSONL)' })
 }
 
 it('Escape cancels an import before mutation and returns focus to the file control', async () => {

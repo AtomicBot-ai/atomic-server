@@ -1,3 +1,4 @@
+import { catalogModelMatches, fastFlowLmFamilyMatches } from '@view'
 import { record, rows, text } from '../../types'
 import type { RecordValue } from '../../types'
 
@@ -42,6 +43,7 @@ export function modelFormat(model: RecordValue): string {
   const providers = modelProviders(model)
   if (providers.includes('mlx')) return 'mlx'
   if (providers.includes('foundry-local')) return 'foundry'
+  if (providers.includes('fastflowlm')) return 'fastflowlm'
   if (providers.includes('geniex')) return 'geniex'
   if (providers.includes('litert-lm')) return 'litert'
   if (model.store === 'managed' || providers.some((p) => ['vllm', 'sglang', 'tensorrt-llm'].includes(p)))
@@ -78,4 +80,24 @@ export function modelLikes(value: string | null): string[] {
   } catch {
     return []
   }
+}
+
+export function installedCatalogMatches(
+  installed: RecordValue,
+  model: RecordValue,
+  setups: unknown[] = []
+): boolean {
+  if (modelFormat(model) === 'fastflowlm')
+    return fastFlowLmFamilyMatches(
+      modelId(installed),
+      modelProviders(installed).includes('fastflowlm') ? 'fastflowlm' : '',
+      modelId(model),
+      record(model.fastflowlm).variants
+    )
+  return catalogModelMatches(
+    modelId(installed),
+    modelId(model),
+    setups,
+    typeof installed.repository === 'string' ? installed.repository : undefined
+  )
 }

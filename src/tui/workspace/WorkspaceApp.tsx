@@ -25,6 +25,8 @@ import { activate } from './actions.js'
 import { CanvasRow } from './draw/CanvasRow.js'
 import { captureFailure } from '../../telemetry/index.js'
 export interface WorkspaceProps {
+  initialState?: WorkspaceState
+  onHostStep?: (operation: string, state: WorkspaceState) => void
   showIntro?: boolean
   onLaunch?: (launch: AgentLaunch) => void
   initialMessage?: string
@@ -37,15 +39,22 @@ export interface WorkspaceProps {
 }
 export function WorkspaceApp(props: WorkspaceProps) {
   const [intro, setIntro] = useState(props.showIntro ?? true)
-  const [resume, setResume] = useState<WorkspaceState | null>(null)
+  const [resume, setResume] = useState<WorkspaceState | null>(props.initialState ?? null)
+  const [chooseEngine, setChooseEngine] = useState(false)
   return intro ? (
-    <IntroScreen {...props} forceWelcome={resume !== null} onContinue={() => setIntro(false)} />
+    <IntroScreen
+      {...props}
+      forceWelcome={resume !== null}
+      chooseEngine={chooseEngine}
+      onContinue={() => setIntro(false)}
+    />
   ) : (
     <WorkspaceContent
       {...props}
       resume={resume}
-      onIntro={(state) => {
+      onIntro={(state, choose = false) => {
         setResume(state)
+        setChooseEngine(choose)
         setIntro(true)
       }}
     />
@@ -53,16 +62,17 @@ export function WorkspaceApp(props: WorkspaceProps) {
 }
 type ContentProps = WorkspaceProps & {
   resume: WorkspaceState | null
-  onIntro: (state: WorkspaceState) => void
+  onIntro: (state: WorkspaceState, chooseEngine?: boolean) => void
 }
 function WorkspaceContent(props: ContentProps) {
-  const [state, setState] = useState(
-      () =>
-        props.resume ?? {
-          ...createWorkspace(props.initialPage),
-          message: props.initialMessage ?? '',
-          commands: props.root ? commandRows(props.root) : [],
-        }
+  const [state, setState] = useState(() =>
+      props.resume
+        ? { ...props.resume, ready: false }
+        : {
+            ...createWorkspace(props.initialPage),
+            message: props.initialMessage ?? '',
+            commands: props.root ? commandRows(props.root) : [],
+          }
     ),
     [seconds, setSeconds] = useState(0)
   const latest = useRef(state),
@@ -102,6 +112,13 @@ function WorkspaceContent(props: ContentProps) {
       .then((saved) => {
         if (!live) return
         if (!resume) patch(saved)
+        else
+          patch({
+            ready: true,
+            ...(resume.firstRun === 'model' && saved.engine !== resume.engine
+              ? { engine: saved.engine ?? '', setup: null, firstModelChoice: '', page: 'welcome' as const }
+              : {}),
+          })
         if (saved.setup)
           void c.setup.resume().catch((e) => {
             captureFailure(deps.base.errors, e, { component: 'tui', operation: 'setup.resume' })
@@ -141,6 +158,10 @@ function WorkspaceContent(props: ContentProps) {
   const frame = workspaceFrame(state, columns, rows, seconds, 'fangs', downloadHighlight)
   const { send, cancel } = turnActions(latest, controller, epoch, update, deps.base.errors)
   const context = () => ({
+    hostStep: (operation: string) => {
+      props.onHostStep?.(operation, latest.current)
+      exit()
+    },
     handoff: (launch: AgentLaunch) => {
       props.onLaunch?.(launch)
       exit()
@@ -154,6 +175,25 @@ function WorkspaceContent(props: ContentProps) {
       copyWorkspaceText(value, deps.base.copyText, write, (message) => patch({ message })),
   })
   const run = (id: string) => {
+    const current = latest.current
+    if (
+      id === 'close' &&
+      current.overlay === 'engine-panel' &&
+      current.firstRun === 'model' &&
+      current.setup?.stage === 'engine'
+    )
+      return props.onIntro(
+        {
+          ...current,
+          page: 'welcome',
+          setup: null,
+          overlay: null,
+          enginePanel: null,
+          edit: '',
+          focus: 'hosting',
+        },
+        true
+      )
     if (id === 'first-intro') return props.onIntro(latest.current)
     if (!controller.current || (latest.current.busy && id === 'refresh-models')) return
     void activate(id, context()).catch((e) => {

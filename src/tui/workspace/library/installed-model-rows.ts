@@ -8,9 +8,11 @@ export function installedModelRows(s: WorkspaceState) {
     ...s.installed.map((model, index) => ({
       id: `installed:${index}`,
       remove:
-        model.store === 'geniex'
-          ? `geniex-delete:${encodeURIComponent(model.id)}`
-          : `installed-delete:${encodeURIComponent(model.id)}`,
+        model.store === 'fastflowlm'
+          ? `fastflowlm-delete:${encodeURIComponent(model.id)}`
+          : model.store === 'geniex'
+            ? `geniex-delete:${encodeURIComponent(model.id)}`
+            : `installed-delete:${encodeURIComponent(model.id)}`,
       name: `${model.name || model.id}${model.providers?.length ? '  ' + model.providers.join(', ') : ''}`,
       status: localModelStatus(
         s.workspace,

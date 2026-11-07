@@ -1,11 +1,13 @@
-// Lifted from Atomic-Chat/web-app/src/containers/hub/MediaHub.tsx + MediaFamilyRow.tsx @ 5043013; adapted: live server artifacts.
-import type { ReactNode } from 'react'
+// Lifted from Atomic-Chat/web-app/src/containers/hub/MediaHub.tsx + MediaFamilyRow.tsx @ 5043013; adapted: live server artifacts and compact accessible model cards.
+import { useId, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { text } from '../../types'
 import type { RecordValue } from '../../types'
-import { attributionOf } from '@view'
+import { attributionOf, engineName } from '@view'
 import { ModelMark } from './ModelMark'
-import { modelId } from './catalog-models'
+import { catalogDownloadOptions } from './catalog-download-options'
+import './catalog-media.css'
+import { modelId, modelProviders } from './catalog-models'
 export function CatalogMedia({
   models,
   expanded,
@@ -21,37 +23,64 @@ export function CatalogMedia({
   deviceStatus?: (model: RecordValue) => string
   detail: (model: RecordValue) => ReactNode
 }) {
+  const panelId = useId()
   return (
     <div className="hub-media-list">
       {[true, false].map((installed) => {
         const entries = models.filter((m) => isInstalled(modelId(m)) === installed)
         return entries.length ? (
           <section key={String(installed)}>
-            <h2>{installed ? 'Installed' : 'Available'}</h2>
-            {entries.map((model) => {
+            <div className="hub-media-heading">
+              <h2>{installed ? 'Installed' : 'Available'}</h2>
+              <span>{entries.length} models</span>
+            </div>
+            {entries.map((model, index) => {
               const id = modelId(model),
                 open = id === expanded,
+                detailsId = `${panelId}-${installed}-${index}`,
+                count = catalogDownloadOptions(model).length,
                 status = deviceStatus?.(model) || (installed ? 'Downloaded' : '')
               return (
-                <article className="hub-media-family" key={id}>
+                <article className="hub-media-family" data-expanded={open} key={id}>
                   <button
                     className="hub-model-disclosure"
                     aria-label={text(model.title ?? model.name, id)}
+                    id={`${detailsId}-trigger`}
+                    aria-controls={open ? detailsId : undefined}
                     aria-expanded={open}
                     onClick={() => onExpand(open ? '' : id)}
                   >
                     <ModelMark model={model} />
-                    <span>
+                    <span className="hub-media-copy">
                       <strong>{text(model.title ?? model.name, id)}</strong>
-                      <small>{text(model.description ?? model.summary, '')}</small>
+                      <small className="hub-media-description">
+                        {text(model.description ?? model.summary, '')}
+                      </small>
                       {attributionOf(model) && <small>{attributionOf(model)}</small>}
-                      {status && <small data-model-status={status}>{status}</small>}
+                      <span className="hub-media-meta">
+                        {modelProviders(model).map((provider) => (
+                          <span key={provider}>{engineName(provider)}</span>
+                        ))}
+                        <span>
+                          {count} {count === 1 ? 'variant' : 'variants'}
+                        </span>
+                        {status && <span data-model-status={status}>{status}</span>}
+                      </span>
                     </span>
                     <span className="hub-model-chevron">
                       {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </span>
                   </button>
-                  {open && <div className="hub-model-detail">{detail(model)}</div>}
+                  {open && (
+                    <div
+                      id={detailsId}
+                      role="region"
+                      aria-labelledby={`${detailsId}-trigger`}
+                      className="hub-model-detail"
+                    >
+                      {detail(model)}
+                    </div>
+                  )}
                 </article>
               )
             })}

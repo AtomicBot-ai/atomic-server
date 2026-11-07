@@ -106,10 +106,10 @@ describe.skipIf(process.platform === 'win32' || !hasPython())('terminal editors 
       runPty(
         [
           { wait: 'Agents & tools' },
+          { resize: [40, 120] },
           { click: 'Playground' },
           { click: 'Choose model' },
-          { type: '\u001b[B' },
-          { type: '\u001b[B' },
+          { wait: 'Choose a model' },
           { click: 'Connect an endpoint' },
           { wait: 'Connect a model endpoint' },
           { type: '\u0015' },

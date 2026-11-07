@@ -24,7 +24,7 @@ it('keeps custom endpoints usable after cancel, successful checking, edit and ad
   await userEvent.type(screen.getByLabelText('API key'), 'secret-only-test')
   await userEvent.type(screen.getByLabelText(/Model IDs/), 'model-one')
   await userEvent.click(screen.getByRole('button', { name: 'Connect', exact: true }))
-  expect(await screen.findByText('✓ Connected')).toBeInTheDocument()
+  expect(await screen.findByText('Connected')).toBeInTheDocument()
   expect(screen.getByText('https://provider.example/v1')).toBeInTheDocument()
   expect(screen.queryByDisplayValue('secret-only-test')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Edit connection' }))

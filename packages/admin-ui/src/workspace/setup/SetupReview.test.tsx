@@ -32,7 +32,7 @@ const plan = {
   verdict: ok,
 }
 
-function review(answers: Record<string, unknown>) {
+function review(answers: Record<string, unknown>, engine = 'vllm') {
   const { workspace, execute } = workspaceFixture(answers)
   const onStarted = vi.fn(),
     onEngine = vi.fn()
@@ -41,7 +41,7 @@ function review(answers: Record<string, unknown>) {
       workspace={workspace}
       model={{ id: REPO, name: 'Qwen 2B' }}
       category="text"
-      engine="vllm"
+      engine={engine}
       technical={false}
       onClose={vi.fn()}
       onStarted={onStarted}
@@ -50,6 +50,42 @@ function review(answers: Record<string, unknown>) {
   )
   return { execute, onStarted, onEngine }
 }
+
+it.each(['sglang', 'tensorrt-llm'])('keeps the selected %s when vLLM is also installed', async (engine) => {
+  const { execute } = review(
+    {
+      'models.check': { repository: REPO, verdicts: [ok, { ...ok, engine }] },
+      'managed.plan': { ...plan, engine },
+      'managed.install': { id: 'job' },
+    },
+    engine
+  )
+  await userEvent.click(await screen.findByRole('button', { name: 'Download' }))
+  await waitFor(() => expect(execute).toHaveBeenCalledWith('managed.plan', { repository: REPO, engine }))
+})
+
+it('explains an unavailable selected engine without silently switching to an installed alternative', async () => {
+  review(
+    {
+      'models.check': {
+        repository: REPO,
+        verdicts: [
+          ok,
+          {
+            ...ok,
+            engine: 'sglang',
+            compatibility: null,
+            error: { code: 'MODEL_INCOMPATIBLE', message: 'Unsupported architecture' },
+          },
+        ],
+      },
+    },
+    'sglang'
+  )
+  expect(await screen.findByRole('alert')).toHaveTextContent('SGLang')
+  expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Choose another model' })).toBeInTheDocument()
+})
 
 it('takes a vLLM model through its verdict and plan, then hands the wizard the download and the model', async () => {
   const { execute, onStarted } = review({
@@ -65,17 +101,36 @@ it('takes a vLLM model through its verdict and plan, then hands the wizard the d
   expect(onStarted.mock.calls[0]![0]).not.toBe('')
 })
 
-it('leads to the install of the engine that would take the model when the chosen one refuses it', async () => {
-  const refused = {
-    ...ok,
-    compatibility: {
-      ...ok.compatibility,
-      verdict: { ok: false, error: { code: 'MODEL_INCOMPATIBLE', message: 'vllm refuses it' } },
-    },
+it.each([false, true])(
+  'offers only the selected missing engine with another installed=%s',
+  async (installed) => {
+    const { onEngine } = review(
+      {
+        'models.check': {
+          verdicts: [
+            { ...ok, installed },
+            { ...ok, engine: 'sglang', installed: false },
+          ],
+        },
+      },
+      'sglang'
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Install SGLang' }))
+    expect(onEngine).toHaveBeenCalledWith('sglang')
+    expect(screen.queryByRole('button', { name: 'Install vLLM' })).not.toBeInTheDocument()
   }
-  const { onEngine } = review({
-    'models.check': { repository: REPO, verdicts: [refused, { ...ok, engine: 'sglang', installed: false }] },
+)
+
+it('keeps incompatible model review on the chosen engine instead of offering another runtime', async () => {
+  review({
+    'models.check': {
+      verdicts: [
+        { ...ok, compatibility: null, error: { code: 'MODEL_INCOMPATIBLE', message: 'vllm refuses it' } },
+        { ...ok, engine: 'sglang', installed: false },
+      ],
+    },
   })
-  await userEvent.click(await screen.findByRole('button', { name: 'Install SGLang' }))
-  expect(onEngine).toHaveBeenCalledWith('sglang')
+  await screen.findByRole('alert')
+  expect(screen.queryByRole('button', { name: 'Install SGLang' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Choose another model' })).toBeInTheDocument()
 })

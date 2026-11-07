@@ -1,15 +1,18 @@
 // Lifted from Atomic-Chat/web-app/src/containers/hub/LocalModelTable.tsx @ 5043013; adapted: managed engine verdicts and direct server download.
 import { useEffect, useRef, useState } from 'react'
 import type { ManagedModelPlan, ManagedVerdict } from '@contract'
-import { engineName, formatSize, verdictLine } from '@view'
+import { engineName, formatSize } from '@view'
 import { describeError } from '@/services/admin-api'
 import { Action, Field } from '../../Controls'
 import type { Workspace } from '../../useWorkspace'
 import { ModelInstallFrame } from './ModelInstallFrame'
+import { ManagedCompatibility } from './ManagedCompatibility'
+import './runtime-model.css'
 
 export function ManagedModelInstall({
   workspace: w,
   repository,
+  expectedEngine,
   onClose,
   onStarted,
   onInstallEngine,
@@ -18,6 +21,7 @@ export function ManagedModelInstall({
 }: {
   workspace: Workspace
   repository: string
+  expectedEngine?: string
   onClose: () => void
   onStarted?: (id: string) => void | Promise<void>
   onInstallEngine: (engine: string) => void
@@ -46,8 +50,16 @@ export function ManagedModelInstall({
   }, [execute, repository, revision, retry])
   const takes = (verdicts ?? []).filter((v) => v.compatibility?.verdict.ok)
   const usable = takes.filter((v) => v.installed).map((v) => v.engine)
-  const would = takes.filter((v) => !v.installed).map((v) => v.engine)
-  const chosen = usable.includes(engine) ? engine : (usable[0] ?? '')
+  const would = takes
+    .filter((v) => !v.installed && (!expectedEngine || v.engine === expectedEngine))
+    .map((v) => v.engine)
+  const chosen = expectedEngine
+    ? usable.includes(expectedEngine)
+      ? expectedEngine
+      : ''
+    : usable.includes(engine)
+      ? engine
+      : (usable[0] ?? '')
   const download = async () => {
     if (!chosen || pending) return
     setPending(true)
@@ -83,17 +95,16 @@ export function ManagedModelInstall({
           Checking compatibility…
         </p>
       )}
-      {verdicts && (
-        <details open={!usable.length}>
-          <summary>Compatibility</summary>
-          {verdicts.map((v) => (
-            <p key={v.engine}>{verdictLine(v)}</p>
-          ))}
-        </details>
-      )}
+      {verdicts && <ManagedCompatibility verdicts={verdicts} />}
       {error && (
         <p role="alert" className="inline-error">
           {error}
+        </p>
+      )}
+      {verdicts && expectedEngine && !chosen && (
+        <p role="alert">
+          {engineName(expectedEngine)} is not ready to run this model. Review its compatibility above or
+          choose another model.
         </p>
       )}
       {!verdicts && error && (
@@ -110,8 +121,9 @@ export function ManagedModelInstall({
           ))}
         </ul>
       )}
-      <div className="ew-actions">
-        {usable.length > 1 && (
+      <div className="ew-actions runtime-model-actions">
+        {verdicts && expectedEngine && !chosen && <Action onClick={onClose}>Choose another model</Action>}
+        {!expectedEngine && usable.length > 1 && (
           <Field label="Engine">
             <select
               aria-label="Engine"
@@ -133,10 +145,10 @@ export function ManagedModelInstall({
         )}
         {chosen && (
           <Action primary disabled={pending} onClick={download}>
-            Download
+            {pending ? 'Preparing download…' : 'Download'}
           </Action>
         )}
-        {!usable.length &&
+        {!chosen &&
           would.map((id) => (
             <Action key={id} onClick={() => onInstallEngine(id)}>
               Install {engineName(id)}

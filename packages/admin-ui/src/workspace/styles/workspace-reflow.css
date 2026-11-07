@@ -7,10 +7,19 @@
   gap: 8px;
 }
 .desktop-workspace .desktop-rail .rail-item {
-  width: 64px;
+  width: 100%;
+  min-width: 0;
   min-height: 56px;
   height: auto;
   padding: 8px 4px;
+}
+.desktop-workspace .desktop-rail .rail-bottom {
+  width: 100%;
+  min-width: 0;
+}
+.desktop-workspace .desktop-rail .rail-item span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .desktop-workspace .desktop-sidebar {
   margin: 0;

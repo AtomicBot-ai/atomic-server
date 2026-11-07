@@ -1,7 +1,8 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider validation and advanced endpoints.
 import { useEffect, useRef } from 'react'
 import { CLOUD_CONNECTION_NOTES, cloudNeedsKey } from '@view'
-import { Action, Field } from '../../Controls'
+import { SettingsField } from '../../SettingsForm'
+import { Action, Field as CompactField } from '../../Controls'
 import type { RecordValue } from '../../types'
 
 type Connection = { provider: string; url: string; key: string; models: string }
@@ -32,6 +33,7 @@ export function CloudProviderEditor({
   close: () => void
   disconnect: () => Promise<void>
 }) {
+  const Field = onboarding ? CompactField : SettingsField
   const form = useRef<HTMLFormElement>(null)
   const submitted = useRef<{ moved: boolean } | null>(null)
   useEffect(() => {
@@ -75,7 +77,7 @@ export function CloudProviderEditor({
   return (
     <form
       ref={form}
-      className="cloud-provider-editor"
+      className={`cloud-provider-editor ${onboarding ? '' : 'settings-form'}`}
       onSubmit={(event) => {
         event.preventDefault()
         submitted.current = { moved: false }
@@ -138,9 +140,9 @@ export function CloudProviderEditor({
           </div>
         </details>
         <div className="ew-actions">
-          {!onboarding && connectButton}
-          {!onboarding && <Action onClick={close}>Cancel</Action>}
           {!onboarding && saved && <Action onClick={disconnect}>Disconnect</Action>}
+          {!onboarding && <Action onClick={close}>Cancel</Action>}
+          {!onboarding && connectButton}
         </div>
       </fieldset>
     </form>

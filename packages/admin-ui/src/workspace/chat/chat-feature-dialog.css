@@ -1,0 +1,167 @@
+.desktop-workspace .ew-modal.chat-feature-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ew-bg);
+  border: 1px solid var(--ew-line);
+  border-radius: 14px;
+}
+.chat-tools-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--ew-line);
+}
+.chat-feature-dialog .chat-tools-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+}
+.chat-feature-dialog .chat-tools-heading p {
+  margin: 4px 0 0;
+  color: var(--ew-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+.chat-tools-heading > button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  height: 32px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ew-muted);
+}
+.chat-tools-heading > button:hover {
+  background: var(--ew-raised);
+  color: var(--ew-text);
+}
+.chat-tools-body {
+  overflow-y: auto;
+  padding: 0 24px;
+  min-height: 0;
+}
+.chat-tools-section {
+  padding: 20px 0;
+}
+.chat-tools-section + .chat-tools-section {
+  border-top: 1px solid var(--ew-line);
+}
+.chat-feature-dialog .chat-tools-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.chat-tools-section h3 svg {
+  color: var(--ew-muted);
+}
+.chat-tools-section .server-picker-field {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+.chat-tools-section .server-picker-field > span {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.chat-tools-section .server-detail-picker {
+  min-height: 42px;
+  padding: 10px 12px;
+}
+.chat-tools-section .server-picker-copy strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.chat-feature-dialog .chat-tools-hint,
+.chat-feature-dialog .chat-tools-empty {
+  margin: 8px 0 0;
+  color: var(--ew-muted);
+  font-size: 13px;
+  line-height: 21px;
+}
+.chat-tool-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.chat-tool-choice:hover {
+  background: var(--ew-raised);
+}
+.chat-tool-choice > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.chat-tool-choice input {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--ew-teal);
+}
+.chat-tool-choice strong {
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 500;
+}
+.chat-feature-dialog .chat-tool-choice small {
+  display: block;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+  margin-top: 2px;
+}
+.chat-tool-choice[data-unavailable='true'] {
+  cursor: default;
+  color: var(--ew-muted);
+}
+.chat-tools-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--ew-line);
+}
+.chat-tools-footer > span {
+  color: var(--ew-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.chat-tools-footer > button {
+  min-width: 80px;
+}
+@media (max-width: 520px) {
+  .chat-tools-heading {
+    padding: 20px;
+  }
+  .chat-tools-body {
+    padding: 0 20px;
+  }
+  .chat-tools-footer {
+    padding: 16px 20px;
+  }
+}
+/* Keep long assistant choices inside the scrollable body, above the fixed footer. */
+.chat-tools-section .server-picker-menu {
+  position: static;
+  width: 100%;
+  max-height: min(240px, 35dvh) !important;
+  margin-top: 6px;
+}

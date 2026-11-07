@@ -1,5 +1,5 @@
 /** Loads in the admin: stage and time, cancel, the log after a failure («Загрузка в admin»). */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { snapshotFixture, workspaceFixture } from '@/test/workspace-fixture'
@@ -108,10 +108,7 @@ describe('a managed load in the admin', () => {
       />
     )
     await userEvent.click(screen.getByRole('button', { name: 'Choose chat model' }))
-    const select = await screen.findByLabelText('Installed model and engine')
-    await waitFor(() => expect(select).toHaveTextContent('tensorrt-llm'))
-    await userEvent.selectOptions(select, `tensorrt-llm|${MODEL}`)
-    await userEvent.click(screen.getByRole('button', { name: 'Load with this engine' }))
+    await userEvent.click(await screen.findByRole('button', { name: `Load ${MODEL} with TensorRT-LLM` }))
     expect(execute).toHaveBeenCalledWith('models.load', { provider: 'tensorrt-llm', model_id: MODEL })
   })
 })

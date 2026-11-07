@@ -13,14 +13,14 @@ import { readTextFile, resolveConfig } from '../../src/config/index.js'
 import { WorkspaceApp } from '../../src/tui/workspace/WorkspaceApp.js'
 import type { WorkspaceDeps } from '../../src/tui/workspace/controller.js'
 import { WorkspaceController } from '../../src/tui/workspace/controller.js'
-
 const cleanup: (() => void | Promise<void>)[] = []
 afterEach(async () => {
   for (const dispose of cleanup.splice(0).reverse()) await dispose()
 })
 async function mount(
   complete: boolean,
-  prepare?: (link: ReturnType<typeof fakeCoreLink>, request: typeof fetch) => Promise<void>
+  prepare?: (link: ReturnType<typeof fakeCoreLink>, request: typeof fetch) => Promise<void>,
+  engine?: string
 ) {
   const temp = tmpDataFolder(),
     terminal = fakeTerminal(120, 40),
@@ -65,6 +65,7 @@ async function mount(
         : Response.json({ data: [] })
   const config = async () => resolveConfig({ fileText: await readTextFile(temp.paths.configFile), env: {} })
   const request = hostedWorkspace(temp.paths, link, hub)
+  if (engine) writeFileSync(temp.paths.atcDir + '/engine-choice.json', JSON.stringify({ id: engine }))
   await prepare?.(link, request)
   const deps: WorkspaceDeps = {
     apiKey: '',
@@ -115,10 +116,12 @@ async function mount(
   }
   return { temp, terminal, link, ui, config, sees, click, capture }
 }
-
 it.each(['Second GGUF', 'Apple fixture'])('retains %s through Continue → Escape → Continue', async (name) => {
-  const t = await mount(false)
+  const t = await mount(false, undefined, name === 'Apple fixture' ? 'mlx' : 'llamacpp-upstream')
   await t.click(name)
+  expect(t.terminal.stdout.lastFrame()).not.toContain(
+    name === 'Apple fixture' ? 'First GGUF' : 'Apple fixture'
+  )
   await t.click('Continue')
   await t.sees('Notifications')
   t.terminal.stdin.press('\u001b')

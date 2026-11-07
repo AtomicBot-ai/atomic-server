@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/EngineModelFields.tsx @ 5043013; adapted: available engines and installed models from the server.
+import { StatusIndicator } from '../StatusIndicator'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { useEffect, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
@@ -102,7 +103,7 @@ export function ServerModel({
               <Action primary={!compatible.length} onClick={() => openModels(selectedEngine || undefined)}>
                 Browse models
               </Action>
-              {loaded && <span className="server-state-tag">Loaded</span>}
+              {loaded && <StatusIndicator tone="positive">Loaded</StatusIndicator>}
             </div>
           </fieldset>
           {!loaded && selectedModel && (

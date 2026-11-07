@@ -1,3 +1,4 @@
+import { catalogReadGuard } from './catalog-read.js'
 import { variantCatalogAction } from './catalog-variants.js'
 import { withInstalledRows } from './catalog-installed.js'
 import type { ActionContext } from '../actions.js'
@@ -60,10 +61,14 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
     return true
   }
   patch({ catalogOpen: row.id, catalogVariants: [], catalogVariant: '', selected, busy: true })
+  const fresh = catalogReadGuard(ctx)
   try {
     if (
       s.installed.some(
-        (item) => item.id === row.id && (row.source?.['format'] !== 'geniex' || item.provider === 'geniex')
+        (item) =>
+          item.id === row.id &&
+          (!['geniex', 'fastflowlm'].includes(String(row.source?.['format'])) ||
+            item.provider === row.source?.['format'])
       )
     )
       return true
@@ -72,7 +77,9 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
     const raw = source['variants'] ?? transformer['quants'] ?? source['quants']
     const variants =
       s.libraryCategory === 'text' &&
-      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex'].includes(String(source['format'] ?? 'gguf'))
+      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(
+        String(source['format'] ?? 'gguf')
+      )
         ? (await ctx.controller.files(row.id)).map((file) => ({
             value: file.filename,
             label: `${file.filename} · ${bytes(file.size)}`,
@@ -84,15 +91,15 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
             }))
           : []
     // A response from an older row must not replace the currently open family.
-    if (ctx.get().catalogOpen === row.id)
+    if (fresh() && ctx.get().catalogOpen === row.id)
       patch({
         catalogVariants: variants,
         catalogVariant: String(source['default_variant'] ?? variants[0]?.value ?? ''),
       })
   } catch (error) {
-    patch({ message: error instanceof Error ? error.message : String(error) })
+    if (fresh()) patch({ message: error instanceof Error ? error.message : String(error) })
   } finally {
-    patch({ busy: false })
+    if (fresh()) patch({ busy: false })
   }
   return true
 }

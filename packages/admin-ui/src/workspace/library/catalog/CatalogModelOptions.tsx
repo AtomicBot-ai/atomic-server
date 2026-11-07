@@ -1,8 +1,10 @@
-// Lifted from Atomic-Chat/web-app/src/containers/hub/ModelListRow.tsx @ 5043013; adapted: server file lookup.
+// Lifted from Atomic-Chat/web-app/src/containers/hub/ModelListRow.tsx @ 5043013; adapted: server file lookup and compact, labelled download variants.
 import { useEffect, useRef, useState } from 'react'
 import type { Execute, RecordValue } from '../../types'
 import { bytes, record, rows, text } from '../../types'
 import { Action } from '../../Controls'
+import { catalogDownloadOptions } from './catalog-download-options'
+import './catalog-download-options.css'
 import { describeError } from '@/services/admin-api'
 export function CatalogModelOptions({
   model,
@@ -23,12 +25,6 @@ export function CatalogModelOptions({
     source.format !== 'mlx' &&
     !['safetensors', 'Foundry Local'].includes(text(model.format))
   const [files, setFiles] = useState<RecordValue[]>([])
-  const quants = record(source.transformer).quants ?? source.quants ?? model.quants
-  const variants = Array.isArray(quants)
-    ? quants
-        .map((q) => (typeof q === 'string' ? q : text(record(q).id ?? record(q).name, '')))
-        .filter(Boolean)
-    : []
   const [loading, setLoading] = useState(gguf)
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -65,6 +61,7 @@ export function CatalogModelOptions({
       live = false
     }
   }, [execute, gguf, id, revision])
+  const variants = catalogDownloadOptions(model, gguf ? files : undefined)
   return (
     <>
       {needsEngine ? (
@@ -73,37 +70,44 @@ export function CatalogModelOptions({
         <>
           {loading && <p role="status">Loading variants…</p>}
           {!loading && gguf && !files.length && !error && <p>No GGUF files available</p>}
-          {!loading && !error && (
-            <div className="catalog-download-rows">
-              {(gguf
-                ? files.map((f) => ({
-                    value: text(f.filename ?? f.path),
-                    label: `${text(f.filename ?? f.path)}${typeof f.size === 'number' ? ` · ${bytes(f.size)}` : ''}`,
-                  }))
-                : variants.length
-                  ? variants.map((v) => ({ value: v, label: v }))
-                  : [{ value: '', label: text(model.name ?? model.title, id) }]
-              ).map((v) => (
-                <div className="catalog-download-row" key={v.value}>
-                  <span>{v.label}</span>
-                  <Action
-                    primary
-                    onClick={() =>
-                      choose({
-                        ...model,
-                        ...(gguf
-                          ? { selectedFile: v.value }
-                          : variants.length
-                            ? { selectedQuant: v.value }
-                            : {}),
-                      })
-                    }
-                  >
-                    Download
-                  </Action>
-                </div>
-              ))}
-            </div>
+          {!loading && !error && variants.length > 0 && (
+            <section className="catalog-variants" aria-label="Download options">
+              <div className="catalog-variants-heading">
+                <strong>{variants.length > 1 ? 'Choose a variant' : 'Download model'}</strong>
+                <span>
+                  {variants.length} {variants.length === 1 ? 'variant' : 'variants'}
+                </span>
+              </div>
+              <ul className="catalog-download-rows" aria-label="Download variants">
+                {variants.map((v) => (
+                  <li className="catalog-download-row" key={v.value}>
+                    <span className="catalog-variant-name">
+                      {v.label}
+                      {v.recommended && <small className="catalog-variant-recommended">Recommended</small>}
+                    </span>
+                    <span className="catalog-variant-size">
+                      {v.size === null ? 'Size unavailable' : bytes(v.size)}
+                      {v.size !== null && <small>Model file</small>}
+                    </span>
+                    <Action
+                      onClick={() =>
+                        choose({
+                          ...model,
+                          ...(gguf ? { selectedFile: v.value } : v.value ? { selectedQuant: v.value } : {}),
+                        })
+                      }
+                    >
+                      Download
+                    </Action>
+                  </li>
+                ))}
+              </ul>
+              <p className="catalog-variants-note">
+                {category === 'image' || category === 'video'
+                  ? 'Additional components may be required. Review the full download on the next step.'
+                  : 'Review the download details on the next step.'}
+              </p>
+            </section>
           )}
           {error && (
             <p role="alert">

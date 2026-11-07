@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colorEnabled, colorsFor, stripAnsi } from './color.js'
+import { colorEnabled, colorsFor, stripAnsi, trueColorSupported } from './color.js'
 
 describe('color', () => {
   it.each([
@@ -19,4 +19,14 @@ describe('color', () => {
     expect(stripAnsi(colorsFor(true).red('x'))).toBe('x')
     expect(colorsFor(true).bold('x')).not.toBe('x')
   })
+})
+
+it.each([
+  [{ WT_SESSION: 'windows-terminal-session' }, true],
+  [{ COLORTERM: 'truecolor' }, true],
+  [{ COLORTERM: '24bit' }, true],
+  [{ WT_SESSION: '' }, false],
+  [{}, false],
+])('detects truecolor from terminal capabilities %j', (env, expected) => {
+  expect(trueColorSupported(env)).toBe(expected)
 })

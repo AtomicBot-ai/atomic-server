@@ -159,6 +159,7 @@ it('walks cloud, optional media queue and connection choice without repeated set
 it('treats a quantized ready family as installed and keeps installed media first', () => {
   const t = fixture({
     libraryCategory: 'image',
+    libraryRows: rows.map((row) => ({ ...row, category: 'image' })),
     workspace: {
       setups: [{ id: 'done', stage: 'ready', plan: { model_id: 'fixture/two:fp8', category: 'image' } }],
       downloads: [],

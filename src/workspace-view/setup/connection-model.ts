@@ -35,6 +35,7 @@ const VARIANT_JOBS: Record<string, string> = {
   'foundry-model': 'foundry-local',
   'litert-model': 'litert-lm',
   'geniex-model': 'geniex',
+  'fastflowlm-model': 'fastflowlm',
 }
 
 export function connectionDownloadTarget(job: unknown) {

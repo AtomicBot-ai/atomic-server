@@ -43,6 +43,11 @@ export function colorEnabled(facts: { isTTY: boolean; env: NodeJS.ProcessEnv; no
   return facts.isTTY
 }
 
+/** Windows Terminal identifies itself with WT_SESSION without requiring COLORTERM. */
+export function trueColorSupported(env: NodeJS.ProcessEnv): boolean {
+  return /truecolor|24bit/i.test(env['COLORTERM'] ?? '') || Boolean(env['WT_SESSION'])
+}
+
 /** Strip ANSI sequences, for measuring and for tests. */
 export function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex

@@ -106,7 +106,7 @@ export function newSetup(mode: 'personal' | 'server'): SetupView {
 /** A managed engine's, Foundry Local's or LiteRT-LM's model download that guided setup started (its request id). */
 export interface EngineSetupJob {
   id: string
-  kind: 'managed-model' | 'foundry-model' | 'litert-model' | 'geniex-model'
+  kind: 'managed-model' | 'foundry-model' | 'litert-model' | 'geniex-model' | 'fastflowlm-model'
   engine: string
   /** The model id the engine loads: the repository, or the Foundry Local or LiteRT-LM variant. */
   model: string
@@ -115,9 +115,15 @@ export interface EngineSetupRow {
   id: string
   title: string
   detail: string
+  /** Exact installed variant IDs returned by this engine's catalog. */
+  installedIds?: string[]
+  recommended?: boolean
 }
 /** Guided setup with a managed engine, Foundry Local or LiteRT-LM: its model list, the reviewed plan, the job. */
 export interface GenieSetupPlan {
+  license?: string
+  context_length?: number
+  capabilities?: { tools: boolean; reasoning: boolean; structured_output: boolean }
   digest: string
   variant_id: string
   name: string
@@ -127,7 +133,7 @@ export interface GenieSetupPlan {
 }
 export interface EngineSetupPath {
   engine: string
-  kind: 'managed' | 'foundry' | 'litert' | 'geniex'
+  kind: 'managed' | 'foundry' | 'litert' | 'geniex' | 'fastflowlm'
   rows: EngineSetupRow[]
   plan: ManagedModelPlan | FoundryModelPlan | LiteRtModelPlan | GenieSetupPlan | null
   /** The core's verdict of every managed engine on the reviewed checkpoint (`models.check`). */

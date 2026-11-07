@@ -7,7 +7,7 @@
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
 
-export type CatalogFormat = 'gguf' | 'mlx' | 'safetensors' | 'foundry' | 'litert' | 'geniex'
+export type CatalogFormat = 'gguf' | 'mlx' | 'safetensors' | 'foundry' | 'litert' | 'geniex' | 'fastflowlm'
 
 export const CATALOG_FORMAT_LABELS: Record<CatalogFormat, string> = {
   gguf: 'GGUF',
@@ -16,6 +16,7 @@ export const CATALOG_FORMAT_LABELS: Record<CatalogFormat, string> = {
   foundry: 'Foundry Local',
   litert: 'LiteRT-LM',
   geniex: 'GenieX',
+  fastflowlm: 'FastFlowLM',
 }
 
 /** The engine whose own catalog (`models.search --engine`) a variant format reads. */
@@ -23,6 +24,7 @@ export const FORMAT_ENGINE: Partial<Record<CatalogFormat, string>> = {
   foundry: 'foundry-local',
   litert: 'litert-lm',
   geniex: 'geniex',
+  fastflowlm: 'fastflowlm',
 }
 
 /**

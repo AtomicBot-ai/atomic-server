@@ -14,7 +14,7 @@ const answers = {
 }
 it('keeps model navigation in one footer with keyboard access to Back, Skip setup, and Continue', async () => {
   const { workspace, execute } = workspaceFixture(answers, { setup: null })
-  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} onWelcome={vi.fn()} />)
+  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
   const back = screen.getByRole('button', { name: 'Back', exact: true })
   const footer = back.closest('footer')!
   await waitFor(() => expect(within(footer).getByRole('button', { name: 'Continue' })).toBeEnabled())

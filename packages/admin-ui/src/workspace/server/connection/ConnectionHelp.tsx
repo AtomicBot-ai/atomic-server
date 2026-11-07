@@ -10,14 +10,16 @@ export function ConnectionHelp({
   disabled?: boolean
 }) {
   return (
-    <details>
+    <details className="connection-help">
       <summary>Where do I change server settings?</summary>
-      <Action disabled={disabled} onClick={onSettings}>
-        Server configuration
-      </Action>
-      <Action disabled={disabled} onClick={onModels}>
-        Engine & model
-      </Action>
+      <div className="ew-actions">
+        <Action disabled={disabled} onClick={onSettings}>
+          Server configuration
+        </Action>
+        <Action disabled={disabled} onClick={onModels}>
+          Engine & model
+        </Action>
+      </div>
     </details>
   )
 }

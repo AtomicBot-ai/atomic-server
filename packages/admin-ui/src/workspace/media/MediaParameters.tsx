@@ -1,6 +1,8 @@
+import { FileInput } from '../FileInput'
 // Lifted from atomic-chat-ui/web-app/src/containers/images/ImagePromptForm.tsx @ 807b4d9; adapted: supported core capabilities and controlled request fields.
 import { useId, useState } from 'react'
 import { Field } from '../Controls'
+import { SettingsField } from '../SettingsField'
 import { text } from '../types'
 import { mediaBounds, mediaFieldError } from './media-validation'
 import type { RecordValue } from '../types'
@@ -23,36 +25,38 @@ export function MediaParameters({
     const { min, max, step } = mediaBounds(capabilities, name)
     const error = mediaFieldError(capabilities, name, values[name])
     return (
-      <label className="media-parameter" key={name}>
-        <span>{label}</span>
-        <input
-          type="range"
-          aria-label={`${label} slider`}
-          min={min}
-          max={max}
-          step={step}
-          disabled={disabled}
-          value={Number(values[name] ?? min)}
-          onChange={(e) => change(name, Number(e.target.value))}
-        />
-        <input
-          type="number"
-          aria-label={label}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-${name}` : undefined}
-          min={min}
-          max={max}
-          step={step}
-          disabled={disabled}
-          value={text(values[name], '')}
-          onChange={(e) => change(name, e.target.value === '' ? undefined : Number(e.target.value))}
-        />
-        {error && (
-          <span id={`${id}-${name}`} className="ew-error media-field-error">
-            {error}
-          </span>
-        )}
-      </label>
+      <div className="media-range-field" key={name}>
+        <SettingsField
+          label={label}
+          layout="stacked"
+          error={error}
+          actions={
+            <input
+              type="range"
+              aria-label={`${label} slider`}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? `${id}-${name}-error` : undefined}
+              min={min}
+              max={max}
+              step={step}
+              disabled={disabled}
+              value={Number(values[name] ?? min)}
+              onChange={(e) => change(name, Number(e.target.value))}
+            />
+          }
+        >
+          <input
+            id={`${id}-${name}`}
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            disabled={disabled}
+            value={text(values[name], '')}
+            onChange={(e) => change(name, e.target.value === '' ? undefined : Number(e.target.value))}
+          />
+        </SettingsField>
+      </div>
     )
   }
   return (
@@ -60,12 +64,13 @@ export function MediaParameters({
       {Boolean(capabilities.supportsNegativePrompt) && (
         <details className="media-negative">
           <summary>Negative prompt</summary>
-          <textarea
-            aria-label="Negative prompt"
-            disabled={disabled}
-            value={text(values.negativePrompt, '')}
-            onChange={(e) => change('negativePrompt', e.target.value)}
-          />
+          <Field label="Negative prompt">
+            <textarea
+              disabled={disabled}
+              value={text(values.negativePrompt, '')}
+              onChange={(e) => change('negativePrompt', e.target.value)}
+            />
+          </Field>
         </details>
       )}
       {values.workflow !== 'create' && (
@@ -89,23 +94,21 @@ export function MediaParameters({
         {['width', 'height'].map((name) => {
           const error = mediaFieldError(capabilities, name, values[name])
           return (
-            <Field key={name} label={name === 'width' ? 'Width' : 'Height'}>
+            <SettingsField
+              key={name}
+              label={name === 'width' ? 'Width' : 'Height'}
+              layout="stacked"
+              error={error}
+            >
               <input
                 type="number"
                 aria-label={name === 'width' ? 'Width' : 'Height'}
                 {...mediaBounds(capabilities, name)}
-                aria-invalid={Boolean(error)}
-                aria-describedby={error ? `${id}-${name}` : undefined}
                 disabled={disabled}
                 value={text(values[name], '')}
                 onChange={(e) => change(name, e.target.value === '' ? undefined : Number(e.target.value))}
               />
-              {error && (
-                <small id={`${id}-${name}`} className="ew-error">
-                  {error}
-                </small>
-              )}
-            </Field>
+            </SettingsField>
           )
         })}
       </div>
@@ -147,25 +150,24 @@ function ImageInput({
 }) {
   const [error, setError] = useState('')
   return (
-    <Field label={label} hint={error}>
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        disabled={disabled}
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          if (file.size > 10 * 1024 * 1024) {
-            setError('Choose an image below 10 MB.')
-            return
-          }
-          setError('')
-          const reader = new FileReader()
-          reader.onload = () => onChange({ base64: String(reader.result) })
-          reader.onerror = () => setError('The image could not be read. Choose it again.')
-          reader.readAsDataURL(file)
-        }}
-      />
-    </Field>
+    <FileInput
+      label={label}
+      hint={error}
+      accept="image/png,image/jpeg,image/webp"
+      disabled={disabled}
+      onChange={(e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (file.size > 10 * 1024 * 1024) {
+          setError('Choose an image below 10 MB.')
+          return
+        }
+        setError('')
+        const reader = new FileReader()
+        reader.onload = () => onChange({ base64: String(reader.result) })
+        reader.onerror = () => setError('The image could not be read. Choose it again.')
+        reader.readAsDataURL(file)
+      }}
+    />
   )
 }

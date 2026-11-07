@@ -36,3 +36,22 @@ it('keeps engine cards above a wrapped install failure and leaves Retry accessib
   expect(lines.join('\n')).toContain('Hint: keep 127.0.0.1')
   expect(frame.targets.find((target) => target.id === 'retry')!.y).toBeGreaterThan(errorRow)
 })
+
+it('shows scroll directions only when engine choices are hidden', () => {
+  const choices = Array.from({ length: 10 }, (_, i) => ({
+    id: `llamacpp-upstream|b${i}|cpu`,
+    provider: 'llamacpp-upstream',
+    version: `b${i}`,
+    backend: 'cpu',
+    installed: false,
+  })) as EngineChoice[]
+  const screen = (selected: number, items = choices) =>
+    drawIntroEngines(54, 24, items, selected, '')
+      .cells.map((row) => row.map((cell) => cell.char).join(''))
+      .join('\n')
+  expect(screen(0)).toMatch(/v \d+ below/)
+  expect(screen(0)).not.toContain('above')
+  expect(screen(9)).toMatch(/\^ \d+ above/)
+  expect(screen(9)).not.toContain('below')
+  expect(screen(0, choices.slice(0, 1))).not.toMatch(/above|below/)
+})

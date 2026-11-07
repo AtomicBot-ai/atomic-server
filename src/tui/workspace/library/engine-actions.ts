@@ -6,6 +6,7 @@
  * live operation changes phase, the core's state is read again.
  */
 
+import { flmPreparationAction, readFlmPreparation } from './fastflowlm-actions.js'
 import { randomUUID } from 'node:crypto'
 import { AtomicCoreError } from '@atomic-chat/core'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
@@ -14,7 +15,7 @@ import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import { engineHasSettings } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
 import { buildAction, readBuilds } from './engine-builds.js'
-import { settingsAction, readEngineForm } from './engine-settings.js'
+import { settingsAction } from './engine-settings.js'
 import { refreshVariantEngine, variantEngineAction } from './variant-engine-actions.js'
 import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedEngineState, ManagedInstallResult, ServerLaunch } from '../../../contract/index.js'
@@ -52,6 +53,7 @@ export const hasPanel = (id: string) =>
 
 export async function engineAction(id: string, ctx: PanelContext): Promise<boolean> {
   const { get, update, controller: c } = ctx
+  if (await flmPreparationAction(id, ctx)) return true
   if (await settingsAction(id, ctx)) return true
   if (await buildAction(id, ctx)) return true
   if (await variantEngineAction(id, ctx)) return true
@@ -87,16 +89,11 @@ export async function engineAction(id: string, ctx: PanelContext): Promise<boole
         seen: '',
       },
     }))
-    await refresh(ctx)
-    const opened = get().enginePanel
-    if (opened?.engine === engine) {
-      await readBuilds(ctx).catch(() => {})
-      try {
-        if (engineHasSettings(engine)) panel(ctx, engine, { form: await readEngineForm(ctx, opened) })
-      } catch (error) {
-        panel(ctx, engine, { error: error instanceof Error ? error.message : String(error) })
-      }
-    }
+    await Promise.all([
+      refresh(ctx),
+      readBuilds(ctx).catch(() => {}),
+      engineHasSettings(engine) ? settingsAction('engine-settings', ctx) : Promise.resolve(),
+    ])
     return true
   }
   const s = get(),
@@ -190,6 +187,7 @@ function panel(ctx: PanelContext, engine: string, part: Partial<EnginePanel>) {
 /** Read the core's state for the open panel again, noting which live operation it was read for. */
 async function refresh(ctx: PanelContext): Promise<void> {
   const p = ctx.get().enginePanel
+  if (p?.engine === 'fastflowlm') return readFlmPreparation(ctx)
   if (p?.kind === 'foundry' || p?.kind === 'litert')
     return refreshVariantEngine(ctx, panelRefreshKey(p, ctx.get().workspace))
   if (!p || p.kind !== 'managed') return

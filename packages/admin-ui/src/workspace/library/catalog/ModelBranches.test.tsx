@@ -150,10 +150,10 @@ describe('a Foundry Local model in the admin', () => {
         onFoundry={foundry}
       />
     )
-    expect(screen.getByText(/unverified/i)).toBeInTheDocument()
+    expect(screen.getByText(/checksums are not available/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Prepare OpenVINO NPU' }))
     expect(foundry).toHaveBeenCalled()
-    await userEvent.selectOptions(screen.getByLabelText('Variant'), 'phi-4-mini-cpu')
+    await userEvent.click(screen.getByRole('radio', { name: /CPU/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Download' }))
     expect(execute).toHaveBeenCalledWith('foundry.plan', { model: 'phi-4-mini', variant: 'phi-4-mini-cpu' })
     expect(execute).toHaveBeenCalledWith('foundry.install', {
@@ -209,7 +209,9 @@ describe('the admin catalog and installed models', () => {
     await userEvent.click(await screen.findByText(REPO, { selector: 'strong' }))
     await waitFor(() => expect(execute).toHaveBeenCalledWith('models.check', { repository: REPO }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByText('Compatibility')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Engine compatibility' })).toHaveTextContent(
+      'No compatibility results are available for this model.'
+    )
   })
 
   it('goes back to the category catalog when the task changes after another format was chosen', async () => {

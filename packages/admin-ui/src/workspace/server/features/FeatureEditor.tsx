@@ -1,6 +1,7 @@
 // Lifted from atomic-chat-ui/web-app/src/routes/settings/assistant.tsx and routes/skills/index.tsx (AddEditAssistant, AgentSkillCreateDialog) @ 807b4d9; adapted: shared server operations.
 import { useState } from 'react'
-import { Action, Field } from '../../Controls'
+import { Action } from '../../Controls'
+import { SettingsField as Field } from '../../SettingsForm'
 import { useDialog } from '../../useDialog'
 import type { Workspace } from '../../useWorkspace'
 import { describeError } from '@/services/admin-api'
@@ -43,7 +44,7 @@ export function FeatureEditor({
     <div className="modal-shade">
       <section
         ref={ref}
-        className="ew-modal feature-editor"
+        className="ew-modal feature-editor settings-form"
         role="dialog"
         aria-modal="true"
         aria-label={`${initial.id || initial.name ? 'Edit' : 'Add'} ${kind === 'assistants' ? 'assistant' : kind === 'skills' ? 'skill' : 'connector'}`}
@@ -82,14 +83,13 @@ export function FeatureEditor({
         {kind === 'skills' && (
           <>
             {field('body', 'Instructions', true)}
-            <label className="feature-switch">
+            <Field label="Enabled">
               <input
                 type="checkbox"
                 checked={value.enabled !== false}
                 onChange={(e) => setValue({ ...value, enabled: e.target.checked })}
               />
-              Enabled
-            </label>
+            </Field>
           </>
         )}
         {kind === 'connectors' && (
@@ -125,14 +125,13 @@ export function FeatureEditor({
                 onChange={(e) => setValue({ ...value, timeout: Number(e.target.value) })}
               />
             </Field>
-            <label className="feature-switch">
+            <Field label="Enabled">
               <input
                 type="checkbox"
                 checked={value.enabled !== false}
                 onChange={(e) => setValue({ ...value, enabled: e.target.checked })}
               />
-              Enabled
-            </label>
+            </Field>
           </>
         )}
         {error && <p role="alert">{error}</p>}

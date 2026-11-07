@@ -5,14 +5,16 @@ import type { WorkspaceController } from './controller.js'
 import { PAGE_FOCUS } from './state.js'
 import type { Page, WorkspaceState } from './state.js'
 export async function startup(c: WorkspaceController, initialPage?: Page): Promise<Partial<WorkspaceState>> {
-  const [config, manifest, history, selectedEngine, setupState, catalogLikes] = await Promise.all([
-    c.config(),
-    c.setup.read(),
-    c.history.list(),
-    c.engineSelection.read(),
-    c.runtime?.setup() ?? Promise.resolve(null),
-    c.catalogLikes?.() ?? Promise.resolve([]),
-  ])
+  const [config, manifest, history, selectedEngine, setupState, catalogLikes, catalogPreferences] =
+    await Promise.all([
+      c.config(),
+      c.setup.read(),
+      c.history.list(),
+      c.engineSelection.read(),
+      c.runtime?.setup() ?? Promise.resolve(null),
+      c.catalogLikes?.() ?? Promise.resolve([]),
+      c.catalogPreferences?.read() ?? Promise.resolve({}),
+    ])
   const ui = config.values.tui
   const follows = followsLocalServer(config)
   const complete = setupFinished(setupState) || manifest?.complete === true || manifest?.onboarded === true
@@ -38,6 +40,7 @@ export async function startup(c: WorkspaceController, initialPage?: Page): Promi
     setup,
     history,
     catalogLikes,
+    ...catalogPreferences,
     page,
     settingsGroup: page === 'settings' ? 'tui' : 'api',
     endpoint: follows ? await c.localEndpoint() : ui.endpoint,

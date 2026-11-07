@@ -15,8 +15,9 @@ import { AtcError } from '../errors/index.js'
 export interface HelperOptions {
   platform: NodeJS.Platform
   env: NodeJS.ProcessEnv
+  requestSha256?: string
   /** The core's executor; tests pass a fake. */
-  execute?: (requestPath: string, deps: HostStepExecutorDeps) => Promise<HostStepResult>
+  execute?: (requestPath: string, deps: HostStepExecutorDeps, digest?: string) => Promise<HostStepResult>
 }
 
 /**
@@ -31,7 +32,7 @@ export async function runHostStepHelper(
   const execute = options.execute ?? executeHostStep
   const deps = options.platform === 'win32' ? windowsHostStepDeps(options.env) : nodeHostStepDeps(options.env)
   try {
-    return await execute(requestPath, deps)
+    return await execute(requestPath, deps, options.requestSha256)
   } catch (error) {
     if (error instanceof AtomicCoreError && error.code === 'MANAGED_HOST_STEP_INVALID')
       throw new AtcError('ATC_USAGE', error.message, {

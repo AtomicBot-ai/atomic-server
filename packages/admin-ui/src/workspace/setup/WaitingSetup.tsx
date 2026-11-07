@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { connectionDownload, downloadStopped, reminderSet, setupDownloadsPending } from '@view'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
+import { SettingsField } from '../SettingsField'
 import { DownloadGame } from '../games/DownloadGame'
 import { describeError } from '@/services/admin-api'
 import './waiting-setup.css'
@@ -44,7 +45,7 @@ export function WaitingSetup({
         <div className="waiting-side">
           {pending && (
             <form
-              className="waiting-email"
+              className="waiting-email settings-form"
               noValidate
               onSubmit={async (event) => {
                 event.preventDefault()
@@ -64,12 +65,28 @@ export function WaitingSetup({
                 }
               }}
             >
-              <label htmlFor="setup-email">Email me when it is ready</label>
-              <p id="setup-email-hint" className="waiting-email-hint">
-                By clicking Notify me, you agree to one email when this model is ready. Keep the server
-                running for the download to finish. Your address is used only for this reminder.
-              </p>
-              <div className="waiting-email-controls">
+              <SettingsField
+                label="Email me when it is ready"
+                layout="stacked"
+                hint="By clicking Notify me, you agree to one email when this model is ready. Keep the server running for the download to finish. Your address is used only for this reminder."
+                error={
+                  emailStatus === 'invalid'
+                    ? 'Enter a valid email address.'
+                    : emailStatus === 'failed'
+                      ? emailError
+                      : undefined
+                }
+                actions={
+                  <button
+                    className="ew-button primary"
+                    type="submit"
+                    aria-busy={saving || undefined}
+                    disabled={!email.trim() || saving}
+                  >
+                    {saving ? 'Saving…' : 'Notify me'}
+                  </button>
+                }
+              >
                 <input
                   id="setup-email"
                   type="email"
@@ -77,37 +94,20 @@ export function WaitingSetup({
                   maxLength={320}
                   value={email}
                   readOnly={saving}
-                  aria-invalid={emailStatus === 'invalid' || undefined}
-                  aria-describedby="setup-email-hint setup-email-status"
+                  aria-describedby="setup-email-status"
                   onChange={(event) => {
                     setEmail(event.target.value)
                     setEmailStatus('idle')
                   }}
                   placeholder="you@example.com"
                 />
-                <button
-                  className="ew-button primary"
-                  type="submit"
-                  aria-busy={saving || undefined}
-                  disabled={!email.trim() || saving}
-                >
-                  {saving ? 'Saving…' : 'Notify me'}
-                </button>
-              </div>
-              <span
-                id="setup-email-status"
-                className={`waiting-email-status ${emailStatus}`}
-                role={emailStatus === 'invalid' || emailStatus === 'failed' ? 'alert' : 'status'}
-              >
-                {emailStatus === 'invalid'
-                  ? 'Enter a valid email address.'
-                  : emailStatus === 'failed'
-                    ? emailError
-                    : saving
-                      ? 'Saving your reminder…'
-                      : reminded
-                        ? 'Reminder set. We’ll email you when the model is ready.'
-                        : ''}
+              </SettingsField>
+              <span id="setup-email-status" className={`waiting-email-status ${emailStatus}`} role="status">
+                {saving
+                  ? 'Saving your reminder…'
+                  : reminded
+                    ? 'Reminder set. We’ll email you when the model is ready.'
+                    : ''}
               </span>
             </form>
           )}

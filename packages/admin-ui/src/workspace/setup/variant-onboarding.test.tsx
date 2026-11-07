@@ -50,7 +50,7 @@ it.each([
       },
       { setup: null }
     )
-    render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} onWelcome={vi.fn()} />)
+    render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
     expect(await screen.findByRole('button', { name: new RegExp(`^${name}`) })).toHaveAttribute(
       'aria-pressed',
       'true'

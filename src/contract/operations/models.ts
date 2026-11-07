@@ -99,7 +99,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'configure',
     'Remove an installed model from the data folder. Select the GenieX store explicitly for a GenieX row.',
     {
-      properties: { model_id: { type: 'string' }, store: { type: 'string', enum: ['geniex'] } },
+      properties: { model_id: { type: 'string' }, store: { type: 'string', enum: ['geniex', 'fastflowlm'] } },
       required: ['model_id'],
     }
   ),
@@ -173,7 +173,10 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     {
       properties: {
         id: { type: 'string' },
-        owner: { type: 'string', enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert', 'geniex'] },
+        owner: {
+          type: 'string',
+          enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert', 'geniex', 'fastflowlm'],
+        },
         installed: { type: 'boolean' },
       },
       required: ['id', 'owner'],

@@ -28,16 +28,17 @@ export function ActionConfirmation({
     <div className="modal-shade">
       <section
         ref={ref}
-        className="ew-modal"
-        style={{ maxWidth: 480 }}
+        className="ew-modal confirmation-dialog settings-form"
         role="dialog"
         aria-modal="true"
         aria-label={title}
         aria-busy={pending || undefined}
         tabIndex={-1}
       >
-        <h2>{title}</h2>
-        {children}
+        <header className="panel-heading">
+          <h2>{title}</h2>
+        </header>
+        <div className="confirmation-content">{children}</div>
         <div className="ew-actions">
           <Action disabled={pending} onClick={close}>
             Cancel

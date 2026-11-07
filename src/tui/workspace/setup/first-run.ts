@@ -1,3 +1,4 @@
+import { variantModelChoiceAction, openVariantModelChoice } from './variant-model-choice.js'
 import { firstRunDownloadsPending } from './download-pending.js'
 import { workspaceHeaderRows } from '../draw/brand-header.js'
 import { drawWaitingSetup, waitingSetupAction } from './waiting-setup.js'
@@ -16,11 +17,13 @@ import { quietButton } from '../draw/controls.js'
 import { actionButton } from '../draw/cards.js'
 import { firstModelChoices, selectedFirstModel } from './first-model.js'
 import { pathKind } from './engine-setup.js'
+import { installMlxFirstModel } from './mlx-first-model.js'
 import { record } from '../library/library-model.js'
 import { accessPurposeAction, drawSetupPermissions, openFirstRunServer } from './access-purpose.js'
 import { drawFirstConnection, firstConnectionAction } from './connection-choice.js'
 
 export async function firstRunAction(id: string, ctx: ActionContext): Promise<boolean> {
+  if (await variantModelChoiceAction(id, ctx)) return true
   if (await waitingSetupAction(id, ctx)) return true
   if (await accessPurposeAction(id, ctx)) return true
   if (await firstConnectionAction(id, ctx)) return true
@@ -40,6 +43,9 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
     if (!choice || s.setup?.busy) return true
     patch({ firstModelChoice: choice.key })
     if (choice.installed) return firstRunAction(choice.action, ctx)
+    if (s.setup?.engine === 'foundry-local' || s.setup?.engine === 'litert-lm')
+      return openVariantModelChoice(ctx, choice.key.slice('catalog:'.length))
+    if (s.setup?.engine === 'mlx') return installMlxFirstModel(choice.key.slice('catalog:'.length), ctx)
     patch({ firstRun: 'permissions', page: 'welcome', focus: 'first-permission:notifications' })
     await setupAction(choice.action, ctx)
     const pending = ctx.get().setup,
@@ -67,6 +73,7 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
     if (ctx.get().setup?.error) return true
     const engine = ctx.get().setup?.engine ?? ''
     await setupAction(pathKind(engine) ? `setup-engine:${engine}` : 'setup-models', ctx)
+    if (ctx.get().overlay === 'engine-panel') return true
     if (!ctx.get().firstRun) return true
     const chosen = selectedFirstModel(ctx.get()),
       selected = Math.max(
@@ -90,12 +97,13 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
   }
   if (id.startsWith('first-installed:')) {
     const model = s.installed[Number(id.slice(16))]
-    if (model && returnToConnection(ctx, { model: model.id, provider: model.provider })) return true
+    const engine = s.setup?.engine || s.engine || model?.provider || ''
+    if (model && returnToConnection(ctx, { model: model.id, provider: engine.split('|')[0]! })) return true
     if (model) {
       await ctx.controller.save('tui.model', model.id)
       patch({
         model: model.id,
-        engine: model.provider,
+        engine,
         firstRun: 'permissions',
         page: 'welcome',
         setup: null,
@@ -204,17 +212,17 @@ export function drawFirstRun(c: Canvas, s: WorkspaceState, focus: string, second
   button(c, 'first-back', x, backY, '< Back', 'Return to the previous choice', focus)
   const nextX = x + width - label.length - 6
   const skipX = step === 'connect' ? x + width - 12 : nextX - 15
-  quietButton(c, 'first-skip', skipX, actionY + 1, 'Skip setup', 'Open workspace; downloads continue', focus)
+  quietButton(c, 'first-skip', skipX, backY, 'Skip setup', 'Open workspace; downloads continue', focus)
   if (step === 'connect') {
     if (s.message && !s.busy)
-      actionButton(c, 'first-model', x + 13, actionY, 'Choose model', 'Return to model selection', focus)
+      actionButton(c, 'first-model', x + 13, backY, 'Choose model', 'Return to model selection', focus)
     return
   }
   actionButton(
     c,
     'first-next',
     nextX,
-    actionY,
+    backY,
     label,
     step === 'cloud'
       ? 'Continue to image and video models'

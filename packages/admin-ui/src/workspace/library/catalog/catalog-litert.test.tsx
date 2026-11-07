@@ -49,7 +49,7 @@ it('keeps LiteRT-LM variants inline, opens the engine dialog, and downloads afte
   await format('LiteRT-LM')
   expect(execute).toHaveBeenCalledWith('models.search', { engine: 'litert-lm', query: '' })
   await userEvent.click(await screen.findByText('Gemma 4 E4B', { selector: 'strong' }))
-  expect(screen.getByLabelText('Variant')).toHaveValue('gemma-4-e4b-cpu')
+  expect(screen.getByRole('radio', { name: /CPU/ })).toBeChecked()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Install LiteRT-LM' }))
   const dialog = within(await screen.findByRole('dialog', { name: 'LiteRT-LM', exact: true }))

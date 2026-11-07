@@ -96,7 +96,11 @@ export function useWorkspaceData(
     if (s.overlay !== 'engine-panel' || !p || p.busy || !c.current) return
     if (p.kind === 'managed' && !p.state) return
     if (panelRefreshKey(p, s.workspace) === p.seen) return
-    void engineAction('engine-refresh', { controller: c.current, get: () => latest.current, update })
+    void engineAction(p.engine === 'fastflowlm' ? 'flm-refresh' : 'engine-refresh', {
+      controller: c.current,
+      get: () => latest.current,
+      update,
+    })
   }, [s.overlay, s.workspace, s.enginePanel, c, latest, update])
   useEffect(() => {
     if (!s.ready || (!s.setupComplete && s.firstRun !== 'connect')) return

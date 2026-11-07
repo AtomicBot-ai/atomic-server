@@ -45,6 +45,7 @@ it('removes only the confirmed engine build and keeps a failure inside its dialo
     },
   })
   render(<EngineBuilds provider="mlx" execute={workspace.execute} />)
+  await userEvent.click(await screen.findByText('Installed versions (1)'))
   const trigger = await screen.findByRole('button', { name: 'Remove' })
   await userEvent.click(trigger)
   const dialog = screen.getByRole('dialog', { name: 'Remove engine build?' })
@@ -63,6 +64,7 @@ it('Escape from unsaved engine settings opens an in-app discard confirmation and
   const { workspace } = workspaceFixture(settings)
   const close = vi.fn()
   render(<EngineSettings provider="mlx" workspace={workspace} onClose={close} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
   const input = await screen.findByLabelText('Context size')
   await userEvent.clear(input)
   await userEvent.type(input, '4096')
@@ -73,7 +75,7 @@ it('Escape from unsaved engine settings opens an in-app discard confirmation and
   expect(dialog).not.toBeInTheDocument()
   expect(input).toHaveValue(4096)
   expect(input).toHaveFocus()
-  await userEvent.click(screen.getByRole('button', { name: 'Close', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Close' }))
   await userEvent.click(
     within(screen.getByRole('dialog', { name: 'Discard unsaved engine settings?' })).getByRole('button', {
       name: 'Discard changes',

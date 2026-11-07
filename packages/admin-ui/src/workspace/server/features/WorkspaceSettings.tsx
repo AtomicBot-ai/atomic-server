@@ -1,16 +1,16 @@
 // Lifted from atomic-chat-ui/web-app/src/routes/settings/assistant.tsx, routes/connectors/index.tsx and routes/skills/index.tsx @ 807b4d9; adapted: shared server-owned features.
+import { AssistantsSettings } from './AssistantsSettings'
+import { FileInput } from '../../FileInput'
 import { FeatureMenu } from './FeatureMenu'
 import { fileData, downloadData } from '../../file-data'
 import { useState } from 'react'
-import { Bot, FileText, Plus, Pencil, Trash2, Download } from 'lucide-react'
-import { DEFAULT_ASSISTANT } from '@contract'
+import { FileText, Pencil, Trash2, Download } from 'lucide-react'
 import type { Workspace } from '../../useWorkspace'
 import { Action } from '../../Controls'
 import { ActionConfirmation } from '../../ActionConfirmation'
 import { FeatureEditor } from './FeatureEditor'
 import { ConnectorsSettings } from '../connectors/ConnectorsSettings'
 import { AttachmentSettings } from './AttachmentSettings'
-import { DetailPicker } from '../DetailPicker'
 import './workspace-features.css'
 import { describeError } from '@/services/admin-api'
 type Value = Record<string, unknown>
@@ -22,7 +22,8 @@ export function WorkspaceSettings({ section, workspace: w }: { section: string; 
     [, setBusy] = useState('')
   if (section === 'attachments') return <AttachmentSettings workspace={w} />
   if (section === 'connectors') return <ConnectorsSettings workspace={w} />
-  const kind = section as 'assistants' | 'connectors' | 'skills',
+  if (section === 'assistants') return <AssistantsSettings workspace={w} />
+  const kind = 'skills',
     data = w.snapshot?.features
   const run = async (id: string, action: () => Promise<unknown>) => {
     setBusy(id)
@@ -39,79 +40,34 @@ export function WorkspaceSettings({ section, workspace: w }: { section: string; 
     const value = await w.execute<{ name: string; data: string }>('skills.export', { id })
     downloadData(value.name, value.data)
   }
-  const assistants = data?.assistants ?? [DEFAULT_ASSISTANT],
-    skills = data?.skills ?? []
+  const skills = data?.skills ?? []
   const skill = skills.find((s) => s.name === selected) ?? skills[0]
   return (
     <>
       {error && <p role="alert">{error}</p>}
       <div className="settings-actions">
-        {kind === 'assistants' ? (
-          <Action primary onClick={() => setEditor({ avatar: '*', parameters: {} })}>
-            <Plus size={16} />
-            Add assistant
-          </Action>
-        ) : (
-          <FeatureMenu label="Create new skill">
-            <Action onClick={() => setEditor({})}>Write skill instructions</Action>
-            <label className="feature-upload">
-              Upload a skill
-              <input
-                type="file"
-                aria-label="Upload a skill"
-                accept=".md,.skill"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (file)
-                    void run('import', async () => {
-                      if (file.size > 10 * 1024 * 1024) throw new Error('Skill file must be below 10 MB.')
-                      await w.execute(
-                        'skills.import',
-                        file.name.toLowerCase().endsWith('.skill')
-                          ? { data: await fileData(file) }
-                          : { content: await file.text() }
-                      )
-                    })
-                }}
-              />
-            </label>
-          </FeatureMenu>
-        )}
+        <FeatureMenu label="Create new skill">
+          <Action onClick={() => setEditor({})}>Write skill instructions</Action>
+          <FileInput
+            label="Upload a skill"
+            accept=".md,.skill"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file)
+                return run('import', async () => {
+                  if (file.size > 10 * 1024 * 1024) throw new Error('Skill file must be below 10 MB.')
+                  await w.execute(
+                    'skills.import',
+                    file.name.toLowerCase().endsWith('.skill')
+                      ? { data: await fileData(file) }
+                      : { content: await file.text() }
+                  )
+                })
+            }}
+          />
+        </FeatureMenu>
       </div>
-      {kind === 'assistants' && (
-        <section className="settings-card">
-          <div className="settings-item assistant-default-picker">
-            <DetailPicker
-              label="Default assistant"
-              name="default-assistant"
-              value={data?.default_assistant ?? DEFAULT_ASSISTANT.id}
-              placeholder="Choose assistant"
-              choices={assistants.map((a) => ({ id: a.id, name: a.name, icon: null }))}
-              onChange={(id) => void run('default', () => w.execute('assistants.default', { id }))}
-            />
-          </div>
-          <h2 className="settings-card-heading">All assistants</h2>
-          {assistants.map((a) => (
-            <div className="feature-row" key={a.id}>
-              <span className="feature-avatar">{a.avatar || <Bot size={22} />}</span>
-              <div className="feature-row-copy">
-                <strong>{a.name}</strong>
-                {a.id === data?.default_assistant && <small className="feature-tag">Default</small>}
-                <p>{a.description}</p>
-              </div>
-              <Action onClick={() => setEditor({ ...a })}>
-                <Pencil size={16} />
-                Edit
-              </Action>
-              <Action disabled={a.id === DEFAULT_ASSISTANT.id} onClick={() => setRemove(a)}>
-                <Trash2 size={16} />
-                Delete
-              </Action>
-            </div>
-          ))}
-        </section>
-      )}
       {kind === 'skills' && (
         <div className="skills-settings">
           <aside>

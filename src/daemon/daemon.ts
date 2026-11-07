@@ -1,3 +1,4 @@
+import { followFastFlowLmHost } from './fastflowlm-host.js'
 /**
  * The long-lived `atc` process: the core in-process (owner of the data folder), the admin server,
  * the host-step loop for managed runtimes, and
@@ -136,6 +137,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       log: (m) => log.debug(m),
     })
 
+    const stopFlmHost = await followFastFlowLmHost(paths, link, host, log)
+    undo.push(stopFlmHost)
     const releases = await serverReleaseWatch({ io, host, log })
     undo.push(() => releases.stop())
     const workspace = new WorkspaceService({
@@ -253,6 +256,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     const cleanup = () =>
       (cleanupOnce ??= (async () => {
         sessions.stop()
+        stopFlmHost()
         releases.stop()
         clearInterval(pendingTimer)
         workspace.stop()

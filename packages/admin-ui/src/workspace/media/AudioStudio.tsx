@@ -35,7 +35,6 @@ function ControlField({
   disabled: boolean
   change: (value: unknown) => void
 }) {
-  const id = useId()
   const effective = audioJobRequest({ [control.name]: value }, [control])[control.name]
   const adjustment =
     typeof value === 'number' && effective !== value
@@ -68,18 +67,16 @@ function ControlField({
     )
   const number = control.kind === 'number'
   return (
-    <Field label={control.label}>
+    <Field label={control.label} hint={adjustment || undefined}>
       <input
         disabled={disabled}
         type={number ? 'number' : 'text'}
         aria-label={control.label}
         min={control.min}
         max={control.max}
-        aria-describedby={adjustment ? id : undefined}
         value={text(value, '')}
         onChange={(e) => change(number && e.target.value !== '' ? Number(e.target.value) : e.target.value)}
       />
-      {adjustment && <small id={id}>{adjustment}</small>}
     </Field>
   )
 }
@@ -110,7 +107,7 @@ export function AudioStudio({ workspace, onCatalog }: { workspace: Workspace; on
   const jobError = text(record(job.error).message, '')
   return (
     <div className="media-studio" data-screen="playground-audio">
-      <aside className="media-controls" aria-label="Audio controls">
+      <aside className="media-controls settings-form" aria-label="Audio controls">
         <h1>Audio</h1>
         <div className="media-prompt-card">
           <button className="media-model-trigger" disabled={busy} onClick={() => setModels(true)}>

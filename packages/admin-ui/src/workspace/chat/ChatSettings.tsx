@@ -1,7 +1,9 @@
+import { FileInput } from '../FileInput'
 import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import { useDialog } from '../useDialog'
-import { Action, Field } from '../Controls'
+import { Action } from '../Controls'
+import { SettingsField as Field } from '../SettingsForm'
 import { CHAT_DEFAULTS, downloadJson, validPreferences } from './chat-preferences'
 import type { ChatPreferences } from './chat-preferences'
 import { describeError } from '@/services/admin-api'
@@ -31,7 +33,7 @@ export function ChatSettings({
     <div className="modal-shade">
       <section
         ref={ref}
-        className="ew-modal"
+        className="ew-modal settings-form"
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
@@ -55,14 +57,13 @@ export function ChatSettings({
             {checks
               .filter(([key]) => (section === 'General' ? key === 'sendOnEnter' : key !== 'sendOnEnter'))
               .map(([key, title]) => (
-                <label key={key} className="preference-check">
+                <Field key={key} label={title}>
                   <input
                     type="checkbox"
                     checked={draft[key]}
                     onChange={(e) => set({ ...draft, [key]: e.target.checked })}
                   />
-                  {title}
-                </label>
+                </Field>
               ))}
             {section === 'General' ? (
               <Field
@@ -114,27 +115,27 @@ export function ChatSettings({
             >
               Export preferences and presets
             </Action>
-            <Field label="Import preferences">
-              <input
-                type="file"
-                accept=".json"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0]
-                  e.target.value = ''
-                  if (!file) return
-                  try {
-                    if (file.size > 1000000) throw new Error('Choose a file smaller than 1 MB.')
-                    const data = JSON.parse(await file.text())
-                    if (data.format !== 'atomic-playground-preferences-v1')
-                      throw new Error('Choose an Atomic Playground preferences export.')
-                    set(validPreferences(data.preferences))
-                    setError('')
-                  } catch (err) {
-                    setError(describeError(err))
-                  }
-                }}
-              />
-            </Field>
+            <FileInput
+              label="Import preferences"
+
+              accept=".json"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (!file) return
+                try {
+                  if (file.size > 1000000) throw new Error('Choose a file smaller than 1 MB.')
+                  const data = JSON.parse(await file.text())
+                  if (data.format !== 'atomic-playground-preferences-v1')
+                    throw new Error('Choose an Atomic Playground preferences export.')
+                  set(validPreferences(data.preferences))
+                  setError('')
+                } catch (err) {
+                  setError(describeError(err))
+                }
+              }}
+            />
+
             <p className="ew-muted">
               Imported preferences are staged until Save. Server settings and API keys are not included.
             </p>

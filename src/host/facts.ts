@@ -18,6 +18,7 @@ export interface HostFacts {
   hasDisplay: boolean
   hasSudo: boolean
   hasPkexec: boolean
+  hasTerminalLauncher?: boolean
   username: string
   homedir: string
   hostname: string
@@ -48,6 +49,7 @@ export function hostFacts(input: FactsInput): HostFacts {
     hasDisplay: Boolean(input.env['DISPLAY'] || input.env['WAYLAND_DISPLAY']) || input.platform === 'darwin',
     hasSudo: !win && input.onPath('sudo'),
     hasPkexec: input.platform === 'linux' && input.onPath('pkexec'),
+    hasTerminalLauncher: input.platform === 'linux' && input.onPath('xdg-terminal-exec'),
     username: input.username,
     homedir: input.homedir,
     hostname: input.hostname,

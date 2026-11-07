@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
-import { Action, Copy, Panel } from '../Controls'
+import { Action, Copy } from '../Controls'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { remoteSetupView } from '@view'
+import { SettingsSection } from '../SettingsForm'
 import { RemoteSetup } from './RemoteSetup'
 export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
   const [addresses, setAddresses] = useState<string[]>([])
@@ -30,10 +31,12 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
     [execute]
   )
   return (
-    <>
-      <Panel title="Public remote access">
+    <div className="settings-form">
+      <SettingsSection
+        title="Public remote access"
+        description="Reach this server over HTTPS through a Cloudflare tunnel."
+      >
         <div className="remote-access-body">
-          <p>Reach this server over HTTPS through a Cloudflare tunnel.</p>
           <p role="status">{setup?.status ?? text(remote.state, 'Checking status…')}</p>
           {error && <p role="alert">{error}</p>}
           {setup && <RemoteSetup setup={setup} />}
@@ -76,10 +79,12 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
             </div>
           )}
         </div>
-      </Panel>
-      <Panel title="Local network">
+      </SettingsSection>
+      <SettingsSection
+        title="Local network"
+        description="Let devices on the same network connect with an API key."
+      >
         <div className="remote-access-body">
-          <p>Let devices on the same network connect with an API key.</p>
           <p role="status">{localNetworkStatus(w.snapshot?.api)}</p>
           <div className="remote-access-actions">
             <Action
@@ -107,8 +112,8 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
               )
             })}
         </div>
-      </Panel>
-    </>
+      </SettingsSection>
+    </div>
   )
 }
 

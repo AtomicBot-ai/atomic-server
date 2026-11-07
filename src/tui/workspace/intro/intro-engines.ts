@@ -1,6 +1,8 @@
 import type { EngineChoice } from '../../../terminal-setup/index.js'
+import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
+import type { EngineId } from '@atomic-chat/core/contracts'
 import { engineName } from '../../../workspace-view/index.js'
-import { computeRowWindow } from '../../row-window.js'
+import { computeRowWindow, rowWindowHint } from '../../row-window.js'
 import { canvas, text, button, COLORS, wrapWords } from '../draw/canvas.js'
 import { card } from '../draw/cards.js'
 import { atomicHeader, brandHeaderRows } from '../draw/brand-header.js'
@@ -29,6 +31,7 @@ export function drawIntroEngines(
     selected,
     Math.max(1, Math.floor((errorTop - headingY - 3) / height))
   )
+  text(c, x, headingY + 1, rowWindowHint(window), COLORS.muted, width)
   choices.slice(window.start, window.start + window.count).forEach((choice, i) =>
     card(c, {
       id: `engine:${window.start + i}`,
@@ -37,7 +40,12 @@ export function drawIntroEngines(
       width,
       height,
       title: `${engineName(choice.provider)}${choice.installed ? ' [Installed]' : ''}`,
-      detail: `${choice.version} / ${choice.backend}`,
+      detail:
+        !choice.installed && ENGINE_KINDS[choice.provider as EngineId] === 'managed'
+          ? 'Check requirements and set up'
+          : choice.version && choice.backend
+            ? `${choice.version} / ${choice.backend}`
+            : 'No compatible build available',
       icon: '[*]',
       focus: `engine:${selected}`,
       seconds,

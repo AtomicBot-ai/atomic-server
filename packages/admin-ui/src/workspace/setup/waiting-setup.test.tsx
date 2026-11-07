@@ -93,7 +93,6 @@ it('registers the address with the server, shows its refusal, then the reminder 
   const notify = screen.getByRole('button', { name: 'Notify me' })
   expect(input).toHaveAccessibleDescription(/agree to one email when this model is ready/)
   expect(notify).toBeDisabled()
-  expect(input.nextElementSibling).toBe(notify)
   fireEvent.change(input, { target: { value: 'invalid' } })
   fireEvent.click(notify)
   expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid email address.')
@@ -105,6 +104,7 @@ it('registers the address with the server, shows its refusal, then the reminder 
   fireEvent.click(notify)
   expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests. Try again in an hour.')
   expect(input).toHaveValue('person@example.com')
+  expect(input).toHaveAccessibleDescription(/Too many requests. Try again in an hour./)
 
   fireEvent.click(notify)
   expect(screen.getByRole('button', { name: 'Saving…' })).toHaveAttribute('aria-busy', 'true')

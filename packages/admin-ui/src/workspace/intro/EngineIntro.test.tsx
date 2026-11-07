@@ -5,6 +5,34 @@ import type { Workspace } from '../useWorkspace'
 import { EngineIntro } from './EngineIntro'
 let workspace: Workspace
 vi.mock('../useWorkspace', () => ({ useWorkspace: () => workspace }))
+it.each([
+  ['fastflowlm', 'FastFlowLM'],
+  ['mlx', 'MLX'],
+])('offers uninstalled %s from fresh onboarding', async (engine, name) => {
+  const fixture = workspaceFixture(
+    { 'engines.list': enginesList([engine], []), 'engines.enqueue': {} },
+    { setup: null }
+  )
+  workspace = fixture.workspace
+  const next = vi.fn()
+  render(<EngineIntro onContinue={next} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
+  fireEvent.click(await screen.findByRole('button', { name, exact: true }))
+  await waitFor(() => expect(next).toHaveBeenCalledOnce())
+  expect(fixture.execute).toHaveBeenCalledWith('engines.enqueue', { engine, select: true })
+})
+
+it('does not offer FastFlowLM when the core has no compatible build', async () => {
+  workspace = workspaceFixture(
+    { 'engines.list': { engines: [{ engine: 'fastflowlm', latest: null, active: null }] } },
+    { setup: null }
+  ).workspace
+  render(<EngineIntro onContinue={vi.fn()} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
+  await screen.findByText('No compatible engines available.')
+  expect(screen.queryByRole('button', { name: 'FastFlowLM' })).not.toBeInTheDocument()
+})
+
 it('queues the chosen engine and proceeds before the background installation completes', async () => {
   let accept!: () => void
   const fixture = workspaceFixture(

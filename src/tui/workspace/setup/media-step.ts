@@ -49,7 +49,6 @@ export async function loadSetupMedia(ctx: ActionContext) {
     return {
       ...s,
       libraryRows: rows,
-      libraryCategory: 'image',
       libraryView: 'catalog',
       setupMedia: { image: selected('image'), video: selected('video'), errors, request, loading: false },
     }
@@ -95,8 +94,11 @@ export async function mediaSetupAction(id: string, ctx: ActionContext) {
     }))
     return true
   }
-  ctx.update((s) => ({ ...s, libraryCategory: row.category, libraryView: 'catalog' }))
-  await libraryAction(`library-row:${index}`, ctx)
+  // The onboarding action uses this row's category without changing the user's catalog preference.
+  await libraryAction(`library-row:${index}`, {
+    ...ctx,
+    get: () => ({ ...ctx.get(), libraryCategory: row.category, libraryView: 'catalog' }),
+  })
   ctx.update((s) => ({ ...s, page: 'welcome', focus: id }))
   return true
 }

@@ -130,7 +130,7 @@ npm run verify:fast             # lint, typecheck, unit + contract tests touched
 npm run verify                  # every gate, as CI runs them — run before finishing
 ```
 
-Node 22 is the development and test runtime; Bun 1.3.10 installs dependencies and compiles; scripts run
+Node 22 is the development and test runtime; Bun is pinned in `.bun-version` for installs and compilation; scripts run
 through `npm run`, as in the core. Code never knows which runtime it is on.
 
 ---

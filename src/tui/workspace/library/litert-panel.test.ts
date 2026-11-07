@@ -160,7 +160,9 @@ describe('LiteRT-LM in the TUI', () => {
     const linux = tui([{ ...LINUX, installed: false, build: null }, LINUX])
     await activate('library-row:0', linux.ctx)
     await activate('litert-install', linux.ctx)
-    expect(calls(linux, 'engines.install')).toEqual([{ engine: 'litert-lm' }])
+    expect(calls(linux, 'engines.install')).toEqual([
+      { engine: 'litert-lm', request: { task_id: expect.any(String) } },
+    ])
     expect(calls(linux, 'litert.prepare')).toEqual([])
     const windows = tui([accelerators({ installed: false, build: null, accelerators: [] }), accelerators()])
     await activate('library-row:0', windows.ctx)
