@@ -27,7 +27,7 @@ export function drawDataPanel(
     )
     const win = computeRowWindow(entries.length, s.selected, Math.max(1, Math.floor((bottom - y - 5) / 2)))
     entries.slice(win.start, win.start + win.count).forEach((h, i) => {
-      const date = new Date(h.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      const date = new Date(h.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       button(
         c,
         `history:${h.id}`,

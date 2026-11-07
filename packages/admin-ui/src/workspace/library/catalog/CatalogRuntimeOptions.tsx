@@ -18,6 +18,7 @@ import { modelId } from './catalog-models'
 /** The engines whose models carry variants with the core's verdicts, read again from their own catalog. */
 const VARIANT_ENGINES = [
   { key: 'foundry', engine: 'foundry-local', catalog: 'Foundry' },
+  { key: 'fastflowlm', engine: 'fastflowlm', catalog: 'FastFlowLM' },
   { key: 'geniex', engine: 'geniex', catalog: 'GenieX' },
   { key: 'litert', engine: 'litert-lm', catalog: 'LiteRT-LM' },
 ] as const
@@ -70,8 +71,9 @@ export function CatalogRuntimeOptions({
               {error} <Action onClick={refreshVariants}>Retry</Action>
             </p>
           )}
-          {variants.key === 'geniex' ? (
+          {variants.key === 'geniex' || variants.key === 'fastflowlm' ? (
             <GenieModelInstall
+              engine={variants.key}
               workspace={workspace}
               model={current}
               onStarted={onStarted}
@@ -118,8 +120,8 @@ export function CatalogRuntimeOptions({
           }}
         />
       )}
-      {engineDialog && variants?.key === 'geniex' && (
-        <EngineSettings workspace={workspace} provider="geniex" onClose={closeEngineDialog} />
+      {engineDialog && (variants?.key === 'geniex' || variants?.key === 'fastflowlm') && (
+        <EngineSettings workspace={workspace} provider={variants.engine} onClose={closeEngineDialog} />
       )}
       {engineDialog && variants?.key === 'foundry' && (
         <FoundryLocal workspace={workspace} onClose={closeEngineDialog} />

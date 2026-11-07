@@ -13,6 +13,7 @@ const installs = new Set([
   'foundry.resume',
   'litert.install',
   'geniex.install',
+  'fastflowlm.install',
   'litert.resume',
 ])
 /** Stop only an empty listener when its first model/engine download begins. Live models keep serving. */

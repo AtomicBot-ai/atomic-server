@@ -13,7 +13,9 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TARGETS } from './targets.mjs'
 import { assertReleaseReporting } from './reporting-config.mjs'
+import { assertBuildRuntime } from './build-runtime.mjs'
 
+assertBuildRuntime()
 assertReleaseReporting(process.env)
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))

@@ -285,6 +285,7 @@ Flow, in `src/host/host-step.ts` and `elevator.ts`:
 | Strategy | Chosen when (first match) | Runs | Status |
 | --- | --- | --- | --- |
 | `root` | euid 0, or an elevated Windows process | the helper directly | works |
+| `terminal-sudo` | FastFlowLM in a Linux desktop daemon with sudo and xdg-terminal-exec | Opens a terminal running the digest-bound unprivileged `host-step prompt`; it invokes sudo once and preserves the SDK result or a bound refusal | works |
 | `pkexec` | the daemon, on Linux, with `DISPLAY`/`WAYLAND_DISPLAY` and `pkexec` on PATH | `pkexec atc host-step exec …` (a polkit agent prompts; exit 126 is a declined prompt) | works |
 | `windows-runas` | Windows, in the daemon or with a terminal | `Start-Process -Verb RunAs -Wait` (UAC; "canceled by the user" is declined) | works |
 | `sudo-tty` | a command (not the daemon) with a terminal and `sudo` | `sudo -k -- atc host-step exec …`, stdio inherited for the password | works |

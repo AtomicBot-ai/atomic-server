@@ -44,13 +44,7 @@
 .cloud-provider-tag {
   margin-left: auto;
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-  padding: 4px 6px;
-  border-radius: 5px;
-  background: #373e3c;
-  font-size: 11px;
+  flex-shrink: 0;
 }
 .cloud-provider-editor {
   margin-top: 18px;
@@ -136,6 +130,13 @@
 }
 .cloud-provider-dialog .form-grid {
   grid-template-columns: 1fr;
+}
+.cloud-provider-dialog .cloud-provider-editor .ew-actions {
+  justify-content: flex-end;
+  align-items: center;
+}
+.cloud-provider-dialog .cloud-provider-editor .ew-actions .ew-button {
+  min-width: 104px;
 }
 @media (max-width: 600px) {
   .cloud-provider-overlay {

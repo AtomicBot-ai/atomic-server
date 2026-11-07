@@ -1,0 +1,23 @@
+.file-input {
+  min-width: 0;
+}
+.file-input-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.file-input-row > .ew-button {
+  flex-shrink: 0;
+}
+.file-input .file-input-name {
+  min-width: 0;
+  color: var(--ew-muted);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.file-input input[hidden] {
+  display: none;
+}

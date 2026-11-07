@@ -20,28 +20,26 @@
 .inline-download-game .mine-help {
   margin-bottom: 0;
 }
-.waiting-email {
-  display: grid;
+.desktop-workspace .waiting-email {
   gap: 12px;
   padding: 20px;
-  border-radius: 16px;
-  background: var(--ew-panel, #1b211e);
+  border: 1px solid var(--ew-line);
+  border-radius: 10px;
+  background: var(--ew-panel);
 }
 .waiting-side {
   display: grid;
+  min-width: 0;
   gap: 20px;
 }
-.waiting-email-controls,
+.desktop-workspace .waiting-email .settings-field-stacked {
+  margin: 0;
+}
 .waiting-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-}
-.waiting-email-controls .ew-button {
-  flex: 0 0 auto;
-  padding-inline: 16px;
-}
-.waiting-actions {
   grid-column: 1 / -1;
   justify-content: flex-end;
 }
@@ -50,26 +48,13 @@
   white-space: normal;
   text-align: center;
 }
-.waiting-email input {
-  min-width: 0;
-  width: 100%;
-  flex: 1;
-  padding: 12px;
-  border: 1px solid var(--ew-line, #45504b);
-  border-radius: 10px;
-  background: #303934;
-  color: inherit;
-}
-.waiting-email-hint {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ew-muted, #a5b5ac);
-}
 .waiting-email-status {
-  min-height: 3em;
-  font-size: 13px;
-  color: var(--ew-muted, #a5b5ac);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+}
+.waiting-email-status:empty {
+  display: none;
 }
 @media (max-width: 700px) {
   .waiting-setup-grid {
@@ -78,14 +63,6 @@
   .waiting-side {
     grid-row: 1;
   }
-}
-
-.waiting-email-status.invalid,
-.waiting-email-status.failed {
-  color: #ffb3a7;
-}
-.waiting-email input[aria-invalid='true'] {
-  border-color: #ffb3a7;
 }
 
 @media (min-width: 701px) and (max-height: 850px) {

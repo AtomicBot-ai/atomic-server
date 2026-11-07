@@ -1,7 +1,7 @@
-import { EngineBuilds } from './EngineBuilds'
-import { EngineSetup } from './EngineSetup'
-import { FoundryLocal } from './FoundryLocal'
-import { LiteRtLm } from './LiteRtLm'
+import { EngineOverview } from './EngineOverview'
+import { EngineSettingsTransfer } from './EngineSettingsTransfer'
+import './engine-settings.css'
+import './engine-drawer.css'
 import { useConfirmation } from '../../use-confirmation'
 import { EngineReload } from './EngineReload'
 import { useEngineSettingsData } from './use-engine-settings-data'
@@ -17,27 +17,28 @@ import {
 } from '@view'
 import { useDialog } from '../../useDialog'
 import type { Workspace } from '../../useWorkspace'
-import { Action, Field } from '../../Controls'
-import { describeError } from '@/services/admin-api'
+import { Action } from '../../Controls'
 import { record, rows, text } from '../../types'
 import type { RecordValue } from '../../types'
 import { SETTING_GROUPS, commonSetting, editableSetting, settingGroup } from './engine-setting-groups'
 import { EngineSettingField } from './EngineSettingField'
-import { downloadJson } from '../../chat/chat-preferences'
 
 export function EngineSettings({
   provider,
   workspace: w,
   onClose,
+  presentation = 'dialog',
 }: {
   provider: string
   workspace: Workspace
   onClose: () => void
+  presentation?: 'dialog' | 'drawer'
 }) {
   const { values, setValues, saved, schema, revision, error, setError, loading, markSaved } =
     useEngineSettingsData(provider, w.execute, engineHasSettings(provider))
   const [query, setQuery] = useState(''),
-    [group, setGroup] = useState('All')
+    [group, setGroup] = useState('Common')
+  const [tab, setTab] = useState<'overview' | 'settings'>('overview')
   const [formError, setFormError] = useState('')
   const [notice, setNotice] = useState(''),
     [changedOnly, setChangedOnly] = useState(false)
@@ -80,9 +81,10 @@ export function EngineSettings({
   const visible = fields.filter((field) => {
     const name = text(field.key),
       match = `${field.title} ${name} ${field.description}`.toLowerCase().includes(query.toLowerCase())
-    if (changedOnly) return name in changes && match
+    if (changedOnly && Object.keys(changes).length) return name in changes && match
     if (query) return match || name in changes
     return (
+      fields.length <= 6 ||
       group === 'All' ||
       (group === 'Common'
         ? commonSetting(field) || (!common && fields.indexOf(field) < 6)
@@ -96,11 +98,11 @@ export function EngineSettings({
   }
   const loaded = w.snapshot?.services.filter((s) => s.provider === provider && s.kind === 'chat') ?? []
   return (
-    <div className="modal-shade">
+    <div className={`modal-shade${presentation === 'drawer' ? ' engine-drawer-shade' : ''}`}>
       <section
         ref={dialog}
         tabIndex={-1}
-        className="ew-modal settings-dialog"
+        className="ew-modal settings-dialog engine-settings-dialog"
         role="dialog"
         aria-modal="true"
         aria-label={`${provider} settings`}
@@ -111,117 +113,135 @@ export function EngineSettings({
             Close
           </button>
         </div>
-        <EngineBuilds provider={provider} execute={execute} />
-        {engineFamily(provider) === 'managed' && (
-          <EngineSetup workspace={w} engine={provider} onClose={onClose} embedded />
-        )}
-        {provider === 'foundry-local' && <FoundryLocal workspace={w} onClose={onClose} embedded />}
-        {provider === 'litert-lm' && <LiteRtLm workspace={w} onClose={onClose} embedded />}
-        <p className="ew-muted engine-settings-note">
-          {engineTaskNote(provider) ?? 'Settings apply on the next model load.'}
-        </p>
-        {loading && <p role="status">Loading engine settings…</p>}
-        {(formError || error) && (
-          <p role="alert" className="ew-error">
-            {formError || error}
-          </p>
-        )}
-        <input
-          aria-label="Find engine setting"
-          placeholder="Search all settings…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <nav className="subnav setting-groups" aria-label="Engine setting groups">
-          {SETTING_GROUPS.filter(
-            (name) => ['Common', 'All'].includes(name) || fields.some((f) => settingGroup(f) === name)
-          ).map((name) => (
+        <div className="engine-tabs" role="tablist" aria-label="Engine sections">
+          {(['overview', 'settings'] as const).map((name) => (
             <button
               key={name}
-              className={group === name ? 'active' : ''}
-              onClick={() => {
-                setGroup(name)
-                setQuery('')
-                setChangedOnly(false)
-              }}
-            >
-              {name}
-            </button>
-          ))}
-        </nav>
-        <label className="preference-check">
-          <input
-            type="checkbox"
-            checked={changedOnly}
-            onChange={(e) => {
-              setChangedOnly(e.target.checked)
-              setQuery('')
-            }}
-          />
-          Review changes ({Object.keys(changes).length})
-        </label>
-        {!visible.length && !loading && engineHasSettings(provider) && (
-          <p className="ew-muted">No settings match. Search another term or choose All.</p>
-        )}
-        <div className="form-grid">
-          {visible.map((field) => (
-            <EngineSettingField
-              key={text(field.key)}
-              field={field}
-              values={values}
-              saved={saved}
-              update={update}
-              gpus={gpus}
-              managed={engineFamily(provider) === 'managed'}
-            />
-          ))}
-        </div>
-        <details>
-          <summary>Import / export engine configuration</summary>
-          <Action
-            onClick={() =>
-              downloadJson(`${provider}-settings.json`, {
-                format: 'atomic-engine-settings-v1',
-                provider,
-                values: Object.fromEntries(
-                  Object.entries(values).filter(
-                    ([name]) => !/env|secret|password|token|api.?key|args|arguments/i.test(name)
-                  )
-                ),
-              })
-            }
-          >
-            Export settings (credentials and extra arguments excluded)
-          </Action>
-          <Field label="Import settings for this engine">
-            <input
-              type="file"
-              accept=".json"
-              onChange={async (e) => {
-                const file = e.target.files?.[0]
-                e.target.value = ''
-                if (!file) return
-                try {
-                  if (file.size > 1000000) throw new Error('Choose a file smaller than 1 MB.')
-                  const data = record(JSON.parse(await file.text()))
-                  if (data.format !== 'atomic-engine-settings-v1' || data.provider !== provider)
-                    throw new Error('This preset is for a different engine or format.')
-                  const incoming = record(data.values),
-                    problem = settingValuesError(incoming, fields)
-                  if (problem) throw new Error(problem)
-                  setValues({ ...values, ...incoming })
-                  setChangedOnly(true)
-                  setQuery('')
-                  setNotice('Imported settings are staged. Review and save to apply on the next model load.')
-                  setFormError('')
-                } catch (err) {
-                  setFormError(describeError(err))
+              id={`engine-${name}-tab`}
+              role="tab"
+              aria-selected={tab === name}
+              aria-controls={`engine-${name}-panel`}
+              tabIndex={tab === name ? 0 : -1}
+              onClick={() => setTab(name)}
+              onKeyDown={(event) => {
+                if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                  event.preventDefault()
+                  const next =
+                    event.key === 'Home'
+                      ? 'overview'
+                      : event.key === 'End'
+                        ? 'settings'
+                        : name === 'overview'
+                          ? 'settings'
+                          : 'overview'
+                  setTab(next)
+                  document.getElementById(`engine-${next}-tab`)?.focus()
                 }
               }}
+            >
+              {name === 'overview' ? 'Overview' : 'Settings'}
+              {name === 'settings' && Object.keys(changes).length > 0 && (
+                <span className="engine-change-count">{Object.keys(changes).length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="engine-dialog-body settings-form">
+          <div
+            role="tabpanel"
+            id="engine-overview-panel"
+            aria-labelledby="engine-overview-tab"
+            hidden={tab !== 'overview'}
+          >
+            <EngineOverview provider={provider} workspace={w} onClose={close} />
+          </div>
+          <div
+            role="tabpanel"
+            id="engine-settings-panel"
+            aria-labelledby="engine-settings-tab"
+            hidden={tab !== 'settings'}
+          >
+            <p className="ew-muted engine-settings-note">
+              {engineTaskNote(provider) ?? 'Settings apply on the next model load.'}
+            </p>
+            {loading && <p role="status">Loading engine settings…</p>}
+            {(formError || error) && (
+              <p role="alert" className="ew-error">
+                {formError || error}
+              </p>
+            )}
+            {fields.length > 6 && (
+              <input
+                aria-label="Find engine setting"
+                placeholder="Search all settings…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            )}
+            {fields.length > 6 && (
+              <nav className="subnav setting-groups" aria-label="Engine setting groups">
+                {SETTING_GROUPS.filter(
+                  (name) => ['Common', 'All'].includes(name) || fields.some((f) => settingGroup(f) === name)
+                ).map((name) => (
+                  <button
+                    key={name}
+                    className={group === name ? 'active' : ''}
+                    onClick={() => {
+                      setGroup(name)
+                      setQuery('')
+                      setChangedOnly(false)
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </nav>
+            )}
+            {Object.keys(changes).length > 0 && (
+              <label className="preference-check">
+                <input
+                  type="checkbox"
+                  checked={changedOnly}
+                  onChange={(e) => {
+                    setChangedOnly(e.target.checked)
+                    setQuery('')
+                  }}
+                />
+                Review changes ({Object.keys(changes).length})
+              </label>
+            )}
+            {!visible.length && !loading && engineHasSettings(provider) && (
+              <p className="ew-muted">No settings match. Search another term or choose All.</p>
+            )}
+            <div className="form-grid">
+              {visible.map((field) => (
+                <EngineSettingField
+                  key={text(field.key)}
+                  field={field}
+                  values={values}
+                  saved={saved}
+                  update={update}
+                  gpus={gpus}
+                  managed={engineFamily(provider) === 'managed'}
+                />
+              ))}
+            </div>
+            <EngineSettingsTransfer
+              provider={provider}
+              values={values}
+              fields={fields}
+              onError={setFormError}
+              onImport={(incoming) => {
+                setValues({ ...values, ...incoming })
+                setChangedOnly(true)
+                setQuery('')
+                setNotice('Imported settings are staged. Review and save to apply on the next model load.')
+                setFormError('')
+              }}
             />
-          </Field>
-        </details>
-        <div className="settings-footer">
+          </div>
+        </div>
+        <div className="settings-footer engine-dialog-footer">
           {notice && <p role="status">{notice}</p>}
           {Object.keys(changes).length > 0 && (
             <div className="ew-actions">

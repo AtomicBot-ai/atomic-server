@@ -11,10 +11,13 @@
 import { basename } from 'node:path'
 import type { HostStepRequest, HostStepResult } from '@atomic-chat/core/host'
 import type { ExecFn } from './exec.js'
+import type { HostStepOutcomeKind } from './managed-types.js'
 
-export type ElevationStrategy = 'root' | 'sudo-tty' | 'pkexec' | 'windows-runas' | 'manual'
+export type ElevationStrategy = 'root' | 'sudo-tty' | 'terminal-sudo' | 'pkexec' | 'windows-runas' | 'manual'
 
 export interface ElevationContext {
+  hasTerminalLauncher?: boolean
+  allowTerminalPrompt?: boolean
   platform: NodeJS.Platform
   isRoot: boolean
   isElevatedWindows: boolean | null
@@ -33,6 +36,15 @@ export function selectStrategy(ctx: ElevationContext): ElevationStrategy {
     return ctx.inDaemon || ctx.hasTty ? 'windows-runas' : 'manual'
   }
   if (ctx.isRoot) return 'root'
+  if (
+    ctx.inDaemon &&
+    ctx.platform === 'linux' &&
+    ctx.hasDisplay &&
+    ctx.hasSudo &&
+    ctx.hasTerminalLauncher &&
+    ctx.allowTerminalPrompt
+  )
+    return 'terminal-sudo'
   if (ctx.inDaemon && ctx.platform === 'linux' && ctx.hasDisplay && ctx.hasPkexec) return 'pkexec'
   if (!ctx.inDaemon && ctx.hasTty && ctx.hasSudo) return 'sudo-tty'
   return 'manual'
@@ -44,8 +56,8 @@ export type HostStepRequestFile = HostStepRequest
 /** The part of the executor's result file the daemon reads. */
 export type HostStepResultFile = Pick<
   HostStepResult,
-  'schema_version' | 'step_id' | 'outcome' | 'exit_code' | 'log_tail' | 'finished_at'
->
+  'schema_version' | 'step_id' | 'exit_code' | 'log_tail' | 'finished_at'
+> & { outcome: HostStepOutcomeKind }
 
 /** The result file, or what the elevator saw without one: a declined prompt or a failed helper. */
 export type HostStepReport = Omit<HostStepResultFile, 'outcome'> & {
@@ -57,7 +69,7 @@ export type HostStepOutcome =
 
 export interface Elevator {
   select(ctx: ElevationContext): ElevationStrategy
-  run(strategy: ElevationStrategy, requestPath: string): Promise<HostStepOutcome>
+  run(strategy: ElevationStrategy, requestPath: string, requestSha256?: string): Promise<HostStepOutcome>
 }
 
 export interface ElevatorDeps {
@@ -71,13 +83,15 @@ export interface ElevatorDeps {
 export function manualInstructions(
   selfCommand: readonly string[],
   requestPath: string,
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
+  requestSha256?: string
 ): string {
   const quote = platform === 'win32' ? powershellQuote : shellQuote
   const self = selfCommand.map(quote).join(' ')
+  const binding = requestSha256 ? ` --request-sha256 ${quote(requestSha256)}` : ''
   if (platform === 'win32')
-    return `From an elevated (Administrator) PowerShell:\n  ${self} host-step exec ${quote(requestPath)}`
-  return `sudo ${self} host-step exec ${quote(requestPath)}`
+    return `From an elevated (Administrator) PowerShell:\n  ${self} host-step exec ${quote(requestPath)}${binding}`
+  return `sudo ${self} host-step exec ${quote(requestPath)}${binding}`
 }
 
 export function shellQuote(arg: string): string {
@@ -95,10 +109,17 @@ export function elevatedCommand(
   strategy: Exclude<ElevationStrategy, 'manual'>,
   selfCommand: readonly string[],
   requestPath: string,
-  env: NodeJS.ProcessEnv
+  env: NodeJS.ProcessEnv,
+  requestSha256?: string
 ): { command: string; args: string[]; env?: NodeJS.ProcessEnv; interactive: boolean } {
   const [exe = 'atc', ...prefix] = selfCommand
-  const helper = [...prefix, 'host-step', 'exec', requestPath]
+  const helper = [
+    ...prefix,
+    'host-step',
+    'exec',
+    requestPath,
+    ...(requestSha256 ? ['--request-sha256', requestSha256] : []),
+  ]
   switch (strategy) {
     case 'root': {
       // Already root: an inherited SUDO_UID/PKEXEC_UID (a server started with `sudo atc start`) would
@@ -109,6 +130,9 @@ export function elevatedCommand(
     case 'sudo-tty':
       // -k: always ask on this terminal; never reuse a cached ticket for a privileged install.
       return { command: 'sudo', args: ['-k', '--', exe, ...helper], interactive: true }
+    case 'terminal-sudo':
+      helper[prefix.length + 1] = 'prompt'
+      return { command: 'xdg-terminal-exec', args: ['--', exe, ...helper], interactive: false }
     case 'pkexec':
       return { command: 'pkexec', args: [exe, ...helper], interactive: false }
     case 'windows-runas': {
@@ -139,10 +163,13 @@ export function createElevator(
 ): Elevator {
   return {
     select: selectStrategy,
-    async run(strategy, requestPath) {
+    async run(strategy, requestPath, requestSha256) {
       if (strategy === 'manual')
-        return { kind: 'pending', instructions: manualInstructions(deps.selfCommand, requestPath, platform) }
-      const line = elevatedCommand(strategy, deps.selfCommand, requestPath, deps.env ?? {})
+        return {
+          kind: 'pending',
+          instructions: manualInstructions(deps.selfCommand, requestPath, platform, requestSha256),
+        }
+      const line = elevatedCommand(strategy, deps.selfCommand, requestPath, deps.env ?? {}, requestSha256)
       const result = await deps.exec(line.command, line.args, {
         timeoutMs: ELEVATED_STEP_TIMEOUT_MS,
         killTree: true,
@@ -152,6 +179,11 @@ export function createElevator(
       const file = await deps.readResult(requestPath)
       const stepId = basename(requestPath).replace(/\.request\.json$/, '')
       if (file?.step_id === stepId) return { kind: 'result', result: file }
+      if (strategy === 'terminal-sudo' && result.code === 0)
+        return {
+          kind: 'pending',
+          instructions: 'Complete authorization in the terminal opened on this server.',
+        }
       // No result file: the helper never ran (a declined prompt) or could not write one.
       return {
         kind: 'result',

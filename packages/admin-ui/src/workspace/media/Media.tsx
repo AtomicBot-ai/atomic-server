@@ -211,7 +211,7 @@ export function Media({
       />
     )
   return (
-    <div className="media-layout">
+    <div className="media-layout settings-form">
       <Panel
         title={{ embedding: 'Embeddings', decision: 'Decisions', router: 'Router' }[task] || task}
         actions={
@@ -232,12 +232,9 @@ export function Media({
         <MediaFields task={task} capabilities={capabilities} values={values} change={change} />
         <details>
           <summary>Additional parameters</summary>
-          <textarea
-            className="code-input"
-            aria-label="Additional parameters"
-            value={advanced}
-            onChange={(e) => setAdvanced(e.target.value)}
-          />
+          <Field label="Additional parameters">
+            <textarea className="code-input" value={advanced} onChange={(e) => setAdvanced(e.target.value)} />
+          </Field>
         </details>
         <Action primary disabled={!loaded || !String(values.prompt ?? '').trim()} onClick={generate}>
           {task === 'embedding' ? 'Embed' : 'Run'}

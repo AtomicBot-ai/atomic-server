@@ -67,7 +67,9 @@ export function Server({
     }
   }
   return (
-    <div className="server-page server-desktop">
+    <div
+      className={`server-page server-desktop ${['configuration', 'remote', 'proxy'].includes(view) ? 'server-form-page' : ''}`}
+    >
       {view !== 'overview' && (
         <div className="page-heading">
           <h1>{SERVER_SECTIONS.find((s) => s.id === view)?.label ?? 'Server'}</h1>

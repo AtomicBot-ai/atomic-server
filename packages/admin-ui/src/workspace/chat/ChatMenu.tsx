@@ -53,7 +53,7 @@ export function ChatMenu({ label, children }: { label: string; children: ReactNo
                 if (event.target instanceof HTMLInputElement) return
                 const items = [
                   ...event.currentTarget.querySelectorAll<HTMLElement>(
-                    'button:not(:disabled), input:not(:disabled), summary'
+                    'button:not(:disabled), input:not(:disabled):not([hidden]):not([type="hidden"]), summary'
                   ),
                 ]
                 const current = items.indexOf(document.activeElement as HTMLElement)

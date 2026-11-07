@@ -1,6 +1,7 @@
+import { FileInput } from '../FileInput'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, MessageCircle, Search } from 'lucide-react'
-import { Action, Field } from '../Controls'
+import { Action } from '../Controls'
 import { downloadJson } from './chat-preferences'
 import { workspaceApi } from '../workspace-api'
 import { text } from '../types'
@@ -23,7 +24,7 @@ export function ChatHistory({
     [expanded, setExpanded] = useState(true)
   const [importing, setImporting] = useState<unknown[] | null>(null)
   const [reading, setReading] = useState(false)
-  const importInput = useRef<HTMLInputElement>(null)
+  const importInput = useRef<HTMLButtonElement>(null)
   const restoreImportFocus = useRef(false)
   useEffect(() => {
     const search = () => setSearching(true)
@@ -84,47 +85,45 @@ export function ChatHistory({
             >
               Export all conversations
             </Action>
-            <Field label="Import conversations (JSON / JSONL)">
-              <input
-                ref={importInput}
-                type="file"
-                accept=".json,.jsonl"
-                disabled={s.busy || reading || Boolean(importing)}
-                onChange={async (event) => {
-                  const file = event.target.files?.[0]
-                  event.target.value = ''
-                  if (!file) return
-                  setReading(true)
+            <FileInput
+              label="Import conversations (JSON / JSONL)"
+              triggerRef={importInput}
+              accept=".json,.jsonl"
+              disabled={s.busy || reading || Boolean(importing)}
+              onChange={async (event) => {
+                const file = event.target.files?.[0]
+                event.target.value = ''
+                if (!file) return
+                setReading(true)
+                try {
+                  if (file.size > 32 * 1024 * 1024) throw new Error('Choose a file smaller than 32 MB.')
+                  const raw = await file.text()
+                  let value: unknown
                   try {
-                    if (file.size > 32 * 1024 * 1024) throw new Error('Choose a file smaller than 32 MB.')
-                    const raw = await file.text()
-                    let value: unknown
-                    try {
-                      value = JSON.parse(raw)
-                    } catch {
-                      value = raw
-                        .split(/\r?\n/)
-                        .filter((line) => line.trim())
-                        .map((line) => JSON.parse(line))
-                    }
-                    const data = value as RecordValue
-                    let chats = Array.isArray(value)
-                      ? value
-                      : Array.isArray(data.conversations)
-                        ? data.conversations
-                        : [value]
-                    if (chats[0]?.role) chats = [{ title: file.name, messages: chats }]
-                    if (!chats.length) throw new Error('This file contains no conversations.')
-                    s.setError('')
-                    setImporting(chats)
-                  } catch (e) {
-                    s.setError(describeError(e))
-                  } finally {
-                    setReading(false)
+                    value = JSON.parse(raw)
+                  } catch {
+                    value = raw
+                      .split(/\r?\n/)
+                      .filter((line) => line.trim())
+                      .map((line) => JSON.parse(line))
                   }
-                }}
-              />
-            </Field>
+                  const data = value as RecordValue
+                  let chats = Array.isArray(value)
+                    ? value
+                    : Array.isArray(data.conversations)
+                      ? data.conversations
+                      : [value]
+                  if (chats[0]?.role) chats = [{ title: file.name, messages: chats }]
+                  if (!chats.length) throw new Error('This file contains no conversations.')
+                  s.setError('')
+                  setImporting(chats)
+                } catch (e) {
+                  s.setError(describeError(e))
+                } finally {
+                  setReading(false)
+                }
+              }}
+            />
           </details>
         </ChatMenu>
       </div>

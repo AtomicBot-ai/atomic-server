@@ -11,6 +11,8 @@ export const SETTING_GROUPS = [
 ]
 export function settingGroup(field: RecordValue): string {
   const key = text(field.key).toLowerCase()
+  if (/^(prefill_chunk_len|prefix_cache_mb|prefix_slots|prefix_min_gain)$/.test(key)) return 'Advanced'
+  if (key === 'pmode') return 'Hardware'
   if (/mtp|dflash|draft|speculat/.test(key)) return 'Speculative decoding'
   if (/concurrent|parallel|batch|metrics/.test(key)) return 'Concurrency'
   if (/ctx|context|cache|mmap|mlock|rope|fit|memory/.test(key)) return 'Memory & context'
@@ -22,7 +24,7 @@ export function editableSetting(field: RecordValue): boolean {
   return text(field.key) !== 'version_backend'
 }
 export function commonSetting(field: RecordValue): boolean {
-  return /^(ctx_size|context_size|fit|concurrent_mode|parallel|threads|gpu_layers|n_gpu_layers|flash_attn|max_tokens|num_ctx|temperature|memory_limit)$/.test(
+  return /^(ctx_len|pmode|ctx_size|context_size|fit|concurrent_mode|parallel|threads|gpu_layers|n_gpu_layers|flash_attn|max_tokens|num_ctx|temperature|memory_limit)$/.test(
     text(field.key)
   )
 }

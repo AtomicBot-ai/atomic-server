@@ -65,3 +65,28 @@ it.each([
     expect(row.y + row.height).toBeLessThanOrEqual(height! - 3)
   }
 })
+it('keeps a FastFlowLM installation in its family without hiding another provider with the same ID', async () => {
+  const { modelInstalled, catalogDeviceStatus } = await import('./model-job.js')
+  const s = createWorkspace('models')
+  const row = {
+    id: 'qwen',
+    name: 'Qwen',
+    category: 'text',
+    description: '',
+    source: { format: 'fastflowlm', engine: 'fastflowlm', variants: [{ id: 'qwen-npu2' }] },
+  }
+  s.libraryRows = [row]
+  s.installed = [{ id: 'qwen-npu2', name: 'Qwen', provider: 'fastflowlm' }]
+  expect(withInstalledRows(s.libraryRows, s)).toEqual([row])
+  expect(modelInstalled(s, row.id)).toBe(true)
+  expect(catalogDeviceStatus(s, row)).toBe('Downloaded')
+  s.installed[0]!.provider = 'llamacpp-upstream'
+  expect(modelInstalled(s, row.id)).toBe(false)
+  expect(withInstalledRows(s.libraryRows, s)).toHaveLength(2)
+})
+
+it('names the active format beside Filters without opening the popover', () => {
+  const s = { ...createWorkspace('models'), setupComplete: true, libraryFormat: 'fastflowlm' as const }
+  const frame = workspaceFrame(s, 120, 36, 0)
+  expect(frame.cells.map((r) => r.map((c) => c.char).join('')).join('\n')).toContain('Filters: FastFlowLM')
+})

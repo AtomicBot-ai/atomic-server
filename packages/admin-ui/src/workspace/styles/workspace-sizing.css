@@ -4,7 +4,7 @@
 /* Shared web rhythm; component-specific content may grow rather than shrink its targets. */
 .desktop-workspace {
   --control-height: 36px;
-  --primary-height: 40px;
+  --button-height: 40px;
   --control-radius: 8px;
   --panel-radius: 12px;
   font-size: 14px;
@@ -23,8 +23,9 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.desktop-workspace .ew-button.primary {
-  min-height: var(--primary-height);
+.desktop-workspace .ew-button,
+.desktop-workspace .media-generate-slot .ew-button {
+  min-height: var(--button-height);
   padding-block: 9px;
 }
 .desktop-workspace .media-generate-slot {

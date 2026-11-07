@@ -13,6 +13,9 @@ export function acceptedResult(
   result: HostStepResultFile | undefined
 ): HostStepResultFile | undefined {
   if (!result || result.step_id !== requestStepId(requestPath)) return undefined
+  // FLM service activation uses its own bound receipt protocol, never the Docker/WSL API.
+  if (!['completed', 'failed', 'declined', 'reboot-required', 'relogin-required'].includes(result.outcome))
+    return undefined
   return result
 }
 

@@ -67,10 +67,8 @@
   margin-top: 24px;
 }
 .desktop-workspace .first-run .ew-button.primary {
-  border-radius: 24px;
   background: #bee8df;
   color: #18302c;
-  padding: 12px 24px;
 }
 .first-run-content h1:focus {
   outline: none;

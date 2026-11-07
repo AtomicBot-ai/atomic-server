@@ -11,12 +11,12 @@
   display: block;
   width: 100%;
 }
-.server-power button {
+.desktop-workspace .server-power .ew-button {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  border-radius: 24px;
+  border-radius: 999px;
   min-height: 38px;
   margin-bottom: 7px;
 }

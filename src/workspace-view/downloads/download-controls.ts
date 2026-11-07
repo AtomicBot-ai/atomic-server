@@ -1,10 +1,11 @@
 import type { DownloadRow } from './downloads.js'
-export type DownloadOwner = 'setup' | 'artifacts' | 'managed' | 'foundry' | 'litert' | 'geniex'
+export type DownloadOwner = 'setup' | 'artifacts' | 'managed' | 'foundry' | 'litert' | 'geniex' | 'fastflowlm'
 /** The services whose jobs resume by installing their plan again, by job kind. */
 const PLAN_OWNERS: Record<string, DownloadOwner> = {
   'managed-model': 'managed',
   'foundry-model': 'foundry',
   'geniex-model': 'geniex',
+  'fastflowlm-model': 'fastflowlm',
   'litert-model': 'litert',
 }
 export function downloadOwner(job: Record<string, unknown>): DownloadOwner | null {

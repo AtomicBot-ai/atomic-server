@@ -1,7 +1,8 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/connectors/ConnectorSecretDialog.tsx and EditJsonMCPserver @ 807b4d9; adapted: server-owned operations.
 import { useState } from 'react'
 import type { ConnectorTemplate } from '@contract'
-import { Action, Field } from '../../Controls'
+import { Action } from '../../Controls'
+import { SettingsField as Field } from '../../SettingsForm'
 import { useDialog } from '../../useDialog'
 import { describeError } from '@/services/admin-api'
 export function ConnectorDialog({
@@ -18,7 +19,7 @@ export function ConnectorDialog({
     <div className="modal-shade">
       <section
         ref={ref}
-        className="ew-modal connector-dialog"
+        className="ew-modal connector-dialog settings-form"
         role="dialog"
         aria-modal="true"
         aria-label={title}

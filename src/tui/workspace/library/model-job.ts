@@ -2,7 +2,11 @@ import type { WorkspaceState } from '../state.js'
 import { record } from './library-model.js'
 import type { LibraryRow } from './library-model.js'
 import { AUDIO_ENGINE_ID } from '../../../contract/index.js'
-import { catalogModelMatches, localModelStatus } from '../../../workspace-view/index.js'
+import {
+  catalogModelMatches,
+  localModelStatus,
+  fastFlowLmFamilyMatches,
+} from '../../../workspace-view/index.js'
 
 function matches(job: Record<string, unknown>, id: string) {
   const plan = record(job['plan'])
@@ -23,13 +27,31 @@ export function modelJob(s: WorkspaceState, id: string) {
     .reverse()
     .sort((a, b) => rank(b) - rank(a))[0]
 }
+export function matchesCatalogInstallation(
+  row: LibraryRow | undefined,
+  model: WorkspaceState['installed'][number],
+  setups: unknown[] = []
+) {
+  if (!row) return false
+  if (row.source?.['format'] === 'fastflowlm')
+    return fastFlowLmFamilyMatches(model.id, model.provider, row.id, row.source['variants'])
+  return catalogModelMatches(model.id, row.id, setups, model.repository)
+}
 export function modelInstalled(s: WorkspaceState, id: string) {
   const jobs = (s.workspace?.setups ?? []).map(record).filter((job) => matches(job, id))
   return (
     s.installed.some(
       (model) =>
-        catalogModelMatches(model.id, id, s.workspace?.setups, model.repository) ||
-        jobs.some((job) => record(job['plan'])['model_id'] === model.id)
+        matchesCatalogInstallation(
+          s.libraryRows.find((row) => row.id === id) ?? {
+            id,
+            name: id,
+            description: '',
+            category: s.libraryCategory,
+          },
+          model,
+          s.workspace?.setups
+        ) || jobs.some((job) => record(job['plan'])['model_id'] === model.id)
     ) ||
     jobs.some(
       (job) =>
@@ -60,13 +82,12 @@ export function catalogDeviceStatus(s: WorkspaceState, model: LibraryRow) {
   const providers = (values: string[]) =>
     values.filter(
       (provider) =>
+        category !== 'text' ||
         !s.catalogFilters.engine ||
         provider === s.catalogFilters.engine ||
         (s.catalogFilters.engine === 'llamacpp' && provider === 'llamacpp-upstream')
     )
-  const files = s.installed.filter((file) =>
-    catalogModelMatches(file.id, model.id, s.workspace?.setups, file.repository)
-  )
+  const files = s.installed.filter((file) => matchesCatalogInstallation(model, file, s.workspace?.setups))
   const jobs = (s.workspace?.setups ?? []).map(record).filter((job) => matches(job, model.id))
   const candidates = [
     ...files.map((file) => ({

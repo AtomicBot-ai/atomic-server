@@ -33,7 +33,10 @@ it.each([
     'settings.schema': { descriptors: settingsSchema('llamacpp-upstream') },
   })
   render(<EngineSettings provider="llamacpp-upstream" workspace={workspace} onClose={() => {}} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'All', exact: true }))
   await screen.findByLabelText('Threads')
+  await userEvent.click(screen.getByText('Import or export settings'))
   const preset = new File(
     [JSON.stringify({ format: 'atomic-engine-settings-v1', provider: 'llamacpp-upstream', values })],
     'preset.json',
@@ -57,7 +60,10 @@ it('stages a valid preset and sends only its changes with the saved revision', a
     'settings.update': { revision: 8 },
   })
   render(<EngineSettings provider="llamacpp-upstream" workspace={workspace} onClose={() => {}} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'All', exact: true }))
   await screen.findByLabelText('Threads')
+  await userEvent.click(screen.getByText('Import or export settings'))
   await userEvent.upload(
     screen.getByLabelText('Import settings for this engine'),
     new File(
@@ -86,6 +92,7 @@ it('shows an unsupported stored enum explicitly rather than displaying the first
     'settings.schema': { descriptors: settingsSchema('llamacpp-upstream') },
   })
   render(<EngineSettings provider="llamacpp-upstream" workspace={workspace} onClose={() => {}} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
   expect(await screen.findByLabelText('Flash Attention')).toHaveDisplayValue(
     'Unsupported saved value: legacy-invalid'
   )

@@ -20,6 +20,7 @@ HTMLMediaElement.prototype.pause = () => {}
 // runs a cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
   cleanup()
+  localStorage.removeItem('atomic-server-catalog')
   useStatusStore.getState().reset()
   useServiceStore.setState({ serviceHub: null })
   FakeEventSource.reset()

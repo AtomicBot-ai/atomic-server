@@ -100,13 +100,6 @@
   border: 0;
   background: transparent;
 }
-.server-state-tag {
-  color: var(--ew-teal);
-  background: color-mix(in srgb, var(--ew-teal) 10%, transparent);
-  padding: 5px 9px;
-  border-radius: 15px;
-  font-size: 12px;
-}
 .server-connections {
   display: grid;
   gap: 16px;

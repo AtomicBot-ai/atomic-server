@@ -9,9 +9,8 @@ import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { useDialog } from '../useDialog'
 import { ModelInstall } from '../library/install/ModelInstall'
-import { FoundryLocal } from '../library/engines/FoundryLocal'
-import { EngineSettings } from '../library/engines/EngineSettings'
-import { LiteRtLm } from '../library/engines/LiteRtLm'
+import { SetupEngineDialog } from './SetupEngineDialog'
+import { EngineChooser } from '../intro/EngineChooser'
 import { SetupReview } from './SetupReview'
 import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
 import { WorkspaceBrand } from '../WorkspaceBrand'
@@ -29,7 +28,6 @@ export function SetupWizard({
   onClose,
   onOpenGoal,
   onDestination,
-  onWelcome,
 }: {
   workspace: Workspace
   onClose: () => void
@@ -37,7 +35,6 @@ export function SetupWizard({
   onPrepared?: (id: string) => void
   onConfigure?: () => void
   onChat?: () => void
-  onWelcome?: () => void
   onDestination?: (destination: 'endpoint' | 'agents') => void
 }) {
   const [step, setStep] = useState<FirstRunStep>(w.snapshot?.setups.length ? 'permissions' : 'model')
@@ -45,6 +42,8 @@ export function SetupWizard({
   const [modelChoice, setModelChoice] = useState('')
   const [review, setReview] = useState<RecordValue | null>(null)
   const [engineDialog, setEngineDialog] = useState('')
+  const [choosingEngine, setChoosingEngine] = useState(false)
+  const [engineRevision, setEngineRevision] = useState(0)
   const choosing = useRef(false)
   const [category, setCategory] = useState('image')
   const [mediaAdded, setMediaAdded] = useState(false)
@@ -67,7 +66,7 @@ export function SetupWizard({
         }
         const previous = FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1]
         if (previous) setStep(previous)
-        else onWelcome?.()
+        else setChoosingEngine(true)
       }
     },
     true,
@@ -128,6 +127,7 @@ export function SetupWizard({
           )}
           {!waitingDestination && step === 'model' && (
             <FirstModel
+              key={engineRevision}
               workspace={w}
               initialChoice={modelChoice}
               onChoice={setModelChoice}
@@ -180,20 +180,16 @@ export function SetupWizard({
         </main>
         {!waitingDestination && (
           <footer className="first-run-footer">
-            {step !== 'model' || onWelcome ? (
-              <Action
-                disabled={checking}
-                onClick={() =>
-                  step === 'model'
-                    ? onWelcome?.()
-                    : setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1])
-                }
-              >
-                Back
-              </Action>
-            ) : (
-              <span />
-            )}
+            <Action
+              disabled={checking}
+              onClick={() =>
+                step === 'model'
+                  ? setChoosingEngine(true)
+                  : setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1])
+              }
+            >
+              Back
+            </Action>
             {
               <div className="first-run-actions" ref={setModelActionContainer}>
                 <span className="first-run-skip">
@@ -238,6 +234,7 @@ export function SetupWizard({
         )}
         {review && step === 'model' && (
           <SetupReview
+            revision={engineRevision}
             autoStart
             workspace={w}
             model={review}
@@ -270,13 +267,26 @@ export function SetupWizard({
             }}
           />
         )}
-        {engineDialog === 'foundry-local' && (
-          <FoundryLocal workspace={w} onClose={() => setEngineDialog('')} />
+        {engineDialog && (
+          <SetupEngineDialog
+            workspace={w}
+            engine={engineDialog}
+            onClose={() => {
+              setEngineDialog('')
+              setEngineRevision((v) => v + 1)
+            }}
+          />
         )}
-        {engineDialog === 'geniex' && (
-          <EngineSettings workspace={w} provider="geniex" onClose={() => setEngineDialog('')} />
+        {choosingEngine && (
+          <EngineChooser
+            workspace={w}
+            onBack={() => setChoosingEngine(false)}
+            onContinue={() => {
+              setChoosingEngine(false)
+              setEngineRevision((v) => v + 1)
+            }}
+          />
         )}
-        {engineDialog === 'litert-lm' && <LiteRtLm workspace={w} onClose={() => setEngineDialog('')} />}
       </section>
     </div>
   )

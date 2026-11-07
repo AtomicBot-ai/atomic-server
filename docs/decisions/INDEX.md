@@ -11,6 +11,11 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-07** — [Open engines from a compact directory](2026-11-07-open-engines-from-compact-directory.md) — grouped clickable rows, a responsive detail drawer and error-local Retry.
+
+- **2026-11-07** — [Align model variants across the web catalog](2026-11-07-align-catalog-download-variants.md) — compact accessible media and GGUF rows, existing catalog metadata and explicit model-file sizes.
+
+- **2026-11-06** — [Keep managed host receipts scoped to Docker and WSL](2026-11-06-keep-managed-host-receipts-scoped.md) — keep FastFlowLM service activation results out of the existing managed-runtime receipt API when linking core 0.22.0.
 - **2026-11-05** — [Install GenieX models in Atomic Server](2026-11-05-install-geniex-models-in-atc.md) — separate GGUF and Qualcomm bundle installs, shared by all clients.
 - **2026-11-03** — [Pin core 0.21.0 for agent serving](2026-11-03-pin-core-0-21-0.md) — the advertised window, request window and cached tokens, agent-friendly engine defaults; the tensor-count patch moves to 0.21.0 until atomic-chat-core#67 ships.
 
@@ -178,3 +183,37 @@ add a new one that says which record it supersedes.
 - **2026-11-04** — [Await the complete model-load operation in the terminal contract](2026-11-04-await-complete-model-load-in-terminal-contract.md) — wait for API initialization and keyring writes before endpoint assertions and fixture cleanup.
 - **2026-11-05** — [Recover refused workspace clients](2026-11-05-recover-refused-workspace-clients.md) — invalidate failed admin targets without replaying commands or weakening loopback and instance checks.
 - **2026-11-05** — [Give new Atomic Server profiles their own API port](2026-11-05-separate-server-api-port.md) — use 1339 for new APIs and preserve existing profile ports.
+- [2026-11-06 — Keep FastFlowLM model transfers and recovery in the server](2026-11-06-fastflowlm-server-installs.md)
+
+- [2026-11-06 — Separate runtime memory preparation from driver recipes](2026-11-06-separate-runtime-memlock.md)
+- [2026-11-06 — Offer FastFlowLM before its first installation](2026-11-06-offer-fastflowlm-before-installation.md)
+
+- [Manual NPU driver setup](2026-11-06-manual-npu-driver-setup.md) — core-owned instructions, manual drivers and automatic memlock.
+- [Keep onboarding models and installation on the selected engine](2026-11-06-scope-onboarding-models-to-engine.md)
+
+- [Import the shipped FastFlowLM chat catalog with editorial recommendations](2026-11-06-import-upstream-flm-catalog.md)
+
+- **2026-11-06** — [Keep the TUI catalog selection consistent](2026-11-06-keep-tui-catalog-selection-consistent.md) — preserve filters, isolate categories and reject stale catalog responses.
+
+- **2026-11-06** — [Refresh variant verdicts when returning from engine setup](2026-11-06-refresh-catalog-after-engine-panel.md) — reread model eligibility after setup and align popup buttons with their hit areas.
+
+- **2026-11-06** — [Keep web catalog selection and requests consistent](2026-11-06-keep-web-catalog-selection-consistent.md) — persist one selection, preserve server search semantics and serialize installed-model scans.
+- [2026-11-06 — Offer registered chat engines before installation](2026-11-06-offer-chat-engines-before-installation.md)
+- [2026-11-06 — Show engine installation progress in terminal panels](2026-11-06-show-engine-install-progress-in-panels.md)
+- [2026-11-07 — Separate engine readiness from inference settings](2026-11-07-separate-engine-readiness-and-settings.md)
+
+- **2026-11-07** — [Show hidden choices and recognize Windows Terminal colors](2026-11-07-show-terminal-scroll-directions.md)
+
+- [2026-11-07 — Track web engine installation through its server job](2026-11-07-track-web-engine-installation-lifecycle.md)
+
+- [2026-11-07 — Separate state labels from actions and own file-picker copy](2026-11-07-own-ui-status-and-file-picker-copy.md)
+
+- [2026-11-07 — Clarify chat tools, assistant settings and model selection](2026-11-07-clarify-chat-tools-and-model-selection.md)
+
+- [2026-11-07 — Separate model selection from runtime diagnostics](2026-11-07-clarify-runtime-model-cards.md)
+
+- [2026-11-07 — Share web settings field geometry and accessible descriptions](2026-11-07-share-web-settings-form-layout.md)
+
+- [2026-11-07 — Reuse the API listener when connecting an agent](2026-11-07-reuse-api-for-connections.md)
+
+- [2026-11-07 — Package a runtime that does not inherit Windows sockets](2026-11-07-prevent-windows-socket-inheritance.md)

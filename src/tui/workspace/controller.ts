@@ -1,3 +1,4 @@
+import { CatalogPreferences } from './library/catalog-preferences.js'
 import { sharedChat } from './chat/shared-chat.js'
 import type { WorkspaceState } from './state.js'
 import { WorkspaceRuntime } from './runtime/runtime.js'
@@ -7,7 +8,13 @@ import { installedModels } from '../../terminal-setup/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
 import { dirname, join } from 'node:path'
 import { ClientKeys, ChatHistory } from '../../terminal-data/index.js'
-import { TerminalSetup, ModelCatalog, modelFiles, EngineSelection } from '../../terminal-setup/index.js'
+import {
+  TerminalSetup,
+  ModelCatalog,
+  modelFiles,
+  EngineSelection,
+  engineModels,
+} from '../../terminal-setup/index.js'
 import type { HubRepository } from '../../terminal-setup/index.js'
 import { prepareAgent } from '../../agent-launch/index.js'
 import type { AgentHost, AgentId } from '../../agent-launch/index.js'
@@ -37,6 +44,7 @@ export interface WorkspaceDeps {
   chatKey: string
 }
 export class WorkspaceController {
+  readonly catalogPreferences: CatalogPreferences
   readonly runtime: WorkspaceRuntime
   readonly keys: ClientKeys
   readonly history: ChatHistory
@@ -58,6 +66,7 @@ export class WorkspaceController {
     this.legacy = new TuiController(deps.base, dispatch)
     this.runtime = new WorkspaceRuntime(deps.base, deps.request)
     const directory = dirname(deps.base.paths.configFile)
+    this.catalogPreferences = new CatalogPreferences(directory)
     this.keys = new ClientKeys(directory)
     this.history = new ChatHistory(directory)
     this.setup = new TerminalSetup(
@@ -121,11 +130,7 @@ export class WorkspaceController {
   image(path: string) {
     return readChatImage(path)
   }
-  /**
-   * Every installed model with the providers that list it, as the server's core says
-   * (`models.installed`). Without a running server there is no core to ask: the models on disk, each
-   * with the provider its format names.
-   */
+  /** Installed models from the server, or local files when no server is running. */
   async installed(): Promise<WorkspaceState['installed']> {
     try {
       return (await this.runtime.read('models.installed')) as WorkspaceState['installed']
@@ -134,7 +139,13 @@ export class WorkspaceController {
       return installedModels(this.deps.base.paths.layout)
     }
   }
-  hub(query: string, signal: AbortSignal = this.abort.signal, onRefresh?: (rows: HubRepository[]) => void) {
+  hub(
+    query: string,
+    signal: AbortSignal = this.abort.signal,
+    onRefresh?: (rows: HubRepository[]) => void,
+    engine?: string
+  ) {
+    if (engine) return engineModels(this.runtime, engine, query)
     return this.catalog.list(query, AbortSignal.any([signal, this.abort.signal]), onRefresh)
   }
   files(repository: string, signal?: AbortSignal) {

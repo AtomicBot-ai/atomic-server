@@ -1,5 +1,5 @@
 /** One scrollable engine popup: build controls, settings and update actions. */
-import { COLORS, text, wrap } from '../draw/canvas.js'
+import { COLORS, text, textWidth, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { panel, actionButton } from '../draw/cards.js'
 import { fieldControl, scrollTrack } from '../draw/controls.js'
@@ -7,6 +7,7 @@ import type { WorkspaceState } from '../state.js'
 import { enginePanelModel } from './engine-panel-model.js'
 import type { PanelLine } from './engine-panel-model.js'
 import { computeRowWindow } from '../../row-window.js'
+import { queuedInstallation } from './engine-install-progress.js'
 import { parseSettingValue } from '../../../workspace-view/index.js'
 
 const TONES: Record<PanelLine['tone'], string> = {
@@ -17,7 +18,7 @@ const TONES: Record<PanelLine['tone'], string> = {
   error: COLORS.statusError,
   command: COLORS.green,
 }
-export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string): void {
+export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string, seconds = 0): void {
   const p = s.enginePanel
   if (!p) return
   const width = Math.min(104, c.width - 6)
@@ -36,22 +37,32 @@ export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string): vo
     wrap(line.text, width - 6).map((label) => ({ label, tone: line.tone, id: '', hint: '' }))
   )
   const content = [...rows, ...model.fields.map((field) => ({ ...field, tone: 'text' as const }))]
-  const primary = model.buttons.find((b) => /^(Download|Install|Continue|Approve|Save)/.test(b.label))?.id
-  const span = (b: (typeof model.buttons)[number]) => b.label.length + 7
+  const footer: Array<{ button: (typeof model.buttons)[number]; label: string; x: number; y: number }> = []
   let footerRows = 1,
     used = 0
-  for (const b of model.buttons) {
-    if (used && used + span(b) > width - 4) {
+  for (const button of model.buttons) {
+    const label = wrap(button.label, width - 6)[0] ?? ''
+    const size = textWidth(label) + 2
+    if (used && used + size > width - 4) {
       footerRows++
       used = 0
     }
-    used += span(b)
+    footer.push({ button, label, x: used, y: footerRows - 1 })
+    used += size + 1
   }
-  const footerHeight = footerRows * 3
+  const footerHeight = footerRows
   const height = Math.min(c.height - 6, Math.max(10, content.length + footerHeight + 4)),
     x = Math.floor((c.width - width) / 2),
     y = Math.floor((c.height - height) / 2)
   panel(c, x, y, width, height)
+  if (p.installation || queuedInstallation(p, s.workspace))
+    text(
+      c,
+      x + width - 4,
+      y + 1,
+      ['|', '/', '-', '\\'][Math.floor((s.motion ? seconds : 0) * 8) % 4]!,
+      COLORS.accent
+    )
   c.popover = { x, y, width, height }
   c.targets = []
   const room = Math.max(1, height - footerHeight - 4)
@@ -68,23 +79,6 @@ export function drawEnginePanel(c: Canvas, s: WorkspaceState, focus: string): vo
     }
   })
   scrollTrack(c, x + width - 2, y + 1, room, win.start, win.count, content.length)
-  let bx = x + 2,
-    by = y + height - footerHeight - 1
-  for (const b of model.buttons) {
-    if (bx + span(b) - 1 >= x + width - 1) {
-      bx = x + 2
-      by += 3
-    }
-    const size = actionButton(c, b.id, bx, by, b.label, b.hint, focus)
-    if (b.id !== primary)
-      for (let row = by; row < by + 3; row++)
-        for (let col = bx; col < bx + size; col++) {
-          const cell = c.cells[row]?.[col]
-          if (cell) {
-            cell.background = focus === b.id ? COLORS.focus : COLORS.navButton
-            cell.color = COLORS.text
-          }
-        }
-    bx += size + 1
-  }
+  for (const { button, label, x: offset, y: row } of footer)
+    actionButton(c, button.id, x + 2 + offset, y + height - footerHeight - 1 + row, label, button.hint, focus)
 }

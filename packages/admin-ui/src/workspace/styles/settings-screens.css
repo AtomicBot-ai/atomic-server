@@ -1,0 +1,207 @@
+/* Form screens use the same readable measure as their shared fields. */
+.desktop-workspace .server-page.server-form-page,
+.desktop-workspace .settings-page {
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+}
+.desktop-workspace .settings-page {
+  container-type: inline-size;
+}
+.desktop-workspace .settings-card {
+  padding: 20px 24px;
+}
+.desktop-workspace .settings-card-heading,
+.desktop-workspace .settings-page .settings-card > h2 {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+.desktop-workspace .settings-item > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.desktop-workspace .settings-item > .action-wrap {
+  justify-self: start;
+}
+.desktop-workspace .settings-item > span,
+.desktop-workspace .settings-shortcuts {
+  font-size: 13px;
+  line-height: 20px;
+}
+.desktop-workspace .server-form-page > .page-heading {
+  margin-bottom: 20px;
+}
+.desktop-workspace .settings-form .settings-card .runtime-settings > .settings-section {
+  padding: 16px 0 0;
+  border: 0;
+  margin: 0;
+}
+.desktop-workspace .settings-form .settings-card .runtime-settings > .settings-section > header {
+  display: none;
+}
+.desktop-workspace .engine-dialog-body.settings-form {
+  max-width: none;
+}
+.desktop-workspace .settings-form > .form-grid,
+.desktop-workspace .engine-dialog-body.settings-form .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (max-width: 560px) {
+  .desktop-workspace .settings-card {
+    padding: 16px;
+  }
+}
+.desktop-workspace .settings-page > .settings-general-advanced,
+.desktop-workspace .settings-page .settings-general-advanced > details {
+  margin: 0;
+}
+.desktop-workspace .settings-page details.settings-card > summary {
+  font-size: 13px;
+  line-height: 20px;
+}
+.desktop-workspace .settings-page details.settings-card:not([open]) {
+  padding: 16px 24px;
+}
+.desktop-workspace .settings-page .settings-general-advanced > details[open] > summary {
+  margin-bottom: 16px;
+}
+.desktop-workspace .settings-page .settings-general-advanced .settings-form {
+  gap: 16px;
+}
+.desktop-workspace .settings-form details {
+  display: block;
+  margin: 0;
+}
+.desktop-workspace .settings-form details > summary {
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0;
+}
+.desktop-workspace .settings-form details[open] > summary {
+  margin-bottom: 16px;
+}
+.desktop-workspace .settings-form.feature-editor > details {
+  padding: 16px 0 0;
+}
+.desktop-workspace .engine-setting .settings-field-actions {
+  margin-top: 8px;
+}
+.desktop-workspace .engine-setting .settings-field-actions details {
+  width: 100%;
+  font-size: 12px;
+  line-height: 18px;
+}
+.desktop-workspace .engine-setting .settings-field-actions summary {
+  font-size: 12px;
+  line-height: 18px;
+}
+.desktop-workspace .engine-setting .settings-field {
+  padding: 12px 0;
+}
+.desktop-workspace .engine-settings-dialog .engine-setting {
+  padding: 0;
+}
+.desktop-workspace .settings-form .form-grid {
+  margin: 0;
+}
+.desktop-workspace .settings-form details > summary {
+  padding: 0;
+}
+.desktop-workspace .settings-form-compact .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.desktop-workspace .settings-form.ew-modal {
+  max-width: min(760px, calc(100vw - 32px));
+}
+.desktop-workspace .settings-form > .panel-heading,
+.desktop-workspace .settings-form > .wizard-bottom {
+  margin: 0;
+}
+.desktop-workspace .settings-form > .panel-heading h2 {
+  font-size: 18px;
+  line-height: 26px;
+  margin: 0;
+}
+.desktop-workspace .settings-form > p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.desktop-workspace .assistant-default-section {
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  padding: 20px 24px;
+}
+.desktop-workspace .assistant-default-section .server-detail-picker {
+  min-height: 36px;
+  font-size: 13px;
+  padding: 7px 10px;
+}
+@container (max-width: 560px) {
+  .desktop-workspace .assistant-default-section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+    gap: 12px;
+  }
+}
+@container (max-width: 300px) {
+  .desktop-workspace .settings-form-compact .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.desktop-workspace .wizard.import-model-dialog.settings-form {
+  width: min(560px, calc(100vw - 32px));
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 24px;
+}
+.desktop-workspace .settings-form > .wizard-bottom {
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.desktop-workspace .chat-parameters.settings-form {
+  width: min(380px, calc(100vw - 24px));
+  align-content: start;
+  gap: 16px;
+}
+.desktop-workspace .chat-parameters.settings-form > .chat-parameters-heading {
+  margin: 0;
+}
+.desktop-workspace .settings-form .form-grid > .settings-field-stacked {
+  margin-bottom: 0;
+}
+.desktop-workspace .settings-form.ew-modal > .settings-field {
+  padding: 0;
+}
+.desktop-workspace .settings-form.ew-modal > .subnav {
+  margin: 0;
+}
+.desktop-workspace .settings-form.ew-modal > .ew-actions {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.desktop-workspace .settings-form.ew-modal > .ew-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 12px 0;
+  background: var(--ew-panel);
+}
+/* Paired media dimensions and slider values retain their task-specific widths. */
+html .desktop-workspace .media-controls input[type='number'] {
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--ew-line);
+  border-radius: 7px;
+  background: var(--ew-bg);
+  color: var(--ew-text);
+  font-size: 13px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}

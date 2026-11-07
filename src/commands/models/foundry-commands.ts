@@ -1,3 +1,4 @@
+import { flmAccelerators } from './fastflowlm-commands.js'
 /**
  * Foundry Local from `atc engines` (spec `foundry-local-server`, "Ускорители Foundry Local"): what the
  * library finds, and preparing the accelerators a variant runs on — in the server, followed here by the
@@ -53,9 +54,9 @@ export async function prepareAccelerators(ctx: CommandContext, names: string[] =
 
 export const acceleratorsCommand = defineCommand({
   name: 'accelerators',
-  summary: "Foundry Local's and LiteRT-LM's accelerators: list, refresh, prepare",
+  summary: 'Engine accelerators: list, refresh, prepare',
   positionals: [
-    { name: 'engine', description: 'foundry-local or litert-lm', required: true },
+    { name: 'engine', description: 'foundry-local, litert-lm, geniex or fastflowlm', required: true },
     {
       name: 'accelerator',
       description: 'With --prepare: the ones to prepare (default every one not prepared)',
@@ -63,15 +64,23 @@ export const acceleratorsCommand = defineCommand({
     },
   ],
   options: {
-    refresh: { type: 'boolean', description: 'Ask the library (Foundry Local) or the core again' },
-    prepare: { type: 'boolean', description: 'Download and register accelerators' },
+    'approve': { type: 'string', description: 'FastFlowLM: approve only this preparation plan digest' },
+    'resume': { type: 'string', description: 'FastFlowLM: resume this preparation operation' },
+    'cancel': { type: 'string', description: 'FastFlowLM: cancel this preparation operation' },
+    'request-id': { type: 'string', description: 'FastFlowLM: stable preparation request ID' },
+    'detach': { type: 'boolean', description: 'FastFlowLM: leave preparation running in the server' },
+    'dry-run': { type: 'boolean', description: 'FastFlowLM: show the dependency plan' },
+    'refresh': { type: 'boolean', description: 'Ask the library (Foundry Local) or the core again' },
+    'prepare': { type: 'boolean', description: 'Download and register accelerators' },
   },
   examples: [
     'atc engines accelerators foundry-local',
     'atc engines accelerators foundry-local --prepare',
     'atc engines accelerators litert-lm --prepare',
+    'atc engines accelerators fastflowlm --prepare --dry-run --json',
   ],
   run: async (inv, ctx) => {
+    if (inv.positionals[0] === 'fastflowlm') return flmAccelerators(ctx, inv.values)
     if (inv.positionals[0] === 'geniex') {
       const { service } = await attachWorkspace(ctx)
       const view = (await service.execute('geniex.accelerators')) as {
@@ -92,7 +101,7 @@ export const acceleratorsCommand = defineCommand({
         ? prepareLiteRtAccelerators(ctx, inv.positionals.slice(1))
         : listLiteRtAccelerators(ctx)
     if (inv.positionals[0] !== 'foundry-local')
-      throw new AtcError('ATC_USAGE', 'Only Foundry Local and LiteRT-LM have accelerators to prepare.')
+      throw new AtcError('ATC_USAGE', 'Choose foundry-local, litert-lm, geniex or fastflowlm.')
     if (inv.values['prepare']) return prepareAccelerators(ctx, inv.positionals.slice(1))
     const { service } = await attachWorkspace(ctx)
     const view = (await service.execute('foundry.accelerators', {

@@ -7,10 +7,8 @@
  * the server's store, Foundry Local and LiteRT-LM jobs opened on Cancel or Resume.
  */
 
-import { withInstalledRows } from './catalog-installed.js'
+import { readCatalog } from './catalog-read.js'
 import { randomUUID } from 'node:crypto'
-import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
-import type { EngineId } from '@atomic-chat/core/contracts'
 import type { ManagedVerdict } from '../../../contract/index.js'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 import { catalogFormatsFor, verdictLine } from '../../../workspace-view/index.js'
@@ -18,12 +16,9 @@ import type { CatalogFormat } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'
 import { engineAction } from './engine-actions.js'
-import { isVariantFormat, loadVariantCatalog } from './catalog-variants.js'
-import { libraryRows, record } from './library-model.js'
+import { record } from './library-model.js'
 
 export type LibraryFormat = CatalogFormat
-const managed = (engines: readonly string[]) =>
-  engines.filter((e) => ENGINE_KINDS[e as EngineId] === 'managed')
 const ACTIVE = ['queued', 'downloading', 'verifying']
 
 /** Formats the text catalog offers on this host: GGUF, plus what the core's engines here run. */
@@ -76,69 +71,39 @@ export async function managedChoice(repository: string, ctx: ActionContext): Pro
   return true
 }
 
-async function catalogRows(
-  ctx: ActionContext,
-  format: LibraryFormat
-): Promise<WorkspaceState['libraryRows']> {
-  const s = ctx.get()
-  if (isVariantFormat(format)) return loadVariantCatalog(ctx, format)
-  const engine =
-    managed(s.libraryEngines).find((e) => e === s.catalogFilters.engine) ?? managed(s.libraryEngines)[0]
-  if (format !== 'safetensors' || !engine)
-    return libraryRows(
-      await ctx.controller.runtime.execute('models.catalog', { category: s.libraryCategory }),
-      'catalog'
-    )
-  const query = s.libraryQuery
-  const result = record(
-    await ctx.controller.runtime.execute(query ? 'models.search' : 'models.catalog', {
-      engine,
-      ...(query ? { query } : {}),
-    })
-  )
-  const rows = (
-    Array.isArray(result['models']) ? result['models'] : Array.isArray(result['rows']) ? result['rows'] : []
-  ).map(record)
-  return rows.map((r) => ({
-    id: String(r['repository']),
-    name: String(r['repository']),
-    category: 'text',
-    description: String(r['note'] ?? r['section'] ?? 'safetensors'),
-    source: { format: 'safetensors', engine },
-  }))
-}
-
 export async function catalogAction(id: string, ctx: ActionContext): Promise<boolean> {
   const { get, update, controller: c } = ctx
   const s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
   if (id.startsWith('format:')) {
     const format = id.slice('format:'.length) as LibraryFormat
-    patch({ libraryFormat: format, busy: true, selected: 0 })
-    try {
-      patch({ libraryRows: withInstalledRows(await catalogRows(ctx, format), get()) })
-    } finally {
-      patch({ busy: false })
-    }
+    patch({ libraryFormat: format, libraryCategory: 'text' })
+    await readCatalog(ctx)
     return true
   }
   if (
     (id === 'library-remove' && s.libraryView === 'installed') ||
+    id.startsWith('fastflowlm-delete:') ||
     id.startsWith('geniex-delete:') ||
     id.startsWith('installed-delete:')
   ) {
-    const model = id.startsWith('geniex-delete:')
+    const model = id.startsWith('fastflowlm-delete:')
       ? s.installed.find(
-          (m) => m.store === 'geniex' && m.id === decodeURIComponent(id.slice('geniex-delete:'.length))
+          (m) =>
+            m.store === 'fastflowlm' && m.id === decodeURIComponent(id.slice('fastflowlm-delete:'.length))
         )
-      : id.startsWith('installed-delete:')
-        ? s.installed.find((m) => m.id === decodeURIComponent(id.slice(17)))
-        : s.installed[s.selected]
+      : id.startsWith('geniex-delete:')
+        ? s.installed.find(
+            (m) => m.store === 'geniex' && m.id === decodeURIComponent(id.slice('geniex-delete:'.length))
+          )
+        : id.startsWith('installed-delete:')
+          ? s.installed.find((m) => m.id === decodeURIComponent(id.slice(17)))
+          : s.installed[s.selected]
     if (model)
       patch({
         overlay: 'remove-model',
         libraryRemove: model.id,
-        removeGenieModel: model.store === 'geniex',
+        removeModelStore: model.store === 'geniex' || model.store === 'fastflowlm' ? model.store : undefined,
         focus: 'close',
       })
     return true
@@ -148,7 +113,7 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
     try {
       await c.runtime.execute('models.remove', {
         model_id: s.libraryRemove,
-        ...(s.removeGenieModel ? { store: 'geniex' } : {}),
+        ...(s.removeModelStore ? { store: s.removeModelStore } : {}),
       })
       patch({
         installed: await c.installed(),
@@ -187,6 +152,7 @@ const JOB_TOOLS: Readonly<Record<string, string>> = {
   'managed-model': 'managed',
   'foundry-model': 'foundry',
   'geniex-model': 'geniex',
+  'fastflowlm-model': 'fastflowlm',
   'litert-model': 'litert',
 }
 

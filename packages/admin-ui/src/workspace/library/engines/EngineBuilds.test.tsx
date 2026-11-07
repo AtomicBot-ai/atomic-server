@@ -16,6 +16,13 @@ const entry = {
 it('shows checking, then replaces the same action only after an available update', async () => {
   let finish!: (value: unknown) => void
   const { workspace, execute } = workspaceFixture({
+    'engines.enqueue': {
+      id: 'job',
+      taskId: 'job',
+      stage: 'queued',
+      kind: 'engine',
+      engine: 'llamacpp-upstream',
+    },
     'engines.list': (input: Record<string, unknown>) =>
       input.force
         ? new Promise((resolve) => {
@@ -24,7 +31,7 @@ it('shows checking, then replaces the same action only after an available update
         : { engines: [entry] },
   })
   render(<EngineBuilds provider="llamacpp-upstream" execute={workspace.execute} />)
-  await screen.findByText('Active: b1')
+  await screen.findByText('b1 · cpu')
   expect(screen.queryByRole('button', { name: 'Install latest build' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
   expect(screen.getByRole('button', { name: 'Checking…' })).toBeDisabled()
@@ -35,7 +42,7 @@ it('shows checking, then replaces the same action only after an available update
   await waitFor(() =>
     expect(execute).toHaveBeenCalledWith('engines.enqueue', { engine: 'llamacpp-upstream' })
   )
-  expect(screen.getByRole('status')).toHaveTextContent('Download queued')
+  expect(screen.getByRole('status')).toHaveTextContent('Queued…')
 })
 
 it('keeps rechecking available after current, failed and stale-cache results', async () => {
@@ -47,7 +54,7 @@ it('keeps rechecking available after current, failed and stale-cache results', a
     },
   })
   render(<EngineBuilds provider="llamacpp-upstream" execute={workspace.execute} />)
-  await screen.findByText('Active: b1')
+  await screen.findByText('b1 · cpu')
   const check = () => userEvent.click(screen.getByRole('button', { name: 'Check for updates' }))
   await check()
   expect(screen.getByRole('status')).toHaveTextContent('up to date')

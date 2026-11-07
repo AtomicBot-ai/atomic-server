@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { isValidElement, useState } from 'react'
+import { SettingsField } from './SettingsField'
 import type { ReactNode } from 'react'
 import { describeError } from '@/services/admin-api'
 
@@ -83,6 +84,16 @@ export function Copy({
   )
 }
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
+  if (
+    isValidElement<React.InputHTMLAttributes<HTMLInputElement>>(children) &&
+    typeof children.type === 'string' &&
+    ['input', 'select', 'textarea'].includes(children.type)
+  )
+    return (
+      <SettingsField label={label} hint={hint} layout="stacked">
+        {children}
+      </SettingsField>
+    )
   return (
     <label className="ew-field">
       <span>{label}</span>

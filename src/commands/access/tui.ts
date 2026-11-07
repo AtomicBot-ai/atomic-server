@@ -9,8 +9,9 @@ import { AtcError, defineCommand } from '../../cli/index.js'
 import { initializeProfileDefaults, loadProfileConfig } from '../../config/index.js'
 import { CHECKS, coreHardware, runChecks } from '../../doctor/index.js'
 import { managedFacts } from '../system/doctor.js'
-import { HostStepJournal, copyToClipboard } from '../../host/index.js'
-import { colorEnabled } from '../../output/index.js'
+import { HostStepJournal, FastFlowLmHostSteps, probedFacts, copyToClipboard } from '../../host/index.js'
+import type { FastFlowLmOperation } from '@atomic-chat/core/contracts'
+import { colorEnabled, trueColorSupported } from '../../output/index.js'
 import { TELEMETRY_NOTICE, takeTelemetryNotice } from '../../telemetry/index.js'
 import { detectInstall } from '../../update/index.js'
 import { ATC_TARGET } from '../../version.js'
@@ -63,6 +64,22 @@ export const tuiCommand = defineCommand({
     const notice = await takeTelemetryNotice({ config: await ctx.config(), paths, env: io.env })
     return runTui({
       terminal,
+      authorizeHostStep: async (operation) => {
+        const link = await ctx.core.attach({ launch: false })
+        const runner = new FastFlowLmHostSteps({
+          atcDir: paths.atcDir,
+          dataFolder: paths.dataFolder,
+          link,
+          elevator: ctx.host.elevator,
+          context: { ...(await probedFacts(ctx.host.facts, ctx.host.exec)), inDaemon: false },
+        })
+        await runner.handle(
+          await link.request<FastFlowLmOperation>(
+            'GET',
+            '/runtimes/fastflowlm/operations/' + encodeURIComponent(operation)
+          )
+        )
+      },
       ...(notice ? { notice: TELEMETRY_NOTICE } : {}),
       agentHost: {
         env: io.env,
@@ -77,7 +94,7 @@ export const tuiCommand = defineCommand({
       request: io.fetch,
       apiKey: io.env['ATC_API_KEY'] ?? '',
       chatKey: io.env['ATC_CHAT_API_KEY'] ?? io.env['ATC_API_KEY'] ?? '',
-      trueColor: /truecolor|24bit/i.test(io.env['COLORTERM'] ?? ''),
+      trueColor: trueColorSupported(io.env),
       color: colorEnabled({ isTTY: io.isTTY.stdout, env: io.env, noColor: ctx.flags.noColor }),
       dataFolder: paths.dataFolder,
       waitForShutdown: io.waitForShutdown,

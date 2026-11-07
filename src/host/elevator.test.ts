@@ -24,6 +24,11 @@ describe('selectStrategy', () => {
     ['root wins everywhere', { isRoot: true }, 'root'],
     ['headless daemon falls back to manual', {}, 'manual'],
     ['desktop daemon uses pkexec', { hasDisplay: true, hasPkexec: true }, 'pkexec'],
+    [
+      'desktop daemon can authorize in a terminal without a polkit agent',
+      { hasDisplay: true, hasTerminalLauncher: true, allowTerminalPrompt: true },
+      'terminal-sudo',
+    ],
     ['a command on a terminal uses sudo', { inDaemon: false, hasTty: true }, 'sudo-tty'],
     ['a command without sudo is manual', { inDaemon: false, hasTty: true, hasSudo: false }, 'manual'],
     ['a command without a terminal is manual', { inDaemon: false, hasTty: false }, 'manual'],
@@ -40,6 +45,35 @@ describe('selectStrategy', () => {
 })
 
 describe('createElevator', () => {
+  it('keeps a detached desktop terminal pending until its bound helper result arrives', async () => {
+    const calls: string[][] = []
+    const elevator = createElevator(
+      {
+        exec: async (cmd, args) => {
+          calls.push([cmd, ...args])
+          return { code: 0, stdout: '', stderr: '', timedOut: false }
+        },
+        selfCommand: ['/opt/atc'],
+        readResult: async () => undefined,
+      },
+      'linux'
+    )
+    expect(await elevator.run('terminal-sudo', '/private/s.request.json', 'a'.repeat(64))).toMatchObject({
+      kind: 'pending',
+    })
+    expect(calls).toEqual([
+      [
+        'xdg-terminal-exec',
+        '--',
+        '/opt/atc',
+        'host-step',
+        'prompt',
+        '/private/s.request.json',
+        '--request-sha256',
+        'a'.repeat(64),
+      ],
+    ])
+  })
   it('runs the helper as root and reads its result file', async () => {
     const calls: string[][] = []
     const elevator = createElevator(

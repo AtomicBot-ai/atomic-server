@@ -15,12 +15,16 @@ function fixture() {
   let s: WorkspaceState = { ...createWorkspace('welcome'), firstRun: 'media' }
   let failed = ''
   let blockers: string[] = []
+  let planned: Record<string, unknown> = {}
   const execute = vi.fn(async (op: string, input: Record<string, unknown> = {}) => {
     if (op === 'models.catalog') {
       if (input['category'] === failed) throw new Error('Catalog unavailable')
       return { rows: rows.filter((row) => row.category === input['category']) }
     }
-    if (op === 'artifacts.plan') return { digest: 'media', blockers, model_id: input['model_id'] }
+    if (op === 'artifacts.plan') {
+      planned = input
+      return { digest: 'media', blockers, model_id: input['model_id'] }
+    }
     if (op === 'artifacts.install')
       s = {
         ...s,
@@ -30,8 +34,8 @@ function fixture() {
               id: 'queued',
               stage: 'downloading',
               plan: {
-                category: s.libraryCategory,
-                model_id: s.setupMedia[s.libraryCategory as 'image' | 'video'],
+                category: planned['category'],
+                model_id: planned['model_id'],
               },
             },
           ],

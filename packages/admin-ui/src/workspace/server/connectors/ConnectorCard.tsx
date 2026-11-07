@@ -1,4 +1,5 @@
 // Lifted from atomic-chat-ui/web-app/src/containers/connectors/ConnectorCard.tsx @ 807b4d9; adapted: shared runtime status and accessible controls.
+import { StatusIndicator } from '../../StatusIndicator'
 import { useEffect, useRef } from 'react'
 import { MoreVertical, Plug } from 'lucide-react'
 import type { ConnectorConfig, ConnectorStatus, ConnectorTemplate } from '@contract'
@@ -58,9 +59,20 @@ export function ConnectorCard({
         </span>
         <div className="mcp-identity">
           <h3>{name}</h3>
-          <small>
-            {config
-              ? busy
+          {config ? (
+            <StatusIndicator
+              pending={busy}
+              tone={
+                busy
+                  ? 'neutral'
+                  : connected
+                    ? 'positive'
+                    : config.enabled && status?.state === 'error'
+                      ? 'negative'
+                      : 'neutral'
+              }
+            >
+              {busy
                 ? 'Connecting…'
                 : !config.enabled
                   ? 'Inactive'
@@ -68,9 +80,11 @@ export function ConnectorCard({
                     ? 'Connected'
                     : status?.state === 'error'
                       ? 'Error'
-                      : 'Inactive'
-              : `By ${template?.author}`}
-          </small>
+                      : 'Inactive'}
+            </StatusIndicator>
+          ) : (
+            <small>By {template?.author}</small>
+          )}
         </div>
         {config ? (
           <div className="mcp-card-controls">

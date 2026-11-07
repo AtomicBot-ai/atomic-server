@@ -23,6 +23,7 @@ export function SetupReview({
   onStarted,
   onEngine,
   autoStart,
+  revision,
 }: {
   workspace: Workspace
   model: RecordValue
@@ -33,12 +34,15 @@ export function SetupReview({
   onStarted: (id: string, model: string) => void | Promise<void>
   onEngine: (engine: string) => void
   autoStart?: boolean
+  revision?: number
 }) {
   const kind = engineDialog(engine)
   if (kind === 'managed')
     return (
       <ManagedModelInstall
         workspace={w}
+        revision={revision}
+        expectedEngine={engine}
         repository={text(model.id)}
         onClose={onClose}
         onStarted={(id) => onStarted(id, text(model.id))}
@@ -48,6 +52,7 @@ export function SetupReview({
   if (kind === 'foundry')
     return (
       <FoundryModelInstall
+        revision={revision}
         workspace={w}
         model={model.foundry as never}
         onClose={onClose}
@@ -55,18 +60,20 @@ export function SetupReview({
         onFoundry={() => onEngine('foundry-local')}
       />
     )
-  if (kind === 'geniex')
+  if (kind === 'geniex' || kind === 'fastflowlm')
     return (
       <GenieModelInstall
+        engine={kind}
         workspace={w}
-        model={record(model.geniex)}
-        onEngine={() => onEngine('geniex')}
+        model={record(model[kind])}
+        onEngine={() => onEngine(kind)}
         onStarted={onStarted}
       />
     )
   if (kind === 'litert')
     return (
       <LiteRtModelInstall
+        revision={revision}
         workspace={w}
         model={model.litert as never}
         onClose={onClose}

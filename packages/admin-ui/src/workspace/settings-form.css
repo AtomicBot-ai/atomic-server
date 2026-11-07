@@ -1,0 +1,274 @@
+/* Shared settings geometry. Search, composer and inline task controls keep their own layouts. */
+:is(.desktop-workspace, .settings-surface) .settings-form {
+  min-width: 0;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 20px;
+  width: 100%;
+  max-width: 760px;
+  container-type: inline-size;
+}
+:is(.desktop-workspace, .settings-surface) .settings-section {
+  padding: 20px 24px;
+  border: 1px solid var(--ew-line);
+  border-radius: 10px;
+  background: var(--ew-panel);
+  margin: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-section > header {
+  margin: 0 0 16px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-section h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+:is(.desktop-workspace, .settings-surface) .settings-section > header p,
+:is(.desktop-workspace, .settings-surface) .settings-field-copy p {
+  margin: 4px 0 0;
+  color: var(--ew-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px 24px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-copy {
+  min-width: 0;
+  padding-top: 7px;
+  overflow-wrap: anywhere;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-copy > label {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--ew-text);
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-control {
+  min-width: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+html
+  :is(.desktop-workspace, .settings-surface)
+  .settings-field-input
+  > :is(input, select, textarea):where(:not([type='checkbox']):not([type='radio'])) {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 13px;
+  line-height: 20px;
+  border: 1px solid var(--ew-line);
+  border-radius: 7px;
+  background: var(--ew-bg);
+  color: var(--ew-text);
+}
+html :is(.desktop-workspace, .settings-surface) .settings-field-number .settings-field-input > input {
+  width: 120px;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-unit {
+  color: var(--ew-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-input > input[type='checkbox'] {
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-error {
+  color: var(--atomic-status-error, #b42318);
+  font-size: 12px;
+  line-height: 18px;
+  margin: 6px 0 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-multiline {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-multiline textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form .form-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form-fields {
+  display: grid;
+  gap: 20px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-disclosure {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+:is(.desktop-workspace, .settings-surface) .settings-disclosure > summary {
+  color: var(--ew-muted);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-actions-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 12px 16px;
+  border: 1px solid var(--ew-line);
+  border-radius: 8px;
+  background: var(--ew-bg);
+  font-size: 13px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+:is(.desktop-workspace, .settings-surface) .settings-actions-buttons .action-wrap {
+  max-width: 100%;
+}
+@container (max-width: 560px) {
+  :is(.desktop-workspace, .settings-surface) .settings-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  :is(.desktop-workspace, .settings-surface) .settings-section {
+    padding: 16px;
+  }
+  :is(.desktop-workspace, .settings-surface) .settings-field-copy {
+    padding-top: 0;
+  }
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-stacked {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 16px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-stacked .settings-field-copy {
+  padding: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form .server-settings-panel {
+  gap: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form.feature-editor,
+:is(.desktop-workspace, .settings-surface) .settings-form.connector-dialog {
+  width: min(720px, 100%, calc(100vw - 32px));
+  max-width: 720px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form .ew-actions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form.feature-editor > details {
+  padding: 12px 0;
+  border-top: 1px solid var(--ew-line);
+}
+:is(.desktop-workspace, .settings-surface) .cloud-provider-editor.settings-form .cloud-key-row {
+  display: block;
+}
+
+:is(.desktop-workspace, .settings-surface) .settings-section-fields > .settings-field:first-child {
+  padding-top: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-section-fields > .settings-field:last-child {
+  padding-bottom: 0;
+}
+
+:is(.desktop-workspace, .settings-surface) .settings-key-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+  padding: 0;
+}
+/* Keep the settings controls neutral even when the light-theme global input rule loads later. */
+html:not(.dark)
+  :is(.desktop-workspace, .settings-surface)
+  .settings-field-input
+  > :is(input, select, textarea):where(:not([type='checkbox']):not([type='radio'])) {
+  border-color: var(--ew-line);
+}
+
+:is(.desktop-workspace, .settings-surface) .settings-field-select {
+  position: relative;
+}
+html :is(.desktop-workspace, .settings-surface) .settings-field .settings-field-select > select {
+  appearance: none;
+  padding-right: 36px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-field-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ew-muted);
+  pointer-events: none;
+}
+@media (forced-colors: active) {
+  html :is(.desktop-workspace, .settings-surface) .settings-field .settings-field-select > select {
+    appearance: auto;
+  }
+  :is(.desktop-workspace, .settings-surface) .settings-field-chevron {
+    display: none;
+  }
+}
+
+:is(.desktop-workspace, .settings-surface) .settings-form.feature-editor {
+  gap: 20px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form.feature-editor > .settings-field {
+  padding: 0;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form.feature-editor > h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form.feature-editor > .ew-actions {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+
+:is(.desktop-workspace, .settings-surface) .settings-field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form .settings-field-actions .ew-button {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 20px;
+}
+:is(.desktop-workspace, .settings-surface) .settings-form-fields > .settings-section:last-child {
+  margin-bottom: 0;
+}

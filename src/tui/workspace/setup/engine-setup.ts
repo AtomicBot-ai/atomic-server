@@ -1,13 +1,8 @@
 /**
- * Guided setup with a managed engine, Foundry Local or LiteRT-LM (specs managed-models-server,
- * foundry-local-server, litert-lm-server):
- * the same workspace operations as `atc models pull --engine`. An engine not installed yet is installed
- * first in its engine panel, which then offers "Choose models >". The Models step lists the engine's
- * curated models (or a search); Review shows the core's verdict and the download plan; the download is
- * the server's durable job, followed from the snapshot and recorded so a reopened terminal finds it;
- * Ready loads the model with that engine.
+ * Guided setup for engines with their own model catalogs and installation plans.
+ * Onboarding browses the chosen engine while it installs; manual setup opens its engine panel first.
+ * Durable jobs resume across terminals; Ready loads the model with the selected engine.
  */
-
 import { randomUUID } from 'node:crypto'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId } from '@atomic-chat/core/contracts'
@@ -18,13 +13,8 @@ import type {
   ManagedVerdict,
   WorkspaceSnapshot,
 } from '../../../contract/index.js'
-import type {
-  EngineSetupJob,
-  EngineSetupPath,
-  EngineSetupRow,
-  SetupView,
-} from '../../../terminal-setup/index.js'
-import { formatSize } from '../../../workspace-view/index.js'
+import type { EngineSetupJob, EngineSetupPath, SetupView } from '../../../terminal-setup/index.js'
+import { engineSetupRows } from './engine-setup-rows.js'
 import type { ActionContext } from '../actions.js'
 import { engineAction } from '../library/engine-actions.js'
 import { returnToConnection } from '../server/connection-model-return.js'
@@ -39,13 +29,16 @@ export const pathKind = (engine: string): EngineSetupPath['kind'] | null =>
       ? 'foundry'
       : engine === 'litert-lm'
         ? 'litert'
-        : engine === 'geniex'
-          ? 'geniex'
-          : null
+        : engine === 'fastflowlm'
+          ? 'fastflowlm'
+          : engine === 'geniex'
+            ? 'geniex'
+            : null
 
 /** The operations of a path's own downloads: plan, install. */
 const OPS = {
   foundry: { plan: 'foundry.plan', install: 'foundry.install', job: 'foundry-model' },
+  fastflowlm: { plan: 'fastflowlm.plan', install: 'fastflowlm.install', job: 'fastflowlm-model' },
   geniex: { plan: 'geniex.plan', install: 'geniex.install', job: 'geniex-model' },
   litert: { plan: 'litert.plan', install: 'litert.install', job: 'litert-model' },
   managed: { plan: 'managed.plan', install: 'managed.install', job: 'managed-model' },
@@ -54,6 +47,7 @@ const JOB_INSTALL: Record<EngineSetupJob['kind'], string> = {
   'managed-model': 'managed.install',
   'foundry-model': 'foundry.install',
   'litert-model': 'litert.install',
+  'fastflowlm-model': 'fastflowlm.install',
   'geniex-model': 'geniex.install',
 }
 
@@ -79,41 +73,6 @@ export function pathJob(setup: SetupView, snapshot: WorkspaceSnapshot | null) {
     done: transfers.reduce((n, t) => n + (t.transferred ?? 0), 0),
     total: record?.plan?.download_bytes ?? transfers.reduce((n, t) => n + (t.total ?? 0), 0),
   }
-}
-
-async function rows(
-  c: Context['controller'],
-  path: EngineSetupPath,
-  query: string
-): Promise<EngineSetupRow[]> {
-  if (path.kind === 'foundry' || path.kind === 'litert' || path.kind === 'geniex') {
-    const found = (await c.runtime.execute('models.search', { engine: path.engine, query })) as {
-      models: Array<{ model_id: string; name: string; default_variant: string | null; unverified: boolean }>
-    }
-    return found.models.map((m) => ({
-      id: m.model_id,
-      title: m.name,
-      detail: `${m.default_variant ?? 'no variant runs here'}${m.unverified ? ' · unverified' : ''}`,
-    }))
-  }
-  if (query) {
-    const found = (await c.runtime.execute('models.search', { engine: path.engine, query })) as {
-      rows: Array<{ repository: string; section: string; weight_bytes_estimate: number | null }>
-    }
-    return found.rows.map((r) => ({
-      id: r.repository,
-      title: r.repository,
-      detail: r.weight_bytes_estimate ? `about ${formatSize(r.weight_bytes_estimate)}` : r.section,
-    }))
-  }
-  const curated = (await c.runtime.execute('models.catalog', { engine: path.engine })) as {
-    models: Array<{ repository: string; note: string; vram_tier_bytes: number }>
-  }
-  return curated.models.map((m) => ({
-    id: m.repository,
-    title: m.repository,
-    detail: `${m.note}${m.vram_tier_bytes ? ` · ${formatSize(m.vram_tier_bytes)} GPU` : ''}`,
-  }))
 }
 
 /** Whether `id` is the engine path's to handle, decided without waiting (the GGUF path updates at once). */
@@ -159,10 +118,11 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
     return true
   }
   if (kind) {
-    if (!view.installed.includes(engine)) return openPanel(engine)
+    const onboardingChoice = kind !== 'managed' && get().firstRun && get().engine.split('|')[0] === engine
+    if (!view.installed.includes(engine) && !onboardingChoice) return openPanel(engine)
     change({ engine, stage: 'models', query: '', path: { engine, kind, rows: [], plan: null, job: null } })
     return run(async () => {
-      path({ rows: await rows(c, get().setup!.path!, '') })
+      path({ rows: await engineSetupRows(c, get().setup!.path!, '') })
       focus('setup-path-repo:0')
     })
   }
@@ -181,10 +141,11 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   if (!current || !id.startsWith('setup-')) return false
   // A variant that waits on Foundry Local or LiteRT-LM itself: its panel installs it or prepares the accelerator.
   if (id === 'setup-path-foundry') return openPanel('foundry-local')
+  if (id === 'setup-path-fastflowlm') return openPanel('fastflowlm')
   if (id === 'setup-path-geniex') return openPanel('geniex')
   if (id === 'setup-path-litert') return openPanel('litert-lm')
   if (id === 'setup-search' && view.stage === 'models')
-    return run(async () => path({ rows: await rows(c, current, view.query) }))
+    return run(async () => path({ rows: await engineSetupRows(c, current, view.query) }))
   if (id.startsWith('setup-path-repo:')) {
     const row = current.rows[Number(id.slice('setup-path-repo:'.length))]
     if (!row) return true

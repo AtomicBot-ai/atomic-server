@@ -19,9 +19,10 @@ export function IntroScreen({
   trueColor,
   write,
   forceWelcome = false,
-}: WorkspaceProps & { onContinue: () => void; forceWelcome?: boolean }) {
+  chooseEngine = false,
+}: WorkspaceProps & { onContinue: () => void; forceWelcome?: boolean; chooseEngine?: boolean }) {
   const { columns, rows } = useWindowSize()
-  const engine = useIntroEngine(deps, forceWelcome)
+  const engine = useIntroEngine(deps, forceWelcome, chooseEngine)
   const { exit } = useApp()
   const [seconds, setSeconds] = useState(0)
   const [motion, setMotion] = useState(true)

@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 import type { LiteRtModelPlan, LiteRtModelRow } from '@contract'
-import { formatSize, liteRtVariantLabel, liteRtVerdictText } from '@view'
+import { liteRtVariantLabel } from '@view'
 import { describeError } from '@/services/admin-api'
-import { Action, Field } from '../../Controls'
+import { Action } from '../../Controls'
 import type { Workspace } from '../../useWorkspace'
 import { ModelInstallFrame } from './ModelInstallFrame'
+import { VariantChoices } from './VariantChoices'
+import { useVariantModel } from './use-variant-model'
 
 /**
  * A LiteRT-LM model (spec litert-lm-server): its variants for this machine with the core's verdicts,
@@ -15,7 +17,8 @@ import { ModelInstallFrame } from './ModelInstallFrame'
  */
 export function LiteRtModelInstall({
   workspace: w,
-  model,
+  model: initialModel,
+  revision = 0,
   onClose,
   onStarted,
   onEngine,
@@ -23,12 +26,18 @@ export function LiteRtModelInstall({
 }: {
   workspace: Workspace
   model: LiteRtModelRow
+  revision?: number
   onClose: () => void
   /** The request's id, and the variant's id: what loads once the download is done. */
   onStarted?: (id: string, variant: string) => void | Promise<void>
   onEngine: () => void
   embedded?: boolean
 }) {
+  const {
+    model,
+    checking,
+    error: readError,
+  } = useVariantModel(initialModel, 'litert-lm', revision, w.execute)
   const [variant, setVariant] = useState(model.default_variant ?? model.variants[0]?.id ?? '')
   const [plan, setPlan] = useState<LiteRtModelPlan | null>(null)
   const [error, setError] = useState('')
@@ -36,7 +45,7 @@ export function LiteRtModelInstall({
   const installRequest = useRef<{ digest: string; id: string } | null>(null)
   const v = model.variants.find((x) => x.id === variant)
   const download = async () => {
-    if (!v || pending) return
+    if (!v || pending || checking) return
     setPending(true)
     setError('')
     setPlan(null)
@@ -71,25 +80,18 @@ export function LiteRtModelInstall({
           A gated model: the server needs HF_TOKEN and its terms accepted on Hugging Face.
         </p>
       )}
-      <Field label="Variant">
-        <select
-          aria-label="Variant"
-          value={variant}
-          disabled={pending}
-          onChange={(e) => {
-            setVariant(e.target.value)
-            setPlan(null)
-            setError('')
-          }}
-        >
-          {model.variants.map((x) => (
-            <option key={x.id} value={x.id}>
-              {liteRtVariantLabel(x)} · {formatSize(x.file.size)} · {liteRtVerdictText(x.verdict)}
-            </option>
-          ))}
-        </select>
-      </Field>
-      {v && <p>{liteRtVerdictText(v.verdict)}</p>}
+      {checking && <p role="status">Checking device availability…</p>}
+      <VariantChoices
+        name={`litert-variant-${model.model_id}`}
+        choices={model.variants.map((x) => ({ ...x, label: liteRtVariantLabel(x), size: x.file.size }))}
+        value={variant}
+        disabled={pending || checking}
+        onChange={(id) => {
+          setVariant(id)
+          setPlan(null)
+          setError('')
+        }}
+      />
       {!!plan?.blockers.length && (
         <ul role="alert">
           {plan.blockers.map((b) => (
@@ -99,7 +101,7 @@ export function LiteRtModelInstall({
       )}
       <div className="ew-actions">
         {v?.verdict.verdict === 'ok' && (
-          <Action primary disabled={pending} onClick={download}>
+          <Action primary disabled={pending || checking} onClick={download}>
             Download
           </Action>
         )}
@@ -114,9 +116,9 @@ export function LiteRtModelInstall({
           </Action>
         )}
       </div>
-      {error && (
+      {(error || readError) && (
         <p role="alert" className="inline-error">
-          {error}
+          {error || readError}
         </p>
       )}
     </ModelInstallFrame>

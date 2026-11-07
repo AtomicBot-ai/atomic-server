@@ -65,7 +65,7 @@ it('retains Foundry provider identity when filtering by engine and expanding var
   render(<Catalog workspace={workspace} openCommand={vi.fn()} />)
   await chooseEngine('Foundry Local')
   await userEvent.click(await screen.findByText('Phi 4 Mini', { selector: 'strong' }))
-  expect(await screen.findByLabelText('Variant')).toHaveValue('phi-cpu')
+  expect(await screen.findByRole('radio', { name: /CPU/ })).toBeChecked()
   expect(screen.getByRole('button', { name: 'Download', exact: true })).toBeEnabled()
   expect(execute).toHaveBeenCalledWith('models.search', { engine: 'foundry-local', query: '' })
 })

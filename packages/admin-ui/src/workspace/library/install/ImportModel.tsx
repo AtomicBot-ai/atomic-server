@@ -32,7 +32,7 @@ export function ImportModel({
         aria-modal="true"
         aria-label="Import local model"
         tabIndex={-1}
-        className="wizard import-model-dialog"
+        className="wizard import-model-dialog settings-form"
       >
         <div className="panel-heading">
           <h2>Import local model</h2>

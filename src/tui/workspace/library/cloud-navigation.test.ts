@@ -4,7 +4,7 @@ import { cloudAction } from './cloud-actions.js'
 import { createWorkspace } from '../state.js'
 import { workspaceFrame } from '../frame.js'
 import { workspaceInput } from '../input.js'
-import { COLORS } from '../draw/canvas.js'
+import { COLORS, hit } from '../draw/canvas.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceController } from '../controller.js'
 function fixture(onboarding = false) {
@@ -93,7 +93,10 @@ it.each([
   const frame = workspaceFrame(t.get(), w!, h!, 0)
   const skip = frame.targets.find((target) => target.id === 'first-skip')!
   const next = frame.targets.find((target) => target.id === 'first-next')!
-  expect(skip.y).toBe(next.y + 1)
+  expect(skip.y).toBe(next.y)
+  expect(frame.targets.find((target) => target.id === 'first-back')!.y).toBe(next.y)
+  expect(hit(frame, skip.x, skip.y)?.id).toBe('first-skip')
+  expect(hit(frame, next.x, next.y)?.id).toBe('first-next')
   expect(skip.x + skip.width).toBeLessThan(next.x)
   expect(frame.cells[skip.y]![skip.x]!.color).toBe(COLORS.muted)
   expect(frame.targets.filter((target) => target.id === 'first-skip')).toHaveLength(1)

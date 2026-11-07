@@ -1,11 +1,13 @@
 // Lifted from Atomic-Chat/web-app/src/containers/ChatInput.tsx @ 807b4d9; adapted: server model choices.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown, Search, Star } from 'lucide-react'
+import { engineName } from '@view'
+import { Check, ChevronDown, Search, Star, X, ArrowRight } from 'lucide-react'
 import type { WorkspaceServiceRow } from '@contract'
 import { useDialog } from '../useDialog'
 import type { ChatPreferences } from './chat-preferences'
 import { InstalledLoad } from './InstalledLoad'
+import './chat-model-menu.css'
 const favoriteKey = (model: WorkspaceServiceRow) => `${model.provider}/${model.model}`
 function modelLabel(model: string, raw: boolean) {
   return raw ? model : model.split('/').pop()?.replace(/[-_]/g, ' ') || model
@@ -65,18 +67,19 @@ function ModelMenu({
     const update = () => {
       const bounds = anchor?.getBoundingClientRect()
       if (!bounds) return
-      const width = Math.min(350, window.innerWidth - 32)
+      const width = Math.min(420, window.innerWidth - 32)
       const above = bounds.top - 24,
         below = window.innerHeight - bounds.bottom - 24
       const upwards = above >= below
+      const compact = Math.max(above, below) < 280
       setPosition({
         position: 'fixed',
         width,
         maxWidth: width,
         left: Math.max(16, Math.min(bounds.right - width, window.innerWidth - width - 16)),
-        top: upwards ? 'auto' : bounds.bottom + 12,
-        bottom: upwards ? window.innerHeight - bounds.top + 12 : 'auto',
-        maxHeight: Math.max(96, Math.min(480, upwards ? above : below)),
+        top: compact ? 16 : upwards ? 'auto' : bounds.bottom + 12,
+        bottom: !compact && upwards ? window.innerHeight - bounds.top + 12 : 'auto',
+        maxHeight: compact ? window.innerHeight - 32 : Math.min(480, upwards ? above : below),
       })
     }
     update()
@@ -88,7 +91,9 @@ function ModelMenu({
     }
   }, [anchor])
   const sorted = [...models]
-    .filter((m) => `${m.provider} ${m.model}`.toLowerCase().includes(query.toLowerCase()))
+    .filter((m) =>
+      `${m.provider} ${engineName(m.provider)} ${m.model}`.toLowerCase().includes(query.toLowerCase())
+    )
     .sort(
       (a, b) =>
         Number(preferences.favorites.includes(favoriteKey(b))) -
@@ -105,59 +110,74 @@ function ModelMenu({
         aria-label="Chat model"
         tabIndex={-1}
       >
+        <header className="model-picker-heading">
+          <h2>Choose a model</h2>
+          <button type="button" aria-label="Close model picker" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </header>
         <div className="chat-model-search">
           <Search size={16} />
           <input
-            aria-label="Search ready models"
+            aria-label="Search models"
             placeholder="Search models"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className="chat-model-options">
-          {sorted.map((m) => (
-            <div className="chat-model-option" key={m.id}>
-              <button
-                type="button"
-                disabled={disabled || !['ready', 'loaded', 'running'].includes(m.state)}
-                aria-pressed={m.id === selected}
-                onClick={() => {
-                  setSelected(m.id)
-                  onClose()
-                }}
-              >
-                <span>
-                  <strong>{modelLabel(m.model, preferences.rawNames)}</strong>
-                  <small>
-                    {m.provider} · {m.state}
-                  </small>
-                </span>
-                {m.id === selected && <Check size={16} />}
-              </button>
-              <button
-                className="chat-model-favorite"
-                type="button"
-                disabled={disabled}
-                aria-label={`${preferences.favorites.includes(favoriteKey(m)) ? 'Remove' : 'Add'} favorite ${m.model}`}
-                onClick={() =>
-                  save({
-                    ...preferences,
-                    favorites: preferences.favorites.includes(favoriteKey(m))
-                      ? preferences.favorites.filter((id) => id !== favoriteKey(m))
-                      : [...preferences.favorites, favoriteKey(m)],
-                  })
-                }
-              >
-                <Star
-                  size={14}
-                  fill={preferences.favorites.includes(favoriteKey(m)) ? 'currentColor' : 'none'}
-                />
-              </button>
-            </div>
-          ))}
-          {!sorted.length && <p>{query ? 'No matching models.' : 'No loaded models.'}</p>}
+        <div className="model-picker-scroll">
+          <div className="chat-model-options">
+            <h3>In this session</h3>
+            {sorted.map((m) => (
+              <div className="chat-model-option" key={m.id}>
+                <button
+                  type="button"
+                  disabled={disabled || !['ready', 'loaded', 'running'].includes(m.state)}
+                  aria-pressed={m.id === selected}
+                  onClick={() => {
+                    setSelected(m.id)
+                    onClose()
+                  }}
+                >
+                  <span>
+                    <strong>{modelLabel(m.model, preferences.rawNames)}</strong>
+                    <small>
+                      {engineName(m.provider)} · {m.state}
+                    </small>
+                  </span>
+                  {m.id === selected && <Check size={16} />}
+                </button>
+                <button
+                  className="chat-model-favorite"
+                  type="button"
+                  disabled={disabled}
+                  aria-label={`${preferences.favorites.includes(favoriteKey(m)) ? 'Remove' : 'Add'} favorite ${m.model}`}
+                  onClick={() =>
+                    save({
+                      ...preferences,
+                      favorites: preferences.favorites.includes(favoriteKey(m))
+                        ? preferences.favorites.filter((id) => id !== favoriteKey(m))
+                        : [...preferences.favorites, favoriteKey(m)],
+                    })
+                  }
+                >
+                  <Star
+                    size={14}
+                    fill={preferences.favorites.includes(favoriteKey(m)) ? 'currentColor' : 'none'}
+                  />
+                </button>
+              </div>
+            ))}
+            {!sorted.length && (
+              <p className="model-picker-note">
+                {query
+                  ? 'No matching active models.'
+                  : 'No model running yet. Load a downloaded model below.'}
+              </p>
+            )}
+          </div>
+          <InstalledLoad disabled={disabled} query={query} models={models} />
         </div>
-        <InstalledLoad disabled={disabled} />
         <button
           type="button"
           className="chat-model-manage"
@@ -166,10 +186,10 @@ function ModelMenu({
             onCatalog()
           }}
         >
-          Manage models
+          Browse model catalog <ArrowRight size={16} aria-hidden="true" />
         </button>
       </section>
     </div>,
-    anchor?.closest('.chat-enhanced') ?? anchor?.closest('.eye-workspace') ?? document.body
+    anchor?.closest('.desktop-workspace') ?? anchor?.closest('.eye-workspace') ?? document.body
   )
 }

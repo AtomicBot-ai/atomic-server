@@ -2,6 +2,7 @@ import type { WorkspaceFeatures } from './workspace-features.js'
 /** Shared operation contract for the terminal, browser and unattended clients. */
 import type {
   EnvironmentOperation,
+  FastFlowLmOperation,
   LocalProviderId,
   RuntimeInstallation,
   SessionLoadStage,
@@ -97,6 +98,7 @@ export interface WorkspaceSnapshot {
   engines: WorkspaceEngine[]
   /** Privileged steps the server could not run itself, with the command to run as administrator. */
   host_steps: WorkspaceHostStep[]
+  fastflowlm_operations?: FastFlowLmOperation[]
   /** The last stage of each load in progress (`session:load-progress`); gone at `ready` or on failure. */
   loads: WorkspaceLoad[]
   /** The server's own atc and the newer release it has seen; absent when no server answers. */

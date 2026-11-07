@@ -1,3 +1,4 @@
+import { drawVariantModelChoice } from './setup/variant-model-choice-view.js'
 import { drawChatDetail } from './chat/recovery.js'
 import { drawChatFeatures } from './chat/features.js'
 import { drawFeatureOverlay } from './server/feature-panel.js'
@@ -36,6 +37,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
   if (s.overlay === 'help') return drawHelp(c, s, focus)
   if (s.overlay === 'stop') return drawApiConfirmation(c, s, focus)
   if (drawMediaOverlay(c, s, focus)) return
+  if (s.overlay === 'variant-model-choice') return drawVariantModelChoice(c, s, focus)
   if (s.overlay === 'setup-permission') return drawPermissionDialog(c, s, focus)
   if (s.overlay === 'waiting-game') return drawWaitingGame(c, s)
   if (s.overlay === 'connection-model' || s.overlay === 'connection-engine') {
@@ -64,7 +66,7 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     return
   }
   if (s.overlay === 'engine-panel') {
-    drawEnginePanel(c, s, focus)
+    drawEnginePanel(c, s, focus, seconds)
     return
   }
   if (drawOperationOverlay(c, s, focus)) return

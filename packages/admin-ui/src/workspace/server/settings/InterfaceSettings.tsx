@@ -2,6 +2,7 @@
 import { useThemeStore } from '@/hooks/useTheme'
 import type { Workspace } from '../../useWorkspace'
 import { Action } from '../../Controls'
+import { SettingsField, SettingsSection } from '../../SettingsForm'
 import { RuntimeSettings } from './RuntimeSettings'
 import './interface-settings.css'
 
@@ -10,38 +11,27 @@ export function InterfaceSettings({ workspace }: { workspace: Workspace }) {
   const setTheme = useThemeStore((state) => state.setTheme)
   return (
     <>
-      <section className="settings-card" aria-label="Interface appearance">
+      <SettingsSection title="Appearance" description="Changes apply immediately in this browser.">
+        <SettingsField label="Theme" hint="Choose the appearance of the web interface.">
+          <select value={theme} onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </SettingsField>
         <div className="settings-item">
-          <label htmlFor="interface-theme">
-            <strong>Theme</strong>
-            <small>Appearance in this browser.</small>
-          </label>
-          <div className="settings-item-control">
-            <select
-              id="interface-theme"
-              aria-label="Theme"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}
-            >
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
-          </div>
-        </div>
-        <div className="settings-item">
-          <label>
+          <div>
             <strong>Font size</strong>
             <small>Use your browser’s zoom controls.</small>
-          </label>
+          </div>
           <span>Browser default</span>
         </div>
         <div className="settings-item">
-          <label>
+          <div>
             <strong>Reset to default</strong>
-          </label>
+          </div>
           <Action onClick={() => setTheme('dark')}>Reset</Action>
         </div>
-      </section>
+      </SettingsSection>
       <details className="settings-card settings-advanced">
         <summary>Terminal interface</summary>
         <RuntimeSettings workspace={workspace} section="tui" />

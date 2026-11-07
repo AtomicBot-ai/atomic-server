@@ -39,11 +39,13 @@ export async function installEngine(
     link.request('POST', `/engines/${segment(engine)}/update`, body)
   const kind = engineKind(engine)
   if (kind === 'managed') return installManaged(link, engine, request)
-  const body = { task_id: randomUUID(), ...(proxy ? { proxy } : {}), ...request }
+  const body: Record<string, unknown> = { task_id: randomUUID(), ...(proxy ? { proxy } : {}), ...request }
   if (kind === 'engine-build') {
     // The core answers an engine it does not register here (LiteRT-LM on Windows arm64) with a bare
     // INVALID_ARGUMENT; its versions list is what says which engines this platform has.
     if (!(await engineVersions(link, engine))) throw unavailableHere(engine)
+    // The queue's displayed target records selection intent; core owns these engines' actual build.
+    delete body['target']
     return update(body)
   }
   if (kind === 'llamacpp' && request['target']) return update(body)

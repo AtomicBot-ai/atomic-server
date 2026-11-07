@@ -3,6 +3,7 @@
  * host-step protocol, OS services, ports. `nodeHostServices` is the real one;
  * tests build the same shape from fakes.
  */
+export { promptHostStep } from './helper-prompt.js'
 import { access, mkdir, rm, writeFile } from 'node:fs/promises'
 import { homedir, userInfo } from 'node:os'
 import { dirname, win32 } from 'node:path'
@@ -92,3 +93,5 @@ const nodeServiceFiles: ServiceFiles = {
     ),
 }
 export * from './server-launch.js'
+
+export * from './fastflowlm-steps.js'

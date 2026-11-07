@@ -6,6 +6,7 @@ import { record } from '../library/library-model.js'
 import { setupAction } from '../setup/setup-actions.js'
 import { connectionPickerAction } from './connection-picker.js'
 import {
+  connectionApiOperation,
   connectionDownload,
   connectionDownloadTarget,
   connectionModelState,
@@ -177,7 +178,7 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       if (!keyId) throw new Error('Create an API key and retry.')
       patch({ keyId, status: 'Starting server' })
       await execute('config.update', { values: { 'api.host': '127.0.0.1', 'api.port': Number(d.port) } })
-      await execute(s.workspace?.api.running ? 'api.restart' : 'api.start', {
+      await execute(connectionApiOperation(s.workspace?.api, { host: '127.0.0.1', port: Number(d.port) }), {
         request: { host: '127.0.0.1', port: Number(d.port) },
       })
       patch({ status: 'Testing model response' })

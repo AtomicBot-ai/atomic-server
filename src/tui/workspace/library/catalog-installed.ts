@@ -1,14 +1,16 @@
 import type { WorkspaceState } from '../state.js'
 import type { LibraryRow } from './library-model.js'
 import { record } from './library-model.js'
-import { modelJob } from './model-job.js'
+import { modelJob, matchesCatalogInstallation } from './model-job.js'
 /** Local files remain manageable even when their repository is absent from the remote catalog. */
 export function withInstalledRows(rows: LibraryRow[], state: WorkspaceState): LibraryRow[] {
   if (state.libraryCategory !== 'text') return rows
   const additional = state.installed.filter(
     (model) =>
       !rows.some(
-        (row) => row.id === model.id || record(modelJob(state, row.id)?.['plan'])['model_id'] === model.id
+        (row) =>
+          matchesCatalogInstallation(row, model, state.workspace?.setups) ||
+          record(modelJob(state, row.id)?.['plan'])['model_id'] === model.id
       )
   )
   return [
@@ -21,15 +23,19 @@ export function withInstalledRows(rows: LibraryRow[], state: WorkspaceState): Li
         installed: true,
         engine: model.provider,
         format:
-          model.provider === 'geniex'
-            ? 'geniex'
-            : model.provider === 'mlx'
-              ? 'mlx'
-              : model.store === 'managed'
-                ? 'safetensors'
-                : model.provider === 'foundry-local'
-                  ? 'foundry'
-                  : 'gguf',
+          model.provider === 'fastflowlm'
+            ? 'fastflowlm'
+            : model.provider === 'geniex'
+              ? 'geniex'
+              : model.provider === 'mlx'
+                ? 'mlx'
+                : model.store === 'managed'
+                  ? 'safetensors'
+                  : model.provider === 'litert-lm'
+                    ? 'litert'
+                    : model.provider === 'foundry-local'
+                      ? 'foundry'
+                      : 'gguf',
       },
     })),
     ...rows,

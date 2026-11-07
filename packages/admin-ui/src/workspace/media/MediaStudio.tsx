@@ -85,7 +85,10 @@ export function MediaStudio({
   const workflows = list(capabilities.workflows)
   return (
     <div className="media-studio" data-screen={`playground-${task}`}>
-      <aside className="media-controls" aria-label={`${task === 'video' ? 'Video' : 'Image'} controls`}>
+      <aside
+        className="media-controls settings-form"
+        aria-label={`${task === 'video' ? 'Video' : 'Image'} controls`}
+      >
         <h1>{task === 'video' ? 'Videos' : 'Images'}</h1>
         <Field label="Mode">
           <select

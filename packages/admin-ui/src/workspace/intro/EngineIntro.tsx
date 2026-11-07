@@ -1,25 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { engineFamily, engineName, setupFinished } from '@view'
-import { describeError } from '@/services/admin-api'
+import { setupFinished } from '@view'
 import { useWorkspace } from '../useWorkspace'
-import { record, rows, text } from '../types'
-import type { RecordValue } from '../types'
+import { record, rows } from '../types'
 import { IntroScreen } from './IntroScreen'
-/** A llama.cpp build to download, or an engine already installed that guided setup can continue with. */
-const offered = (e: RecordValue) =>
-  (engineFamily(text(e.engine)) === 'llamacpp' && Boolean(e.latest)) ||
-  (Boolean(e.active) &&
-    ['llamacpp', 'managed', 'foundry', 'litert', 'geniex'].includes(engineFamily(text(e.engine))))
+import { EngineChooser } from './EngineChooser'
 
-export function EngineIntro({ onContinue, replay = false }: { onContinue: () => void; replay?: boolean }) {
+export function EngineIntro({ onContinue }: { onContinue: () => void }) {
   const w = useWorkspace()
-  const [stage, setStage] = useState<'checking' | 'choose' | 'engines' | 'installing' | 'ready'>(
-    replay ? 'ready' : 'checking'
-  )
-  const [engines, setEngines] = useState<RecordValue[]>([])
-  const [finding, setFinding] = useState(false)
-  const [error, setError] = useState('')
-  const { snapshot, execute, refresh } = w
+  const [stage, setStage] = useState<'checking' | 'choose' | 'engines' | 'ready'>('checking')
+  const { snapshot, execute } = w
   const checking = useRef(false)
   const completed = useRef(false)
   useEffect(() => {
@@ -28,24 +17,6 @@ export function EngineIntro({ onContinue, replay = false }: { onContinue: () => 
       onContinue()
     }
   }, [snapshot?.setup, stage, onContinue])
-  useEffect(() => {
-    if (stage !== 'engines') return
-    const back = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      setStage('choose')
-    }
-    window.addEventListener('keydown', back, true)
-    return () => window.removeEventListener('keydown', back, true)
-  }, [stage])
-  useEffect(() => {
-    if (stage !== 'installing') return
-    const timer = setInterval(() => {
-      void refresh()
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [stage, refresh])
   useEffect(() => {
     if (!snapshot || stage !== 'checking' || checking.current) return
     checking.current = true
@@ -59,78 +30,25 @@ export function EngineIntro({ onContinue, replay = false }: { onContinue: () => 
         if (completed.current) return
         if (rows(record(result).engines).some((e) => e.active)) setStage('ready')
         else {
-          setEngines(rows(record(result).engines).filter(offered))
           setStage('choose')
         }
       })
-      .catch((failure) => {
-        setError(describeError(failure))
-        setStage('engines')
-      })
+      .catch(() => setStage('engines'))
   }, [snapshot, stage, execute, onContinue])
-  const choose = async () => {
-    setStage('engines')
-    setFinding(true)
-    setError('')
-    try {
-      const result = record(await w.execute('engines.list'))
-      const list = rows(result.engines)
-      setEngines(list.filter(offered))
-    } catch (e) {
-      setError(describeError(e))
-    } finally {
-      setFinding(false)
-    }
-  }
   if (stage === 'engines')
     return (
-      <main className="atomic-intro">
-        <section className="atomic-intro-card">
-          <h1>Choose your engine</h1>
-          <div className="intent-grid">
-            {engines.map((e) => (
-              <button
-                key={text(e.engine)}
-                onClick={async () => {
-                  setStage('installing')
-                  setError('')
-                  try {
-                    if (e.active) {
-                      await w.execute('engines.select', { engine: text(e.engine) })
-                      setStage('ready')
-                    } else {
-                      await w.execute('engines.enqueue', { engine: e.engine, select: true })
-                      onContinue()
-                    }
-                  } catch (failure) {
-                    setError(describeError(failure))
-                    setStage('engines')
-                  }
-                }}
-              >
-                {engineName(text(e.engine))}
-                {e.active ? ' · Installed' : ''}
-              </button>
-            ))}
-          </div>
-          {!engines.length && !error && (
-            <p>{finding ? 'Finding compatible engines…' : 'No compatible engines available.'}</p>
-          )}
-          {error && (
-            <>
-              <p role="alert">{error}</p>
-              <button onClick={choose}>Retry</button>
-            </>
-          )}
-          <button onClick={onContinue}>Set up later</button>
-        </section>
-      </main>
+      <EngineChooser
+        workspace={w}
+        onContinue={onContinue}
+        onBack={() => setStage('choose')}
+        onLater={onContinue}
+      />
     )
   return (
     <IntroScreen
       key={stage}
-      onContinue={stage === 'ready' ? onContinue : choose}
-      disabled={(stage === 'checking' && !w.error) || stage === 'installing'}
+      onContinue={stage === 'ready' ? onContinue : () => setStage('engines')}
+      disabled={stage === 'checking' && !w.error}
       label={
         stage === 'ready'
           ? 'Press any key'
@@ -138,9 +56,7 @@ export function EngineIntro({ onContinue, replay = false }: { onContinue: () => 
             ? w.error
               ? 'Retry connection'
               : 'Checking setup…'
-            : stage === 'installing'
-              ? 'Adding download…'
-              : 'Choose engine'
+            : 'Choose engine'
       }
     />
   )

@@ -22,7 +22,7 @@ async function reachDestinations(
     },
     { setup: null }
   )
-  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} onWelcome={vi.fn()} />)
+  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
   await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
   await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))

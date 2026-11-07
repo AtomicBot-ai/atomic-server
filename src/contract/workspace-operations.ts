@@ -1,3 +1,4 @@
+import { FASTFLOWLM_OPERATIONS } from './operations/fastflowlm.js'
 import { FEATURE_OPERATIONS } from './operations/features.js'
 import { CLOUD_OPERATIONS } from './operations/cloud.js'
 import { SERVER_OPERATIONS } from './operations/server.js'
@@ -20,6 +21,7 @@ export const WORKSPACE_OPERATIONS = [
   ...FOUNDRY_OPERATIONS,
   ...LITERT_OPERATIONS,
   ...GENIEX_OPERATIONS,
+  ...FASTFLOWLM_OPERATIONS,
   ...ENGINE_OPERATIONS,
   ...PLAYGROUND_OPERATIONS,
   ...MEDIA_OPERATIONS,

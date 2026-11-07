@@ -1,4 +1,4 @@
-import { connectionModelState, engineName } from '../../../workspace-view/index.js'
+import { connectionApiOperation, connectionModelState, engineName } from '../../../workspace-view/index.js'
 import { PROFILE_AGENTS } from '../../../contract/index.js'
 import { serverRunning } from './server-status.js'
 import { fieldControl } from '../draw/controls.js'
@@ -89,7 +89,11 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
     let detailRows = bottom - 2 - y - errorLines.length
     if (!d.error || detailRows-- > 0)
       put(`http://127.0.0.1:${d.port}${s.workspace?.api.prefix ?? '/v1'}`, COLORS.muted)
-    if (s.workspace?.api.running && (!d.error || detailRows-- > 0))
+    if (
+      connectionApiOperation(s.workspace?.api, { host: '127.0.0.1', port: Number(d.port) }) ===
+        'api.restart' &&
+      (!d.error || detailRows-- > 0)
+    )
       put('Restart interrupts active requests.', COLORS.muted)
     if (selected.ready && selected.provider)
       actionButton(

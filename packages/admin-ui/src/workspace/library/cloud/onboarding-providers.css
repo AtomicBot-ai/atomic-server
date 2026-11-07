@@ -1,7 +1,7 @@
 /* Lifted from Atomic-Chat preview/onboarding/onboarding.css @ 5043013; adapted: inline provider validation. */
 /* Match the desktop provider catalog and inline key panel during first run. */
 .desktop-workspace .first-run .onboarding-providers .cloud-provider-grid {
-  grid-auto-rows: 82px;
+  grid-auto-rows: minmax(108px, auto);
   max-height: clamp(100px, 24dvh, 240px);
   padding: 4px;
   overscroll-behavior: contain;
@@ -32,11 +32,7 @@
   font-size: 12px;
 }
 .first-run .onboarding-providers .cloud-provider-tag {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  padding: 2px 4px;
-  font-size: 9px;
+  margin-left: 0;
 }
 .first-run .cloud-provider-inline .cloud-provider-editor {
   margin-top: 14px;
@@ -77,4 +73,10 @@
 
 .desktop-workspace .first-run .onboarding-providers:not(.has-provider-editor) .cloud-provider-grid {
   max-height: min(50dvh, 420px);
+}
+
+/* Connected cards stay readable when they no longer need an onboarding action. */
+.first-run .onboarding-providers .cloud-provider-card.connected:disabled {
+  opacity: 1;
+  cursor: default;
 }

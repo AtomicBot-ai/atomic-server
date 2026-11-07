@@ -1,3 +1,4 @@
+import { saveCatalogPreferences } from './catalog-preferences.js'
 /** Desktop-style catalog filters operate on the live catalog without losing row identity. */
 import type { WorkspaceState } from '../state.js'
 import type { ActionContext } from '../actions.js'
@@ -32,19 +33,37 @@ export const defaultFilters = (): CatalogFilters => ({
   sort: 'recommended',
 })
 export function catalogIndexes(s: WorkspaceState): number[] {
-  const f = s.catalogFilters
+  const f = s.libraryCategory === 'text' ? s.catalogFilters : defaultFilters()
   const indices = s.libraryRows.flatMap((row, i) => {
     const source = row.source ?? {},
       format = String(source['format'] ?? 'gguf'),
       own = source['engine'] ?? source['provider']
-    const engines = modelEngines(own ? [String(own)] : [], format, row.id)
-    if (!matchesEngineFilter(f.engine, engines)) return []
-    if (f.uncensored && !mentionsUncensored(`${row.name} ${row.description} ${JSON.stringify(source)}`))
+    const providers = Array.isArray(source['providers'])
+      ? source['providers'].filter((v): v is string => typeof v === 'string')
+      : own
+        ? [String(own)]
+        : []
+    const engines = modelEngines(providers, format, row.id)
+    if (row.category !== s.libraryCategory) return []
+    if (s.libraryCategory === 'text' && !matchesEngineFilter(f.engine, engines)) return []
+    if (
+      s.libraryCategory === 'text' &&
+      f.uncensored &&
+      !mentionsUncensored(`${row.name} ${row.description} ${JSON.stringify(source)}`)
+    )
       return []
-    if (f.downloaded && !modelInstalled(s, row.id)) return []
-    if (f.liked && !s.catalogLikes.includes(row.id)) return []
-    if (s.libraryCategory === 'text' && s.libraryFormat === 'mlx' && format !== 'mlx') return []
-    if (s.libraryCategory === 'text' && s.libraryFormat === 'gguf' && format === 'mlx') return []
+    if (s.libraryCategory === 'text' && f.downloaded && !modelInstalled(s, row.id)) return []
+    if (s.libraryCategory === 'text' && f.liked && !s.catalogLikes.includes(row.id)) return []
+    if (s.libraryCategory === 'text' && format !== s.libraryFormat) return []
+    const query = s.libraryQuery.trim().toLowerCase()
+    if (
+      source['installed'] &&
+      query &&
+      !query
+        .split(/\s+/)
+        .every((word) => `${row.id} ${row.name} ${row.description}`.toLowerCase().includes(word))
+    )
+      return []
     return [i]
   })
   if (f.sort.startsWith('column:')) {
@@ -113,16 +132,29 @@ export async function catalogFilterAction(id: string, ctx: ActionContext) {
     ctx.update((v) => ({ ...v, catalogFilters: f }))
     if (f.engine) {
       await catalogAction(`format:${engineCatalogFormat(f.engine)}`, ctx)
+      return true
     }
   } else if (id === 'filter-downloaded') f.downloaded = !f.downloaded
   else if (id === 'filter-uncensored') f.uncensored = !f.uncensored
   else if (id === 'filter-liked') f.liked = !f.liked
-  ctx.update((v) => ({ ...v, catalogFilters: f, selected: 0 }))
+  ctx.update((v) => ({
+    ...v,
+    catalogFilters: f,
+    selected: 0,
+    catalogOpen: '',
+    catalogVariants: [],
+    catalogVariant: '',
+  }))
+  if (s.catalogFilters.engine !== f.engine && s.libraryFormat === 'safetensors')
+    await catalogAction('format:safetensors', ctx)
+  else await saveCatalogPreferences(ctx)
   return true
 }
 export function catalogFilterControls(s: WorkspaceState): string[][] {
   const f = s.catalogFilters
-  const engines = ['', ...new Set(['llamacpp-upstream', 'llamacpp', ...s.libraryEngines])]
+  const engines = ['', ...new Set(['llamacpp-upstream', 'llamacpp', ...s.libraryEngines])].filter(
+    (engine) => !['audio-cpp', 'sd-cpp'].includes(engine)
+  )
   return [
     ...engines.map((engine) => [
       `filter-engine:${engine}`,

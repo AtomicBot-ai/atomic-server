@@ -4,6 +4,7 @@ import { Network, Plus } from 'lucide-react'
 import { CONNECTION_AGENTS } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action, Copy, Panel } from '../Controls'
+import { SettingsField } from '../SettingsForm'
 import { AgentIcon } from './connection/AgentIcon'
 import { ServerKeyField } from './ServerKeyField'
 import { ServiceConnections } from './ServiceConnections'
@@ -39,7 +40,7 @@ export function Connections({
     python: `from openai import OpenAI\nimport os\n\nclient = OpenAI(base_url=${JSON.stringify(endpoint)}, api_key=os.environ["ATOMIC_API_KEY"])\nresponse = client.chat.completions.create(\n    model=${JSON.stringify(model)},\n    messages=[{"role": "user", "content": "Hello"}]\n)\nprint(response.choices[0].message.content)`,
   }
   return (
-    <div className="server-connections">
+    <div className="server-connections settings-form">
       {!model ? (
         <div className="server-connection-empty">
           <Network size={32} />
@@ -56,31 +57,31 @@ export function Connections({
               <code>{endpoint}</code>
               <Copy value={endpoint} label="Copy URL" />
             </div>
+            {models.length > 1 && (
+              <SettingsField label="Connection model">
+                <select
+                  value={model}
+                  disabled={testing}
+                  onChange={(e) => {
+                    setChosen(e.target.value)
+                    setVerified('')
+                  }}
+                >
+                  {models.map((item) => (
+                    <option key={item.id} value={item.model}>
+                      {item.model}
+                    </option>
+                  ))}
+                </select>
+              </SettingsField>
+            )}
             <dl className="server-connection-facts">
-              <div>
-                <dt>Model</dt>
-                <dd>
-                  {models.length > 1 ? (
-                    <select
-                      aria-label="Connection model"
-                      value={model}
-                      disabled={testing}
-                      onChange={(e) => {
-                        setChosen(e.target.value)
-                        setVerified('')
-                      }}
-                    >
-                      {models.map((item) => (
-                        <option key={item.id} value={item.model}>
-                          {item.model}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    model
-                  )}
-                </dd>
-              </div>
+              {models.length === 1 && (
+                <div>
+                  <dt>Model</dt>
+                  <dd>{model}</dd>
+                </div>
+              )}
               <div>
                 <dt>Access</dt>
                 <dd>
@@ -123,19 +124,13 @@ export function Connections({
               <p>No tools prepared in this session.</p>
             )}
           </Panel>
-          <Panel
-            title="Try a request"
-            actions={
-              <select
-                aria-label="Example language"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
+          <Panel title="Try a request">
+            <SettingsField label="Example language">
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
                 <option value="curl">cURL</option>
                 <option value="python">Python</option>
               </select>
-            }
-          >
+            </SettingsField>
             <pre>{snippets[language]}</pre>
             <p className="ew-muted">Set ATOMIC_API_KEY to your API key.</p>
             <div className="ew-actions">

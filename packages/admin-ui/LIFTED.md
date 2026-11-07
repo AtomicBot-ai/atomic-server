@@ -32,7 +32,7 @@ The following flow adaptations use the owner's local `atomic-chat-ui` redesign (
 | Here | Reference | Adaptation |
 | --- | --- | --- |
 | `src/workspace/setup/SetupWizard.tsx`, `FirstModel.tsx` | `web-app/src/preview/onboarding/Onboarding.tsx` | Server-only destination, live catalogs/downloads, explicit unsupported OS permissions |
-| `src/workspace/server/connection/ConnectionGuide.tsx`, `ConnectionHelp.tsx` | `Atomic-Chat/web-app/src/containers/server-concept/Setup.tsx`, `SetupEndpoint.tsx`, `SetupSuccess.tsx`, `SetupHelp.tsx` @ `5043013` | Real inference verification, client profiles and manual endpoint handoff |
+| `src/workspace/server/connection/ConnectionGuide.tsx`, `ConnectionEndpoint.tsx`, `ConnectionHelp.tsx` | `Atomic-Chat/web-app/src/containers/server-concept/Setup.tsx`, `SetupEndpoint.tsx`, `SetupSuccess.tsx`, `SetupHelp.tsx` @ `5043013` | Real inference verification, client profiles and manual endpoint handoff |
 | `src/workspace/WorkspaceNavigation.tsx` | `web-app/src/components/left-sidebar/NavigationRail.tsx`, `containers/ServerSidebar.tsx`, `SettingsMenu.tsx` | Server sections and a secondary Playground |
 | `../../src/contract/desktop-flows.ts` | `Atomic-Chat/web-app/src/constants/integrations.ts` @ `5043013` | Agent names/order shared with TUI; existing Claude wire ID retained |
 
@@ -71,13 +71,13 @@ The settings refresh at `5043013` also adapts `containers/Card.tsx` and `routes/
 ## Desktop parity audit — 2026-10-23 (`atomic-chat-ui` @ `5043013`)
 
 - `workspace/setup/FirstModel.tsx`, `OptionalMedia.tsx`, `SetupWizard.tsx`, `onboarding.css`: `preview/onboarding/Onboarding.tsx`; live hardware, catalog, provider checks, background jobs, fixed footer, server destination.
-- `workspace/library/catalog/CatalogToolbar.tsx`: `containers/hub/HubSearchToolbar.tsx` and `HubFilters.tsx`; separate filter/sort popovers and actual engine choices.
-- `workspace/library/catalog/CatalogTable.tsx`, `CatalogBrowse.tsx`, `CatalogModelOptions.tsx`, `catalog-desktop.css`: `containers/hub/LocalModelTable.tsx`; live metadata, expandable variants, imported models, server load/delete controls. Unknown metadata is not invented.
-- `workspace/library/catalog/CatalogMedia.tsx`: `containers/hub/MediaHub.tsx` and `MediaFamilyRow.tsx`; installed/available family rows and inline live artifact operations.
+- `workspace/library/catalog/CatalogToolbar.tsx`: `containers/hub/HubSearchToolbar.tsx` and `HubFilters.tsx`; separate filter/sort popovers and text-only engine choices; catalog selection is controlled by the parent (2026-11-06).
+- `workspace/library/catalog/CatalogTable.tsx`, `CatalogBrowse.tsx`, `CatalogModelOptions.tsx`, `catalog-desktop.css`: `containers/hub/LocalModelTable.tsx`; live metadata, expandable variants, imported models, server load/delete controls. Unknown metadata is not invented. Download rows preserve variant labels, recommendations and model-file sizes with responsive aligned actions (2026-11-07). Catalog selection now follows the parent, remote search semantics are preserved, and installed-model reads are serialized (2026-11-06).
+- `workspace/library/catalog/CatalogMedia.tsx`: `containers/hub/MediaHub.tsx` and `MediaFamilyRow.tsx`; installed/available family rows and inline live artifact operations. Compact cards now include engine/variant metadata, bounded descriptions and linked disclosure regions (2026-11-07).
 
 - `workspace/styles/desktop-parity.css`: final rail/sidebar, Models Hub spacing and responsive drawer composition from the desktop shell @ `5043013`. Web-only sign-out and advanced commands live in Help.
 - `workspace/library/catalog/model-logos.ts`, `ModelMark.tsx`, and `public/model-brands/`: model-family logo rules and bundled brand artwork from `lib/model-logo.ts`, `containers/ModelLogo.tsx`, and their referenced public assets @ `5043013`; the audio maker keys and the OpenMOSS and ACE-Step avatars @ `ae494232d`. Monochrome marks use the prototype's mask treatment; no remote avatar requests.
-- `workspace/library/catalog/CatalogRuntimeOptions.tsx`, `../install/ManagedModelInstall.tsx`, `../install/FoundryModelInstall.tsx`: expanded model download controls from `containers/hub/LocalModelTable.tsx` @ `5043013`; managed compatibility and Foundry variants remain inline, Download checks the real plan and starts immediately when unblocked, and host engine/accelerator preparation returns to the same row. `ModelInstallFrame.tsx` shares these controls with setup dialogs.
+- `workspace/library/catalog/CatalogRuntimeOptions.tsx`, `../install/ManagedModelInstall.tsx`, `../install/FoundryModelInstall.tsx`: expanded model download controls from `containers/hub/LocalModelTable.tsx` @ `5043013`; managed compatibility and Foundry/FastFlowLM variants remain inline, Download checks the real plan and starts immediately when unblocked, and host engine/accelerator preparation returns to the same row. `ModelInstallFrame.tsx` shares these controls with setup dialogs.
 
 - `src/workspace/library/cloud/CloudProviderDialog.tsx`: Atomic-Chat preview/onboarding/Onboarding.tsx @ `5043013`; compact provider dialog, focus containment, and Escape dismissal.
 
@@ -117,7 +117,7 @@ The `807b4d9` onboarding refresh also supplies `setup/FirstModel.tsx` and `onboa
 
 - `workspace/HelpMenu.tsx`, `help-menu.css` and `WorkspaceNavigation.tsx` follow `components/left-sidebar/NavigationRail.tsx`: the actual Discord, issue and mail destinations, labelled two-line rail controls, Server/Playground/Models above Help/Web/Settings. Support messages are never sent automatically.
 - `workspace/server/ServerControlPanel.tsx` / `server-sidebar.css` use `containers/ServerControlPanel.tsx` and `server-control-panel.css`: one grouped surface and actual start/stop/restart states, with reduced-motion support.
-- `workspace/chat/{ChatMessages,ChatComposer,ChatModelPicker}.tsx` and `chat-desktop.css` follow `containers/{MessageItem,ChatInput}.tsx`: user bubbles, inline assistant responses, compact accessible icon actions and a single composer with attachments/model/tools below the input. Shared server operations retain conversation and tool state.
+- `workspace/chat/{ChatMessages,ChatComposer,ChatModelPicker}.tsx` and `chat-desktop.css` follow `containers/{MessageItem,ChatInput}.tsx`: user bubbles, inline assistant responses, compact accessible icon actions and a single composer with attachments/model/tools below the input. Shared server operations retain conversation and tool state. The branch editor uses shared settings fields and an explicit editing width so user bubbles cannot shrink around a size-contained form.
 
 | `workspace/server/features/WorkspaceSettings.tsx`, `FeatureEditor.tsx`, `AttachmentSettings.tsx` | `atomic-chat-ui/web-app/src/routes/settings/assistant.tsx`, `routes/skills/index.tsx`, `routes/settings/attachments.tsx` @ `807b4d9` | Shared server-owned assistant, skill and attachment controls; terminal equivalents use the same operation contract. |
 
@@ -130,4 +130,18 @@ The `807b4d9` onboarding refresh also supplies `setup/FirstModel.tsx` and `onboa
 
 ## Media step preview — 2026-10-29 (`Atomic-Chat` @ `2d0323463`)
 
+The 2026-11-06 onboarding adaptation scopes `setup/FirstModel.tsx` to the selected engine's catalog and authoritative installed-model providers. `library/install/ManagedModelInstall.tsx` keeps the onboarding engine fixed while retaining the library's explicit engine chooser.
+
 - `workspace/setup/MediaPreview.tsx`, its `first-media-{scene,art,kind,toggle}` rules in `media-preview.css`, and `public/images/onboarding/{robot-studio.webp,robot-wave.mp4}`: `web-app/src/containers/onboarding/steps/MediaPreview.tsx`, `media.css` (`.ob-media-scene`, `.ob-media-art`, `.ob-media-kind`, `.ob-animation-toggle`) and `web-app/public/images/onboarding/` @ `2d0323463`; English strings from `locales/en/onboarding-media.json` inlined, the line under the still takes the card's border colour, and a missing `matchMedia` reads as no reduced-motion preference. The two binaries are copied unchanged.
+
+The onboarding wizard now shares `intro/EngineChooser.tsx` with the intro: managed runtime consent and readiness precede model selection, Back/Escape retain wizard state, and returning from an engine panel rechecks the selected model's compatibility (`setup/SetupEngineDialog.tsx`).
+
+The 2026-11-07 adaptation replaces the Foundry native variant menu in `workspace/library/install/FoundryModelInstall.tsx` (original `LocalModelTable.tsx` @ `5043013`) with `VariantChoices.tsx`, shared with LiteRT-LM. Short device/readiness labels and a separate reason keep expanded catalog rows within the viewport. `use-variant-model.ts` refreshes core verdicts when setup returns from engine preparation. Engine dialogs now separate Overview from Settings while retaining staged edits.
+
+The provider summaries, connector cards and workspace settings above now use shared non-interactive status indicators; skill upload uses the shared English file-picker control. Onboarding provider rows grow to accommodate connection status. Original provenance headers are retained.
+
+`workspace/server/features/AssistantsSettings.tsx` is extracted from the lifted `WorkspaceSettings.tsx` assistant settings adaptation above (`atomic-chat-ui/web-app/src/routes/settings/assistant.tsx` @ `807b4d9`), with a compact default/profile layout. The lifted chat model picker now groups active and downloaded models, with explicit per-engine load actions.
+
+The 2026-11-07 runtime model card adaptation keeps the provenance of `workspace/library/install/ManagedModelInstall.tsx` (`LocalModelTable.tsx` @ `5043013`): compatibility summaries now use `ManagedCompatibility.tsx` with expandable original diagnostics. FastFlowLM/GenieX downloads use a compact variant/size/action block; FastFlowLM facts and license are separated from source notices.
+
+The 2026-11-07 settings layout adaptation retains the lifted component headers and routes native controls through `workspace/SettingsField.tsx`. Attachment settings use semantic sections and guarded draft saving; runtime, API, engine, assistant, connector and provider forms share control geometry while retaining their server operations.

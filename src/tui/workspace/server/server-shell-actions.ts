@@ -7,9 +7,26 @@ import { serverChoices } from './server-settings.js'
 import { setsUpInPanel } from '../../../terminal-setup/index.js'
 import { engineAction } from '../library/engine-actions.js'
 import { serverAgents } from './server-overview.js'
+import { libraryAction } from '../library/library-actions.js'
+import { defaultFilters } from '../library/catalog-filters.js'
+import { engineCatalogFormat } from '../../../workspace-view/index.js'
 export async function serverShellAction(id: string, ctx: ActionContext): Promise<boolean> {
   const s = ctx.get(),
     c = ctx.controller
+  if (id === 'server-download-model') {
+    const selected = serverSelection(s).engine
+    const engine = s.engines.find((choice) => choice.id === selected || choice.provider === selected)
+    const provider = engine?.provider ?? selected.split('|')[0] ?? ''
+    ctx.update((v) => ({
+      ...v,
+      serverChoice: null,
+      libraryCategory: 'text',
+      libraryFormat: engineCatalogFormat(provider),
+      libraryQuery: '',
+      catalogFilters: { ...defaultFilters(), engine: provider, sort: v.catalogFilters.sort },
+    }))
+    return libraryAction('library:catalog', ctx)
+  }
   if (id === 'server-example-language') {
     ctx.update((v) => ({
       ...v,

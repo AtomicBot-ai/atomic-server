@@ -43,7 +43,7 @@ export async function settingsAction(id: string, ctx: PanelContext): Promise<boo
     ctx.update((v) =>
       v.enginePanel?.engine === p.engine ? { ...v, enginePanel: { ...v.enginePanel, ...part } } : v
     )
-  if (p.busy && (id.startsWith('engine-setting') || id.startsWith('engine-option:'))) return true
+  if (p.settingsBusy && (id.startsWith('engine-setting') || id.startsWith('engine-option:'))) return true
   const editing = (s.overlay === 'endpoint' || s.overlay === 'engine-panel') && s.edit.startsWith(EDIT)
   if (editing && (id === 'engine-settings-save' || (id.startsWith(EDIT) && id !== s.edit))) {
     await settingsAction('engine-setting-commit', ctx)
@@ -62,11 +62,11 @@ export async function settingsAction(id: string, ctx: PanelContext): Promise<boo
   }
   if (s.overlay !== 'engine-panel') return false
   if (id === 'engine-settings') {
-    set({ busy: true, error: '', notice: '' })
+    set({ settingsBusy: true, settingsError: '', error: '', notice: '' })
     try {
-      set({ form: await readEngineForm(ctx, p), busy: false })
+      set({ form: await readEngineForm(ctx, p), settingsBusy: false })
     } catch (e) {
-      set({ busy: false, error: e instanceof Error ? e.message : String(e) })
+      set({ settingsBusy: false, settingsError: e instanceof Error ? e.message : String(e) })
     }
     return true
   }
@@ -107,7 +107,7 @@ export async function settingsAction(id: string, ctx: PanelContext): Promise<boo
   if (id === 'engine-settings-save') {
     const values = changedValues(f.values, f.draft, f.descriptors)
     if (!Object.keys(values).length) return (set({ notice: 'Nothing changed.' }), true)
-    set({ busy: true, error: '', notice: '' })
+    set({ settingsBusy: true, settingsError: '', error: '', notice: '' })
     try {
       await ctx.controller.runtime.execute('settings.update', {
         provider: p.engine,
@@ -116,12 +116,12 @@ export async function settingsAction(id: string, ctx: PanelContext): Promise<boo
       })
       set({
         form: await readEngineForm(ctx, p),
-        busy: false,
+        settingsBusy: false,
         notice: 'Saved. Applies from the next model load.',
       })
       ctx.update((v) => (v.enginePanel?.engine === p.engine ? { ...v, focus: 'close' } : v))
     } catch (e) {
-      set({ busy: false, error: e instanceof Error ? e.message : String(e) })
+      set({ settingsBusy: false, error: e instanceof Error ? e.message : String(e) })
     }
     return true
   }

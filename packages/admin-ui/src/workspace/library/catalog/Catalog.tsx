@@ -1,20 +1,18 @@
-import { watchSharedRead } from '../../watch-shared-read'
 import { CloudProviders } from '../cloud/CloudProviders'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useCatalogSelection } from './catalog-preferences'
+import { useCatalogResults } from './useCatalogResults'
 import { LIBRARY_SECTIONS } from '@contract'
 import type { Workspace } from '../../useWorkspace'
 import { Action } from '../../Controls'
 import { CatalogBrowse } from './CatalogBrowse'
-import { rows, text } from '../../types'
+import { text } from '../../types'
 import type { RecordValue } from '../../types'
-import { describeError } from '@/services/admin-api'
 import { ModelInstall } from '../install/ModelInstall'
 import { Downloads } from '../downloads/Downloads'
 import { EngineSettings } from '../engines/EngineSettings'
 import { EnginesTab } from '../engines/EnginesTab'
-import { FORMAT_ENGINE, engineCatalogFormat } from '@view'
-import { catalogCards, catalogFormats } from './catalog-data'
-import type { CatalogFormat } from './catalog-data'
+import { catalogFormats } from './catalog-data'
 import { useEngines } from '../../useEngines'
 import { InstalledModels } from './InstalledModels'
 import { ImportModel } from '../install/ImportModel'
@@ -25,7 +23,7 @@ export function Catalog({
   section,
   onSection,
   engine,
-  initialCategory = 'text',
+  initialCategory,
 }: {
   workspace: Workspace
   openCommand: (name: string) => void
@@ -38,123 +36,43 @@ export function Catalog({
   const [localTab, setLocalTab] = useState('catalog')
   const tab = section ?? localTab
   const selectTab = onSection ?? setLocalTab
-  const [category, setCategory] = useState(initialCategory)
-  const [query, setQuery] = useState('')
-  const [catalog, setCatalog] = useState<RecordValue[]>([])
-  const [installed, setInstalled] = useState<RecordValue[]>([])
-  const [engines, setEngines] = useState<RecordValue[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [selection, setSelection] = useCatalogSelection(engine, initialCategory)
+  const { category, format, query } = selection
   const [selected, setSelected] = useState<RecordValue | null>(null)
   const [settingsProvider, setSettingsProvider] = useState('')
+  const previousProvider = useRef('')
+  useEffect(() => {
+    if (!settingsProvider && previousProvider.current)
+      document.getElementById(`engine-directory-${previousProvider.current}`)?.focus()
+    previousProvider.current = settingsProvider
+  }, [settingsProvider])
   const [importing, setImporting] = useState(false)
   const [importNotice, setImportNotice] = useState('')
   const [importRevision, setImportRevision] = useState(0)
-  const [format, setFormat] = useState<CatalogFormat>(() => (engine ? engineCatalogFormat(engine) : 'gguf'))
   const [managedRepo, setManagedRepo] = useState('')
-  const [managedEngine, setManagedEngine] = useState(engine ?? '')
   const { engines: registered } = useEngines(w.execute)
-  const managedEngines = registered.filter((e) => e.kind === 'managed').map((e) => text(e.engine))
-  const engineForModels = managedEngines.includes(managedEngine) ? managedEngine : (managedEngines[0] ?? '')
   const { execute } = w
-  const requestId = useRef(0)
+  const {
+    catalog,
+    installed,
+    engines,
+    loading,
+    error,
+    invalidate: invalidateResults,
+    refresh,
+  } = useCatalogResults(execute, tab, selection, registered, importRevision)
   const invalidate = () => {
-    requestId.current += 1
-    setCatalog([])
+    invalidateResults()
     setSelected(null)
     setManagedRepo('')
-    setError('')
   }
   const setTab = (value: string) => {
-    if (value === tab) return
-    invalidate()
-    selectTab(value)
-  }
-  const refresh = useCallback(
-    async (background = false) => {
-      const request = ++requestId.current
-      if (!background) setLoading(true)
-      setError('')
-      try {
-        let result: RecordValue[] = [],
-          commit = setCatalog
-        if (tab === 'engines') {
-          result = rows(await execute('engines.list'))
-          commit = setEngines
-        } else if (tab === 'installed') {
-          const [chat, media] = await Promise.all([execute('models.installed'), execute('artifacts.list')])
-          result = [...rows(chat), ...rows(media).filter((model) => model.stage === 'ready')]
-          commit = setInstalled
-        } else if (tab === 'catalog' && format === 'safetensors' && engineForModels)
-          result = catalogCards(
-            await execute('models.catalog', { engine: engineForModels }),
-            format,
-            engineForModels
-          )
-        else if (tab === 'catalog' && FORMAT_ENGINE[format])
-          result = catalogCards(
-            await execute('models.search', { engine: FORMAT_ENGINE[format], query: '' }),
-            format
-          )
-        else if (tab === 'catalog') result = rows(await execute('models.catalog', { category }))
-        if (request === requestId.current) commit(result)
-      } catch (e) {
-        if (request === requestId.current) setError(describeError(e))
-      } finally {
-        if (request === requestId.current) setLoading(false)
-      }
-    },
-    [tab, category, execute, format, engineForModels]
-  )
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const searchCatalog = useCallback(() => {
-    clearTimeout(searchTimer.current)
-    if (!query.trim() || category !== 'text') return
-    const request = ++requestId.current
-    setLoading(true)
-    setError('')
-    void execute(
-      'models.search',
-      format === 'gguf' || format === 'mlx'
-        ? { query, ...(format === 'mlx' ? { engine: 'mlx' } : {}) }
-        : {
-            engine: FORMAT_ENGINE[format] ?? engineForModels,
-            query,
-          }
-    )
-      .then((result) => {
-        if (request === requestId.current) setCatalog(catalogCards(result, format, engineForModels))
-      })
-      .catch((e) => {
-        if (request === requestId.current) setError(describeError(e))
-      })
-      .finally(() => {
-        if (request === requestId.current) setLoading(false)
-      })
-  }, [query, category, execute, format, engineForModels])
-  useEffect(() => {
-    if (tab !== 'catalog' || category !== 'text' || !query.trim()) return
-    searchTimer.current = setTimeout(searchCatalog, 350)
-    return () => clearTimeout(searchTimer.current)
-  }, [query, tab, category, searchCatalog])
-  useEffect(() => {
-    const stop = ['installed', 'engines'].includes(tab)
-      ? watchSharedRead(
-          () => refresh(true),
-          () => {},
-          () => {}
-        )
-      : undefined
-    if (!stop) void refresh()
-    return () => {
-      stop?.()
-      requestId.current += 1
+    if (value !== tab) {
+      invalidate()
+      selectTab(value)
     }
-  }, [refresh, tab])
-  const refreshResults = () => {
-    if (category === 'text' && query.trim()) searchCatalog()
-    else void refresh()
   }
+  const refreshResults = () => void refresh()
   return (
     <div>
       {importNotice && tab === 'catalog' && <p role="status">{importNotice}</p>}
@@ -166,18 +84,21 @@ export function Catalog({
             invalidate()
             setImporting(false)
             setImportNotice('Model imported.')
-            setCategory('text')
-            setFormat('gguf')
-            setQuery('')
+            setSelection((s) => ({
+              ...s,
+              category: 'text',
+              format: 'gguf',
+              query: '',
+              filters: { ...s.filters, engine: '' },
+            }))
             setImportRevision((value) => value + 1)
-            if (category === 'text' && format === 'gguf') void refresh()
           }}
         />
       )}
       {tab !== 'catalog' && tab !== 'endpoint' && (
         <div className="page-heading">
           <h1>{LIBRARY_SECTIONS.find((s) => s.id === tab)?.label ?? 'Models'}</h1>
-          <Action onClick={refresh}>Refresh</Action>
+          {tab !== 'engines' && <Action onClick={refresh}>Refresh</Action>}
         </div>
       )}
       {!section && (
@@ -197,6 +118,7 @@ export function Catalog({
       {error && (
         <p className="ew-error" role="alert">
           {error}
+          {tab === 'engines' && <Action onClick={refresh}>Retry</Action>}
         </p>
       )}
       {tab === 'catalog' && (
@@ -204,7 +126,13 @@ export function Catalog({
           <Downloads workspace={w} compact showTitle={false} />
           <CatalogBrowse
             key={importRevision}
-            engine={engine}
+            filters={selection.filters}
+            onFilters={(filters) => {
+              if (filters.engine !== selection.filters.engine) invalidate()
+              setSelection((s) => ({ ...s, filters }))
+            }}
+            sort={selection.sort}
+            onSort={(sort) => setSelection((s) => ({ ...s, sort }))}
             workspace={w}
             managedRepository={managedRepo}
             onStarted={() => {
@@ -216,24 +144,21 @@ export function Catalog({
             format={format}
             query={query}
             engines={registered}
-            onEngine={setManagedEngine}
             loading={loading}
             execute={execute}
             setCategory={(value) => {
               if (value === category) return
               invalidate()
-              setCategory(value)
-              setFormat('gguf')
-              setQuery('')
+              setSelection((s) => ({ ...s, category: value, query: '' }))
             }}
             setFormat={(value) => {
               if (value === format) return
               invalidate()
-              setFormat(value)
+              setSelection((s) => ({ ...s, format: value }))
             }}
             setQuery={(value) => {
-              setQuery(value)
-              if (!value.trim() && query.trim()) void refresh()
+              invalidate()
+              setSelection((s) => ({ ...s, query: value }))
             }}
             choose={setSelected}
             importFile={() => {
@@ -241,7 +166,7 @@ export function Catalog({
               setImporting(true)
             }}
             onNoGguf={catalogFormats(registered).includes('safetensors') ? setManagedRepo : undefined}
-            search={searchCatalog}
+            search={refreshResults}
           />
         </>
       )}
@@ -254,10 +179,10 @@ export function Catalog({
           loading={loading}
           openCommand={openCommand}
           browse={() => setTab('catalog')}
-          onChanged={refresh}
+          onChanged={() => refresh(false, true)}
         />
       )}
-      {tab === 'engines' && (
+      {tab === 'engines' && (!error || engines.length > 0) && (
         <EnginesTab
           engines={engines}
           snapshot={w.snapshot}
@@ -267,7 +192,12 @@ export function Catalog({
       )}
       {tab === 'downloads' && <Downloads workspace={w} showTitle={false} />}
       {settingsProvider && (
-        <EngineSettings provider={settingsProvider} workspace={w} onClose={() => setSettingsProvider('')} />
+        <EngineSettings
+          presentation="drawer"
+          provider={settingsProvider}
+          workspace={w}
+          onClose={() => setSettingsProvider('')}
+        />
       )}
       {selected && (['gguf', 'mlx'].includes(format) || category !== 'text') && (
         <ModelInstall

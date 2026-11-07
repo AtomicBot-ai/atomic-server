@@ -1,9 +1,9 @@
 import { useConfirmation } from './use-confirmation'
 import { useEffect, useRef, useState } from 'react'
-import type { WorkspaceField, WorkspaceOperation } from '@contract'
-import { Action, Copy, Field, JsonResult } from './Controls'
+import type { WorkspaceOperation } from '@contract'
+import { Action, Copy, JsonResult } from './Controls'
 import type { Execute, RecordValue } from './types'
-import { record } from './types'
+import { OperationField } from './OperationFields'
 
 function initialValues(operation: WorkspaceOperation) {
   return Object.fromEntries(
@@ -65,25 +65,21 @@ export function OperationForm({
     onComplete?.(value)
   }
   return (
-    <div className="operation-form">
+    <div className="operation-form settings-form">
       {confirmation}
       {operation.description !== operation.title && (
         <p className="ew-muted">{operation.description.replace(' Engine capability limits apply.', '')}</p>
       )}
       <div className="form-grid">
         {Object.entries(operation.inputSchema.properties).map(([name, field]) => (
-          <Field
+          <OperationField
             key={name}
-            label={`${name.replaceAll('_', ' ')}${required.includes(name) ? ' *' : ''}`}
-            hint={field.description}
-          >
-            <SchemaInput
-              name={name}
-              field={field}
-              value={values[name]}
-              onChange={(value) => setValues((current) => ({ ...current, [name]: value }))}
-            />
-          </Field>
+            name={name}
+            field={field}
+            required={required.includes(name)}
+            value={values[name]}
+            onChange={(value) => setValues((current) => ({ ...current, [name]: value }))}
+          />
         ))}
       </div>
       <div className="ew-actions">
@@ -135,140 +131,6 @@ export function OperationForm({
         </div>
       ) : (
         <JsonResult value={result} />
-      )}
-    </div>
-  )
-}
-function SchemaInput({
-  name,
-  field,
-  value,
-  onChange,
-}: {
-  name: string
-  field: WorkspaceField
-  value: unknown
-  onChange: (value: unknown) => void
-}) {
-  if (field.enum)
-    return (
-      <select value={String(value ?? '')} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Choose…</option>
-        {field.enum.map((item) => (
-          <option key={item}>{item}</option>
-        ))}
-      </select>
-    )
-  if (field.type === 'boolean')
-    return (
-      <select
-        value={value === undefined ? '' : String(value)}
-        onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value === 'true')}
-      >
-        <option value="">Default</option>
-        <option value="true">On</option>
-        <option value="false">Off</option>
-      </select>
-    )
-  if (field.type === 'object' && field.properties)
-    return <ObjectInput name={name} field={field} value={value} onChange={onChange} />
-  if (field.type === 'object' || field.type === 'array')
-    return (
-      <textarea
-        spellCheck={false}
-        className="code-input"
-        value={String(value ?? '')}
-        placeholder={field.type === 'object' ? '{}' : '[]'}
-        onChange={(e) => onChange(e.target.value)}
-      />
-    )
-  return (
-    <input
-      type={
-        field.type === 'number' || field.type === 'integer'
-          ? 'number'
-          : /(^|_)(api_?key|token|password|secret)$|^key$/.test(name)
-            ? 'password'
-            : 'text'
-      }
-      min={field.minimum}
-      max={field.maximum}
-      step={field.type === 'integer' ? 1 : 'any'}
-      value={String(value ?? '')}
-      onChange={(e) =>
-        onChange(
-          e.target.type === 'number'
-            ? e.target.value === ''
-              ? undefined
-              : Number(e.target.value)
-            : e.target.value
-        )
-      }
-    />
-  )
-}
-
-function ObjectInput({
-  name,
-  field,
-  value,
-  onChange,
-}: {
-  name: string
-  field: WorkspaceField
-  value: unknown
-  onChange: (value: unknown) => void
-}) {
-  let values = record(value)
-  if (typeof value === 'string') {
-    try {
-      values = record(JSON.parse(value))
-    } catch {
-      /* Keep typed fields empty until JSON is valid. */
-    }
-  }
-  const [extra, setExtra] = useState('')
-  const [error, setError] = useState('')
-  return (
-    <div className="nested-fields">
-      <div className="form-grid">
-        {Object.entries(field.properties ?? {}).map(([key, descriptor]) => (
-          <Field
-            key={key}
-            label={`${key.replaceAll('_', ' ')}${field.required?.includes(key) ? ' *' : ''}`}
-            hint={descriptor.description}
-          >
-            <SchemaInput
-              name={`${name}.${key}`}
-              field={descriptor}
-              value={values[key]}
-              onChange={(next) => onChange({ ...values, [key]: next })}
-            />
-          </Field>
-        ))}
-      </div>
-      {field.additionalProperties && (
-        <details>
-          <summary>Additional fields (JSON)</summary>
-          <textarea
-            aria-label={`${name} additional fields`}
-            className="code-input"
-            placeholder="{}"
-            value={extra}
-            onChange={(event) => {
-              const raw = event.target.value
-              setExtra(raw)
-              try {
-                onChange({ ...values, ...record(JSON.parse(raw || '{}')) })
-                setError('')
-              } catch {
-                onChange(raw)
-                setError('Enter a JSON object.')
-              }
-            }}
-          />
-          {error && <small role="alert">{error}</small>}
-        </details>
       )}
     </div>
   )

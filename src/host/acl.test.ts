@@ -115,6 +115,7 @@ describe('owner-only folder ACL', () => {
             ? { code: 0, stdout: JSON.stringify(owned), stderr: '', timedOut: false }
             : { code: 0, stdout: '', stderr: '', timedOut: false },
         env: {},
+        systemRoot: 'C:\\Windows',
         checked: (problem) => reported.push(problem),
       })
       expect(granted).toBeUndefined()
@@ -132,6 +133,7 @@ describe('owner-only folder ACL', () => {
         user: 'HOST\\alice',
         exec,
         env: {},
+        systemRoot: 'C:\\Windows',
         checked: (problem) => reported.push(problem),
       })
       expect(typeof granted).toBe('string')

@@ -125,6 +125,7 @@ export async function removeDownload(
       options,
       installed
     )
+  if (owner === 'fastflowlm') return downloads.fastflowlm.discard(id)
   if (owner === 'geniex') {
     const journal = downloads.geniex.journal
     return journal.remove(id, async (job) => {

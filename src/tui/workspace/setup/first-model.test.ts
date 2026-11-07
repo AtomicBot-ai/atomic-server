@@ -163,7 +163,9 @@ it.each([
       if (i) await t.input('', { downArrow: true }, width, height)
       const frame = workspaceFrame(t.ctx.get(), width, height, 0)
       const skip = frame.targets.find((target) => target.id === 'first-skip')!
-      expect(skip.y).toBe(bar.y + 1)
+      expect(skip.y).toBe(bar.y)
+      expect(frame.targets.find((target) => target.id === 'first-intro')?.y).toBe(bar.y)
+      expect(hit(frame, skip.x, skip.y)?.id).toBe('first-skip')
       expect(skip.x + skip.width).toBeLessThan(bar.x)
       expect(frame.cells[skip.y]![skip.x]!.color).toBe(COLORS.muted)
       expect(frame.targets.some((target) => target.id === `first-model-choice:${i}`)).toBe(true)

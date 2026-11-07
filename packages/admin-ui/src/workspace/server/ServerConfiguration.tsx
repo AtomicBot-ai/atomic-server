@@ -2,9 +2,10 @@
 import { DEFAULT_API_PORT } from '@contract'
 import { apiPrefixError } from '@view'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Workspace } from '../useWorkspace'
-import { Action, Field } from '../Controls'
+import { Action } from '../Controls'
+import { SettingsField as Field, SettingsActions, SettingsSection } from '../SettingsForm'
 import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
@@ -24,7 +25,6 @@ export function ServerConfiguration({
   const [saving, setSaving] = useState(false)
   const [revision, setRevision] = useState(0)
   const [error, setError] = useState('')
-  const fieldId = useId()
   const { execute } = w
   const previous = useRef<RecordValue>({})
   useEffect(() => {
@@ -72,7 +72,7 @@ export function ServerConfiguration({
   const prefixError = apiPrefixError(draft.prefix)
   const valid = !portError && !prefixError
   return (
-    <section className="server-settings" aria-label="Server configuration">
+    <section className="server-settings settings-form" aria-label="Server configuration">
       {error && (
         <p className="ew-error" role="alert">
           {error}
@@ -82,66 +82,61 @@ export function ServerConfiguration({
       {!saved && !error && <p role="status">Loading configuration…</p>}
       {saved && (
         <>
-          <fieldset disabled={saving} className="server-settings-panel">
-            <Field label="Host">
-              <select value={text(draft.host, '127.0.0.1')} onChange={(e) => change('host', e.target.value)}>
-                <option value="127.0.0.1">This device only · 127.0.0.1</option>
-                <option value="0.0.0.0">Local network · 0.0.0.0</option>
-                {!['127.0.0.1', '0.0.0.0'].includes(text(draft.host, '')) && (
-                  <option value={text(draft.host)}>{text(draft.host)}</option>
-                )}
-              </select>
-            </Field>
-            <div className="form-grid">
-              <div>
-                <Field label="Port">
-                  <input
-                    type="number"
-                    min={0}
-                    max={65535}
-                    step={1}
-                    aria-invalid={Boolean(portError)}
-                    aria-describedby={portError ? `${fieldId}-port-error` : undefined}
-                    value={String(draft.port ?? DEFAULT_API_PORT)}
-                    onWheel={(event) => event.currentTarget.blur()}
-                    onChange={(e) => change('port', e.target.value)}
-                  />
-                </Field>
-                {portError && (
-                  <p id={`${fieldId}-port-error`} className="ew-error" role="alert">
-                    {portError}
-                  </p>
-                )}
+          <fieldset disabled={saving} className="settings-form-fields">
+            <SettingsSection
+              title="Connection"
+              description="Address used by applications connecting to this server."
+            >
+              <Field label="Host">
+                <select
+                  value={text(draft.host, '127.0.0.1')}
+                  onChange={(e) => change('host', e.target.value)}
+                >
+                  <option value="127.0.0.1">This device only · 127.0.0.1</option>
+                  <option value="0.0.0.0">Local network · 0.0.0.0</option>
+                  {!['127.0.0.1', '0.0.0.0'].includes(text(draft.host, '')) && (
+                    <option value={text(draft.host)}>{text(draft.host)}</option>
+                  )}
+                </select>
+              </Field>
+              <div className="form-grid">
+                <div>
+                  <Field label="Port" error={portError}>
+                    <input
+                      type="number"
+                      min={0}
+                      max={65535}
+                      step={1}
+                      aria-invalid={Boolean(portError)}
+                      value={String(draft.port ?? DEFAULT_API_PORT)}
+                      onWheel={(event) => event.currentTarget.blur()}
+                      onChange={(e) => change('port', e.target.value)}
+                    />
+                  </Field>
+                </div>
+                <div>
+                  <Field label="API prefix" error={prefixError}>
+                    <input
+                      aria-invalid={Boolean(prefixError)}
+                      value={String(draft.prefix ?? '/v1')}
+                      onChange={(e) => change('prefix', e.target.value)}
+                    />
+                  </Field>
+                </div>
               </div>
-              <div>
-                <Field label="API prefix">
-                  <input
-                    value={String(draft.prefix ?? '/v1')}
-                    onChange={(e) => change('prefix', e.target.value)}
-                    aria-invalid={Boolean(prefixError)}
-                    aria-describedby={prefixError ? `${fieldId}-prefix-error` : undefined}
-                  />
-                </Field>
-                {prefixError && (
-                  <p id={`${fieldId}-prefix-error`} className="ew-error" role="alert">
-                    {prefixError}
-                  </p>
-                )}
-              </div>
-            </div>
-            <ServerKeyField workspace={w} openKeys={openKeys} />
-            <label className="server-switch">
-              <span>
-                <strong>Start automatically</strong>
-                <small>Start the API when the server process starts.</small>
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                checked={Boolean(draft.autoStart)}
-                onChange={(e) => change('autoStart', e.target.checked)}
-              />
-            </label>
+
+              <Field label="Start automatically" hint="Start the API when the server process starts.">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={Boolean(draft.autoStart)}
+                  onChange={(e) => change('autoStart', e.target.checked)}
+                />
+              </Field>
+            </SettingsSection>
+            <SettingsSection title="API access" description="Manage the key used by your API clients.">
+              <ServerKeyField workspace={w} openKeys={openKeys} />
+            </SettingsSection>
           </fieldset>
           <details className="server-advanced">
             <summary>Advanced settings</summary>
@@ -163,39 +158,30 @@ export function ServerConfiguration({
             </Field>
           </details>
           {dirty && (
-            <div className="server-save-bar">
-              <span>{w.snapshot?.api.running ? 'Saving changes restarts the API.' : 'Unsaved changes'}</span>
-              <Action
-                disabled={saving}
-                onClick={() => {
-                  setDraft(saved)
+            <SettingsActions
+              saving={saving}
+              valid={valid}
+              message={w.snapshot?.api.running ? 'Saving changes restarts the API.' : 'Unsaved changes'}
+              onDiscard={() => {
+                setDraft(saved)
+                setHostsText(undefined)
+                setNotice('')
+              }}
+              onSave={async () => {
+                setSaving(true)
+                try {
+                  await execute('config.update', { values: changes })
+                  if (w.snapshot?.api.running) await execute('api.restart')
+                  previous.current = draft
+                  setSaved(draft)
                   setHostsText(undefined)
-                  setNotice('')
-                }}
-              >
-                Discard
-              </Action>
-              <Action
-                primary
-                disabled={saving || !valid}
-                onClick={async () => {
-                  setSaving(true)
-                  try {
-                    await execute('config.update', { values: changes })
-                    if (w.snapshot?.api.running) await execute('api.restart')
-                    previous.current = draft
-                    setSaved(draft)
-                    setHostsText(undefined)
-                    setNotice('Changes saved.')
-                    await w.refresh()
-                  } finally {
-                    setSaving(false)
-                  }
-                }}
-              >
-                Save changes
-              </Action>
-            </div>
+                  setNotice('Changes saved.')
+                  await w.refresh()
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            />
           )}
           {notice && <p role="status">{notice}</p>}
         </>

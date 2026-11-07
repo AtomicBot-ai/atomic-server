@@ -1,3 +1,5 @@
+import type { FastFlowLmOperation } from '@atomic-chat/core/contracts'
+import { flmOperation } from './fastflowlm/operations.js'
 import { suspendDownloadingApi } from './snapshot/download-api.js'
 import { readServerSelection, restoreServerSelection } from './server-selection.js'
 import { EngineDownloads } from './engines/engine-downloads.js'
@@ -81,7 +83,7 @@ export class WorkspaceService {
    */
   start(): Promise<{ kept: string[] }> {
     this.reminders.start()
-    return this.downloads.artifacts.migrate()
+    return this.downloads.fastflowlm.mutations.recover().then(() => this.downloads.artifacts.migrate())
   }
   /** Stops watching; the server calls it on shutdown, and it may be passed on unbound. */
   readonly stop = (): void => this.reminders.stop()
@@ -113,6 +115,7 @@ export class WorkspaceService {
       ...(await this.downloads.managed.list()),
       ...(await this.downloads.foundry.list()),
       ...(await this.downloads.geniex.journal.list()),
+      ...(await this.downloads.fastflowlm.journal.list()),
       ...(await this.downloads.litert.models.list())
     )
     result.features = await this.features.view()
@@ -128,6 +131,11 @@ export class WorkspaceService {
       this.keys,
       this.metrics
     )
+    const operations = await this.options.link.request<FastFlowLmOperation[]>(
+      'GET',
+      '/runtimes/fastflowlm/operations'
+    )
+    result.fastflowlm_operations = Array.isArray(operations) ? operations : []
     // The core's own downloads are engine builds; every model transfer is this server's. Synced here,
     // on rows just read, so a shared copy never replays an older progress over a newer stage.
     this.engineDownloads.sync(result.downloads)
@@ -169,6 +177,8 @@ export class WorkspaceService {
     if (feature !== NOT_CORE) return feature
     const cloud = await cloudOperation(link, paths, this.request, operation, input)
     if (cloud !== NOT_CORE) return sanitized(cloud)
+    const flm = await flmOperation(this.options, this.downloads.fastflowlm, operation, input)
+    if (flm !== NOT_CORE) return flm
     const genie = this.downloads.geniex
     if ((operation === 'models.search' || operation === 'models.catalog') && input['engine'] === 'geniex')
       return genieCatalog(this.options, String(input['query'] ?? ''), operation === 'models.search')

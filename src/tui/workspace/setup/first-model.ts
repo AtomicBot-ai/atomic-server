@@ -1,10 +1,11 @@
+import { rowWindowHint } from '../../row-window.js'
 import { workspaceHeaderRows } from '../draw/brand-header.js'
 import type { WorkspaceState } from '../state.js'
 import type { Canvas } from '../draw/canvas.js'
 import { COLORS, text, textWidth } from '../draw/canvas.js'
 import { actionButton, panel } from '../draw/cards.js'
 import { quietButton } from '../draw/controls.js'
-import { engineName, formatSize } from '../../../workspace-view/index.js'
+import { engineName, formatSize, onboardingModelMatchesEngine } from '../../../workspace-view/index.js'
 
 export interface FirstModelChoice {
   key: string
@@ -21,35 +22,53 @@ export function isFirstModel(s: WorkspaceState) {
 
 /** The desktop's local/recommended/Hub groups, backed by this engine's actual catalog. */
 export function firstModelChoices(s: WorkspaceState): FirstModelChoice[] {
-  const local: FirstModelChoice[] = s.installed.map((m, i) => ({
-    key: `local:${m.id}`,
-    name: m.name || m.id,
-    detail: `${engineName(m.provider)} · Downloaded`,
-    group: 'Downloaded',
-    action: `first-installed:${i}`,
-    installed: true,
-  }))
+  const matches = (m: WorkspaceState['installed'][number]) =>
+    onboardingModelMatchesEngine(m, s.setup?.engine || s.engine)
+  const local: FirstModelChoice[] = s.installed.flatMap((m, i) =>
+    matches(m)
+      ? [
+          {
+            key: `local:${m.id}`,
+            name: m.name || m.id,
+            detail: `${engineName(m.provider)} · Downloaded`,
+            group: 'Downloaded',
+            action: `first-installed:${i}`,
+            installed: true,
+          },
+        ]
+      : []
+  )
   const available = s.setup?.path
     ? s.setup.path.rows.map((m, i) => ({
         key: m.id,
         name: m.title,
         detail: m.detail,
         action: `setup-path-repo:${i}`,
+        installedIds: m.installedIds ?? [],
+        recommended: m.recommended,
       }))
     : (s.setup?.repositories ?? []).map((m, i) => ({
         key: m.id,
         name: m.title || m.id.split('/').at(-1) || m.id,
         detail: m.summary || m.id,
         action: `setup-repo:${i}`,
+        installedIds: [] as string[],
+        recommended: undefined,
       }))
   return [
     ...local,
     ...available
-      .filter((m) => !s.installed.some((l) => l.id === m.key || l.id.startsWith(m.key + '/')))
+      .filter(
+        (m) =>
+          !s.installed.some(
+            (l) =>
+              matches(l) && (l.id === m.key || l.id.startsWith(m.key + '/') || m.installedIds.includes(l.id))
+          )
+      )
       .map((m, i) => ({
         ...m,
         key: `catalog:${m.key}`,
-        group: i < 3 ? 'Recommended' : 'Hugging Face',
+        group: (m.recommended ?? i < 3) ? 'Recommended' : s.setup?.path ? 'More models' : 'Hugging Face',
         installed: false,
       })),
   ]
@@ -58,13 +77,17 @@ export function firstModelChoices(s: WorkspaceState): FirstModelChoice[] {
 export function selectedFirstModel(s: WorkspaceState) {
   const rows = firstModelChoices(s),
     key = s.firstModelChoice,
-    repository = key.startsWith('catalog:') ? key.slice(8) : ''
+    repository = key.startsWith('catalog:') ? key.slice(8) : '',
+    variants = s.setup?.path?.rows.find((row) => row.id === repository)?.installedIds ?? []
   return (
     rows.find((row) => row.key === key) ??
     (repository
       ? rows.find(
           (row) =>
-            row.installed && (row.key === `local:${repository}` || row.key.startsWith(`local:${repository}/`))
+            row.installed &&
+            (row.key === `local:${repository}` ||
+              row.key.startsWith(`local:${repository}/`) ||
+              variants.includes(row.key.slice(6)))
         )
       : undefined) ??
     rows[0]
@@ -126,7 +149,10 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
     })
     rowY += cardHeight
   }
-  if (start > 0 || c.targets.filter((t) => t.id.startsWith('first-model-choice:')).length < rows.length) {
+  const visible = c.targets.filter((t) => t.id.startsWith('first-model-choice:')).length
+  const hiddenAfter = Math.max(0, rows.length - start - visible)
+  if (start > 0 || hiddenAfter > 0) {
+    text(c, x, bottom, rowWindowHint({ hiddenBefore: start, hiddenAfter }), COLORS.muted, width)
     const length = Math.max(1, bottom - top)
     for (let i = 0; i < length; i++) text(c, x + width - 1, top + i, '|', COLORS.line)
     const thumb = Math.round(((length - 1) * focused) / Math.max(1, rows.length - 1))
@@ -146,5 +172,5 @@ export function drawFirstModel(c: Canvas, s: WorkspaceState, focus: string, seco
     if (!v.busy)
       actionButton(c, 'first-model-continue', actionX, barY + 1, label, 'Use this model and continue', focus)
   }
-  quietButton(c, 'first-skip', skipX, barY + 2, 'Skip setup', 'Open workspace; downloads continue', focus)
+  quietButton(c, 'first-skip', skipX, barY + 1, 'Skip setup', 'Open workspace; downloads continue', focus)
 }

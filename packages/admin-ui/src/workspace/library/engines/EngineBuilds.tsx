@@ -1,40 +1,58 @@
-import { useEffect, useRef, useState } from 'react'
-import { engineName, engineUpdateResult } from '@view'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { engineUpdateResult } from '@view'
 import type { EngineUpdateCheck } from '@view'
 import { describeError } from '@/services/admin-api'
 import { Action } from '../../Controls'
-import { useConfirmation } from '../../use-confirmation'
 import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { record, rows, text } from '../../types'
 import type { Execute, RecordValue } from '../../types'
+import type { Workspace } from '../../useWorkspace'
+import { useEngineInstall } from './use-engine-install'
+import { EngineInstallProgress } from './EngineInstallProgress'
+import { installationLabel } from './installation-label'
+import { EngineVersions } from './EngineVersions'
+import { installRuntime } from './install-runtime'
 
-/** Builds and updates live alongside the engine's settings in the same scrollable dialog. */
-export function EngineBuilds({ provider, execute }: { provider: string; execute: Execute }) {
+/** One installation state and primary action, backed by the server's durable engine queue. */
+export function EngineBuilds({
+  provider,
+  execute,
+  snapshot = null,
+}: {
+  provider: string
+  execute: Execute
+  snapshot?: Workspace['snapshot']
+}) {
   const [engine, setEngine] = useState<RecordValue>({})
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [check, setCheck] = useState<EngineUpdateCheck>({ phase: 'idle', message: '' })
-  const checking = useRef(false)
-  const generation = useRef(0)
-  const { ask, confirmation, waiting } = useConfirmation()
-  const read = async (force = false) => {
-    if (checking.current) return
-    checking.current = true
-    generation.current++
-    if (force) setCheck({ phase: 'checking', message: 'Checking for updates…' })
-    setError('')
-    try {
-      const result = await execute('engines.list', { ...(force ? { force: true } : {}) })
-      const source = rows(result).find((item) => item.engine === provider)
-      setEngine(source ?? {})
-      if (force) setCheck(engineUpdateResult(source))
-    } catch (failure) {
-      if (force)
-        setCheck({ phase: 'error', message: `Could not check for updates: ${describeError(failure)}` })
-      else setError(describeError(failure))
-    } finally {
-      checking.current = false
-    }
-  }
+  const installing = useEngineInstall({ execute, snapshot }, provider)
+  const checking = useRef(false),
+    generation = useRef(0)
+  const read = useCallback(
+    async (force = false) => {
+      if (checking.current) return
+      checking.current = true
+      generation.current++
+      if (force) setCheck({ phase: 'checking', message: 'Checking for updates…' })
+      setError('')
+      try {
+        const result = await execute('engines.list', { ...(force ? { force: true } : {}) })
+        const source = rows(result).find((item) => item.engine === provider)
+        setEngine(source ?? {})
+        if (force) setCheck(engineUpdateResult(source))
+      } catch (failure) {
+        if (force)
+          setCheck({ phase: 'error', message: `Could not check for updates: ${describeError(failure)}` })
+        else setError(describeError(failure))
+      } finally {
+        checking.current = false
+        setLoading(false)
+      }
+    },
+    [execute, provider]
+  )
   useEffect(
     () =>
       watchSharedRead(
@@ -46,112 +64,102 @@ export function EngineBuilds({ provider, execute }: { provider: string; execute:
           if (checking.current || started !== generation.current) return
           const source = rows(result).find((item) => item.engine === provider)
           setEngine(source ?? {})
+          setLoading(false)
+          setError('')
           setCheck((current) => (current.phase === 'available' ? engineUpdateResult(source) : current))
         },
-        (failure) => setError(describeError(failure))
+        (failure) => {
+          setError(describeError(failure))
+          setLoading(false)
+        }
       ),
     [execute, provider]
   )
-  const managed = engine.kind === 'managed'
-  // Foundry Local's and LiteRT-LM's builds install from their own panel, which prepares accelerators after.
-  const canInstall = !managed && provider !== 'foundry-local' && provider !== 'litert-lm'
-  const offered = canInstall && Boolean(engine.active) && check.phase === 'available'
+  const previous = useRef(installing.refreshKey)
+  useEffect(() => {
+    if (previous.current === installing.refreshKey) return
+    previous.current = installing.refreshKey
+    void read()
+  }, [installing.refreshKey, read])
+  const active = record(engine.active)
+  const installed = Boolean(active.version || rows(engine.builds).length)
+  const offered = check.phase === 'available'
+  const special = provider === 'foundry-local' || provider === 'litert-lm'
+  const busy = installing.busy || check.phase === 'checking'
   const install = async () => {
-    await execute('engines.enqueue', { engine: provider })
-    setCheck({ phase: 'idle', message: 'Download queued.' })
-    await read()
+    setCheck({ phase: 'idle', message: '' })
+    if (special && !installing.hasQueuedFailure)
+      await installing.run((taskId, preparing) => installRuntime(execute, provider, taskId, preparing), true)
+    else await installing.enqueue()
   }
+  const label = installing.runtimeBusy
+    ? installationLabel(installing.installation) || 'Working…'
+    : installing.error
+      ? 'Retry installation'
+      : installed
+        ? 'Install latest build'
+        : 'Install engine'
   return (
     <section className="engine-builds" aria-label="Engine builds">
-      <div className="panel-heading">
-        <h3>Installed builds</h3>
-        <Action
-          primary={offered}
-          disabled={waiting || check.phase === 'checking'}
-          onClick={offered ? install : () => read(true)}
-        >
-          {offered ? 'Install latest build' : check.phase === 'checking' ? 'Checking…' : 'Check for updates'}
-        </Action>
+      <div className="engine-runtime-heading">
+        <div>
+          <h3>Installation</h3>
+          <p className="engine-runtime-summary">
+            {loading
+              ? 'Checking installation…'
+              : installing.runtimeBusy
+                ? 'Installation in progress'
+                : installed
+                  ? 'Installed'
+                  : error
+                    ? 'Installation status unavailable'
+                    : 'Not installed'}
+          </p>
+          {Boolean(active.version) && (
+            <p className="ew-muted">
+              {text(active.version)}
+              {active.variant ? ` · ${text(active.variant)}` : ''}
+            </p>
+          )}
+        </div>
+        <div className="ew-actions">
+          {!engine.engine && error && <Action onClick={() => read()}>Retry check</Action>}
+          {Boolean(engine.engine) &&
+            engine.kind !== 'managed' &&
+            (!installed || offered || installing.error || installing.runtimeBusy) && (
+              <Action primary disabled={busy || loading} onClick={install}>
+                {label}
+              </Action>
+            )}
+          {installed && !offered && !installing.error && !installing.runtimeBusy && (
+            <Action disabled={busy} onClick={() => read(true)}>
+              {check.phase === 'checking' ? 'Checking…' : 'Check for updates'}
+            </Action>
+          )}
+        </div>
       </div>
-      {check.message && (
-        <p
-          role={check.phase === 'error' ? 'alert' : 'status'}
-          className={check.phase === 'error' ? 'ew-error' : 'ew-muted'}
-        >
+      <EngineInstallProgress installation={installing.installation} downloads={installing.downloads} />
+      {(installing.error || error) && (
+        <p role="alert" className="engine-feedback error">
+          {installing.error || error}
+        </p>
+      )}
+      {!installing.busy && check.message && (
+        <p role={check.phase === 'error' ? 'alert' : 'status'} className="engine-feedback">
           {check.message}
         </p>
       )}
-      {error && (
-        <p role="alert" className="ew-error">
-          {error}
-        </p>
-      )}
-      {Boolean(engine.source_error) && check.phase === 'idle' && (
+      {Boolean(engine.source_error) && !error && check.phase === 'idle' && (
         <p role="alert">{text(engine.source_error)}</p>
       )}
-      {!rows(engine.builds).length && (
-        <p className="ew-muted">
-          {engine.active ? `Active: ${text(record(engine.active).version)}` : 'Not installed'}
-        </p>
-      )}
-      {rows(engine.builds).map((build) => (
-        <div className="installed-row" key={`${text(build.version)}-${text(build.variant)}`}>
-          <div>
-            <strong>{text(build.version)}</strong>
-            <small>
-              {text(build.variant)}
-              {build.in_use ? ' · In use' : ''}
-            </small>
-          </div>
-          <div className="ew-actions">
-            <Action
-              disabled={waiting || Boolean(build.active) || engine.active_choice !== 'client'}
-              onClick={async () => {
-                await execute('engines.activate', {
-                  engine: provider,
-                  version: build.version,
-                  variant: build.variant,
-                })
-                await read()
-              }}
-            >
-              {build.active ? 'Active' : 'Activate'}
-            </Action>
-            <Action
-              disabled={!build.removable || waiting}
-              title={text(build.not_removable_reason, '')}
-              onClick={() =>
-                ask({
-                  title: 'Remove engine build?',
-                  actionLabel: 'Remove build',
-                  danger: true,
-                  children: (
-                    <p>
-                      {engineName(provider)} · {text(build.version)} · {text(build.variant)}
-                    </p>
-                  ),
-                  onConfirm: async () => {
-                    await execute('engines.remove', {
-                      engine: provider,
-                      version: build.version,
-                      variant: build.variant,
-                    })
-                    await read()
-                  },
-                })
-              }
-            >
-              Remove
-            </Action>
-          </div>
-        </div>
-      ))}
-      {canInstall && Boolean(engine.engine) && !engine.active && (
-        <Action disabled={waiting || check.phase === 'checking'} onClick={install}>
-          Install engine
-        </Action>
-      )}
-      {confirmation}
+      <EngineVersions
+        provider={provider}
+        builds={rows(engine.builds)}
+        activeChoice={engine.active_choice}
+        execute={execute}
+        busy={busy}
+        onChanged={read}
+      />
     </section>
   )
 }

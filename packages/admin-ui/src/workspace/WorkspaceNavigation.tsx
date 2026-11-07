@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Image,
   Video,
+  AudioLines,
 } from 'lucide-react'
 import {
   WORKSPACE_NAVIGATION,
@@ -48,6 +49,7 @@ const sectionIcons = {
   chat: MessageCircle,
   image: Image,
   video: Video,
+  audio: AudioLines,
 }
 const icons = { server: RadioTower, catalog: Blocks, settings: Settings, playground: FlaskConical }
 

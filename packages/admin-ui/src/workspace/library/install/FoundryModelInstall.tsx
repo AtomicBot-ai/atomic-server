@@ -1,11 +1,13 @@
 // Lifted from Atomic-Chat/web-app/src/containers/hub/LocalModelTable.tsx @ 5043013; adapted: inline Foundry variant controls.
 import { useRef, useState } from 'react'
 import type { FoundryModelPlan } from '@contract'
-import { acceleratorLabel, formatSize, foundryVerdictText, variantLabel } from '@view'
+import { acceleratorLabel, variantLabel } from '@view'
 import { describeError } from '@/services/admin-api'
-import { Action, Field } from '../../Controls'
+import { Action } from '../../Controls'
 import type { Workspace } from '../../useWorkspace'
 import { ModelInstallFrame } from './ModelInstallFrame'
+import { VariantChoices } from './VariantChoices'
+import { useVariantModel } from './use-variant-model'
 
 interface Variant {
   id: string
@@ -30,7 +32,8 @@ interface FoundryModel {
  */
 export function FoundryModelInstall({
   workspace: w,
-  model,
+  model: initialModel,
+  revision = 0,
   onClose,
   onStarted,
   onFoundry,
@@ -38,12 +41,18 @@ export function FoundryModelInstall({
 }: {
   workspace: Workspace
   model: FoundryModel
+  revision?: number
   onClose: () => void
   /** The request's id, and the variant's id: what loads once the download is done. */
   onStarted?: (id: string, variant: string) => void | Promise<void>
   onFoundry: () => void
   embedded?: boolean
 }) {
+  const {
+    model,
+    checking,
+    error: readError,
+  } = useVariantModel(initialModel, 'foundry-local', revision, w.execute)
   const [variant, setVariant] = useState(model.default_variant ?? model.variants[0]?.id ?? '')
   const [plan, setPlan] = useState<FoundryModelPlan | null>(null)
   const [error, setError] = useState('')
@@ -51,7 +60,7 @@ export function FoundryModelInstall({
   const installRequest = useRef<{ digest: string; id: string } | null>(null)
   const v = model.variants.find((x) => x.id === variant)
   const download = async () => {
-    if (!v || pending) return
+    if (!v || pending || checking) return
     setPending(true)
     setError('')
     setPlan(null)
@@ -85,29 +94,21 @@ export function FoundryModelInstall({
     >
       {model.unverified && (
         <p className="ew-muted">
-          A Microsoft catalog model: unverified by Atomic Chat (its files are checked by size only).
+          From the Microsoft catalog. File sizes are checked; checksums are not available.
         </p>
       )}
-      <Field label="Variant">
-        <select
-          aria-label="Variant"
-          value={variant}
-          disabled={pending}
-          onChange={(e) => {
-            setVariant(e.target.value)
-            setPlan(null)
-            setError('')
-          }}
-        >
-          {model.variants.map((x) => (
-            <option key={x.id} value={x.id}>
-              {variantLabel(x)} · {x.size_bytes ? formatSize(x.size_bytes) : '?'} ·{' '}
-              {foundryVerdictText(x.verdict)}
-            </option>
-          ))}
-        </select>
-      </Field>
-      {v && <p>{foundryVerdictText(v.verdict)}</p>}
+      {checking && <p role="status">Checking device availability…</p>}
+      <VariantChoices
+        name={`foundry-variant-${model.model_id}`}
+        choices={model.variants.map((x) => ({ ...x, label: variantLabel(x), size: x.size_bytes }))}
+        value={variant}
+        disabled={pending || checking}
+        onChange={(id) => {
+          setVariant(id)
+          setPlan(null)
+          setError('')
+        }}
+      />
       {!!plan?.blockers.length && (
         <ul role="alert">
           {plan.blockers.map((b) => (
@@ -117,7 +118,7 @@ export function FoundryModelInstall({
       )}
       <div className="ew-actions">
         {v?.verdict.verdict === 'ok' && (
-          <Action primary disabled={pending} onClick={download}>
+          <Action primary disabled={pending || checking} onClick={download}>
             Download
           </Action>
         )}
@@ -137,9 +138,9 @@ export function FoundryModelInstall({
           </Action>
         )}
       </div>
-      {error && (
+      {(error || readError) && (
         <p role="alert" className="inline-error">
-          {error}
+          {error || readError}
         </p>
       )}
     </ModelInstallFrame>

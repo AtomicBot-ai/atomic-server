@@ -1,3 +1,4 @@
+import { pullFlmModel } from './fastflowlm-commands.js'
 import { resumeGgufPull } from './resume-gguf.js'
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
@@ -55,6 +56,7 @@ const CANCEL: Record<string, string> = {
   'foundry-local': 'foundry.cancel',
   'litert-lm': 'litert.cancel',
   'geniex': 'geniex.cancel',
+  'fastflowlm': 'fastflowlm.cancel',
   'mlx': 'artifacts.cancel',
 }
 const engineOption = {
@@ -162,6 +164,10 @@ export const modelsCommand = defineCommand({
           placeholder: 'engine',
         },
         'detach': { type: 'boolean', description: 'Start a managed download without following it' },
+        'refresh': {
+          type: 'boolean',
+          description: 'FastFlowLM: review the latest catalog for a model update',
+        },
         'device': {
           type: 'string',
           description: 'Foundry Local: the variant for npu, gpu or cpu',
@@ -191,6 +197,7 @@ export const modelsCommand = defineCommand({
         if (!inv.positionals[0]) throw new AtcError('ATC_USAGE', 'Name the model to download.')
         if (inv.values['engine'] === 'foundry-local')
           return pullFoundryModel(ctx, inv.positionals[0], inv.values)
+        if (inv.values.engine === 'fastflowlm') return pullFlmModel(ctx, inv.positionals[0], inv.values)
         if (inv.values.engine === 'geniex') return pullGenieModel(ctx, inv.positionals[0], inv.values)
         if (inv.values['engine'] === 'litert-lm') return pullLiteRtModel(ctx, inv.positionals[0], inv.values)
         if (inv.values['engine'] === 'mlx') return pullMlxModel(ctx, inv.positionals[0], inv.values)

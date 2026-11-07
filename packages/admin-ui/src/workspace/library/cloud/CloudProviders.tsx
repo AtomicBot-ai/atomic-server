@@ -1,4 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 5043013; adapted: live provider checks and server credential storage.
+import { StatusIndicator } from '../../StatusIndicator'
 import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { useEffect, useRef, useState } from 'react'
 import { CLOUD_CATALOG } from '@view'
@@ -187,11 +188,12 @@ export function CloudProviders({
                 <span>{p.name}</span>
                 {pending ? (
                   <span className="cloud-provider-tag">
-                    <i className="cloud-check-spinner" />
-                    Checking
+                    <StatusIndicator pending>Checking</StatusIndicator>
                   </span>
                 ) : connected ? (
-                  <span className="cloud-provider-tag">✓ Connected</span>
+                  <span className="cloud-provider-tag">
+                    <StatusIndicator tone="positive">Connected</StatusIndicator>
+                  </span>
                 ) : null}
               </button>
             )

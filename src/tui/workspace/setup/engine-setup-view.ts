@@ -8,7 +8,7 @@ import {
   liteRtVerdictText,
   variantLabel,
 } from '../../../workspace-view/index.js'
-import { computeRowWindow } from '../../row-window.js'
+import { computeRowWindow, rowWindowHint } from '../../row-window.js'
 import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
@@ -27,6 +27,7 @@ export function drawPathModels(c: Canvas, s: WorkspaceState, v: SetupView, a: Ar
     a.width
   )
   const win = computeRowWindow(path.rows.length, s.selected, Math.max(1, a.bottom - a.y - 8))
+  text(c, a.x, a.y + 4, rowWindowHint(win), COLORS.muted, a.width)
   path.rows
     .slice(win.start, win.start + win.count)
     .forEach((r, i) =>
@@ -54,6 +55,13 @@ function planLinesOf(plan: NonNullable<NonNullable<SetupView['path']>['plan']>):
       plan.variant.backend.toUpperCase(),
       plan.variant.verdict.reason ?? plan.variant.verdict.verdict,
       formatSize(plan.download_bytes),
+      ...(plan.license ? [`License: ${plan.license}`] : []),
+      ...(plan.context_length ? [`Context: ${plan.context_length}`] : []),
+      ...(plan.capabilities
+        ? [
+            `Tools: ${plan.capabilities.tools ? 'yes' : 'no'}; reasoning: ${plan.capabilities.reasoning ? 'yes' : 'no'}; structured output: ${plan.capabilities.structured_output ? 'yes' : 'no'}`,
+          ]
+        : []),
     ]
   if ('backend' in plan)
     return [
@@ -95,9 +103,14 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.statusError, a.width)
   const litert = 'backend' in plan
   const genie = 'variant' in plan
+  const flm = v.path?.kind === 'fastflowlm'
   const waits = genie
-    ? plan.variant.verdict.verdict === 'engine-not-installed'
-      ? 'Install GenieX'
+    ? ['engine-not-installed', 'environment-not-ready', 'requires-newer-engine'].includes(
+        plan.variant.verdict.verdict
+      )
+      ? flm
+        ? 'Set up FastFlowLM'
+        : 'Install GenieX'
       : undefined
     : 'variant_id' in plan
       ? (litert ? LITERT_STEP : FOUNDRY_STEP)[plan.verdict.verdict]
@@ -109,11 +122,17 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
     bx +=
       button(
         c,
-        genie ? 'setup-path-geniex' : litert ? 'setup-path-litert' : 'setup-path-foundry',
+        flm
+          ? 'setup-path-fastflowlm'
+          : genie
+            ? 'setup-path-geniex'
+            : litert
+              ? 'setup-path-litert'
+              : 'setup-path-foundry',
         bx,
         a.bottom,
         waits,
-        genie ? 'Open GenieX' : litert ? 'Open LiteRT-LM' : 'Open Foundry Local',
+        flm ? 'Open FastFlowLM' : genie ? 'Open GenieX' : litert ? 'Open LiteRT-LM' : 'Open Foundry Local',
         a.focus
       ) + 1
   button(c, 'setup-back', bx, a.bottom, 'Back', 'Return without downloading', a.focus)

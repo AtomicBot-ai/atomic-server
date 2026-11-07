@@ -3,7 +3,7 @@ import { button, COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import type { SetupView } from '../../../terminal-setup/index.js'
-import { computeRowWindow } from '../../row-window.js'
+import { computeRowWindow, rowWindowHint } from '../../row-window.js'
 import { engineFamily, engineName } from '../../../workspace-view/index.js'
 /** No catalogs and an error: the check itself failed (say, the server did not start), not every engine. */
 export function engineCheckFailed(v: SetupView): boolean {
@@ -69,7 +69,7 @@ export function drawSetupBrowser(
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
     for (const engine of registered.filter((e) =>
-      ['managed', 'foundry', 'litert', 'geniex'].includes(engineFamily(e))
+      ['managed', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(engineFamily(e))
     ))
       b(
         `setup-engine:${engine}`,
@@ -141,6 +141,7 @@ export function drawSetupBrowser(
     s.selected,
     Math.max(1, Math.floor((bottom - y - 6 - installedRows) / cardHeight))
   )
+  put(4, rowWindowHint(win))
   items.slice(win.start, win.start + win.count).forEach((item, i) => {
     const index = win.start + i
     if ('filename' in item) {

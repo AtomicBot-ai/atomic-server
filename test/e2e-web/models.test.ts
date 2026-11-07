@@ -60,8 +60,7 @@ it('lists LiteRT-LM families with their variants inline and opens the engine’s
 it('shows LiteRT-LM’s own controls inside its Engine settings, without a build install around openvino', async () => {
   const page = s.page
   await page.getByRole('button', { name: 'Inference engines' }).click()
-  const card = page.getByRole('heading', { name: 'LiteRT-LM', level: 2 }).locator('xpath=..')
-  await card.getByRole('button', { name: 'Engine settings' }).click()
+  await page.getByRole('button', { name: 'LiteRT-LM', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'litert-lm settings' })
   await expect.poll(() => dialog.getByRole('region', { name: 'LiteRT-LM' }).isVisible()).toBe(true)
   expect(await dialog.getByRole('button', { name: 'Install latest build' }).count()).toBe(0)
@@ -86,8 +85,7 @@ it('keeps the engine settings note below what comes before it, not pulled up ont
   // engine's builds and setup is no subtitle, and it climbed onto SGLang's "Agree and install".
   const page = s.page
   await page.getByRole('button', { name: 'Inference engines' }).click()
-  const card = page.getByRole('heading', { name: 'llama.cpp', level: 2, exact: true }).locator('xpath=..')
-  await card.getByRole('button', { name: 'Engine settings' }).click()
+  await page.getByRole('button', { name: 'llama.cpp', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'llamacpp-upstream settings' })
   const note = dialog.getByText('Settings apply on the next model load.')
   const gap = await note.evaluate((p) => {

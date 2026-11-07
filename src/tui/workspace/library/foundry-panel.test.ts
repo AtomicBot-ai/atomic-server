@@ -154,7 +154,9 @@ describe('Foundry Local in the TUI', () => {
     const t = tui(accelerators({ installed: false, accelerators: [] }))
     await activate('library-row:0', t.ctx)
     await activate('foundry-install', t.ctx)
-    expect(calls(t, 'engines.install')).toEqual([{ engine: 'foundry-local' }])
+    expect(calls(t, 'engines.install')).toEqual([
+      { engine: 'foundry-local', request: { task_id: expect.any(String) } },
+    ])
     expect(calls(t, 'foundry.prepare')).toEqual([{}])
   })
 
@@ -162,7 +164,9 @@ describe('Foundry Local in the TUI', () => {
     const t = tui(accelerators())
     await activate('library-row:0', t.ctx)
     await activate('foundry-update', t.ctx)
-    expect(calls(t, 'engines.install')).toEqual([{ engine: 'foundry-local' }])
+    expect(calls(t, 'engines.install')).toEqual([
+      { engine: 'foundry-local', request: { task_id: expect.any(String) } },
+    ])
     expect(calls(t, 'foundry.prepare')).toEqual([{}])
   })
 
@@ -170,7 +174,9 @@ describe('Foundry Local in the TUI', () => {
     const t = tui(accelerators())
     await activate('library-row:0', t.ctx)
     await activate('foundry-models', t.ctx)
-    expect(calls(t, 'models.search')).toEqual([{ engine: 'foundry-local' }])
+    expect(calls(t, 'models.search')).toEqual([
+      { engine: 'foundry-local', request: { task_id: expect.any(String) } },
+    ])
     const labels = (t.model().fields ?? []).map((f) => f.label).join('\n')
     expect(labels).toMatch(/Phi 4 mini · OpenVINO NPU .*accelerator-not-prepared.*unverified/)
     expect(labels).toMatch(/Phi 4 mini · CPU .*ok/)

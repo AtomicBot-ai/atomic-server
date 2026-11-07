@@ -74,7 +74,7 @@ export function ChatParameters({
         <div className="chat-parameters-backdrop">
           <section
             ref={dialog}
-            className="chat-parameters"
+            className="chat-parameters settings-form settings-form-compact"
             role="dialog"
             aria-modal="true"
             aria-label="Run settings"

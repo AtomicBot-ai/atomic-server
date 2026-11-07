@@ -27,16 +27,18 @@ export function Settings({
   openEngines: () => void
 }) {
   return (
-    <div className="settings-page">
-      <div className="page-heading">
-        <div>
-          <h1>
-            {[...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS, ...SERVER_SETTINGS_GROUPS].find(
-              (s) => s.id === section
-            )?.label ?? 'Settings'}
-          </h1>
+    <div className="settings-page settings-form">
+      {section !== 'assistants' && (
+        <div className="page-heading">
+          <div>
+            <h1>
+              {[...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS, ...SERVER_SETTINGS_GROUPS].find(
+                (s) => s.id === section
+              )?.label ?? 'Settings'}
+            </h1>
+          </div>
         </div>
-      </div>
+      )}
       {section === 'admin' ? (
         <GeneralSettings workspace={w} openCommand={openCommand} openEngines={openEngines} />
       ) : section === 'tui' ? (

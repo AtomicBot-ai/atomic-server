@@ -3,7 +3,8 @@ import { sharedRead, watchSharedRead } from '../../watch-shared-read'
 import { useEffect, useState } from 'react'
 import { SETTINGS_SECTIONS, SERVER_SETTINGS_GROUPS } from '@contract'
 import type { Workspace } from '../../useWorkspace'
-import { Action, Field } from '../../Controls'
+import { Action } from '../../Controls'
+import { SettingsField as Field, SettingsActions, SettingsSection } from '../../SettingsForm'
 import { record, rows, text } from '../../types'
 import type { RecordValue } from '../../types'
 import { describeError } from '@/services/admin-api'
@@ -96,7 +97,7 @@ export function RuntimeSettings({
     group === 'admin' ? ['admin.host', 'admin.port'] : group === 'tui' ? ['tui.endpoint', 'tui.model'] : []
   return (
     <section
-      className="runtime-settings server-settings"
+      className="runtime-settings server-settings settings-form"
       aria-label={`${[...SETTINGS_SECTIONS, ...SERVER_SETTINGS_GROUPS].find((item) => item.id === group)?.label ?? group} settings`}
     >
       {!section && (
@@ -127,10 +128,15 @@ export function RuntimeSettings({
       )}
       {!loading && !error && (
         <>
-          <div className="settings-card">
+          <SettingsSection
+            title={
+              [...SETTINGS_SECTIONS, ...SERVER_SETTINGS_GROUPS].find((item) => item.id === group)?.label ??
+              group
+            }
+          >
             {visible.filter((field) => !advanced.includes(text(field.path))).map(control)}
             {!visible.length && <p>No settings available.</p>}
-          </div>
+          </SettingsSection>
           {visible.some((field) => advanced.includes(text(field.path))) && (
             <details className="settings-card settings-advanced">
               <summary>Advanced settings</summary>
@@ -138,37 +144,28 @@ export function RuntimeSettings({
             </details>
           )}
           {dirty && (
-            <div className="server-save-bar">
-              <span role="status">Unsaved changes</span>
-              <Action disabled={saving} onClick={clear}>
-                Discard
-              </Action>
-              <Action
-                primary
-                disabled={saving || !valid}
-                onClick={async () => {
-                  setSaving(true)
-                  try {
-                    const result = record(await execute('config.update', { values: changes }))
-                    if (group === 'api' && w.snapshot?.api.running) await execute('api.restart')
-                    const next = record(await execute('config.get'))
-                    setConfig(record(next.values))
-                    clear()
-                    setNoticeGroup(group)
-                    setNotice(
-                      result.restart_required
-                        ? 'Saved. Restart the server to apply changes.'
-                        : 'Changes saved.'
-                    )
-                    onSaved?.()
-                  } finally {
-                    setSaving(false)
-                  }
-                }}
-              >
-                Save changes
-              </Action>
-            </div>
+            <SettingsActions
+              saving={saving}
+              valid={valid}
+              onDiscard={clear}
+              onSave={async () => {
+                setSaving(true)
+                try {
+                  const result = record(await execute('config.update', { values: changes }))
+                  if (group === 'api' && w.snapshot?.api.running) await execute('api.restart')
+                  const next = record(await execute('config.get'))
+                  setConfig(record(next.values))
+                  clear()
+                  setNoticeGroup(group)
+                  setNotice(
+                    result.restart_required ? 'Saved. Restart the server to apply changes.' : 'Changes saved.'
+                  )
+                  onSaved?.()
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            />
           )}
           {notice && noticeGroup === group && <p role="status">{notice}</p>}
         </>

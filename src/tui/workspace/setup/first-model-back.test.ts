@@ -57,7 +57,7 @@ function fixture() {
   return { ctx, back }
 }
 
-it.each([1, 2])('keeps installed choice %i through Permissions → Back → Continue', async (index) => {
+it.each([0, 1])('keeps installed choice %i through Permissions → Back → Continue', async (index) => {
   const { ctx, back } = fixture()
   await firstRunAction(`first-model-choice:${index}`, ctx)
   const choice = selectedFirstModel(ctx.get())!
@@ -72,7 +72,7 @@ it.each([1, 2])('keeps installed choice %i through Permissions → Back → Cont
 
 it('maps a catalog choice to its installed row after its download finishes while on another step', async () => {
   const { ctx, back } = fixture()
-  await firstRunAction('first-model-choice:3', ctx)
+  await firstRunAction('first-model-choice:2', ctx)
   ctx.update((s) => ({
     ...s,
     firstRun: 'permissions',

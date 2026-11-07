@@ -1,6 +1,6 @@
 import type { GpuFacts } from '@atomic-chat/core/contracts'
 import { changedValues, gpuLabel } from '@view'
-import { Field } from '../../Controls'
+import { SettingsField as Field } from '../../SettingsForm'
 import { record, text } from '../../types'
 import type { RecordValue } from '../../types'
 import { descriptorDefault, inactiveSetting } from './engine-setting-groups'
@@ -32,7 +32,32 @@ export function EngineSettingField({
     Object.keys(changedValues(saved, name in values ? { [name]: values[name] } : {}, [field])).length > 0
   return (
     <div className={`engine-setting ${changed ? 'setting-changed' : ''}`}>
-      <Field label={text(field.title, name)}>
+      <Field
+        label={text(field.title, name)}
+        hint={disabled || undefined}
+        actions={
+          <details>
+            <summary>Details & default{changed ? ' · changed' : ''}</summary>
+            <p>{text(field.description, '')}</p>
+            <p>
+              Key: <code>{name}</code>
+            </p>
+            <p>
+              Saved: {text(saved[name], 'Inherited')} · Descriptor default:{' '}
+              {text(descriptorDefault(field), 'Not reported')}
+            </p>
+            {descriptorDefault(field) !== undefined && (
+              <button
+                className="ew-button"
+                disabled={Boolean(disabled)}
+                onClick={() => update(name, descriptorDefault(field))}
+              >
+                Stage default
+              </button>
+            )}
+          </details>
+        }
+      >
         {name === 'gpu_id' && managed ? (
           <select
             aria-label="GPU card"
@@ -87,27 +112,6 @@ export function EngineSettingField({
           />
         )}
       </Field>
-      {disabled && <small>{disabled}</small>}
-      <details>
-        <summary>Details & default{changed ? ' · changed' : ''}</summary>
-        <p>{text(field.description, '')}</p>
-        <p>
-          Key: <code>{name}</code>
-        </p>
-        <p>
-          Saved: {text(saved[name], 'Inherited')} · Descriptor default:{' '}
-          {text(descriptorDefault(field), 'Not reported')}
-        </p>
-        {descriptorDefault(field) !== undefined && (
-          <button
-            className="ew-button"
-            disabled={Boolean(disabled)}
-            onClick={() => update(name, descriptorDefault(field))}
-          >
-            Stage default
-          </button>
-        )}
-      </details>
     </div>
   )
 }

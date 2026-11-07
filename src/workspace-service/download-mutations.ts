@@ -5,6 +5,7 @@ const writes = new Set([
   'managed.install',
   'foundry.install',
   'geniex.install',
+  'fastflowlm.install',
   'setup.resume',
   'artifacts.resume',
   'downloads.remove',

@@ -1,5 +1,5 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/ModelSelection.tsx @ 807b4d9; adapted: live server catalog.
-import { catalogModelMatches } from '@view'
+import { catalogModelMatches, onboardingModelMatchesEngine } from '@view'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Laptop, Check } from 'lucide-react'
@@ -68,26 +68,32 @@ export function FirstModel({
         ])
         return [selectedEngine, available, local] as const
       })
-      .then(([selectedEngine, available, local]) => {
+      .then(([selectedEngine, available, allLocal]) => {
         if (!live) return
-        setEngine(selectedEngine)
-        const remaining = available.filter(
-          (m) =>
-            !rows(local).some((l) => {
-              const id = text(l.id ?? l.model_id, '')
-              const repo = text(m.id ?? m.model_id, '')
-              // A Foundry Local or LiteRT-LM family is installed as one of its variants; a GGUF
-              // download under its file name is its catalog row (the registry names the repository).
-              if (m.geniex && l.provider !== 'geniex') return false
-              const variants = rows(record(m.geniex ?? m.litert ?? m.foundry).variants).map((v) =>
-                text(m.geniex ? record(v.record).variant_id : v.id, '')
-              )
-              return (
-                catalogModelMatches(id, repo, undefined, text(l.repository, '') || undefined) ||
-                variants.includes(id)
-              )
-            })
+        const local = rows(allLocal).filter((model) =>
+          onboardingModelMatchesEngine(
+            {
+              provider: typeof model.provider === 'string' ? model.provider : undefined,
+              providers: Array.isArray(model.providers)
+                ? model.providers.filter((p): p is string => typeof p === 'string')
+                : undefined,
+            },
+            selectedEngine
+          )
         )
+        setEngine(selectedEngine)
+        const matchesLocal = (catalog: RecordValue, local: RecordValue) => {
+          const id = text(local.id ?? local.model_id, '')
+          const repo = text(catalog.id ?? catalog.model_id, '')
+          const variants = rows(
+            record(catalog.fastflowlm ?? catalog.geniex ?? catalog.litert ?? catalog.foundry).variants
+          ).map((v) => text(catalog.geniex || catalog.fastflowlm ? record(v.record).variant_id : v.id, ''))
+          return (
+            catalogModelMatches(id, repo, undefined, text(local.repository, '') || undefined) ||
+            variants.includes(id)
+          )
+        }
+        const remaining = available.filter((model) => !local.some((item) => matchesLocal(model, item)))
         setModels(remaining)
         setInstalled(rows(local))
         const first = rows(local)[0] ?? available[0]
@@ -98,14 +104,8 @@ export function FirstModel({
         setSelected((previous) => {
           if (keys.includes(previous)) return previous
           const repository = previous.slice(previous.indexOf(':') + 1)
-          const downloaded = rows(local).find((m) =>
-            catalogModelMatches(
-              text(m.id ?? m.model_id),
-              repository,
-              undefined,
-              text(m.repository, '') || undefined
-            )
-          )
+          const catalog = available.find((m) => text(m.id ?? m.model_id) === repository) ?? { id: repository }
+          const downloaded = local.find((m) => matchesLocal(catalog, m))
           return downloaded
             ? `local:${text(downloaded.id ?? downloaded.model_id)}`
             : first
@@ -123,6 +123,11 @@ export function FirstModel({
       live = false
     }
   }, [execute, category, revision])
+  const recommended = models.filter((model, i) => {
+    const explicit = record(model.fastflowlm).recommended
+    return typeof explicit === 'boolean' ? explicit : i < 3
+  })
+  const more = models.filter((model) => !recommended.includes(model))
   const cards = (entries: RecordValue[], local: boolean) =>
     entries.map((m) => {
       const id = `${local ? 'local' : 'catalog'}:${text(m.id ?? m.model_id)}`
@@ -194,16 +199,16 @@ export function FirstModel({
             <div className="first-model-grid">{cards(installed, true)}</div>
           </>
         )}
-        {!!models.length && (
+        {!!recommended.length && (
           <>
             <h2>Recommended</h2>
-            <div className="first-model-grid">{cards(models.slice(0, 3), false)}</div>
-            {models.length > 3 && (
-              <>
-                <h2>Hugging Face</h2>
-                <div className="first-model-grid">{cards(models.slice(3), false)}</div>
-              </>
-            )}
+            <div className="first-model-grid">{cards(recommended, false)}</div>
+          </>
+        )}
+        {!!more.length && (
+          <>
+            <h2>{engineDialog(engine) ? 'More models' : 'Hugging Face'}</h2>
+            <div className="first-model-grid">{cards(more, false)}</div>
           </>
         )}
         {!loading && !models.length && !installed.length && (

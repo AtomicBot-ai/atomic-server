@@ -25,6 +25,8 @@ it('says what is installed, installing and offered as an update', () => {
       onSettings={vi.fn()}
     />
   )
-  expect(screen.getByText('Installed · b11946 · cpu · update b12000')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'llama.cpp', exact: true })).toHaveTextContent(
+    'b11946 · cpu · update b12000'
+  )
   expect(screen.getByText('Installing · 25%')).toBeInTheDocument()
 })

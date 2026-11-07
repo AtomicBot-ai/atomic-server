@@ -1,11 +1,13 @@
 import { pollEvery } from '../runtime/poll.js'
+import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
+import type { EngineId } from '@atomic-chat/core/contracts'
 import { setupFinished } from '../../../workspace-view/index.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EngineChoice } from '../../../terminal-setup/index.js'
 import { WorkspaceController } from '../controller.js'
 import type { WorkspaceDeps } from '../controller.js'
 import { explained } from '../../error-text.js'
-export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
+export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false, chooseEngine = false) {
   const controller = useMemo(
     () =>
       new WorkspaceController(
@@ -28,27 +30,32 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
     choiceRequest = useRef(0)
   useEffect(() => {
     live.current = true
-    void Promise.all([controller.engineSelection.read(), controller.setup.read(), controller.runtime.setup()])
-      .then(async ([engine, manifest, setup]) => {
-        if (manifest || setupFinished(setup)) {
-          if (live.current) setStage(forceWelcome && !setupFinished(setup) ? 'ready' : 'resume')
-          return
-        }
-        if (engine) {
-          if (live.current) setStage('ready')
-          return
-        }
-        const installed = await controller.setup.installed().catch(() => [])
-        if (live.current) setStage(installed.length ? 'ready' : 'choose')
-      })
-      .catch(() => {
-        if (live.current) setStage('choose')
-      })
+    if (!chooseEngine)
+      void Promise.all([
+        controller.engineSelection.read(),
+        controller.setup.read(),
+        controller.runtime.setup(),
+      ])
+        .then(async ([engine, manifest, setup]) => {
+          if (manifest || setupFinished(setup)) {
+            if (live.current) setStage(forceWelcome && !setupFinished(setup) ? 'ready' : 'resume')
+            return
+          }
+          if (engine) {
+            if (live.current) setStage('ready')
+            return
+          }
+          const installed = await controller.setup.installed().catch(() => [])
+          if (live.current) setStage(installed.length ? 'ready' : 'choose')
+        })
+        .catch(() => {
+          if (live.current) setStage('choose')
+        })
     return () => {
       live.current = false
       controller.dispose()
     }
-  }, [controller, forceWelcome])
+  }, [controller, forceWelcome, chooseEngine])
   useEffect(
     () =>
       // A failed read is not evidence that setup changed; pollEvery retries at the next tick.
@@ -85,13 +92,10 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
         ]
       })
       if (live.current && request === choiceRequest.current) {
-        setChoices([
-          ...list,
-          ...builds.filter((b) => b.installed && !list.some((v) => v.provider === b.provider)),
-        ])
+        const offered = [...list, ...builds.filter((b) => !list.some((v) => v.provider === b.provider))]
+        setChoices(offered)
         setSelected(0)
-        if (!list.length && !builds.some((b) => b.installed))
-          setError('No compatible engines are available. Retry or set up later.')
+        if (!offered.length) setError('No compatible engines are available. Retry or set up later.')
       }
     } catch (e) {
       if (live.current && request === choiceRequest.current) setError(explained(e))
@@ -99,6 +103,9 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
       if (request === choiceRequest.current) busy.current = false
     }
   }, [controller])
+  useEffect(() => {
+    if (chooseEngine) void choose()
+  }, [chooseEngine, choose])
   const install = async (index = selected) => {
     const choice = choices[index]
     if (!choice || busy.current) return
@@ -110,7 +117,12 @@ export function useIntroEngine(deps: WorkspaceDeps, forceWelcome = false) {
       if (choice.installed) {
         await controller.engineSelection.select(choice)
         if (live.current) setStage('ready')
+      } else if (ENGINE_KINDS[choice.provider as EngineId] === 'managed') {
+        await controller.engineSelection.remember(choice.id)
+        if (live.current) setStage('resume')
       } else {
+        if (!choice.version || !choice.backend)
+          throw new Error('No compatible build is available for this engine. Retry or choose another engine.')
         await controller.runtime.execute('engines.enqueue', {
           engine: choice.provider,
           target: { version: choice.version, variant: choice.backend },

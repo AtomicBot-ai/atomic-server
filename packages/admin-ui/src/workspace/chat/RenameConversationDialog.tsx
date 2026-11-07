@@ -30,16 +30,18 @@ export function RenameConversationDialog({
     <div className="modal-shade">
       <section
         ref={ref}
-        className="ew-modal"
-        style={{ maxWidth: 480 }}
+        className="ew-modal rename-conversation-dialog settings-form"
         role="dialog"
         aria-modal="true"
         aria-label="Rename conversation"
         aria-busy={pending || undefined}
         tabIndex={-1}
       >
-        <h2>Rename conversation</h2>
+        <header className="panel-heading">
+          <h2>Rename conversation</h2>
+        </header>
         <form
+          className="settings-form"
           onSubmit={async (event) => {
             event.preventDefault()
             if (locked.current || !draft.trim()) return

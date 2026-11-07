@@ -1,0 +1,110 @@
+.engine-directory {
+  display: grid;
+  gap: 28px;
+}
+.engine-directory-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+.engine-directory-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.engine-directory-heading > span {
+  font-size: 12px;
+  color: var(--ew-muted);
+}
+.engine-directory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--ew-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.engine-directory-list > li + li {
+  border-top: 1px solid var(--ew-line);
+}
+.engine-directory-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ew-text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.engine-directory-item:hover {
+  background: var(--ew-raised);
+}
+.engine-directory-item:focus-visible {
+  outline: 2px solid var(--ew-teal);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+.engine-directory-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.engine-directory-copy strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.engine-directory-copy small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ew-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.engine-directory-status {
+  max-width: 240px;
+  font-size: 11px;
+  line-height: 18px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--ew-raised);
+  color: var(--ew-muted);
+  overflow-wrap: anywhere;
+}
+.engine-directory-status[data-installed='true'] {
+  color: var(--ew-teal);
+  background: var(--atomic-focus, var(--ew-raised));
+}
+.engine-directory-item > svg {
+  color: var(--ew-muted);
+}
+.engine-directory-error {
+  margin: 0;
+  padding: 0 16px 12px;
+  color: var(--atomic-status-error, #efa99d);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .engine-directory-item {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    gap: 6px 12px;
+    padding: 12px;
+  }
+  .engine-directory-status {
+    grid-column: 1;
+    justify-self: start;
+    max-width: 100%;
+  }
+  .engine-directory-item > svg {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+}

@@ -150,10 +150,10 @@ describe('a Foundry Local model in the admin', () => {
         onFoundry={foundry}
       />
     )
-    expect(screen.getByText(/unverified/i)).toBeInTheDocument()
+    expect(screen.getByText(/checksums are not available/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Prepare OpenVINO NPU' }))
     expect(foundry).toHaveBeenCalled()
-    await userEvent.selectOptions(screen.getByLabelText('Variant'), 'phi-4-mini-cpu')
+    await userEvent.click(screen.getByRole('radio', { name: /CPU/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Download' }))
     expect(execute).toHaveBeenCalledWith('foundry.plan', { model: 'phi-4-mini', variant: 'phi-4-mini-cpu' })
     expect(execute).toHaveBeenCalledWith('foundry.install', {

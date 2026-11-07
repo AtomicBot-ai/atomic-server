@@ -1,3 +1,4 @@
+import { saveCatalogPreferences } from './catalog-preferences.js'
 import type { ActionContext } from '../actions.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, COLORS, text } from '../draw/canvas.js'
@@ -75,6 +76,7 @@ export async function catalogMenuAction(id: string, ctx: ActionContext) {
       },
       selected: 0,
     }))
+    await saveCatalogPreferences(ctx)
     return true
   }
   if (id.startsWith('catalog-sort:')) {
@@ -85,6 +87,7 @@ export async function catalogMenuAction(id: string, ctx: ActionContext) {
       selected: 0,
       focus: 'catalog-sort',
     }))
+    await saveCatalogPreferences(ctx)
     return true
   }
   if (id.startsWith('catalog-variant:')) {

@@ -58,7 +58,8 @@ export class EngineSelection {
       engines
         .filter(
           (e) =>
-            e.engine === 'mlx' || ['managed', 'foundry', 'litert', 'geniex'].includes(engineFamily(e.engine))
+            e.engine === 'mlx' ||
+            ['managed', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(engineFamily(e.engine))
         )
         .map((e) => e.engine as string)
     ).map((engine) => {

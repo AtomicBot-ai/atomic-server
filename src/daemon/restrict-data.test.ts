@@ -22,7 +22,7 @@ describe('restrictDataFolder', () => {
       restrictDataFolder(
         dir,
         host,
-        {},
+        { SystemRoot: 'C:\\Windows' },
         createLogger(() => undefined, { level: 'error' })
       )
     ).resolves.toBeUndefined()

@@ -39,6 +39,7 @@ describe('audio.cpp in the admin', () => {
     render(<EngineSettings provider="audio-cpp" workspace={workspace} onClose={() => {}} />)
     expect(await screen.findByText('v0.9.3')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'audio.cpp' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
     expect(screen.getByText('Generation settings are sent with each audio task.')).toBeInTheDocument()
     expect(execute).not.toHaveBeenCalledWith('settings.get', expect.anything())
     expect(execute).not.toHaveBeenCalledWith('settings.schema', expect.anything())
@@ -62,6 +63,7 @@ describe('engine settings in the admin', () => {
       'environments.list': [{ gpus: GPUS }],
     })
     render(<EngineSettings provider="vllm" workspace={workspace} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
     const select = await screen.findByLabelText('GPU card')
     const labels = within(select)
       .getAllByRole('option')
@@ -82,6 +84,7 @@ describe('gpu_id without cards in the admin', () => {
       'environments.list': [{ gpus: [] }],
     })
     render(<EngineSettings provider="vllm" workspace={workspace} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
     const select = await screen.findByLabelText('GPU card')
     expect(select).toBeDisabled()
     expect(
@@ -112,6 +115,7 @@ it('shows Save only after an actual change and hides it after revert or save', a
     },
   })
   render(<EngineSettings provider="llamacpp-upstream" workspace={workspace} onClose={() => {}} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
   const field = await screen.findByLabelText('Threads')
   expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
   await userEvent.clear(field)
@@ -137,6 +141,7 @@ it('removes Save and changed markers when an implicit Off default is restored', 
     },
   })
   render(<EngineSettings provider="llamacpp-upstream" workspace={workspace} onClose={() => {}} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
   const field = await screen.findByLabelText('Enable MTP')
   expect(field).toHaveValue('false')
   await userEvent.selectOptions(field, 'true')
@@ -144,7 +149,7 @@ it('removes Save and changed markers when an implicit Off default is restored', 
   expect(screen.getByText('Review changes (1)')).toBeInTheDocument()
   await userEvent.selectOptions(field, 'false')
   expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
-  expect(screen.getByText('Review changes (0)')).toBeInTheDocument()
+  expect(screen.queryByText('Review changes (0)')).not.toBeInTheDocument()
   expect(field.closest('.engine-setting')).not.toHaveClass('setting-changed')
   expect(screen.queryByText('Details & default · changed')).not.toBeInTheDocument()
 })

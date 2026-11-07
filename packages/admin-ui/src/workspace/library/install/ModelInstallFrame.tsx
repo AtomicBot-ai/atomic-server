@@ -20,7 +20,7 @@ function ModalFrame({ title, onClose, children, pending }: Props) {
       <section
         ref={dialog}
         tabIndex={-1}
-        className="ew-modal"
+        className="ew-modal settings-form"
         role="dialog"
         aria-modal="true"
         aria-label={`Install ${title}`}

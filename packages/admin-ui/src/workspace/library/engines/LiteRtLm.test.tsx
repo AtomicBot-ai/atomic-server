@@ -67,7 +67,7 @@ describe('LiteRT-LM in the admin', () => {
   it('says a Linux host has nothing to prepare, and offers no Prepare', async () => {
     const { workspace } = workspaceFixture({ 'litert.accelerators': LINUX })
     render(<LiteRtLm workspace={workspace} onClose={() => {}} />)
-    expect(await screen.findByText(/Nothing to prepare/)).toBeInTheDocument()
+    expect(await screen.findByText(/No additional accelerator setup/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Prepare/ })).toBeNull()
   })
 
@@ -78,7 +78,7 @@ describe('LiteRT-LM in the admin', () => {
       'litert.prepare': () => (current = view({ preparing: true })),
     })
     const ui = render(<LiteRtLm workspace={workspace} onClose={() => {}} />)
-    expect(await screen.findByText(/openvino 2026\.4\.1 .*not prepared/)).toBeInTheDocument()
+    expect(await screen.findByText(/Needs preparation/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Prepare openvino' }))
     expect(execute).toHaveBeenCalledWith('litert.prepare', { accelerators: ['openvino'] })
     current = view({
@@ -87,7 +87,9 @@ describe('LiteRT-LM in the admin', () => {
     })
     workspace.snapshot = snapshotFixture({ captured_at: 2 })
     await act(async () => ui.rerender(<LiteRtLm workspace={{ ...workspace }} onClose={() => {}} />))
-    expect(await screen.findByText('openvino: downloading 50%')).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('status')).findByText('openvino: downloading 50%')
+    ).toBeInTheDocument()
   })
 
   it('installs LiteRT-LM, preparing openvino after it only where the core offers it', async () => {
@@ -98,7 +100,10 @@ describe('LiteRT-LM in the admin', () => {
     })
     render(<LiteRtLm workspace={first.workspace} onClose={() => {}} />)
     await userEvent.click(await screen.findByRole('button', { name: 'Install LiteRT-LM' }))
-    expect(first.execute).toHaveBeenCalledWith('engines.install', { engine: 'litert-lm' })
+    expect(first.execute).toHaveBeenCalledWith('engines.install', {
+      engine: 'litert-lm',
+      request: { task_id: expect.any(String) },
+    })
     expect(first.execute).not.toHaveBeenCalledWith('litert.prepare', expect.anything())
   })
 
@@ -120,17 +125,8 @@ describe('LiteRT-LM in the admin', () => {
     expect(await screen.findByText('Gemma 4 E4B', { selector: 'strong' })).toBeInTheDocument()
     await userEvent.click(screen.getByText('gemma-4-E2B-it-litert-lm', { selector: 'strong' }))
     expect(screen.getByText('A Hugging Face model: not verified by Atomic Chat.')).toBeInTheDocument()
-    const options = within(screen.getByRole('combobox', { name: 'Variant' }))
-      .getAllByRole('option')
-      .map((o) => o.textContent)
-    expect(options).toEqual([
-      expect.stringMatching(/GPU .* ok/),
-      expect.stringMatching(/NPU intel-lnl .* accelerator-not-prepared/),
-    ])
-    await userEvent.selectOptions(
-      screen.getByRole('combobox', { name: 'Variant' }),
-      'gemma-4-e2b-it-npu-intel-lnl'
-    )
+    expect(screen.getByRole('radio', { name: /GPU.*Ready/ })).toBeChecked()
+    await userEvent.click(screen.getByRole('radio', { name: /NPU intel-lnl.*Needs preparation/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Prepare accelerator' }))
     expect(await screen.findByRole('dialog', { name: 'LiteRT-LM' })).toBeInTheDocument()
   })
@@ -145,10 +141,10 @@ describe('LiteRT-LM in the admin', () => {
       'artifacts.list': [],
     })
     render(<Catalog workspace={workspace} openCommand={() => {}} section="engines" />)
-    await userEvent.click((await screen.findAllByRole('button', { name: 'Engine settings' }))[1]!)
+    await userEvent.click(await screen.findByRole('button', { name: 'LiteRT-LM', exact: true }))
     const settings = within(await screen.findByRole('dialog', { name: 'litert-lm settings' }))
     expect(await settings.findByRole('region', { name: 'LiteRT-LM' })).toBeInTheDocument()
-    expect(await settings.findByText(/Nothing to prepare/)).toBeInTheDocument()
+    expect(await settings.findByText(/No additional accelerator setup/)).toBeInTheDocument()
     expect(settings.queryByRole('button', { name: 'Install latest build' })).toBeNull()
     expect(execute).not.toHaveBeenCalledWith('engines.enqueue', expect.anything())
   })

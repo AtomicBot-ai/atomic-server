@@ -121,7 +121,9 @@ export function CatalogToolbar({
                     <legend>Engine</legend>
                     {[
                       { engine: '', label: 'All engines' },
-                      ...engines.map((e) => ({ engine: text(e.engine), label: engineName(text(e.engine)) })),
+                      ...engines
+                        .filter((e) => !['audio-cpp', 'sd-cpp'].includes(text(e.engine)))
+                        .map((e) => ({ engine: text(e.engine), label: engineName(text(e.engine)) })),
                     ].map((e) => (
                       <label key={e.engine}>
                         <input

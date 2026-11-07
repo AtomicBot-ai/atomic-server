@@ -1,4 +1,6 @@
+import { returnToEngineCatalog } from './engine-catalog-return.js'
 import { withInstalledRows } from './catalog-installed.js'
+import { readCatalog, invalidateCatalogRead, catalogReadGuard } from './catalog-read.js'
 import { installedModelRows } from './installed-model-rows.js'
 import { catalogBrowseAction } from './catalog-browse.js'
 import { catalogFilterAction, catalogIndexes } from './catalog-filters.js'
@@ -12,6 +14,7 @@ import type { LibraryView } from './library-model.js'
 import { libraryRows, record } from './library-model.js'
 import { downloadAction } from './download-detail.js'
 export async function libraryAction(id: string, ctx: ActionContext): Promise<boolean> {
+  if (await returnToEngineCatalog(id, ctx)) return true
   const variant = /^catalog-download-variant:(\d+):(\d+)$/.exec(id)
   if (variant) {
     const s = ctx.get(),
@@ -40,13 +43,23 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       focus: 'library:catalog',
       message: '',
     })
-    const [installed, models] = await Promise.all([
-      c.installed(),
-      c.models(s.endpoint, s.endpointFollowsServer).catch(() => s.models),
+    await Promise.all([
+      readCatalog(ctx),
+      c.installed().then((installed) =>
+        update((v) => ({
+          ...v,
+          installed,
+          ...(v.page === 'models' && v.libraryView === 'catalog' && !v.busy
+            ? { libraryRows: withInstalledRows(v.libraryRows, { ...v, installed }) }
+            : {}),
+        }))
+      ),
+      c
+        .models(s.endpoint, s.endpointFollowsServer)
+        .catch(() => s.models)
+        .then((models) => patch({ models })),
     ])
-    patch({ installed, models })
-    if (get().page !== 'models') return true
-    return libraryAction('library:catalog', ctx)
+    return true
   }
   if (id.startsWith('library:') || id.startsWith('category:') || id === 'library-refresh') {
     const view = id.startsWith('library:') ? (id.slice(8) as LibraryView) : s.libraryView
@@ -57,24 +70,18 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       edit: '',
       libraryView: view,
       libraryCategory: category,
-      ...(category !== s.libraryCategory
-        ? {
-            catalogFilters: {
-              ...s.catalogFilters,
-              engine: '',
-              uncensored: false,
-              liked: false,
-              downloaded: false,
-            },
-          }
-        : {}),
-      ...(id === 'library-refresh' ? {} : { catalogOpen: '', catalogVariants: [], catalogVariant: '' }),
-      ...(id === 'library-refresh' ? {} : { libraryFormat: 'gguf' as const }),
       selected: 0,
       focus: 'library-row:0',
       hover: '',
       message: '',
     })
+    if (view === 'catalog') {
+      await readCatalog(ctx, id === 'library-refresh')
+      return true
+    }
+    invalidateCatalogRead(ctx)
+    const fresh = catalogReadGuard(ctx)
+    patch({ busy: false })
     if (view === 'installed') {
       patch({ installed: await c.installed() })
       return true
@@ -83,20 +90,7 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       patch({ workspace: await c.runtime.snapshot() })
       return true
     }
-    // Refresh re-reads the format shown: a managed engine's checkpoints are not the GGUF catalog.
-    if (
-      view === 'catalog' &&
-      id === 'library-refresh' &&
-      ['safetensors', 'foundry'].includes(s.libraryFormat)
-    )
-      return catalogAction(`format:${s.libraryFormat}`, ctx)
     patch({ busy: true, libraryRows: [] })
-    if (view === 'catalog' && !s.libraryEngines.length)
-      patch({
-        libraryEngines: await Promise.resolve()
-          .then(() => c.setup.engines())
-          .catch(() => []),
-      })
     try {
       const result = await c.runtime.execute(
         view === 'engines' ? 'engines.list' : 'models.catalog',
@@ -105,16 +99,15 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
           : { category, query: s.libraryQuery, refresh: id === 'library-refresh' }
       )
       // The user may have switched views while this one loaded: its rows are not that view's.
-      if (get().libraryView === view && get().libraryCategory === category)
+      if (fresh())
         patch({
-          libraryRows:
-            view === 'catalog'
-              ? withInstalledRows(libraryRows(result, view), get())
-              : libraryRows(result, view),
+          libraryRows: libraryRows(result, view),
           message: String(record(result)['error'] ?? ''),
         })
+    } catch (error) {
+      if (fresh()) throw error
     } finally {
-      patch({ busy: false })
+      if (fresh()) patch({ busy: false })
     }
     return true
   }

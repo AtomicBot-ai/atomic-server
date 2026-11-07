@@ -24,3 +24,13 @@ export function computeRowWindow(total: number, cursor: number, maxRows: number)
   const count = Math.min(size, total - start)
   return { start, count, hiddenBefore: start, hiddenAfter: Math.max(0, total - start - count) }
 }
+
+/** ASCII arrows remain legible in Windows console fonts. */
+export function rowWindowHint(window: Pick<RowWindow, 'hiddenBefore' | 'hiddenAfter'>): string {
+  return [
+    window.hiddenBefore ? `^ ${window.hiddenBefore} above` : '',
+    window.hiddenAfter ? `v ${window.hiddenAfter} below` : '',
+  ]
+    .filter(Boolean)
+    .join('  ')
+}

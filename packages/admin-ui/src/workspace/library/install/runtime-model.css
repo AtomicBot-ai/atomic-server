@@ -1,0 +1,127 @@
+.runtime-model,
+.runtime-compatibility {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ew-text);
+}
+.runtime-model-download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  padding: 16px;
+  background: var(--ew-raised);
+  border: 1px solid var(--ew-line);
+  border-radius: 10px;
+}
+.runtime-model-variant {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.runtime-model-variant .ew-field {
+  margin: 0;
+}
+.runtime-model-variant select {
+  max-width: 100%;
+}
+.runtime-model-variant strong,
+.runtime-model-size small,
+.runtime-model-size strong {
+  display: block;
+}
+.runtime-model-size small,
+.runtime-model-facts dt,
+.runtime-model-source {
+  color: var(--ew-muted);
+  font-size: 12px;
+}
+.runtime-model-size strong,
+.runtime-model-variant strong {
+  margin-top: 4px;
+}
+.runtime-model-badge {
+  display: inline-block;
+  border: 1px solid var(--ew-line);
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.runtime-model-variant > .runtime-model-badge {
+  margin-bottom: 8px;
+  color: var(--ew-teal);
+}
+.runtime-model-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px 20px;
+  margin: 20px 0;
+}
+.runtime-model-facts dd {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.runtime-model-details {
+  color: var(--ew-muted);
+  font-size: 12px;
+  margin-top: 10px;
+}
+.runtime-model-details summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.runtime-model-details p {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.eye-workspace .runtime-compatibility h3 {
+  font-size: 14px;
+  margin: 16px 0 10px;
+  font-weight: 600;
+}
+.runtime-compatibility ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.runtime-compatibility li {
+  min-width: 0;
+  border: 1px solid var(--ew-line);
+  border-radius: 8px;
+  padding: 14px;
+}
+.runtime-compatibility-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.runtime-compatibility-heading [data-ready='true'] {
+  color: var(--ew-teal);
+}
+.runtime-compatibility-message,
+.runtime-compatibility-warning {
+  font-size: 13px;
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+.runtime-model-actions {
+  margin-top: 16px;
+  align-items: end;
+}
+@media (max-width: 600px) {
+  .runtime-model-download {
+    gap: 14px;
+  }
+  .runtime-model-variant {
+    flex-basis: 100%;
+  }
+  .runtime-model-size {
+    flex: 1;
+  }
+}
