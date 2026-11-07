@@ -61,7 +61,7 @@ it.each(['light', 'dark'])(
     expect(header!.height).toBe(52)
     expect((await page.locator('.desktop-rail').boundingBox())!.width).toBe(72)
     expect((await page.locator('.desktop-sidebar').boundingBox())!.width).toBe(240)
-    expect((await page.getByRole('button', { name: 'Reset', exact: true }).boundingBox())!.height).toBe(36)
+    expect((await page.getByRole('button', { name: 'Reset', exact: true }).boundingBox())!.height).toBe(40)
     expect((await page.getByLabel('Theme', { exact: true }).boundingBox())!.height).toBe(36)
     expect(
       await page.getByRole('button', { name: 'Reset', exact: true }).getAttribute('class')
@@ -69,7 +69,7 @@ it.each(['light', 'dark'])(
     expect(await page.getByRole('heading', { level: 1 }).count()).toBe(1)
     const title = await page.getByRole('heading', { level: 1 }).boundingBox()
     expect(title!.y - header!.height).toBe(24)
-    const panel = await page.getByRole('region', { name: 'Interface appearance' }).boundingBox()
+    const panel = await page.getByRole('region', { name: 'Appearance', exact: true }).boundingBox()
     expect(panel!.y - (title!.y + title!.height)).toBe(24)
     const reset = await page.getByRole('button', { name: 'Reset', exact: true }).boundingBox()
     expect(reset!.y + reset!.height).toBeLessThan(900)

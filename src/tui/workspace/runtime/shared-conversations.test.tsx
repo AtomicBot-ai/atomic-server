@@ -12,6 +12,21 @@ import type { WorkspaceState } from '../state.js'
 import { markSynced } from '../chat/live-conversation.js'
 import { useSharedPanels } from './shared-panels.js'
 
+// Scheduling is covered by poll.test.ts; drive completed reads without wall-clock races here.
+const polling = vi.hoisted(() => ({ tick: undefined as (() => Promise<void>) | undefined }))
+vi.mock('./poll.js', () => ({
+  pollEvery: (_ms: number, work: (live: () => boolean) => Promise<void>) => {
+    polling.tick = () => work(() => true)
+    return () => {
+      polling.tick = undefined
+    }
+  },
+}))
+async function poll() {
+  expect(polling.tick).toBeDefined()
+  await polling.tick!()
+}
+
 const cleanup: Array<() => void | Promise<void>> = []
 afterEach(async () => {
   for (const dispose of cleanup.splice(0).reverse()) await dispose()
@@ -45,7 +60,6 @@ async function mount(state: WorkspaceState) {
   // The Web saves through the server into the same history folder.
   return { latest, controller: controller.current, web: new ChatHistory(folder) }
 }
-const soon = { timeout: 4500 }
 
 it('shows chats and turns another client saves, keeping the draft, and a deletion', async () => {
   const t = await mount({ ...createWorkspace('chat'), setupComplete: true, draft: 'keep me', cursor: 7 })
@@ -55,7 +69,8 @@ it('shows chats and turns another client saves, keeping the draft, and a deletio
     { role: 'assistant', content: 'OK from the Web' },
   ]
   await t.web.save(chat, 0)
-  await vi.waitFor(() => expect(t.latest.current.history.map((c) => c.title)).toEqual(['From the Web']), soon)
+  await poll()
+  expect(t.latest.current.history.map((c) => c.title)).toEqual(['From the Web'])
   // Opened here (`history:` marks what it loaded).
   markSynced(t.controller, chat)
   t.latest.current = { ...t.latest.current, conversation: chat, messages: chat.messages }
@@ -65,7 +80,8 @@ it('shows chats and turns another client saves, keeping the draft, and a deletio
     { role: 'assistant' as const, content: 'LIVE-99 acknowledged' },
   ]
   await t.web.save({ ...chat, title: 'Renamed in the Web', messages: reply }, chat.revision ?? 0)
-  await vi.waitFor(() => expect(t.latest.current.messages).toEqual(reply), soon)
+  await poll()
+  expect(t.latest.current.messages).toEqual(reply)
   expect(t.latest.current).toMatchObject({
     conversation: { id: chat.id, title: 'Renamed in the Web' },
     draft: 'keep me',
@@ -73,7 +89,8 @@ it('shows chats and turns another client saves, keeping the draft, and a deletio
     focus: 'composer',
   })
   await t.web.remove(chat.id)
-  await vi.waitFor(() => expect(t.latest.current.conversation).toBeNull(), soon)
+  await poll()
+  expect(t.latest.current.conversation).toBeNull()
   expect(t.latest.current).toMatchObject({ messages: [], history: [], draft: 'keep me' })
 }, 15000)
 
@@ -85,7 +102,8 @@ it('keeps a reply this terminal has not saved yet over an older saved copy', asy
   markSynced(t.controller, chat)
   const answered = [...chat.messages, { role: 'assistant' as const, content: 'Not saved yet' }]
   t.latest.current = { ...t.latest.current, conversation: chat, messages: answered }
-  await vi.waitFor(() => expect(t.latest.current.history).toHaveLength(1), soon)
-  await new Promise((resolve) => setTimeout(resolve, 2600))
+  await poll()
+  expect(t.latest.current.history).toHaveLength(1)
+  await poll()
   expect(t.latest.current.messages).toEqual(answered)
 }, 15000)
