@@ -293,14 +293,7 @@ jobs:
       - name: Name the assets and checksum them, after signing
         run: |
           set -euo pipefail
-          mkdir -p release
-          for path in bin/atc-*; do
-            name="$(basename "$path")"
-            cp "$path" "release/atc-$VERSION-${name#atc-}"
-          done
-          expected="$(node --input-type=module -e "import { TARGETS } from './scripts/targets.mjs'; console.log(TARGETS.length)")"
-          actual="$(find release -maxdepth 1 -name 'atc-*' | wc -l | tr -d ' ')"
-          if [ "$actual" != "$expected" ]; then echo "::error::$actual binaries, expected $expected"; exit 1; fi
+          node scripts/stage-release-binaries.mjs "$VERSION"
           # The packages are named atc_… (underscore): no atc-* glob above or in the installers sees them.
           cp pkg/atc_* release/
           node --input-type=module -e "
