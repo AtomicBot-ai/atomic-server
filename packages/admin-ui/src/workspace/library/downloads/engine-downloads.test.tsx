@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { Downloads } from './Downloads'
@@ -53,7 +53,12 @@ it('marks only actual installed engine builds as installed', () => {
       onSettings={vi.fn()}
     />
   )
-  expect(screen.getByText('Installed · b1')).toBeInTheDocument()
-  expect(screen.getByText('Installed')).toBeInTheDocument()
-  expect(screen.getByText('Not installed')).toBeInTheDocument()
+  const installed = within(screen.getByRole('region', { name: 'Installed' }))
+  expect(installed.getAllByRole('button')).toHaveLength(2)
+  expect(installed.getByRole('button', { name: 'llama.cpp', exact: true })).toHaveAccessibleDescription(
+    'Installed · b1'
+  )
+  const available = within(screen.getByRole('region', { name: 'Available to install' }))
+  expect(available.getAllByRole('button')).toHaveLength(1)
+  expect(available.getByRole('button')).toHaveAccessibleDescription('Not installed')
 })

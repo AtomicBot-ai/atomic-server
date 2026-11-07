@@ -5,10 +5,10 @@ do not edit by hand.
 
 | Package | Version | License |
 | --- | --- | --- |
-| @ai-sdk/gateway | 2.0.152 | Apache-2.0 |
-| @ai-sdk/openai-compatible | 1.0.54 | Apache-2.0 |
-| @ai-sdk/provider | 2.0.4 | Apache-2.0 |
-| @ai-sdk/provider-utils | 3.0.37 | Apache-2.0 |
+| @ai-sdk/gateway | 2.0.157 | Apache-2.0 |
+| @ai-sdk/openai-compatible | 1.0.56 | Apache-2.0 |
+| @ai-sdk/provider | 2.0.5 | Apache-2.0 |
+| @ai-sdk/provider-utils | 3.0.39 | Apache-2.0 |
 | @alcalzone/ansi-tokenize | 0.3.1 | MIT |
 | @atomic-chat/core | 0.22.0 | MIT |
 | @fastify/busboy | 2.1.1 | MIT |
@@ -19,7 +19,7 @@ do not edit by hand.
 | @radix-ui/react-slot | 1.3.3 | MIT |
 | @standard-schema/spec | 1.1.0 | MIT |
 | @vercel/oidc | 3.1.0 | Apache-2.0 |
-| ai | 5.0.258 | Apache-2.0 |
+| ai | 5.0.265 | Apache-2.0 |
 | ansi-escapes | 7.3.0 | MIT |
 | ansi-regex | 6.3.0 | MIT |
 | ansi-styles | 6.2.3 | MIT |
@@ -127,7 +127,7 @@ do not edit by hand.
 | yoga-layout | 3.2.1 | MIT |
 | zustand | 5.0.15 | MIT |
 
-## @ai-sdk/gateway 2.0.152
+## @ai-sdk/gateway 2.0.157
 
 License: Apache-2.0
 
@@ -149,7 +149,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ````
 
-## @ai-sdk/openai-compatible 1.0.54
+## @ai-sdk/openai-compatible 1.0.56
 
 License: Apache-2.0
 
@@ -171,7 +171,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ````
 
-## @ai-sdk/provider 2.0.4
+## @ai-sdk/provider 2.0.5
 
 License: Apache-2.0
 
@@ -193,7 +193,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ````
 
-## @ai-sdk/provider-utils 3.0.37
+## @ai-sdk/provider-utils 3.0.39
 
 License: Apache-2.0
 
@@ -819,7 +819,7 @@ Apache License
    limitations under the License.
 ````
 
-## ai 5.0.258
+## ai 5.0.265
 
 License: Apache-2.0
 

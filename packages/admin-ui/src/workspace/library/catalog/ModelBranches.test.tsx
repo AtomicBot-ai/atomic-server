@@ -209,7 +209,9 @@ describe('the admin catalog and installed models', () => {
     await userEvent.click(await screen.findByText(REPO, { selector: 'strong' }))
     await waitFor(() => expect(execute).toHaveBeenCalledWith('models.check', { repository: REPO }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByText('Compatibility')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Engine compatibility' })).toHaveTextContent(
+      'No compatibility results are available for this model.'
+    )
   })
 
   it('goes back to the category catalog when the task changes after another format was chosen', async () => {

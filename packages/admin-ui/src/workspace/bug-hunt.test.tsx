@@ -153,10 +153,11 @@ it('keeps the server on the network the person chose when an agent connection is
     })
   )
   await userEvent.click(await screen.findByRole('button', { name: 'Configure & start' }))
-  await waitFor(() => expect(execute).toHaveBeenCalledWith('api.restart', expect.anything()))
+  await waitFor(() => expect(execute).toHaveBeenCalledWith('api.start', expect.anything()))
   const config = execute.mock.calls.find(([name]) => name === 'config.update')?.[1] as {
     values: Record<string, unknown>
   }
   expect(config.values).not.toHaveProperty('api.host')
-  expect(execute).toHaveBeenCalledWith('api.restart', { request: { host: '0.0.0.0', port: 1337 } })
+  expect(execute).toHaveBeenCalledWith('api.start', { request: { host: '0.0.0.0', port: 1337 } })
+  expect(execute).not.toHaveBeenCalledWith('api.restart', expect.anything())
 })

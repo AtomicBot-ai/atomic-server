@@ -1,5 +1,5 @@
 /** Foundry Local in the admin (spec foundry-local-server, «Подготовка NPU из admin»). */
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { FoundryAcceleratorsView } from '@contract'
@@ -46,7 +46,9 @@ describe('Foundry Local in the admin', () => {
     })
     workspace.snapshot = snapshotFixture({ captured_at: 2 })
     await act(async () => ui.rerender(<FoundryLocal workspace={{ ...workspace }} onClose={() => {}} />))
-    expect(await screen.findByText(`${NPU.name}: downloading 50%`)).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('status')).findByText(`${NPU.name}: downloading 50%`)
+    ).toBeInTheDocument()
     current = view({ accelerators: [{ ...NPU, prepared: true }] })
     workspace.snapshot = snapshotFixture({ captured_at: 3 })
     await act(async () => ui.rerender(<FoundryLocal workspace={{ ...workspace }} onClose={() => {}} />))
