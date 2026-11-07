@@ -283,7 +283,7 @@ On Windows arm64 with Snapdragon X, select **GenieX** in the Local models catalo
 
 ## Audio generation
 
-Audio runs on audio.cpp, one model at a time, through the embedded core 0.21.4. The catalog holds MOSS-TTS-Nano 100M and
+Audio runs on audio.cpp, one model at a time, through the embedded core 0.22.0. The catalog holds MOSS-TTS-Nano 100M and
 Qwen3-TTS 1.7B for speech, ACE-Step 1.5 Turbo for music and Stable Audio 3 Small SFX for effects:
 
 ```bash
@@ -389,7 +389,7 @@ ssh -L 1338:127.0.0.1:1338 user@server
 
 ## Development
 
-Prerequisites: Bun 1.3.10 (the package manager — `bun.lock` is committed — and the compiler of the binary)
+Prerequisites: Bun 1.4.4 (the package manager — `bun.lock` is committed — and the compiler of the binary)
 and Node 22 (the development and test runtime; scripts run as `npm run …`, like in the core). The core is the
 npm package `@atomic-chat/core`, pinned to an exact version (`docs/release.md`, "The core pin").
 

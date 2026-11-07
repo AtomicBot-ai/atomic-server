@@ -87,7 +87,7 @@ there is none it runs `node dist/bin.js`. Either way a build is required first:
 
 ```bash
 npm run build && npm run test:e2e          # from source, through Node
-npm run build:bin && npm run test:e2e      # the compiled binary (Bun 1.3.10)
+npm run build:bin && npm run test:e2e      # the compiled binary (Bun 1.4.4)
 ```
 
 The terminal UI journeys (`test/e2e/tui*.test.ts`) drive the program in a real pseudo-terminal through
@@ -125,7 +125,7 @@ child processes) gets a case here before it is used.
 | --- | --- | --- |
 | `gate` | ubuntu-latest | `bun install --frozen-lockfile`, `lint`, `typecheck`, `format:check`, `build`, `gen-command-docs.mjs --check` (docs/commands.md must be current). |
 | `ui` | ubuntu-latest | `bun install --frozen-lockfile`, `test:ui`, `build:ui`; uploads `packages/admin-ui/dist` as the `admin-ui` artifact. |
-| `test` (needs `gate`) | ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-2022, windows-11-arm | Bun 1.3.10 + Node 22, `bun install --frozen-lockfile`, `npm test`, `test:runtime-compat`, `bun test test/runtime-compat`, `build`, `build:bin`, `test:e2e`; uploads `dist/bin` per OS. |
+| `test` (needs `gate`) | ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-2022, windows-11-arm | Bun 1.4.4 + Node 22, `bun install --frozen-lockfile`, `npm test`, `test:runtime-compat`, `bun test test/runtime-compat`, `build`, `build:bin`, `test:e2e`; uploads `dist/bin` per OS. |
 
 The release workflow calls `ci.yml` (`workflow_call`) as its gate, so nothing is published that did not
 pass all three jobs, including the binary e2e on native arm runners. `npm run verify` runs the same gates
