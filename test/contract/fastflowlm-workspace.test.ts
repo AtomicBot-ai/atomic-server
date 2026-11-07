@@ -13,6 +13,7 @@ async function fixture() {
 it('uses the server catalog override and the core verdict without arbitrary Hub search', async () => {
   const f = await fixture()
   expect(await f.service.execute('models.search', { engine: 'fastflowlm' })).toMatchObject({
+    list_error: null,
     models: [
       {
         model_id: f.definition.model_id,

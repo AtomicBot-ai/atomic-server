@@ -174,9 +174,7 @@ describe('LiteRT-LM in the TUI', () => {
     const t = tui([accelerators()])
     await activate('library-row:0', t.ctx)
     await activate('litert-models', t.ctx)
-    expect(calls(t, 'models.search')).toEqual([
-      { engine: 'litert-lm', request: { task_id: expect.any(String) } },
-    ])
+    expect(calls(t, 'models.search')).toEqual([{ engine: 'litert-lm' }])
     const labels = (t.model().fields ?? []).map((f) => f.label).join('\n')
     expect(labels).toMatch(/\* Gemma 4 E4B · NPU intel-lnl .*accelerator-not-prepared/)
     expect(labels).toMatch(/Gemma 4 E4B · CPU .*ok/)

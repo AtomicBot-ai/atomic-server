@@ -133,13 +133,18 @@ it('filters and sorts by stable model identity and persists liked models', async
   ]
   s.catalogFilters.sort = 'downloads'
   expect(catalogIndexes(s)).toEqual([1, 0])
+  const rows = s.libraryRows
   const saveCatalogLikes = vi.fn(async () => {})
   const ctx = {
     get: () => s,
     update: (fn: (v: typeof s) => typeof s) => {
       s = fn(s)
     },
-    controller: { saveCatalogLikes, runtime: { execute: async () => ({ rows: s.libraryRows }) } },
+    controller: {
+      saveCatalogLikes,
+      runtime: { execute: async () => ({ rows }) },
+      setup: { engines: async () => [] },
+    },
   } as unknown as ActionContext
   await catalogFilterAction('library-like', ctx)
   expect(saveCatalogLikes).toHaveBeenCalledWith(['b'])

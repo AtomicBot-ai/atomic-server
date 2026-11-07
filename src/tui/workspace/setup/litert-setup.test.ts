@@ -111,7 +111,7 @@ describe('guided setup with LiteRT-LM', () => {
     const t = harness(['litert-lm'])
     await setupAction('setup-engine:litert-lm', t.ctx)
     expect(t.calls('models.search')).toEqual([{ engine: 'litert-lm', query: '' }])
-    expect(t.screen()).toContain('gemma-4-e4b-gpu')
+    expect(t.screen()).toContain('Choose a device variant')
     expect(t.screen()).not.toMatch(/GGUF/)
     await setupAction('setup-path-repo:0', t.ctx)
     expect(t.calls('litert.plan')).toEqual([{ model: 'gemma-4-e4b' }])

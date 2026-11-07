@@ -5,7 +5,9 @@ import baseline from '../../src/workspace-service/models/model-catalog-baseline.
 
 it('embeds the FastFlowLM SDK and accepts a legacy catalog without an FLM collection', () => {
   expect(CORE_VERSION).toBe('0.22.0')
-  expect(sdk.projectFastFlowLmCollection(sdk.parseAtomicModelCatalog(baseline))).toEqual({
+  const legacy = structuredClone(baseline)
+  Reflect.deleteProperty(legacy.collections, 'fastflowlm-models')
+  expect(sdk.projectFastFlowLmCollection(sdk.parseAtomicModelCatalog(legacy))).toEqual({
     schema_version: 1,
     models: [],
   })

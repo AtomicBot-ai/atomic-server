@@ -138,7 +138,7 @@ describe('the TUI catalog for managed engines', () => {
       'models.catalog': (i: Record<string, unknown>) =>
         i['engine'] === 'vllm'
           ? { engine: 'vllm', models: [{ repository: REPO, note: 'Qwen 2B', vram_tier_bytes: 0 }] }
-          : catalogRow,
+          : { models: [] },
       'models.search': { models: [] },
     })
     await activate('library:catalog', t.ctx)
@@ -148,10 +148,10 @@ describe('the TUI catalog for managed engines', () => {
     expect(t.screen()).toMatch(/Foundry Local/)
     await activate('close', t.ctx)
     await activate('format:safetensors', t.ctx)
-    expect(t.calls('models.catalog').at(-1)).toEqual({ engine: 'vllm' })
+    expect(t.calls('models.catalog').slice(-2)).toEqual([{ engine: 'vllm' }, { engine: 'tensorrt-llm' }])
     expect(t.get().libraryRows.map((r) => r.id)).toEqual([REPO])
     await activate('library-refresh', t.ctx)
-    expect(t.calls('models.catalog').at(-1)).toEqual({ engine: 'vllm' })
+    expect(t.calls('models.catalog').slice(-2)).toEqual([{ engine: 'vllm' }, { engine: 'tensorrt-llm' }])
     expect(t.get().libraryRows.map((r) => r.id)).toEqual([REPO])
     await activate('format:foundry', t.ctx)
     expect(t.get()).toMatchObject({ overlay: null, libraryFormat: 'foundry', libraryView: 'catalog' })

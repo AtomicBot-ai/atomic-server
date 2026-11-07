@@ -68,7 +68,9 @@ export async function flmFixture() {
   const catalog = {
     ...structuredClone(baseline),
     models: {
-      ...baseline.models,
+      ...Object.fromEntries(
+        Object.entries(baseline.models).filter(([, model]) => model.kind !== 'fastflowlm')
+      ),
       fixture: {
         kind: 'fastflowlm',
         format: 'fastflowlm',
