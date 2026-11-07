@@ -10,7 +10,9 @@ import baseline from '../../src/workspace-service/models/model-catalog-baseline.
 const root = mkdtempSync(join(tmpdir(), 'atc-flm-'))
 const catalog = join(root, 'catalog.json'),
   manifest = join(root, 'manifest.json')
-writeFileSync(catalog, JSON.stringify(baseline))
+const legacy = structuredClone(baseline)
+Reflect.deleteProperty(legacy.collections, 'fastflowlm-models')
+writeFileSync(catalog, JSON.stringify(legacy))
 writeFileSync(manifest, JSON.stringify({ schema_version: 1, engine: 'fastflowlm', releases: [] }))
 const env = {
   ...process.env,
