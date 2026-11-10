@@ -70,8 +70,10 @@ branch. One run at a time (`concurrency: release`):
    `scripts/entitlements.mac.plist`, timestamp) and `scripts/notarize-mac-binary.sh` (notarytool with the
    App Store Connect API key, `--wait`, the log on rejection). A bare binary cannot be stapled; Gatekeeper
    checks the ticket online on first run.
-5. **sign-windows** — `scripts/sign-windows-binary.ps1`: DigiCert KeyLocker (`smctl`), then `signtool sign`
-   with a DigiCert timestamp and `signtool verify /pa`, for the x64 and arm64 executables.
+5. **sign-windows** — in the environment `codesign`: `azure/login` with GitHub OIDC, then
+   `scripts/sign-windows-binary.ps1`: AzureSignTool signs with the certificate in Azure Key Vault (the
+   private key never leaves the vault's HSM) with a DigiCert timestamp, and `signtool verify /pa` checks
+   each of the x64 and arm64 executables.
 6. **packages** — the deb and rpm of the Linux binaries `build` uploaded (`scripts/linux-packages.mjs`,
    `packaging/nfpm.yaml`, nfpm pinned by checksum): x64 packages carry the baseline build, arm64 the glibc
    build. Each package depends on the glibc its binary requires, read from the binary (`readelf`). The job
@@ -120,12 +122,18 @@ already pushed.
 
 Secrets (the names atomic-agent uses): `MACOS_CSC_LINK`, `MACOS_CSC_KEY_PASSWORD`, optional
 `MACOS_CSC_NAME`, `NOTARYTOOL_KEY` (the `.p8` contents), `NOTARYTOOL_KEY_ID`, `NOTARYTOOL_ISSUER`;
-`SM_API_KEY`, `SM_CLIENT_CERT_FILE_B64`, `SM_CLIENT_CERT_PASSWORD`, `SM_CODE_SIGNING_CERT_SHA1_HASH`;
 `LINUX_PACKAGES_GPG_KEY` (the armored private packages key) and `LINUX_PACKAGES_GPG_PASSPHRASE`. In the
 environment `packages` (deployment tags `v*` only): `PACKAGES_S3_ACCESS_KEY_ID`, `PACKAGES_S3_SECRET_ACCESS_KEY`
 (Hetzner Object Storage S3 credentials) and `AUR_SSH_PRIVATE_KEY` (the key registered on the AUR
-account). A missing secret fails the run. Only a run by hand on a branch with `allow_unsigned` skips signing; its
-draft is never published. Actions are pinned to commits; Dependabot (`.github/dependabot.yml`) moves them.
+account). Windows signing needs no secret: the environment `codesign` holds the variables
+`AZURE_CLIENT_ID` (the Entra app registration that may sign), `AZURE_TENANT_ID`, `AZURE_KEY_VAULT` (the
+vault's name) and `AZURE_CODESIGN_CERT` (the certificate's name in it). The app registration trusts
+GitHub's OIDC tokens for `repo:AtomicBot-ai/atomic-server:environment:codesign` (a federated credential)
+and holds Key Vault Crypto User and Key Vault Certificate User on the vault; renaming the repository or
+the environment breaks that subject. The `SM_*` secrets of the former DigiCert KeyLocker signing are no
+longer read. A missing secret or variable fails the run. Only a run by hand on a branch with
+`allow_unsigned` skips signing; its draft is never published. Actions are pinned to commits; Dependabot
+(`.github/dependabot.yml`) moves them.
 
 ## Assets
 
@@ -238,6 +246,20 @@ See the workflow above. Locally, `scripts/build-binaries.mjs` re-signs darwin bu
 (Bun's output carries a signature that is invalid once the program is embedded); the release replaces it
 with the Developer ID. Bun's Windows output has no certificate table, so nothing is stripped before
 Authenticode. `atc update` refuses a binary less trusted than the installed one (`src/update/trust.ts`).
+On Windows that pins the signer's subject (`CN=AtomicMail Systems OU, …`), so a new certificate must keep
+it, or installed copies refuse every later release.
+
+To sign Windows binaries by hand (Windows only), with the .NET SDK 8 or later (AzureSignTool is installed
+into a temporary folder), the Windows SDK (`signtool` verifies) and the Azure CLI signed in (`az login`)
+as someone with Key Vault Crypto User and Key Vault Certificate User on the vault:
+
+```powershell
+$env:AZURE_KEY_VAULT = "<vault name>"          # the codesign environment's variables
+$env:AZURE_CODESIGN_CERT = "<certificate name>"
+pwsh scripts/sign-windows-binary.ps1 dist\bin\atc-x86_64-pc-windows-msvc.exe dist\bin\atc-aarch64-pc-windows-msvc.exe
+```
+
+`AZURE_KEY_VAULT_ACCESS_TOKEN` (a token for `https://vault.azure.net`) replaces the Azure CLI.
 
 ## The core pin
 
