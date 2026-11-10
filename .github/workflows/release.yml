@@ -4,8 +4,9 @@ name: release
 # (scripts/release.mjs bumps, commits, tags and pushes). The pushed `v*` tag runs this workflow:
 #
 #   gates → build (each target on its own runner, e2e on the very binary uploaded)
-#         → sign-macos (Developer ID + notarisation), sign-windows (Authenticode) and packages (the deb
-#           and rpm of the Linux binaries, nfpm; the rpm signed with the packages key)
+#         → sign-macos (Developer ID + notarisation), sign-windows (Authenticode with the key in Azure
+#           Key Vault) and packages (the deb and rpm of the Linux binaries, nfpm; the rpm signed with the
+#           packages key)
 #         → draft (SHA256SUMS over the signed binaries and the packages, provenance attestations, a draft)
 #         → smoke (each runner installs the draft's assets with the installer and runs them) and
 #           smoke-packages (each distro installs the packages the way README.md says, from a repository
@@ -15,8 +16,8 @@ name: release
 #           a stable release from a tag only)
 #
 # A published version is never replaced: the updater and the installer pin checksums. A run by hand
-# (workflow_dispatch) on a branch may set allow_unsigned for a dry run without the signing secrets; a
-# tag never does.
+# (workflow_dispatch) on a branch may set allow_unsigned for a dry run without the signing credentials;
+# a tag never does.
 on:
   push:
     tags: ['v*']
@@ -244,22 +245,36 @@ jobs:
           path: dist/bin/atc-*
           if-no-files-found: error
 
+  # Authenticode with the key in Azure Key Vault, which never leaves the vault's HSM. The job signs in
+  # through GitHub OIDC, no stored secret: the app registration's federated credential is bound to the
+  # `codesign` environment, which also holds the AZURE_* variables.
   sign-windows:
     needs: build
     runs-on: windows-2022
+    environment: codesign
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with: { name: built-windows-2022, path: dist/bin }
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with: { name: built-windows-11-arm, path: dist/bin }
-      - name: Sign with Authenticode (DigiCert KeyLocker)
+      # Right before signing: the OIDC sign-in cannot refresh once it is about an hour old. Only a dry run
+      # without the environment's variables skips it (the script then warns and signs nothing).
+      - name: Sign in to Azure (OIDC)
+        if: vars.AZURE_CLIENT_ID != '' || env.ATC_ALLOW_UNSIGNED != '1'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - name: Sign with Authenticode (Azure Key Vault)
         shell: pwsh
         env:
-          SM_API_KEY: ${{ secrets.SM_API_KEY }}
-          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
-          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-          SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
+          AZURE_KEY_VAULT: ${{ vars.AZURE_KEY_VAULT }}
+          AZURE_CODESIGN_CERT: ${{ vars.AZURE_CODESIGN_CERT }}
         run: ./scripts/sign-windows-binary.ps1 (Get-ChildItem dist/bin/atc-*.exe).FullName
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

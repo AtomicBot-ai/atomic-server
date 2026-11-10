@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-10** — [Sign Windows binaries with the key in Azure Key Vault](2026-11-10-sign-windows-binaries-with-azure-key-vault.md) — AzureSignTool with GitHub OIDC in the `codesign` environment, no stored secret, the same signer subject; supersedes the KeyLocker part of the 2026-10-09 release record.
+
 - **2026-11-07** — [Open engines from a compact directory](2026-11-07-open-engines-from-compact-directory.md) — grouped clickable rows, a responsive detail drawer and error-local Retry.
 
 - **2026-11-07** — [Align model variants across the web catalog](2026-11-07-align-catalog-download-variants.md) — compact accessible media and GGUF rows, existing catalog metadata and explicit model-file sizes.
