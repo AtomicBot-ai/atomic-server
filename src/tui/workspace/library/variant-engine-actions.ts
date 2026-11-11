@@ -152,6 +152,7 @@ export async function variantEngineAction(id: string, ctx: PanelContext): Promis
   }
   const step = id.slice(kind.length + 1)
   if (step === 'prepare' || step === 'install' || step === 'update') {
+    if (step === 'update' && p.mode === 'models') change({ mode: 'engine' }, { plan: null })
     await work(async () => {
       change({ installation: { taskId: requestId!, stage: step === 'prepare' ? 'preparing' : 'installing' } })
       if (step !== 'prepare')

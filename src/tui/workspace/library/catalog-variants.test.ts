@@ -97,6 +97,26 @@ describe.each(ENGINES)('$engine in Local models', ({ format, engine, ops }) => {
     expect(t.get().busy).toBe(false)
   })
 })
+it('opens Foundry with the runtime blocker when its update can help', async () => {
+  const t = fixture('foundry')
+  const reason = 'Foundry Local 2.1.0 is active; this model requires 2.4.0 or newer.'
+  const answer = t.execute.getMockImplementation()!
+  t.execute.mockImplementation(async (name, input) => {
+    if (name === 'foundry.plan') return { digest: 'checked-plan', blockers: [reason], update_available: true }
+    return answer(name, input)
+  })
+  const runtime = t.ctx.controller.runtime
+  runtime.start = vi.fn().mockResolvedValue({ launch: 'terminal' })
+  const libraryRows = await loadVariantCatalog(t.ctx, 'foundry')
+  t.ctx.update((s) => ({ ...s, libraryRows, catalogVariant: 'model-cpu' }))
+  await variantCatalogAction('catalog-download:0', t.ctx)
+  expect(t.get()).toMatchObject({
+    overlay: 'engine-panel',
+    enginePanel: { engine: 'foundry-local', notice: reason },
+  })
+  expect(t.execute).not.toHaveBeenCalledWith('foundry.install', expect.anything())
+})
+
 it('routes a GenieX device selection to its own installer', async () => {
   const t = fixture('geniex')
   const libraryRows = await loadVariantCatalog(t.ctx, 'geniex')

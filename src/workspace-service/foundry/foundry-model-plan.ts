@@ -15,6 +15,7 @@ import type { FoundrySearchDeps, FoundryVariantRow } from './foundry-catalog.js'
 import { foundrySearch } from './foundry-catalog.js'
 import { fetchFoundryLocalList, servedUrl } from './foundry-list.js'
 import type { FoundryLocalList } from './foundry-list.js'
+import { checkFoundryRuntime, FOUNDRY_HINTS, foundryRuntimeMinimum } from './foundry-runtime-check.js'
 import type { StoreFiles } from '../managed/managed-model-plan.js'
 import { underRoot } from '../managed/managed-model-plan.js'
 
@@ -22,11 +23,6 @@ export interface Resolved {
   container: string
   query: string
   tags: Record<string, unknown>
-}
-
-const HINTS: Record<string, string> = {
-  'accelerator-not-prepared': 'atc engines accelerators foundry-local --prepare',
-  'engine-not-installed': 'atc engines install foundry-local',
 }
 
 /** Ask the resolver region by region; the first answer with a container link wins. */
@@ -133,29 +129,38 @@ export async function foundryModelPlan(
       ? [...model.variants]
           .filter((v) => v.device === input.device)
           .sort((a, b) => Number(usable(b)) - Number(usable(a)))[0]
-      : model.variants.filter(usable).sort((a, b) => DEVICE_ORDER[a.device]! - DEVICE_ORDER[b.device]!)[0])
+      : (model.variants.filter(usable).sort((a, b) => DEVICE_ORDER[a.device]! - DEVICE_ORDER[b.device]!)[0] ??
+        model.variants.find((v) => v.verdict.verdict === 'engine-update-required')))
   if (!variant)
     throw new AtcError(
       'ATC_USAGE',
       `${model.name} has no variant${input.device ? ` for the ${input.device}` : ''} that runs here.`,
       {
         details: model.variants.map((v) => `${v.id}: ${v.verdict.verdict}`).join('; '),
-        ...(model.variants.some((v) => HINTS[v.verdict.verdict])
-          ? { hint: HINTS[model.variants.find((v) => HINTS[v.verdict.verdict])!.verdict.verdict] }
+        ...(model.variants.some((v) => FOUNDRY_HINTS[v.verdict.verdict])
+          ? {
+              hint: FOUNDRY_HINTS[
+                model.variants.find((v) => FOUNDRY_HINTS[v.verdict.verdict])!.verdict.verdict
+              ],
+            }
           : {}),
       }
     )
   const blockers: string[] = []
-  if (variant.verdict.verdict !== 'ok') {
-    const hint = HINTS[variant.verdict.verdict]
-    blockers.push(
-      `${variant.id}: ${variant.verdict.reason ?? variant.verdict.verdict}${hint ? ` (${hint})` : ''}`
-    )
-  }
-  const { list } = await fetchFoundryLocalList({ ...d.list, fetch: d.fetch })
-  const resolved = blockers.length ? undefined : await resolveVariant(list, variant.asset_id, d.fetch)
+  const canResolve = usable(variant) || variant.verdict.verdict === 'engine-update-required'
+  const resolved = canResolve
+    ? await resolveVariant(
+        (await fetchFoundryLocalList({ ...d.list, fetch: d.fetch })).list,
+        variant.asset_id,
+        d.fetch
+      )
+    : undefined
+  const minimum = foundryRuntimeMinimum(resolved?.tags['minFLVersion'])
+  const check = await checkFoundryRuntime(d.link, variant, minimum, variant.verdict)
+  if (check.blocker) blockers.push(`${variant.id}: ${check.blocker}`)
   const prefix = variant.path_prefix ?? (resolved ? str(resolved.tags, 'directoryPath') : undefined) ?? ''
-  const files = variant.files ?? (resolved ? await listContainer(resolved, prefix, d.fetch) : [])
+  const files =
+    variant.files ?? (resolved && !check.blocker ? await listContainer(resolved, prefix, d.fetch) : [])
   const dir = underRoot(d.modelsDir, variant.id)
   const sizes = await Promise.all(files.map((f) => d.files.size(underRoot(dir, f.path))))
   const pending = files.filter((f, i) => sizes[i] !== f.size).map((f) => f.path)
@@ -179,7 +184,9 @@ export async function foundryModelPlan(
     asset_id: variant.asset_id,
     version: variant.version,
     unverified: model.unverified,
-    verdict: variant.verdict,
+    ...(minimum ? { min_runtime_version: minimum } : {}),
+    ...(check.updateAvailable ? { update_available: true } : {}),
+    verdict: check.verdict,
     dir,
     prefix,
     files,

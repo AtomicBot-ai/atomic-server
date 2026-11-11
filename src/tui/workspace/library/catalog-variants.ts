@@ -51,7 +51,9 @@ export function variantNext(source: Record<string, unknown> | undefined, selecte
       ? 'engine'
       : verdict === 'accelerator-not-prepared'
         ? 'prepare'
-        : 'download',
+        : verdict === 'engine-update-required'
+          ? 'review'
+          : 'download',
   }
 }
 export async function variantCatalogAction(id: string, ctx: ActionContext) {
@@ -77,8 +79,20 @@ export async function variantCatalogAction(id: string, ctx: ActionContext) {
     const plan = record(
       await ctx.controller.runtime.execute(`${ops}.plan`, { model: row.id, variant: variant['id'] })
     )
-    if (Array.isArray(plan['blockers']) && plan['blockers'].length)
-      throw new Error(plan['blockers'].join(' '))
+    if (!fresh()) return true
+    const blockers = Array.isArray(plan['blockers']) ? plan['blockers'].join(' ') : ''
+    if (format === 'foundry' && plan['update_available'] === true) {
+      await engineAction(`engine-open:${engine}`, ctx)
+      const verdict = record(plan['verdict'])
+      const notice = String(verdict['reason'] ?? blockers)
+      if (fresh())
+        ctx.update((v) => ({
+          ...v,
+          enginePanel: v.enginePanel?.engine === engine ? { ...v.enginePanel, notice } : v.enginePanel,
+        }))
+      return true
+    }
+    if (blockers) throw new Error(blockers)
     // One request per plan: a retry after a failed call continues the job the server may already hold.
     await ctx.controller.runtime.execute(`${ops}.install`, {
       request_id: `terminal-${String(plan['digest'])}`,

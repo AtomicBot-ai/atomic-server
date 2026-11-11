@@ -30,7 +30,7 @@ const BY_CATALOG_NAME = new Map(EXECUTION_PROVIDERS)
 /** Where a catalog variant can run, by its accelerator, as conf rules it for curated ones. */
 const PLATFORMS: Record<FoundryLocalExecutionProvider, FoundryLocalPlatform[]> = {
   cpu: ['win-x64', 'win-arm64', 'macos-arm64', 'linux-x64', 'linux-arm64'],
-  cuda: ['win-x64', 'linux-x64'],
+  cuda: ['win-x64', 'linux-x64', 'linux-arm64'],
   webgpu: ['win-x64', 'win-arm64', 'macos-arm64'],
   openvino: ['win-x64'],
   qnn: ['win-arm64'],

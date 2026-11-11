@@ -4,6 +4,53 @@ import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { FoundryModelInstall } from './FoundryModelInstall'
 
+it.each([true, false])(
+  'shows the runtime blocker and offers an update only when available (%s)',
+  async (available) => {
+    const reason = 'Foundry Local 2.1.0 is active; this model requires 2.4.0 or newer.'
+    const { workspace, execute } = workspaceFixture({
+      'foundry.plan': {
+        blockers: [reason],
+        verdict: { verdict: 'engine-update-required', reason, accelerator: null },
+        update_available: available,
+      },
+    })
+    const onFoundry = vi.fn()
+    render(
+      <FoundryModelInstall
+        workspace={workspace}
+        onClose={vi.fn()}
+        onFoundry={onFoundry}
+        model={{
+          model_id: 'phi',
+          name: 'Phi',
+          unverified: false,
+          default_variant: 'phi-cpu',
+          variants: [
+            {
+              id: 'phi-cpu',
+              device: 'cpu',
+              execution_provider: 'cpu',
+              size_bytes: 1000,
+              verdict: { verdict: 'ok', reason: null, accelerator: null },
+            },
+          ],
+        }}
+      />
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Download' }))
+    expect(await screen.findByText(reason)).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument()
+    const update = screen.queryByRole('button', { name: 'Update Foundry Local' })
+    if (available) {
+      expect(update).toBeVisible()
+      await userEvent.click(update!)
+      expect(onFoundry).toHaveBeenCalledOnce()
+    } else expect(update).not.toBeInTheDocument()
+    expect(execute).not.toHaveBeenCalledWith('foundry.install', expect.anything())
+  }
+)
+
 it('shows compact variant choices with a separate reason and downloads the chosen CPU variant', async () => {
   const { workspace, execute } = workspaceFixture({
     'foundry.plan': { digest: 'cpu', variant_id: 'phi-cpu', blockers: [] },

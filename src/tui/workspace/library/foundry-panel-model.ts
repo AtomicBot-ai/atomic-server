@@ -49,6 +49,8 @@ export function foundryModel(p: EnginePanel): {
       if (plan.unverified) say('A Microsoft catalog model: unverified by Atomic Chat (sizes only).', 'warn')
       for (const b of plan.blockers) say(b, 'error')
       if (!plan.blockers.length) add('foundry-download', 'Download', 'Download this variant in the server')
+      if (plan.update_available)
+        add('foundry-update', 'Update build', 'Install the newest Foundry Local build')
       add('foundry-plan-back', 'Back', 'Choose another variant')
     } else {
       if (!search) say(p.busy ? 'Reading the model list…' : 'No models read yet.', 'muted')

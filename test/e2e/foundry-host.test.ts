@@ -42,4 +42,30 @@ describe(`atc foundry-host (${ATC.join(' ')})`, () => {
     // Printed by the core's `ffi-bun.js` itself: the bundle carries the FFI module.
     expect(res.err).toMatch(/not found: no \S*foundry_local\S* in this build/)
   })
+
+  for (const [version, cApiVersion, lib] of [
+    ['2.1.0', 2, process.env['ATC_FOUNDRY_TEST_LIB_210']],
+    ['2.4.0', 3, process.env['ATC_FOUNDRY_TEST_LIB_240']],
+  ] as const) {
+    it.skipIf(!lib)(`probes the real Foundry Local ${version} library`, () => {
+      expect(compiled).toBe(true)
+      const res = runAtc(
+        [
+          'foundry-host',
+          'probe',
+          '--lib',
+          lib!,
+          '--app-data',
+          join(scratch, `data-${version}`),
+          '--logs',
+          join(scratch, `logs-${version}`),
+        ],
+        { cwd: scratch }
+      )
+      expect(res.code, res.err).toBe(0)
+      const probe = JSON.parse(res.out) as { c_api_version: number; version: string }
+      expect(probe.c_api_version).toBe(cApiVersion)
+      expect(probe.version).toMatch(new RegExp(`^v?${version.replaceAll('.', '\\.')}(?:$|[+\\s-])`))
+    })
+  }
 })

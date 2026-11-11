@@ -141,6 +141,10 @@ export interface FoundryModelPlan {
   execution_provider: string
   asset_id: string
   version: string
+  /** Minimum Foundry Local runtime reported for this Azure revision, when present. */
+  min_runtime_version?: string
+  /** The core offers a compatible build to resolve an engine-update-required verdict. */
+  update_available?: boolean
   /** A catalog model: files listed from Azure Blob, checked by size only. */
   unverified: boolean
   verdict: { verdict: string; reason: string | null; accelerator: string | null }

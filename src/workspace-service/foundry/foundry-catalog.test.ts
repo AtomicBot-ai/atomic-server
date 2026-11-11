@@ -108,8 +108,8 @@ describe('foundrySearch', () => {
     expect(chosen).toMatchObject({ device: 'gpu', verdict: { verdict: 'ok' } })
   })
 
-  it('keeps only the variants of another platform (Linux x64: CPU and CUDA)', async () => {
-    const qwen = (await foundrySearch(deps(web(), 'linux', 'x64'), 'qwen2.5')).models[0]!
+  it.each(['x64', 'arm64'])('shows CPU and CUDA variants on Linux %s', async (arch) => {
+    const qwen = (await foundrySearch(deps(web(), 'linux', arch), 'qwen2.5')).models[0]!
     expect(qwen.variants.map((v) => v.execution_provider).sort()).toEqual(['cpu', 'cuda'])
     expect(qwen.default_variant).toBe('qwen2.5-7b-instruct-generic-cpu')
   })
