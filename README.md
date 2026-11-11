@@ -283,7 +283,7 @@ On Windows arm64 with Snapdragon X, select **GenieX** in the Local models catalo
 
 ## Audio generation
 
-Audio runs on audio.cpp, one model at a time, through the embedded core 0.22.0. The catalog holds MOSS-TTS-Nano 100M and
+Audio runs on audio.cpp, one model at a time, through the embedded core. The catalog holds MOSS-TTS-Nano 100M and
 Qwen3-TTS 1.7B for speech, ACE-Step 1.5 Turbo for music and Stable Audio 3 Small SFX for effects:
 
 ```bash
