@@ -72,7 +72,8 @@ export class WorkspaceRuntime {
   }
   async openAdmin() {
     const record = await readDaemonRecord(this.deps.paths.daemonRecord)
-    if (!record?.admin_url) throw new Error('Start the server with web admin enabled.')
+    if (!record?.admin_url)
+      throw new AtcError('ATC_ADMIN_BIND_FAILED', 'Start the server with web admin enabled.')
     await this.deps.openUrl(await this.deps.loginUrl(record.admin_url))
   }
   agentBrief() {
