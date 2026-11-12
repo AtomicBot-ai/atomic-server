@@ -27,11 +27,12 @@ export interface AtcResult {
 
 export function runAtc(
   args: readonly string[],
-  options: { sudo?: boolean; timeoutMs?: number } = {}
+  options: { sudo?: boolean; timeoutMs?: number; cwd?: string } = {}
 ): AtcResult {
   const line = options.sudo ? ['sudo', '-E', ...ATC, ...args] : [...ATC, ...args]
   const [exe, ...rest] = line
   const res = spawnSync(exe as string, rest, {
+    cwd: options.cwd,
     encoding: 'utf8',
     env: { ...process.env, NO_COLOR: '1' },
     timeout: options.timeoutMs ?? 60_000,

@@ -10,12 +10,14 @@
 import { serializeModelYml } from '@atomic-chat/core/models'
 import type { FoundryModelJob, FoundryModelPlan, WorkspaceInput } from '../../contract/index.js'
 import type { Downloader, ProxyConfig } from '../../downloads/index.js'
+import { AtcError } from '../../errors/index.js'
 import { variantLabel } from '../../workspace-view/index.js'
 import { nodeStoreFiles, underRoot } from '../managed/managed-model-plan.js'
 import { SetupJournal } from '../setup-journal.js'
 import { fetchFoundryLocalList } from './foundry-list.js'
 import type { FoundryPlanDeps } from './foundry-model-plan.js'
 import { foundryModelPlan, resolveVariant } from './foundry-model-plan.js'
+import { checkFoundryRuntime, foundryRuntimeMinimum } from './foundry-runtime-check.js'
 import { repairTemplateFile } from './foundry-template.js'
 import { captureFailure, type ErrorSink } from '../../telemetry/index.js'
 
@@ -99,6 +101,14 @@ export class FoundryModelSetups {
         let link = await resolveVariant(list, plan.asset_id, this.d.fetch)
         job.relinks = 0
         for (;;) {
+          if (worker.cancelled) return void (await this.journal.step(job, worker, 'cancelled'))
+          const minimum = foundryRuntimeMinimum(link.tags['minFLVersion'], plan.min_runtime_version)
+          if (minimum && minimum !== plan.min_runtime_version) {
+            plan.min_runtime_version = minimum
+            await this.journal.step(job, worker, 'downloading')
+          }
+          const { blocker } = await checkFoundryRuntime(this.d.link, plan, minimum)
+          if (blocker) throw new AtcError('ATC_USAGE', blocker)
           const items = missing.map((f) => ({
             url: `${link.container}/${plan.prefix ? `${plan.prefix}/` : ''}${f.path}?${link.query}`,
             save_path: underRoot(plan.dir, f.path),

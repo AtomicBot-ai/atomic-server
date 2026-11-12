@@ -55,7 +55,7 @@ The [desktop handoff in the shared spec](../../atomic-chat-spec/openspec/changes
 
 ## Development and release gates
 
-This change currently links local core 0.22.0 with `bun link`; the committed npm pin remains unchanged until that version is published. A clean checkout cannot build the new SDK consumers using the old pin. Before release, replace the link with the exact published package and lockfile, then repeat the full verification and hardware smoke test.
+The FastFlowLM SDK ships in the exact `@atomic-chat/core` version pinned in `package.json` and `bun.lock`.
 
 `ATOMIC_MODEL_CATALOG_URL` (or the existing `ATC_MODEL_CATALOG_URL`) accepts a local `file://` catalog. The core receives its `ATOMIC_FASTFLOWLM_MANIFEST_URL`, `ATOMIC_FASTFLOWLM_ENVIRONMENT_MANIFEST_URL` source overrides from the server environment. Overrides are development inputs; remove them for production acceptance.
 

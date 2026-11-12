@@ -78,6 +78,15 @@ describe('parseInvocation', () => {
     })
   })
 
+  it('rejects the undeclared positive spelling of an explicitly named no-<x> option', () => {
+    expect(() =>
+      parseInvocation(resolveCommand(root, ['models', 'pull', 'x', '--verify', '--no-verify']))
+    ).toThrow(/Unknown option '--verify'/)
+    expect(
+      parseInvocation(resolveCommand(root, ['models', 'pull', '--', '--no-verify'])).positionals
+    ).toEqual(['--no-verify'])
+  })
+
   it('reports usage errors with the help hint', () => {
     expect(() => parseInvocation(resolveCommand(root, ['models', 'pull']))).toThrow(AtcError)
     try {

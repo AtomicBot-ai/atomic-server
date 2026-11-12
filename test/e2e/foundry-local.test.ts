@@ -121,7 +121,10 @@ afterAll(async () => {
 })
 
 describe.skipIf(PLATFORM === null)(`Foundry Local (${ATC.join(' ')})`, () => {
-  it('installs the engine through the proxy and prepares the accelerator the host offers', async () => {
+  it('installs through the proxy and honors --no-accelerators before the normal prepare', async () => {
+    const skipped = await atc('engines', 'install', 'foundry-local', '--yes', '--no-accelerators')
+    expect(skipped.code, skipped.err).toBe(0)
+    expect(`${skipped.out}${skipped.err}`).not.toMatch(/WebGpu\S* .*prepared|prepared.*WebGpu/i)
     const res = await atc('engines', 'install', 'foundry-local', '--yes')
     expect(res.code, res.err).toBe(0)
     expect(mirror.seen).toContain(

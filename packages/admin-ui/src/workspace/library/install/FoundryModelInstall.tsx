@@ -54,22 +54,25 @@ export function FoundryModelInstall({
     error: readError,
   } = useVariantModel(initialModel, 'foundry-local', revision, w.execute)
   const [variant, setVariant] = useState(model.default_variant ?? model.variants[0]?.id ?? '')
-  const [plan, setPlan] = useState<FoundryModelPlan | null>(null)
+  const [review, setReview] = useState<{ revision: number; plan: FoundryModelPlan } | null>(null)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
   const installRequest = useRef<{ digest: string; id: string } | null>(null)
   const v = model.variants.find((x) => x.id === variant)
+  const plan = review?.revision === revision ? review.plan : null
+  const verdict = plan?.verdict?.verdict ?? v?.verdict.verdict
+  const reviewRequirement = !plan && verdict === 'engine-update-required'
   const download = async () => {
     if (!v || pending || checking) return
     setPending(true)
     setError('')
-    setPlan(null)
+    setReview(null)
     try {
       const next = await w.execute<FoundryModelPlan>('foundry.plan', {
         model: model.model_id,
         variant: v.id,
       })
-      setPlan(next)
+      setReview({ revision, plan: next })
       if (next.blockers.length > 0) return
       if (installRequest.current?.digest !== next.digest)
         installRequest.current = { digest: next.digest, id: `admin-${crypto.randomUUID()}` }
@@ -105,7 +108,7 @@ export function FoundryModelInstall({
         disabled={pending || checking}
         onChange={(id) => {
           setVariant(id)
-          setPlan(null)
+          setReview(null)
           setError('')
         }}
       />
@@ -117,22 +120,27 @@ export function FoundryModelInstall({
         </ul>
       )}
       <div className="ew-actions">
-        {v?.verdict.verdict === 'ok' && (
+        {(verdict === 'ok' || reviewRequirement) && (
           <Action primary disabled={pending || checking} onClick={download}>
-            Download
+            {reviewRequirement ? 'Check runtime requirement' : 'Download'}
           </Action>
         )}
-        {v?.verdict.verdict === 'accelerator-not-prepared' && (
+        {plan?.update_available && (
+          <Action primary disabled={pending || checking} onClick={onFoundry}>
+            Update Foundry Local
+          </Action>
+        )}
+        {v && verdict === 'accelerator-not-prepared' && (
           <Action primary disabled={pending} onClick={onFoundry}>
             Prepare{' '}
             {acceleratorLabel({
-              name: v.verdict.accelerator ?? '',
+              name: plan?.verdict.accelerator ?? v.verdict.accelerator ?? '',
               execution_provider: v.execution_provider,
               device: v.device,
             })}
           </Action>
         )}
-        {v?.verdict.verdict === 'engine-not-installed' && (
+        {verdict === 'engine-not-installed' && (
           <Action primary disabled={pending} onClick={onFoundry}>
             Install Foundry Local
           </Action>

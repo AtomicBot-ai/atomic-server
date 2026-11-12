@@ -138,27 +138,41 @@ export function parseInvocation(resolved: ResolvedCommand): Invocation {
         : {}),
     }
   }
+  // With allowNegative, runtimes can require a positive boolean entry even when the spec
+  // explicitly declares --no-<name>. Add that entry for parsing and keep it out of the CLI.
+  const negativeAliases = new Set<string>()
+  for (const [name, option] of Object.entries(options)) {
+    const base = name.slice(3)
+    if (name.startsWith('no-') && base && option.type === 'boolean' && !(base in options)) {
+      options[base] = { type: 'boolean' }
+      negativeAliases.add(base)
+    }
+  }
   let parsed: { values: Record<string, OptionValue>; positionals: string[] }
   try {
-    parsed = parseArgs({
+    const result = parseArgs({
       args,
       options,
       strict: true,
       allowPositionals: true,
       allowNegative: true,
-    }) as typeof parsed
+      tokens: true,
+    })
+    const undeclared = result.tokens.find(
+      (token) =>
+        token.kind === 'option' && negativeAliases.has(token.name) && token.rawName === `--${token.name}`
+    )
+    if (undeclared?.kind === 'option') throw new Error(`Unknown option '${undeclared.rawName}'`)
+    parsed = result as typeof parsed
   } catch (error) {
     throw new AtcError('ATC_USAGE', (error as Error).message, {
       hint: helpHint(path),
     })
   }
-  // `allowNegative` reads `--no-accelerators` as `accelerators: false`; an option spelled `no-<x>` with
-  // no `<x>` of its own gets its value back under its own name.
-  for (const name of Object.keys(options)) {
-    const base = name.slice(3)
-    if (name.startsWith('no-') && !(base in options) && parsed.values[base] === false) {
+  for (const base of negativeAliases) {
+    if (parsed.values[base] === false) {
       delete parsed.values[base]
-      parsed.values[name] = true
+      parsed.values[`no-${base}`] = true
     }
   }
   const specs = spec.positionals ?? []

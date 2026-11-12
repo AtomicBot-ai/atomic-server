@@ -60,11 +60,20 @@ export function confList(path: string, base: string): string {
 }
 
 /** The resolver names container `sig` for variant `id`, which serves its files under `v3/`. */
-export function serveAzure(azure: FixtureHttpServer, base: string, id: string, sig: string): void {
+export function serveAzure(
+  azure: FixtureHttpServer,
+  base: string,
+  id: string,
+  sig: string,
+  minimum?: string
+): void {
   const json = (v: unknown) => ({ body: Buffer.from(JSON.stringify(v)) })
   azure.files.set(
     `/eastus/resolve?assetId=${encodeURIComponent(ASSET(id))}`,
-    json({ blobSasUri: `${base}/container?sig=${sig}`, modelEntity: { kvTags: { directoryPath: 'v3' } } })
+    json({
+      blobSasUri: `${base}/container?sig=${sig}`,
+      modelEntity: { kvTags: { directoryPath: 'v3', minFLVersion: minimum } },
+    })
   )
   azure.files.set(`/container/v3/model.onnx?sig=${sig}`, { body: WEIGHTS })
   azure.files.set(`/container/v3/chat_template.jinja?sig=${sig}`, { body: Buffer.from(GEMMA_TEMPLATE) })

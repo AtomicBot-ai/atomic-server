@@ -29,9 +29,12 @@ export function drawCatalogDownloadRows(
   const win = computeRowWindow(variants.length, at, count)
   variants.slice(win.start, win.start + win.count).forEach((v, i) => {
     const label = isVariantFormat(row.source?.['format'])
-      ? ({ engine: 'Install engine', prepare: 'Prepare accelerators', download: 'Download' }[
-          variantNext(row.source, v.value).action
-        ] ?? 'Download')
+      ? ({
+          engine: 'Install engine',
+          prepare: 'Prepare accelerators',
+          review: 'Check runtime',
+          download: 'Download',
+        }[variantNext(row.source, v.value).action] ?? 'Download')
       : 'Download'
     const bx = x + width - label.length - 2
     text(c, x, y + i * 2, v.label, COLORS.text, Math.max(1, bx - x - 2))
