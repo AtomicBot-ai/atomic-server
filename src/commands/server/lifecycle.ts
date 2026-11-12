@@ -248,6 +248,7 @@ export const statusCommand = defineCommand({
   name: 'status',
   summary: 'Show the server, the API endpoint, running models and the admin URL',
   group: 'server',
+  options: { 'no-watch': { type: 'boolean', description: 'Show status once', hidden: true } },
   run: async (_inv, ctx) => {
     const found = await find(ctx)
     if (found.kind === 'outdated') {

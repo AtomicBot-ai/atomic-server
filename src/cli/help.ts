@@ -4,7 +4,7 @@
  */
 
 import type { CommandGroup, CommandSpec, OptionSpec, PositionalSpec } from './command.js'
-import { GROUP_TITLES } from './command.js'
+import { GROUP_TITLES, visibleOptions } from './command.js'
 import { GLOBAL_OPTIONS_HELP } from './flags.js'
 
 const INDENT = '  '
@@ -49,7 +49,7 @@ export function usageLine(spec: CommandSpec, path: readonly string[]): string {
   const parts = ['atc', ...path]
   if (spec.subcommands) parts.push('<command>')
   for (const p of spec.positionals ?? []) parts.push(positionalLabel(p))
-  if (spec.options && Object.keys(spec.options).length) parts.push('[options]')
+  if (visibleOptions(spec).length) parts.push('[options]')
   return parts.join(' ')
 }
 
@@ -83,12 +83,13 @@ export function renderHelp(
       )
     )
   }
-  if (spec.options && Object.keys(spec.options).length) {
+  const flags = visibleOptions(spec)
+  if (flags.length) {
     out.push(
       '',
       'Options:',
       columns(
-        Object.entries(spec.options).map(([name, o]) => [
+        flags.map(([name, o]) => [
           optionLabel(name, o),
           o.default !== undefined ? `${o.description} (default: ${String(o.default)})` : o.description,
         ]),

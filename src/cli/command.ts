@@ -15,6 +15,8 @@ export interface OptionSpec {
   short?: string
   multiple?: boolean
   description: string
+  /** Accepted by the parser but omitted from help and completion. */
+  hidden?: boolean
   /** Shown in help as `--flag <placeholder>`; defaults to `value`. */
   placeholder?: string
   default?: string | boolean
@@ -101,6 +103,10 @@ export function resolveCommand(root: CommandSpec, args: readonly string[]): Reso
     }
   }
   return { spec, path, args: args.slice(index) }
+}
+
+export function visibleOptions(spec: CommandSpec): Array<[string, OptionSpec]> {
+  return Object.entries(spec.options ?? {}).filter(([, option]) => !option.hidden)
 }
 
 /** Parse a resolved command's own flags and positionals; every mistake is `ATC_USAGE`. */

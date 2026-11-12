@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-12** — [Preserve working legacy CLI flags](2026-11-12-preserve-legacy-cli-flags.md) — keep `api start --cors` and `status --no-watch` working without advertising them.
+
 - **2026-11-12** — [Drop the dead config fields and the stub scaffolding](2026-11-12-drop-dead-config-fields-and-stub-scaffolding.md) — config 6 → 7 strips the six fields nothing read; the stub registry, `status --watch` and `InProcessEvents` are gone.
 
 - **2026-11-11** — [Check Foundry Local runtime requirements before transferring models](2026-11-11-check-foundry-runtime-before-transferring-models.md) — check the planned revision and preserve its minimum and partial bytes across retries.

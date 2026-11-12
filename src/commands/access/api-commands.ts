@@ -27,6 +27,7 @@ export const apiCommand = defineCommand({
       run: apiStart,
       options: {
         ...apiOptions,
+        'cors': { type: 'boolean', description: 'Keep CORS enabled', hidden: true },
         'prefix': { type: 'string', description: 'Path prefix', placeholder: '/v1' },
         'trusted-host': {
           type: 'string',
