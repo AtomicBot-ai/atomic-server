@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { downloadRows } from './download-data'
+import { downloadRows, jobOperations } from './download-data'
 describe('durable download progress', () => {
   it('associates Core taskId transfers with their setup without duplicate rows', () => {
     const [job] = downloadRows(
@@ -28,5 +28,15 @@ describe('durable download progress', () => {
         [{ taskId: 'engine', total: 10, transferred: 2 }]
       )
     ).toMatchObject([{ id: 'engine', owner: 'download' }])
+  })
+  it('resumes and cancels geniex and fastflowlm jobs through their owners', () => {
+    expect(jobOperations({ kind: 'geniex-model', plan: { digest: 'd' } }, 'id', false)).toEqual({
+      resume: ['geniex.install', { request_id: 'id', plan_digest: 'd' }],
+      cancel: ['geniex.cancel', { id: 'id' }],
+    })
+    expect(jobOperations({ kind: 'fastflowlm-model', plan: { digest: 'd' } }, 'id', false)).toEqual({
+      resume: ['fastflowlm.install', { request_id: 'id', plan_digest: 'd' }],
+      cancel: ['fastflowlm.cancel', { id: 'id' }],
+    })
   })
 })

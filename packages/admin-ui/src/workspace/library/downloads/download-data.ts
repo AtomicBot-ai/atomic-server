@@ -19,6 +19,8 @@ export function loadTarget(job: Record<string, unknown>): { provider: string; mo
 const OWNERS: Record<string, string> = {
   'managed-model': 'managed',
   'foundry-model': 'foundry',
+  'geniex-model': 'geniex',
+  'fastflowlm-model': 'fastflowlm',
   'litert-model': 'litert',
 }
 

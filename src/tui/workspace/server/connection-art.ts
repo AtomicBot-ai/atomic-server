@@ -23,7 +23,6 @@ function titleLines(value: string, width: number): string[] {
   }
   return lines
 }
-export { agentMark } from './agent-brand.js'
 export function connectionArt(choice: Choice, seconds: number, compact = true): string[] {
   if (choice !== 'manual') return connectionIllustration(choice, seconds, compact)
   return MANUAL[Math.floor(Math.max(0, seconds) * 2) % MANUAL.length]!

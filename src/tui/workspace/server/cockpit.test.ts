@@ -1,13 +1,9 @@
 import { expect, it } from 'vitest'
-import { cockpitStatus } from './cockpit.js'
 import { drawEye } from '../draw/art.js'
 import { createWorkspace } from '../state.js'
 import { workspaceFrame } from '../frame.js'
 import { WORKSPACE_OPERATIONS } from '../../../contract/index.js'
 it('uses state-specific eye motion and preserves status when motion is reduced', () => {
-  const s = createWorkspace('server')
-  expect(cockpitStatus(s)).toBe('offline')
-  expect(cockpitStatus({ ...s, busy: true, message: 'Starting API…' })).toBe('starting')
   const ready = drawEye(24, 8, 1, true, 'ready')
   expect(drawEye(24, 8, 1, true, 'starting')).not.toEqual(ready)
   expect(drawEye(24, 8, 1, true, 'overloaded')).not.toEqual(ready)

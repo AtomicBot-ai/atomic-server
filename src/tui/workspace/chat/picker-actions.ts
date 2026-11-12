@@ -1,4 +1,5 @@
-import { engineName, setsUpInPanel } from '../../../terminal-setup/index.js'
+import { setsUpInPanel } from '../../../terminal-setup/index.js'
+import { engineName } from '../../../workspace-view/index.js'
 import { engineAction } from '../library/engine-actions.js'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'

@@ -2,7 +2,7 @@ import { button, COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
 import { serverRunning, serverSelection } from './server-status.js'
-import { engineName } from '../../../terminal-setup/index.js'
+import { engineName } from '../../../workspace-view/index.js'
 
 /** Short terminals retain the actual server actions without compressing agent cards. */
 export function drawCompactStatus(

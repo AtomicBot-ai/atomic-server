@@ -10,8 +10,8 @@ export function watchEngineDownload(
 ): () => void {
   const abort = new AbortController()
   const signal = lifetime ? AbortSignal.any([lifetime, abort.signal]) : abort.signal
-  void link.events
-    .subscribe(
+  void link
+    .events!.subscribe(
       (message) => {
         if (message.event !== 'download:progress' || signal.aborted) return
         const data = message.data as { payload?: DownloadProgress } & DownloadProgress

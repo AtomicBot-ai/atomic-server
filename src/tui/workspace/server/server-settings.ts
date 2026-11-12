@@ -1,6 +1,7 @@
 import { DEFAULT_API_PORT } from '../../../contract/index.js'
+import { engineName } from '../../../workspace-view/index.js'
 import { serverSelection } from './server-status.js'
-import { engineName, modelProvider } from '../../../terminal-setup/index.js'
+import { modelProvider } from '../../../terminal-setup/index.js'
 import { engineChoiceDetail } from '../chat/picker.js'
 import { button, COLORS, text } from '../draw/canvas.js'
 import { fieldControl, toggleControl, saveActions } from '../draw/controls.js'
@@ -134,15 +135,6 @@ export function drawServerSettings(
         y++,
         `Trusted hosts  ${value('api.trustedHosts') || 'Default'}`.slice(0, width - 2),
         'Allowed Host header values',
-        focus
-      )
-      button(
-        c,
-        'setting:api.cors',
-        x,
-        y,
-        `${value('api.cors', 'true') === 'true' ? '[x]' : '[ ]'} Allow cross-origin requests`,
-        'Send CORS headers',
         focus
       )
     }

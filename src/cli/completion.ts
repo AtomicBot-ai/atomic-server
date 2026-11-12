@@ -4,14 +4,14 @@
  */
 
 import type { CommandSpec } from './command.js'
-import { walkCommands } from './command.js'
+import { visibleOptions, walkCommands } from './command.js'
 
 export type Shell = 'bash' | 'zsh' | 'fish' | 'powershell'
 export const SHELLS: readonly Shell[] = ['bash', 'zsh', 'fish', 'powershell']
 
 function wordsFor(spec: CommandSpec): string[] {
   const subs = (spec.subcommands ?? []).filter((s) => !s.hidden).map((s) => s.name)
-  const opts = Object.keys(spec.options ?? {}).map((o) => `--${o}`)
+  const opts = visibleOptions(spec).map(([name]) => `--${name}`)
   return [...subs, ...opts, '--help', '--json']
 }
 

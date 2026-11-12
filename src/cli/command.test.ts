@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defineCommand, notImplemented, parseInvocation, resolveCommand, walkCommands } from './command.js'
+import { defineCommand, parseInvocation, resolveCommand, walkCommands } from './command.js'
 import { AtcError } from '../errors/index.js'
 
 const root = defineCommand({
@@ -38,7 +38,6 @@ const root = defineCommand({
         defineCommand({ name: 'token', summary: 'token', run: async () => 0 }),
       ],
     }),
-    notImplemented({ name: 'setup', summary: 'setup' }),
   ],
 })
 
@@ -101,16 +100,6 @@ describe('parseInvocation', () => {
   })
 })
 
-describe('notImplemented', () => {
-  it('marks the spec as a stub and fails with the stub code', async () => {
-    const setup = resolveCommand(root, ['setup'])
-    expect(setup.spec.stub).toBe(true)
-    await expect(setup.spec.run?.(parseInvocation(setup), {} as never)).rejects.toMatchObject({
-      code: 'ATC_NOT_IMPLEMENTED',
-    })
-  })
-})
-
 describe('walkCommands', () => {
   it('lists every command with its path in order', () => {
     expect(walkCommands(root).map((c) => c.path.join(' '))).toEqual([
@@ -120,7 +109,6 @@ describe('walkCommands', () => {
       'admin',
       'admin open',
       'admin token',
-      'setup',
     ])
   })
 })

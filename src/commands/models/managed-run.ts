@@ -95,8 +95,8 @@ export async function runModel(
   // load's stages are not lost; a stream that cannot connect does not hold the load up.
   let connected: () => void = () => {}
   const subscribed = new Promise<void>((resolve) => (connected = resolve))
-  void link.events
-    .subscribe(show, { signal: stop.signal, onSnapshot: () => connected() })
+  void link
+    .events!.subscribe(show, { signal: stop.signal, onSnapshot: () => connected() })
     .catch(() => {})
     .finally(() => connected())
   await Promise.race([subscribed, new Promise((r) => setTimeout(r, SUBSCRIBE_WAIT_MS))])

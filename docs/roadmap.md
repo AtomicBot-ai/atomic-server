@@ -38,7 +38,7 @@ The product's promise. **Goal:** on a clean server, `atc engines install`, `atc 
 - `api start|stop|status` over the core's `/server` routes; `api.autoStart` and `models.autoLoad` honoured
   at server start (`PublicServerKeeper`).
 - Replace an idle server of an older `atc`/core after an upgrade instead of refusing to attach.
-- `status --watch`, `logs --follow`, `config engine.<provider>.<key>` forwarded to `PATCH /settings/:provider`.
+- `logs --follow`, `config engine.<provider>.<key>` forwarded to `PATCH /settings/:provider`.
   `logs --follow` reads through `followLog` (`src/daemon/log-follow.ts`), which the TUI's Logs screen
   already uses.
 - Terminal UI: the API card on Overview gets start/stop keys (`atc api start|stop`), a Models screen with

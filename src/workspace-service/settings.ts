@@ -13,7 +13,7 @@ export function engineSettingsSchema(provider: string) {
   return { provider, core_version: CORE_VERSION, descriptors: settingsSchema(provider) }
 }
 export function workspaceConfig(config: AtcConfig) {
-  return { values: config, fields: FIELDS.filter((f) => f.path !== 'api.cors') }
+  return { values: config, fields: FIELDS }
 }
 /** Persist validated settings; listener and engine changes take effect only on the corresponding restart. */
 export async function updateWorkspaceConfig(
@@ -23,7 +23,7 @@ export async function updateWorkspaceConfig(
 ) {
   for (const [key, value] of Object.entries(values)) {
     const field = fieldFor(key)
-    if (!field || key === 'api.cors') throw new AtcError('ATC_USAGE', `Unsupported setting: ${key}.`)
+    if (!field) throw new AtcError('ATC_USAGE', `Unsupported setting: ${key}.`)
     const problem = checkValue(field, value)
     if (problem) throw new AtcError('ATC_USAGE', problem)
   }

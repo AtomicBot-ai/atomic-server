@@ -53,9 +53,7 @@ export function RuntimeSettings({
       }
     )
   }, [execute, revision])
-  const visible = fields.filter(
-    (field) => text(field.path).startsWith(`${group}.`) && text(field.path) !== 'api.cors'
-  )
+  const visible = fields.filter((field) => text(field.path).startsWith(`${group}.`))
   const value = (path: string) => draft[path] ?? getValue(config, path)
   const changes = Object.fromEntries(
     visible

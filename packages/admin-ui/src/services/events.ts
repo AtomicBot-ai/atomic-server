@@ -1,17 +1,10 @@
 /**
- * The relay's SSE (`GET /api/events`) as the app's event listeners. A page subscribes to a core
- * event by name, exactly as it listens to `atomic-core://<event>` on desktop; the browser's
- * `EventSource` keeps the connection and resumes with `Last-Event-ID` on its own. `resync` is the
- * relay saying its replay buffer ran out: the snapshot stores refetch (see `useLiveStatus`).
+ * The relay's SSE (`GET /api/events`) as one shared `EventSource`. The hub opens it lazily on the
+ * first subscription; the browser keeps the connection and resumes with `Last-Event-ID` on its own.
  */
 
-import { useEffect, useRef } from 'react'
 import { ADMIN_API } from '@contract'
-import type { AdminEvent } from '@contract'
-import { useServiceHub } from '@/hooks/useServiceHub'
 import { ADMIN_BASE, relative } from './admin-api'
-
-export type AdminEventName = AdminEvent['event']
 
 export interface EventMeta {
   /** The relay sequence (`r42`), or null for a source that sends none. */
@@ -116,29 +109,4 @@ export function createEventSource(base = ADMIN_BASE, impl?: EventSourceFactory):
       listeners.clear()
     },
   }
-}
-
-/**
- * Subscribe a component to one or more relay events for as long as it is mounted. The handler may
- * change between renders; the subscription does not.
- */
-export function useCoreEvents<T = unknown>(
-  event: string | readonly string[],
-  handler: EventHandler<T>
-): void {
-  const hub = useServiceHub()
-  const latest = useRef(handler)
-  useEffect(() => {
-    latest.current = handler
-  }, [handler])
-  const key = typeof event === 'string' ? event : event.join('\n')
-  useEffect(() => {
-    const events = hub.events()
-    const offs = key
-      .split('\n')
-      .map((name) => events.subscribe<T>(name, (data, meta) => latest.current(data, meta)))
-    return () => {
-      for (const off of offs) off()
-    }
-  }, [hub, key])
 }

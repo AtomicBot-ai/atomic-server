@@ -2,7 +2,7 @@
  * The engine a load goes to when none is named: `engines.default` when it is installed, else an
  * installed engine the model lists or one of the default's family (the llama.cpp builds run the same
  * files), so a machine with only the TurboQuant build does not download upstream llama.cpp for a load.
- * Nothing installed: the default, which `engines.autoInstall` may fetch.
+ * Nothing installed: no engine to load.
  */
 
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'

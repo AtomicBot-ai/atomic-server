@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defineCommand, notImplemented } from './command.js'
+import { defineCommand } from './command.js'
 import { renderHelp, usageLine } from './help.js'
 
 const pull = defineCommand({
@@ -22,7 +22,6 @@ const root = defineCommand({
     defineCommand({ name: 'serve', summary: 'Serve a model', group: 'server', run: async () => 0 }),
     defineCommand({ name: 'models', summary: 'Manage models', group: 'models', subcommands: [pull] }),
     defineCommand({ name: 'daemon', summary: 'hidden', hidden: true, run: async () => 0 }),
-    notImplemented({ name: 'setup', summary: 'Set up', group: 'models' }),
   ],
 })
 
@@ -44,12 +43,10 @@ describe('help', () => {
     expect(text).toContain('--data-folder <path>')
   })
 
-  it('groups the root help and hides hidden commands, marks stubs', () => {
+  it('groups the root help and hides hidden commands', () => {
     const text = renderHelp(root, [])
     expect(text).toContain('Server:')
     expect(text).toContain('Models & engines:')
     expect(text).not.toContain('daemon')
-    expect(text).toContain('setup')
-    expect(renderHelp(root.subcommands![3]!, ['setup'])).toContain('not implemented yet')
   })
 })

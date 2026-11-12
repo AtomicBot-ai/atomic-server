@@ -7,20 +7,18 @@
  */
 import type { ModelCompatibilityResponse } from '@atomic-chat/core/contracts'
 
-export const MODEL_SETUP_STAGES = [
-  'queued',
-  'installing_engine',
-  'downloading_model',
-  'downloading_projector',
-  'registering',
-  'verifying',
-  'ready',
-  'failed',
-  'cancelled',
+export type ModelSetupStage =
+  | 'queued'
+  | 'installing_engine'
+  | 'downloading_model'
+  | 'downloading_projector'
+  | 'registering'
+  | 'verifying'
+  | 'ready'
+  | 'failed'
+  | 'cancelled'
   /** The server that ran it stopped mid-way; `setup.resume` continues from the files on disk. */
-  'interrupted',
-] as const
-export type ModelSetupStage = (typeof MODEL_SETUP_STAGES)[number]
+  | 'interrupted'
 
 export interface ModelSetupPlanRequest {
   repo: string

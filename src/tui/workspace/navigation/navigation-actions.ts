@@ -81,12 +81,7 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
       hover: '',
       edit: '',
       message: '',
-      focus:
-        page === 'access'
-          ? group === 'admin'
-            ? 'setting:admin.openOnStart'
-            : `settings-section:${group}`
-          : PAGE_FOCUS[page],
+      focus: page === 'access' ? `settings-section:${group}` : PAGE_FOCUS[page],
     }))
     return true
   }

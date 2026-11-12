@@ -77,13 +77,15 @@ export interface CoreLink {
   shutdown(options?: { force?: boolean; client_id?: string }): Promise<void>
   /** A renewable registration held only while `work` runs; how `stop` knows who is attached. */
   withLease<T>(name: string, work: (link: CoreLink, clientId: string) => Promise<T>): Promise<T>
-  events: CoreEventSource
+  /** Set by every client link (`attach` opens the SSE stream); the daemon fans events out itself. */
+  events?: CoreEventSource | undefined
 }
 
 export interface HttpCoreLinkOptions {
   endpoint: CoreEndpoint
   client: CoreClient
-  events: CoreEventSource
+  /** Absent in the daemon: it hosts the core and listens to the emitter directly. */
+  events?: CoreEventSource | undefined
   pid: number
   log?: (message: string) => void
 }
@@ -106,7 +108,7 @@ function unavailable(error: unknown): never {
 
 export class HttpCoreLink implements CoreLink {
   readonly endpoint: CoreEndpoint
-  readonly events: CoreEventSource
+  readonly events: CoreEventSource | undefined
   readonly models: CoreLink['models']
   readonly server: CoreLink['server']
   readonly disk: CoreLink['disk']

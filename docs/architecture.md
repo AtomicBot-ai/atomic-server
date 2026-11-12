@@ -238,7 +238,7 @@ failure is a warning; the server stays up, and `atc api start` or `atc run` can 
 - **Routes** (`bff.ts`): `GET /api/status`, `POST|DELETE /api/session`, `GET /api/config` (`PATCH` is
   iteration 5), `GET /api/events` (SSE), `ANY /api/core/*` → the control API with the daemon's token, but only
   on the allowlist: reads of `/health /snapshot /sessions /server /backends /hardware /environments
-  /settings /telemetry /disk` and their sub-paths; writes only on the exact routes of `WRITE_ROUTES` (model
+  /settings /telemetry` and their sub-paths; writes only on the exact routes of `WRITE_ROUTES` (model
   load/unload, server start/stop, backends, hardware override, `PATCH /settings/:provider`, environment
   operations, download cancel, disk, GGUF validation). `POST /api/workspace/execute` runs any workspace
   operation for the signed-in operator, the same registry `atc control` and `atc mcp` use. A page can never

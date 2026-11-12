@@ -19,12 +19,16 @@ type Plan = { digest: string; catalog_digest: string }
 const planFor = (f: Awaited<ReturnType<typeof fixture>>) =>
   f.service.execute('fastflowlm.plan', { model: f.definition.model_id, refresh: true }) as Promise<Plan>
 async function waitJob(service: WorkspaceService, id: string, stage: string) {
-  await vi.waitFor(async () => {
-    const job = (await service.snapshot()).setups.find((v) => (v as { id?: string }).id === id) as {
-      stage: string
-    }
-    expect(job?.stage).toBe(stage)
-  })
+  return vi.waitFor(
+    async () => {
+      const job = (await service.snapshot()).setups.find((v) => (v as { id?: string }).id === id) as
+        { stage: string; error?: string } | undefined
+      expect(job?.stage).toBe(stage)
+      return job
+    },
+    // A job can still be restoring files while Windows retries a rename for up to 10 seconds.
+    { timeout: 20_000, interval: 100 }
+  )
 }
 async function install(f: Awaited<ReturnType<typeof fixture>>, id = 'first') {
   const p = await planFor(f)
@@ -81,7 +85,8 @@ it('rolls back a verified replacement when the owner rejects its final check', a
   })
   const p = await planFor(f)
   await f.service.execute('fastflowlm.install', { request_id: 'replacement', plan_digest: p.digest })
-  await waitJob(f.service, 'replacement', 'failed')
+  const failed = await waitJob(f.service, 'replacement', 'failed')
+  expect(failed?.error).toBe('fixture rejection')
   expect(
     (await new FastFlowLmRegistry(f.paths.layout).get(f.definition.variant_id)).yml.fastflowlm.catalog_digest
   ).toBe(before.catalog_digest)

@@ -25,12 +25,12 @@ it.each(['sd-cpp', 'nope'])('answers ATC_USAGE for %s', (provider) => {
   expect(() => engineSettingsSchema(provider)).toThrow(expect.objectContaining({ code: 'ATC_USAGE' }))
   expect(() => engineSettingsSchema(provider)).toThrow('task configuration')
 })
-it('validates and persists server settings and rejects unsupported CORS controls', async () => {
+it('validates and persists server settings and rejects unsupported keys', async () => {
   const tmp = tmpDataFolder()
   cleanup.push(tmp.cleanup)
   const config = defaultConfig()
   await expect(updateWorkspaceConfig(tmp.paths, config, { 'api.port': 99999 })).rejects.toThrow()
-  await expect(updateWorkspaceConfig(tmp.paths, config, { 'api.cors': false })).rejects.toThrow('Unsupported')
+  await expect(updateWorkspaceConfig(tmp.paths, config, { 'api.nope': false })).rejects.toThrow('Unsupported')
   expect(await updateWorkspaceConfig(tmp.paths, config, { 'api.port': 15550 })).toMatchObject({
     restart_required: true,
   })

@@ -33,6 +33,37 @@ describe('status and lifecycle', () => {
     expect(await t.run(['stop', '--json'])).toBe(0)
     expect(JSON.parse(t.io.out.join(''))).toMatchObject({ stopped: false })
   })
+
+  it.each([
+    { command: ['api', 'start'], flag: '--cors' },
+    { command: ['status'], flag: '--no-watch' },
+  ])('accepts the legacy flag $flag without advertising it', async ({ command, flag }) => {
+    t = testRun({ running: false })
+    expect(await t.run([...command, flag, '--json'])).toBe(0)
+    if (flag === '--cors') {
+      expect(t.link.calls).toContainEqual(expect.objectContaining({ method: 'POST', path: '/server/start' }))
+    } else {
+      expect(JSON.parse(t.io.out.join(''))).toMatchObject({ running: false })
+    }
+    t.io.out.length = 0
+    expect(await t.run([...command, '--help'])).toBe(0)
+    const help = t.io.out.join('')
+    expect(help).not.toContain(flag)
+    if (flag === '--no-watch') expect(help).toContain('Usage: atc status\n')
+    t.io.out.length = 0
+    expect(await t.run(['completion', 'bash'])).toBe(0)
+    expect(t.io.out.join('')).not.toContain(flag)
+  })
+
+  it('refuses unsupported watch and CORS modes as usage errors', async () => {
+    t = testRun({ running: false })
+    expect(await t.run(['status', '--watch'])).toBe(2)
+    expect(t.io.err.join('')).toContain('watch')
+    t.cleanup()
+    t = testRun({ running: false })
+    expect(await t.run(['api', 'start', '--no-cors'])).toBe(2)
+    expect(t.io.err.join('')).toContain('CORS cannot be disabled')
+  })
 })
 
 describe('config', () => {

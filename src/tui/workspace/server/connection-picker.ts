@@ -1,5 +1,5 @@
 import { dimBackdrop } from '../draw/backdrop.js'
-import { engineName } from '../../../terminal-setup/index.js'
+import { engineName } from '../../../workspace-view/index.js'
 import type { Key } from 'ink'
 import type { ActionContext } from '../actions.js'
 import type { WorkspaceState } from '../state.js'

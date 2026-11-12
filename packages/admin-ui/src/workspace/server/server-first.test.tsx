@@ -15,10 +15,10 @@ it('keeps startup models and container settings editable in their own sections',
   const execute = vi.fn(async (name: string) =>
     name === 'config.get'
       ? {
-          values: { models: { autoLoad: [] }, managed: { mode: 'off' } },
+          values: { models: { autoLoad: [] }, log: { level: 'info' } },
           fields: [
             { path: 'models.autoLoad', description: 'Models on start' },
-            { path: 'managed.mode', values: ['off', 'docker-tensorrt'] },
+            { path: 'log.level', values: ['debug', 'info'] },
           ],
         }
       : {}
@@ -32,12 +32,12 @@ it('keeps startup models and container settings editable in their own sections',
       values: { 'models.autoLoad': ['first', 'second'] },
     })
   )
-  rerender(<RuntimeSettings workspace={workspace} section="managed" />)
-  await userEvent.selectOptions(await screen.findByLabelText('Container runtime'), 'docker-tensorrt')
+  rerender(<RuntimeSettings workspace={workspace} section="log" />)
+  await userEvent.selectOptions(await screen.findByLabelText('Log detail'), 'debug')
   await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
   await waitFor(() =>
     expect(execute).toHaveBeenCalledWith('config.update', {
-      values: { 'managed.mode': 'docker-tensorrt' },
+      values: { 'log.level': 'debug' },
     })
   )
   expect(SERVER_SETTINGS_GROUPS.map((s) => s.id)).toEqual(

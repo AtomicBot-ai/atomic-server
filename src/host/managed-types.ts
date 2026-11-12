@@ -14,8 +14,6 @@ export type {
   Sha256Digest,
 } from '@atomic-chat/core/contracts'
 
-export const TERMINAL_PHASES: readonly ManagedPhase[] = ['ready', 'removed', 'cancelled', 'failed']
-
 export type HostStepOutcomeKind = ManagedHostReceipt['outcome']
 
 /** The slice of `EnvironmentOperation` the host-step executor reads. */

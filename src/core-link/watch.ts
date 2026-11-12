@@ -95,7 +95,8 @@ async function follow(
     }
   })()
   try {
-    await link.events.subscribe(
+    // events is always set by the client link factory.
+    await link.events!.subscribe(
       (message) => {
         options.onEvent?.(message)
         const reason = (message.data as { reason?: unknown } | null)?.reason

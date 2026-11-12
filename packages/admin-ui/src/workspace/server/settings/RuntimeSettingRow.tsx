@@ -8,11 +8,8 @@ import { runtimeSettingError } from './runtime-setting-error'
 
 const hints: Record<string, string> = {
   'admin.autoStart': 'Serve the web interface when the server starts.',
-  'admin.openOnStart': 'Open this interface in your browser when starting the server.',
-  'engines.autoInstall': 'Install a compatible engine when none is available.',
   'engines.default': 'Used when a request does not specify an engine.',
   'models.autoLoad': 'Separate model IDs with commas.',
-  'managed.image': 'Leave empty to use the supported container image.',
   'proxy.url': 'Outbound proxy for catalogs and downloads.',
   'proxy.noProxy': 'Separate hostnames with commas.',
   'proxy.ignoreSsl': 'Allow downloads without verifying the proxy certificate.',

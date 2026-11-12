@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { activate, example, serverEndpoint } from './actions.js'
+import { activate } from './actions.js'
 import type { ActionContext } from './actions.js'
+import { example, serverEndpoint } from './server/connection.js'
 import { createWorkspace } from './state.js'
 import type { WorkspaceController } from './controller.js'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'

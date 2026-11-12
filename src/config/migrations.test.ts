@@ -32,7 +32,7 @@ describe('migrateConfig', () => {
     [
       'engines.provider wins over serve.engine and is renamed',
       { version: 1, serve: { engine: 'mlx' }, engines: { provider: 'llamacpp', autoInstall: false } },
-      { version: CONFIG_VERSION, engines: { default: 'llamacpp', autoInstall: false }, api: { port: 1337 } },
+      { version: CONFIG_VERSION, engines: { default: 'llamacpp' }, api: { port: 1337 } },
     ],
     [
       'a file without either is left as it was',
@@ -82,6 +82,33 @@ describe('migrateConfig', () => {
       api: { port: 1337 },
       tui: { endpoint },
     })
+  })
+
+  it.each([
+    [
+      'the six dead fields are stripped, their siblings kept',
+      {
+        version: 6,
+        api: { cors: true, port: 1337 },
+        admin: { openOnStart: true, autoStart: true },
+        engines: { autoInstall: true, default: 'llamacpp-upstream' },
+        managed: { mode: 'off', image: 'x' },
+        update: { channel: 'stable', checkOnStart: true },
+      },
+      {
+        api: { port: 1337 },
+        admin: { autoStart: true },
+        engines: { default: 'llamacpp-upstream' },
+        update: { checkOnStart: true },
+      },
+    ],
+    [
+      'sections without the dead fields are left alone',
+      { version: 6, tui: { model: 'm' } },
+      { tui: { model: 'm' } },
+    ],
+  ])('6 → 7: %s', (_name, from, to) => {
+    expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 6 })
   })
 
   it('refuses a newer file with an update hint', () => {
