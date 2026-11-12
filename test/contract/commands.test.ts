@@ -33,6 +33,16 @@ describe('status and lifecycle', () => {
     expect(await t.run(['stop', '--json'])).toBe(0)
     expect(JSON.parse(t.io.out.join(''))).toMatchObject({ stopped: false })
   })
+
+  it('refuses removed options as usage errors, not stubs', async () => {
+    t = testRun({ running: false })
+    expect(await t.run(['status', '--watch'])).toBe(2)
+    expect(t.io.err.join('')).toContain('watch')
+    t.cleanup()
+    t = testRun({ running: false })
+    expect(await t.run(['api', 'start', '--no-cors'])).toBe(2)
+    expect(t.io.err.join('')).toContain('cors')
+  })
 })
 
 describe('config', () => {

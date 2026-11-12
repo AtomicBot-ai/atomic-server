@@ -24,7 +24,7 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 6
+export const CONFIG_VERSION = 7
 
 export interface AtcConfig {
   version: number
@@ -38,16 +38,14 @@ export interface AtcConfig {
     host: string
     port: number
     prefix: string
-    cors: boolean
     trustedHosts: string[]
     autoStart: boolean
   }
-  admin: { host: string; port: number; openOnStart: boolean; autoStart: boolean }
-  engines: { autoInstall: boolean; default: LocalProviderId }
+  admin: { host: string; port: number; autoStart: boolean }
+  engines: { default: LocalProviderId }
   models: { autoLoad: string[] }
-  managed: { mode: 'off' | 'docker-tensorrt'; image?: string }
   proxy: { url?: string; noProxy: string[]; ignoreSsl: boolean }
-  update: { channel: 'stable'; checkOnStart: boolean }
+  update: { checkOnStart: boolean }
   telemetry: { enabled: boolean }
   log: { level: 'debug' | 'info' | 'warn' | 'error'; maxFiles: number; maxSizeMb: number }
 }
@@ -85,7 +83,6 @@ export const FIELDS: readonly FieldSpec[] = [
     description: 'Port of the OpenAI-compatible API',
   },
   { path: 'api.prefix', type: 'string', default: '/v1', description: 'Path prefix of the API' },
-  { path: 'api.cors', type: 'boolean', default: true, description: 'Send CORS headers on the API' },
   {
     path: 'api.trustedHosts',
     type: 'string[]',
@@ -108,22 +105,10 @@ export const FIELDS: readonly FieldSpec[] = [
     description: 'Port of the web admin (0 = random)',
   },
   {
-    path: 'admin.openOnStart',
-    type: 'boolean',
-    default: false,
-    description: 'Open the admin in a browser after `atc start`',
-  },
-  {
     path: 'admin.autoStart',
     type: 'boolean',
     default: true,
     description: 'Serve the admin when the server starts',
-  },
-  {
-    path: 'engines.autoInstall',
-    type: 'boolean',
-    default: true,
-    description: 'Install the engine build the core recommends when the server starts with none',
   },
   {
     path: 'engines.default',
@@ -138,19 +123,6 @@ export const FIELDS: readonly FieldSpec[] = [
     default: [],
     description: 'Models to run when the server starts',
   },
-  {
-    path: 'managed.mode',
-    type: 'enum',
-    values: ['off', 'docker-tensorrt'],
-    default: 'off',
-    description: 'Managed container runtime',
-  },
-  {
-    path: 'managed.image',
-    type: 'string',
-    default: undefined,
-    description: 'Override the pinned managed runtime image',
-  },
   { path: 'proxy.url', type: 'string', default: undefined, description: 'HTTPS proxy for downloads' },
   { path: 'proxy.noProxy', type: 'string[]', default: [], description: 'Hosts that bypass the proxy' },
   {
@@ -158,13 +130,6 @@ export const FIELDS: readonly FieldSpec[] = [
     type: 'boolean',
     default: false,
     description: 'Skip TLS verification through the proxy',
-  },
-  {
-    path: 'update.channel',
-    type: 'enum',
-    values: ['stable'],
-    default: 'stable',
-    description: 'Release channel for `atc update`',
   },
   {
     path: 'update.checkOnStart',

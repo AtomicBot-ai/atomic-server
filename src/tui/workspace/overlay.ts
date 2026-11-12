@@ -26,7 +26,7 @@ import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
 import { PAGES } from './state.js'
 import { helpLines } from '../command-list.js'
-import { example } from './actions.js'
+import { example } from './server/connection.js'
 import { tooltip } from './draw/tooltip.js'
 const ms = (v: number | null) => (v === null ? 'Not available' : `${Math.round(v)} ms`)
 export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds = 0): void {

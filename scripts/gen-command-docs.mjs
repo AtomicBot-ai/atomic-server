@@ -8,7 +8,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const { ROOT: tree } = await import(pathToFileURL(join(ROOT, 'dist/commands/index.js')).href)
 const { renderHelp, walkCommands } = await import(pathToFileURL(join(ROOT, 'dist/cli/index.js')).href)
-const { PLANNED, ITERATIONS } = await import(pathToFileURL(join(ROOT, 'dist/cli/not-implemented.js')).href)
 
 const out = [
   '# atc commands',
@@ -20,11 +19,7 @@ out.push('| Command | Summary | Status |', '|---|---|---|')
 for (const { spec, path } of walkCommands(tree)) {
   if (spec.hidden) continue
   const key = path.join(' ')
-  const status = spec.stub
-    ? `stub — ${ITERATIONS[PLANNED[key]] ?? 'later'}`
-    : spec.subcommands
-      ? 'group'
-      : 'works'
+  const status = spec.subcommands ? 'group' : 'works'
   out.push(`| \`atc ${key}\` | ${spec.summary} | ${status} |`)
 }
 out.push('', '## Help texts', '')

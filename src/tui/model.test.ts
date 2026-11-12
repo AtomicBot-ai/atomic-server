@@ -24,7 +24,7 @@ describe('config rows', () => {
 describe('helpers', () => {
   it('describes a saved edit', () => {
     expect(describeEdit('api.port', 1338)).toBe('api.port = 1338')
-    expect(describeEdit('managed.image', undefined)).toBe('managed.image = null')
+    expect(describeEdit('proxy.url', undefined)).toBe('proxy.url = null')
   })
 
   it.each([

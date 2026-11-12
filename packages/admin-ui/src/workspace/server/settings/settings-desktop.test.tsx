@@ -6,10 +6,10 @@ import { RuntimeSettings } from './RuntimeSettings'
 import { HardwareSettings } from './HardwareSettings'
 
 const config = {
-  values: { models: { autoLoad: [] }, managed: { mode: 'off' }, admin: { autoStart: true, port: 1338 } },
+  values: { models: { autoLoad: [] }, log: { level: 'info' }, admin: { autoStart: true, port: 1338 } },
   fields: [
     { path: 'models.autoLoad', type: 'string[]' },
-    { path: 'managed.mode', type: 'enum', values: ['off', 'docker-tensorrt'] },
+    { path: 'log.level', type: 'enum', values: ['debug', 'info'] },
     { path: 'admin.autoStart', type: 'boolean' },
     { path: 'admin.port', type: 'number', min: 0, max: 65535 },
   ],
@@ -18,12 +18,12 @@ it('preserves per-section drafts and saves only the visible section', async () =
   const { workspace, execute } = workspaceFixture({ 'config.get': config })
   const { rerender } = render(<RuntimeSettings workspace={workspace} section="models" />)
   await userEvent.type(await screen.findByLabelText('Models to load on start'), 'first, second')
-  rerender(<RuntimeSettings workspace={workspace} section="managed" />)
+  rerender(<RuntimeSettings workspace={workspace} section="log" />)
   expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
-  await userEvent.selectOptions(screen.getByLabelText('Container runtime'), 'docker-tensorrt')
+  await userEvent.selectOptions(screen.getByLabelText('Log detail'), 'debug')
   await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
   await waitFor(() =>
-    expect(execute).toHaveBeenCalledWith('config.update', { values: { 'managed.mode': 'docker-tensorrt' } })
+    expect(execute).toHaveBeenCalledWith('config.update', { values: { 'log.level': 'debug' } })
   )
   rerender(<RuntimeSettings workspace={workspace} section="models" />)
   expect(screen.getByLabelText('Models to load on start')).toHaveValue('first, second')

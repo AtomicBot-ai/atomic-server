@@ -99,7 +99,7 @@ export async function track(
     (value) => ({ operation: value })
   )
   const result = await follow<EnvironmentOperation>({
-    events: s.link.events,
+    events: s.link.events!,
     pick: (m: CoreEventMessage) =>
       m.event === 'environment:operation' && (m.data as EnvironmentOperation).operation_id === op.operation_id
         ? (m.data as EnvironmentOperation)

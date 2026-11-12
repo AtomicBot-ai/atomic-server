@@ -6,8 +6,20 @@ import { defaultConfig, envNameFor, fieldFor, FIELDS, getAt, setAt } from './sch
 describe('schema', () => {
   it('derives env names from paths', () => {
     expect(envNameFor(fieldFor('api.port')!)).toBe('ATC_API_PORT')
-    expect(envNameFor(fieldFor('engines.autoInstall')!)).toBe('ATC_ENGINES_AUTO_INSTALL')
+    expect(envNameFor(fieldFor('api.trustedHosts')!)).toBe('ATC_API_TRUSTED_HOSTS')
     expect(envNameFor(fieldFor('proxy.ignoreSsl')!)).toBe('ATC_PROXY_IGNORE_SSL')
+  })
+
+  it('has none of the fields the 6 → 7 migration removes', () => {
+    for (const path of [
+      'api.cors',
+      'admin.openOnStart',
+      'engines.autoInstall',
+      'managed.mode',
+      'managed.image',
+      'update.channel',
+    ])
+      expect(FIELDS.some((f) => f.path === path)).toBe(false)
   })
 
   it('has unique paths and a default of the right type', () => {

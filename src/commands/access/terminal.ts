@@ -23,8 +23,6 @@ export const apiStart: CommandRun = async (inv, ctx) => {
     if (read === undefined) throw new AtcError('ATC_USAGE', 'Could not read the API key file.')
     key = read.trim()
   }
-  if (inv.values['cors'] === false)
-    throw new AtcError('ATC_USAGE', 'CORS cannot be disabled by this Core API. Remove --no-cors.')
   const link = await ctx.core.attach({ launch: true })
   await holdCommandLease(link, ctx.leaseName)
   const keys = new ClientKeys(ctx.paths.atcDir)

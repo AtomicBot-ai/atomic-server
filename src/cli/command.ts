@@ -7,7 +7,6 @@
 import { parseArgs } from 'node:util'
 import type { CommandContext } from './context.js'
 import { AtcError } from '../errors/index.js'
-import { plannedFor } from './not-implemented.js'
 
 export type OptionType = 'string' | 'boolean'
 
@@ -62,29 +61,12 @@ export interface CommandSpec {
   /** Run this subcommand when none is named (e.g. `atc admin` → `atc admin open`). */
   defaultSubcommand?: string
   examples?: string[]
-  /** Set by `notImplemented()`: the command exists in the tree but has no implementation yet. */
-  stub?: true
   /** Absent: the command only holds subcommands and prints help when invoked bare. */
   run?: CommandRun
 }
 
 export function defineCommand(spec: CommandSpec): CommandSpec {
   return spec
-}
-
-/** A stub: strict flag parsing and help as designed, then a clear "not yet" with the planned iteration. */
-export function notImplemented(spec: Omit<CommandSpec, 'run' | 'stub'>): CommandSpec {
-  return {
-    ...spec,
-    stub: true,
-    run: async (invocation) => {
-      const command = `atc ${invocation.path.join(' ')}`
-      throw new AtcError('ATC_NOT_IMPLEMENTED', `\`${command}\` is not implemented yet.`, {
-        details: `planned for ${plannedFor(invocation.path) ?? 'a later iteration'}`,
-        hint: 'this build is the scaffold; see docs/commands.md for what works today',
-      })
-    },
-  }
 }
 
 export interface ResolvedCommand {

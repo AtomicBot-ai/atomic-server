@@ -3,7 +3,7 @@
  * ok / warn / fail / skip with a hint. The admin dashboard renders the same table.
  */
 
-import { access, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AtcPaths } from '../config/index.js'
 import { readTextFile, resolveConfig } from '../config/index.js'
@@ -200,13 +200,4 @@ export function worstStatus(results: CheckResult[]): CheckStatus {
   if (results.some((r) => r.status === 'fail')) return 'fail'
   if (results.some((r) => r.status === 'warn')) return 'warn'
   return 'ok'
-}
-
-export async function exists(path: string): Promise<boolean> {
-  try {
-    await access(path)
-    return true
-  } catch {
-    return false
-  }
 }

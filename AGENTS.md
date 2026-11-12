@@ -28,8 +28,8 @@ follow [`docs/concepts.md`](docs/concepts.md) ("server", not "daemon"; `run`/`un
 Real today: the server and its lifecycle (including replacing one another build left running), OS services,
 its own rotated log, the API with its keyring, the terminal UI, the admin's dashboard, config, doctor,
 `atc update`, the installers, the signed release pipeline and the Linux packages (deb and rpm from our
-apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). The remaining stubs exit 3;
-`src/cli/not-implemented.ts` is the map of what is stubbed and when it lands. Bare `atc` on an interactive terminal opens the terminal UI
+apt/dnf repository on Hetzner Object Storage, the AUR's `atc-bin`). Every command in the tree is implemented;
+the old stub registry (`src/cli/not-implemented.ts`) is gone. Bare `atc` on an interactive terminal opens the terminal UI
 (Ink, `src/tui/`); anywhere else it prints help and exits 2 — scripts never get a screen.
 
 ---
@@ -143,11 +143,6 @@ A command is a `CommandSpec` (`src/cli/command.ts`): `name`, `summary`, `descrip
 code. Help, `docs/commands.md` and `atc completion` render from the spec, so nothing drifts. Global flags
 are stripped once by `splitGlobalFlags` before the command parses its own.
 
-A stub is `notImplemented(spec)`: same strict parsing and help, `run` throws `ATC_NOT_IMPLEMENTED` naming
-the iteration from `PLANNED` in `src/cli/not-implemented.ts`. `not-implemented.test.ts` asserts that every
-stub in the tree is registered and every registry entry is a stub. Partial stubs of working commands
-go in `PLANNED_PARTIAL`.
-
 `run` gets a `CommandContext`: `io`, `flags`, `paths`, `config()` (lazy), `out` (printer: `result(json,
 humanFn)`), `log`, `prompt`, `core.attach({ launch })`, `host`, `now`, `signal`. Output goes through
 `ctx.out`; diagnostics through `ctx.log` (stderr). `ctx.prompt.confirm` honours `--yes` off a terminal and
@@ -188,7 +183,7 @@ it works in the binary, an e2e test. While iterating run `npm run verify:fast`; 
 
 **Add a command.** Spec in `src/commands/<group>/<name>.ts`, the folder of its help group (`server`,
 `models`, `access`, `system`); add it to `ROOT` in
-`src/commands/index.ts` in help order; if it is a stub, `notImplemented()` + a `PLANNED` line; unit test
+`src/commands/index.ts` in help order; unit test
 for any pure helper; contract test in `test/contract/commands.test.ts`; `npm run build && npm run
 docs:commands`; e2e case when it works in the binary.
 

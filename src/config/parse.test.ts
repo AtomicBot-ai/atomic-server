@@ -5,7 +5,7 @@ import { fieldFor } from './schema.js'
 describe('coerceValue', () => {
   it.each([
     ['api.port', '1337', 1337],
-    ['api.cors', 'off', false],
+    ['proxy.ignoreSsl', 'off', false],
     ['api.trustedHosts', 'a, b', ['a', 'b']],
     ['api.trustedHosts', '', []],
     ['log.level', 'debug', 'debug'],
@@ -16,7 +16,7 @@ describe('coerceValue', () => {
 
   it('rejects what a field cannot hold', () => {
     expect(() => coerceValue(fieldFor('api.port')!, 'many')).toThrow(/not a number/)
-    expect(() => coerceValue(fieldFor('api.cors')!, 'maybe')).toThrow(/true or false/)
+    expect(() => coerceValue(fieldFor('proxy.ignoreSsl')!, 'maybe')).toThrow(/true or false/)
     expect(() => coerceValue(fieldFor('log.level')!, 'loud')).toThrow(/one of/)
   })
 })

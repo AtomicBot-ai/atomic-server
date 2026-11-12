@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest'
 import { CONNECTION_AGENTS } from '../../../contract/index.js'
 import { canvas } from '../draw/canvas.js'
-import { agentMark, connectionArt, drawAgentChoices, drawConnectionChoices } from './connection-art.js'
+import { agentMark } from './agent-brand.js'
+import { connectionArt, drawAgentChoices, drawConnectionChoices } from './connection-art.js'
 import type { ConnectionDraft } from '../../../contract/index.js'
 
 it('animates each ASCII connection illustration without introducing terminal control characters', () => {

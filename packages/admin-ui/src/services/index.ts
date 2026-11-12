@@ -5,7 +5,7 @@
  * daemon's BFF under `/api`. The name and the `useServiceHub()` shape stay, so pages lift 1:1.
  */
 
-import type { AdminConfigView, AdminStatus } from '@contract'
+import type { AdminStatus } from '@contract'
 import { ADMIN_BASE, createAdminApi } from './admin-api'
 import type { AdminApi } from './admin-api'
 import { createCoreBridge } from './core-bridge'
@@ -19,16 +19,11 @@ export interface StatusService {
   fetch(): Promise<AdminStatus>
 }
 
-export interface ConfigService {
-  fetch(): Promise<AdminConfigView>
-}
-
 export interface ServiceHub {
   // Service getters - all synchronous after initialization
   core(): CoreBridge
   events(): AdminEventSource
   status(): StatusService
-  config(): ConfigService
   session(): SessionService
 }
 
@@ -44,7 +39,6 @@ class AdminServiceHub implements ServiceHub {
   private readonly coreBridge: CoreBridge
   private readonly eventSource: AdminEventSource
   private readonly statusService: StatusService
-  private readonly configService: ConfigService
   private readonly sessionService: SessionService
 
   constructor(options: ServiceHubOptions = {}) {
@@ -53,7 +47,6 @@ class AdminServiceHub implements ServiceHub {
     this.coreBridge = createCoreBridge(base)
     this.eventSource = createEventSource(base, options.eventSource)
     this.statusService = { fetch: () => this.api.status() }
-    this.configService = { fetch: () => this.api.config() }
     // Signing out drops the stream too; the next page load opens a fresh one with its new cookie.
     this.sessionService = createSessionService(this.api, () => this.eventSource.close())
   }
@@ -70,10 +63,6 @@ class AdminServiceHub implements ServiceHub {
     return this.statusService
   }
 
-  config(): ConfigService {
-    return this.configService
-  }
-
   session(): SessionService {
     return this.sessionService
   }
@@ -81,9 +70,4 @@ class AdminServiceHub implements ServiceHub {
 
 export function createServiceHub(options?: ServiceHubOptions): ServiceHub {
   return new AdminServiceHub(options)
-}
-
-/** The app's entry point, kept for parity; the admin has nothing asynchronous to set up. */
-export async function initializeServiceHub(options?: ServiceHubOptions): Promise<ServiceHub> {
-  return createServiceHub(options)
 }

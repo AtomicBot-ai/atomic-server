@@ -15,7 +15,7 @@ import { AtomicCore } from '@atomic-chat/core'
 import { patientCoreClient } from '../core-link/index.js'
 import { AdminServer, ensureAdminToken, RelayHub, SessionStore } from '../admin/index.js'
 import type { AtcPaths, ResolvedConfig } from '../config/index.js'
-import { HttpCoreLink, InProcessEvents, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
+import { HttpCoreLink, removeDaemonRecord, writeDaemonRecord } from '../core-link/index.js'
 import type { CoreLink, DaemonRecord } from '../core-link/index.js'
 import { HostStepExecutor, HostStepJournal, probedFacts, readServerLaunch } from '../host/index.js'
 import type { EnvironmentOperationView, HostServices } from '../host/index.js'
@@ -132,7 +132,6 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     const link = new HttpCoreLink({
       endpoint: { baseUrl: controlUrl, instanceId: core.instanceId, version: CORE_VERSION, pid: process.pid },
       client,
-      events: new InProcessEvents(core, () => client.snapshot()),
       pid: process.pid,
       log: (m) => log.debug(m),
     })

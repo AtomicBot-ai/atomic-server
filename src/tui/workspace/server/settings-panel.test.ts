@@ -38,13 +38,13 @@ it('starts General with About and common controls, keeping host and port in Adva
   const { ctx } = fixture('admin')
   ctx.update((s) => ({ ...s, workspace: { core: { version: '0.19.0' } } as never }))
   await activate('settings-section:admin', ctx)
-  expect(ctx.get().focus).toBe('setting:admin.openOnStart')
+  expect(ctx.get().focus).toBe('settings-section:admin')
   const ids = settingsEntries(ctx.get()).map((entry) => entry.id)
   expect(ids.slice(0, 4)).toEqual([
     'settings-about',
-    'setting:admin.openOnStart',
     'setting:admin.autoStart',
     'settings-expand:admin-advanced',
+    'settings-expand:api',
   ])
   expect(ids).not.toContain('setting:admin.host')
   expect(ids).not.toContain('setting:admin.port')

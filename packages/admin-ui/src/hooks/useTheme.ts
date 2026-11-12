@@ -23,10 +23,9 @@ function applyTheme(theme: Theme) {
 interface ThemeState {
   theme: Theme
   setTheme(theme: Theme): void
-  toggle(): void
 }
 
-export const useThemeStore = create<ThemeState>()((set, get) => ({
+export const useThemeStore = create<ThemeState>()((set) => ({
   theme: 'dark',
   setTheme(theme) {
     applyTheme(theme)
@@ -37,18 +36,9 @@ export const useThemeStore = create<ThemeState>()((set, get) => ({
     }
     set({ theme })
   },
-  toggle() {
-    get().setTheme(get().theme === 'dark' ? 'light' : 'dark')
-  },
 }))
 
 /** Before the first render: the stored choice, dark when there is none. */
 export function applyStoredTheme() {
   useThemeStore.getState().setTheme(readStored())
-}
-
-export function useTheme() {
-  const theme = useThemeStore((state) => state.theme)
-  const toggle = useThemeStore((state) => state.toggle)
-  return { theme, toggle }
 }

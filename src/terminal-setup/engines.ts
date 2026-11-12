@@ -4,7 +4,7 @@ import type { CoreLink } from '../core-link/index.js'
 import { readDocument, writeDocument } from '../terminal-data/index.js'
 import { ENGINE_KINDS } from '@atomic-chat/core/contracts'
 import type { EngineId, EngineVersionsResponse } from '@atomic-chat/core/contracts'
-import { engineFamily, engineName, orderEngines } from '../workspace-view/index.js'
+import { engineFamily, orderEngines } from '../workspace-view/index.js'
 import type { BackendCatalogResponse } from './types.js'
 import type { DownloadProgress } from '@atomic-chat/core/contracts'
 import { watchEngineDownload } from './engine-progress.js'
@@ -18,7 +18,6 @@ export interface EngineChoice {
   /** The build the core reports active; absent when the core did not name one. */
   active?: boolean
 }
-export { engineName }
 /** A managed engine, Foundry Local or LiteRT-LM not installed yet: its panel installs it, a picker cannot. */
 export function setsUpInPanel(choice: EngineChoice): boolean {
   return !choice.installed && ENGINE_KINDS[choice.provider as EngineId] !== 'llamacpp'

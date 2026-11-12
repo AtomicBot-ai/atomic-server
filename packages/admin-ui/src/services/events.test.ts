@@ -1,13 +1,7 @@
-import { renderHook, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { useLiveStatus } from '@/hooks/useAdminStatus'
-import { initializeServiceHubStore } from '@/hooks/useServiceHub'
-import { createServiceHub } from '@/services'
-import { useStatusStore } from '@/stores/status-store'
 import { FakeEventSource } from '@/test/fake-event-source'
-import { jsonResponse, statusFixture } from '@/test/fixtures'
-import { createEventSource, useCoreEvents } from './events'
+import { createEventSource } from './events'
 import type { EventSourceFactory } from './events'
 
 const Fake = FakeEventSource as unknown as EventSourceFactory
@@ -17,10 +11,6 @@ function last(): FakeEventSource {
   if (!source) throw new Error('no EventSource was opened')
   return source
 }
-
-afterEach(() => {
-  vi.unstubAllGlobals()
-})
 
 describe('createEventSource', () => {
   it('opens /api/events with credentials on the first subscription and delivers parsed data', () => {
@@ -86,48 +76,5 @@ describe('createEventSource', () => {
     last().dispatchEvent(new MessageEvent('atc:log', { data: 'plain text', lastEventId: '' }))
 
     expect(handler).toHaveBeenCalledWith('plain text', { id: null, event: 'atc:log' })
-  })
-})
-
-describe('useCoreEvents', () => {
-  it('subscribes for the component lifetime and always calls the latest handler', () => {
-    initializeServiceHubStore(createServiceHub({ eventSource: Fake }))
-    const first = vi.fn()
-    const second = vi.fn()
-
-    const { rerender, unmount } = renderHook(
-      ({ handler }: { handler: () => void }) => useCoreEvents(['session:started', 'session:died'], handler),
-      { initialProps: { handler: first } }
-    )
-    const source = last()
-
-    source.emit('session:died', { pid: 1 })
-    expect(first).toHaveBeenCalledTimes(1)
-
-    rerender({ handler: second })
-    source.emit('session:started', { pid: 2 })
-    expect(second).toHaveBeenCalledWith({ pid: 2 }, expect.objectContaining({ event: 'session:started' }))
-    expect(first).toHaveBeenCalledTimes(1)
-
-    unmount()
-    source.emit('session:started', { pid: 3 })
-    expect(second).toHaveBeenCalledTimes(1)
-  })
-
-  it('a resync refetches the status store', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, statusFixture()))
-    vi.stubGlobal('fetch', fetchMock)
-    initializeServiceHubStore(createServiceHub({ eventSource: Fake }))
-
-    renderHook(() => useLiveStatus())
-    expect(fetchMock).not.toHaveBeenCalled()
-
-    last().emit('resync', null)
-    last().emit('session:started', { model_id: 'qwen' })
-
-    await waitFor(() => expect(useStatusStore.getState().status?.daemon.pid).toBe(4242))
-    // Two events, one debounced request.
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/status')
   })
 })

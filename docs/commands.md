@@ -479,12 +479,9 @@ Global options:
 ### atc status
 
 ```
-Usage: atc status [options]
+Usage: atc status
 
 Show the server, the API endpoint, running models and the admin URL
-
-Options:
-      --watch  Refresh every 2 seconds until interrupted
 
 Global options:
   --json                Print the result as one JSON document (errors go to stderr as JSON)
@@ -1150,7 +1147,6 @@ Options:
       --api-key <key>        Require this key on the API
       --api-key-file <path>  Read the key from a file (secrets mounts)
       --prefix </v1>         Path prefix
-      --cors                 Send CORS headers (default: true)
       --trusted-host <host>  Extra Host value to accept
 
 Global options:

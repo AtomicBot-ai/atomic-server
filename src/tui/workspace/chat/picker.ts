@@ -1,5 +1,6 @@
-import { engineName, setsUpInPanel } from '../../../terminal-setup/index.js'
+import { setsUpInPanel } from '../../../terminal-setup/index.js'
 import type { EngineChoice } from '../../../terminal-setup/index.js'
+import { engineName } from '../../../workspace-view/index.js'
 import { COLORS, text, wrap } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { COMPOSER_HEIGHT } from './composer.js'

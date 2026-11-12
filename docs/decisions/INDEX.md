@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-12** — [Drop the dead config fields and the stub scaffolding](2026-11-12-drop-dead-config-fields-and-stub-scaffolding.md) — config 6 → 7 strips the six fields nothing read; the stub registry, `status --watch` and `InProcessEvents` are gone.
+
 - **2026-11-11** — [Check Foundry Local runtime requirements before transferring models](2026-11-11-check-foundry-runtime-before-transferring-models.md) — check the planned revision and preserve its minimum and partial bytes across retries.
 
 - **2026-11-10** — [Sign Windows binaries with the key in Azure Key Vault](2026-11-10-sign-windows-binaries-with-azure-key-vault.md) — AzureSignTool with GitHub OIDC in the `codesign` environment, no stored secret, the same signer subject; supersedes the KeyLocker part of the 2026-10-09 release record.

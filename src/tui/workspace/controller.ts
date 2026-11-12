@@ -276,7 +276,8 @@ export class WorkspaceController {
     try {
       const link: CoreLink = await this.deps.base.attach({ launch: false, log: this.log })
       if (observer.signal.aborted) return
-      await link.events.subscribe(
+      // events is always set by the client link factory.
+      await link.events!.subscribe(
         (message) => {
           const payload = (message.data as { payload?: unknown })?.payload ?? message.data
           this.setup.event(message.event, payload)

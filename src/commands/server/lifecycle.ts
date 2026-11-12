@@ -248,13 +248,7 @@ export const statusCommand = defineCommand({
   name: 'status',
   summary: 'Show the server, the API endpoint, running models and the admin URL',
   group: 'server',
-  options: { watch: { type: 'boolean', description: 'Refresh every 2 seconds until interrupted' } },
-  run: async (inv, ctx) => {
-    if (inv.values['watch'] === true) {
-      throw new AtcError('ATC_NOT_IMPLEMENTED', '`atc status --watch` is not implemented yet.', {
-        details: 'planned for iteration 2',
-      })
-    }
+  run: async (_inv, ctx) => {
     const found = await find(ctx)
     if (found.kind === 'outdated') {
       const { lock, record } = found.owner

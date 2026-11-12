@@ -1,8 +1,7 @@
 import { setupPreparing } from '../setup/download-pending.js'
-import { apiDownloadWait } from '../../../workspace-view/index.js'
+import { apiDownloadWait, engineName } from '../../../workspace-view/index.js'
 /** Desktop's single server control surface, with terminal-sized status animation. */
 import { serverRunning, serverSelection } from './server-status.js'
-import { engineName } from '../../../terminal-setup/index.js'
 import { COLORS, text } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { panel } from '../draw/cards.js'

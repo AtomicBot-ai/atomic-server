@@ -13,6 +13,33 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 /** Key N migrates a version-N document to N+1. */
 export const MIGRATIONS: Record<number, Migration> = {
+  /**
+   * 6 → 7: `api.cors`, `admin.openOnStart`, `engines.autoInstall`, `managed.mode`, `managed.image`
+   * and `update.channel` are gone. Nothing read them: the core installs the engine build it
+   * recommends itself, the admin follows `admin.autoStart`, and stable is the only release channel.
+   */
+  6: (raw) => {
+    const { api, admin, engines, update, managed, ...rest } = raw
+    const stripped = (section: unknown, ...keys: string[]): Record<string, unknown> | undefined => {
+      if (!isObject(section)) return undefined
+      const next = { ...section }
+      for (const key of keys) delete next[key]
+      return Object.keys(next).length > 0 ? next : undefined
+    }
+    const nextApi = stripped(api, 'cors')
+    const nextAdmin = stripped(admin, 'openOnStart')
+    const nextEngines = stripped(engines, 'autoInstall')
+    const nextUpdate = stripped(update, 'channel')
+    const nextManaged = stripped(managed, 'mode', 'image')
+    return {
+      ...rest,
+      ...(nextApi ? { api: nextApi } : {}),
+      ...(nextAdmin ? { admin: nextAdmin } : {}),
+      ...(nextEngines ? { engines: nextEngines } : {}),
+      ...(nextUpdate ? { update: nextUpdate } : {}),
+      ...(nextManaged ? { managed: nextManaged } : {}),
+    }
+  },
   // An omitted port meant 1337. The old default chat URL meant "follow this server",
   // including when a config edit had written that URL alongside a custom API port.
   5: (raw) => {

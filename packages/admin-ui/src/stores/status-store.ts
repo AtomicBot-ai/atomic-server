@@ -17,8 +17,6 @@ export interface StatusState {
   updatedAt: number | null
   /** Refetch now. One request at a time; a call during a fetch queues exactly one more. */
   refresh(): Promise<void>
-  /** Refetch after a short delay, so a burst of events becomes one request. */
-  refreshSoon(delayMs?: number): void
   reset(): void
 }
 
@@ -26,7 +24,6 @@ const initial = { status: null, loading: false, error: null, unauthorized: false
 
 let inflight: Promise<void> | null = null
 let queued = false
-let timer: ReturnType<typeof setTimeout> | null = null
 
 export const useStatusStore = create<StatusState>()((set, get) => ({
   ...initial,
@@ -55,17 +52,7 @@ export const useStatusStore = create<StatusState>()((set, get) => ({
     return inflight
   },
 
-  refreshSoon(delayMs = 150) {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => {
-      timer = null
-      void get().refresh()
-    }, delayMs)
-  },
-
   reset() {
-    if (timer) clearTimeout(timer)
-    timer = null
     queued = false
     set({ ...initial })
   },

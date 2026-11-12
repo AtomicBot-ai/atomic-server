@@ -98,7 +98,6 @@ export function renderHelp(
   }
   if (spec.examples?.length) out.push('', 'Examples:', ...spec.examples.map((e) => `${INDENT}${e}`))
   out.push('', 'Global options:', columns([...GLOBAL_OPTIONS_HELP], width))
-  if (spec.stub) out.push('', 'Status: not implemented yet in this build (exit code 3).')
   return `${out.join('\n')}\n`
 }
 

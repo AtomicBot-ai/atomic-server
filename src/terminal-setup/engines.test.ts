@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
-import { EngineSelection, engineName, modelProvider, setsUpInPanel } from './engines.js'
+import { engineName } from '../workspace-view/index.js'
+import { EngineSelection, modelProvider, setsUpInPanel } from './engines.js'
 import type { BackendCatalogResponse } from './types.js'
 
 it('lists installed/recommended builds, installs on demand and persists only successful selections', async () => {

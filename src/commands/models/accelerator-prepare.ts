@@ -45,7 +45,7 @@ export async function followPrepare<V extends PrepareState>(
       : { stage: 'status', text: s.view.preparing ? 'Preparing accelerators' : 'Prepared' }
   )
   const result = await follow<Step<V>>({
-    events: link.events,
+    events: link.events!,
     pick: (m: CoreEventMessage) =>
       m.event === ops.event ? { kind: 'step', step: m.data as PrepareStep } : undefined,
     poll: async () => ({ kind: 'status', view: (await service.execute(ops.status)) as V }),

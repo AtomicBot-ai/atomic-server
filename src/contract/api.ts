@@ -38,10 +38,6 @@ export interface AdminConfigView {
   fields: AdminConfigField[]
 }
 
-export interface SessionRequest {
-  token: string
-}
-
 export interface AdminErrorBody {
   error: { code: string; message: string; details?: string; hint?: string }
 }

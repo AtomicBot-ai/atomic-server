@@ -35,11 +35,6 @@ export const CONNECTION_AGENTS = [
   { id: 'xcode', label: 'Xcode' },
 ] as const
 export type ConnectionStep = 'choose' | 'agent' | 'endpoint' | 'review' | 'preparing' | 'done'
-export const DESKTOP_PERMISSIONS = [
-  { label: 'Notifications', detail: 'Desktop notifications are not available from the server.' },
-  { label: 'Microphone', detail: 'Agents manage microphone access on their own device.' },
-  { label: 'Files', detail: 'Import model files from Models. Agents manage their own file access.' },
-] as const
 export interface ConnectionDraft {
   step: ConnectionStep
   pickingModel?: boolean
