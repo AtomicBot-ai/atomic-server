@@ -1,11 +1,11 @@
-/** Settings → Account: the email and device sign-ins against a mocked execute, and signing out. */
+/** Account → Overview: the email and device sign-ins against a mocked execute, and signing out. */
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ACCOUNT_POLL_MS } from '@view'
 import { accountFixture, liveAccount } from '@/test/account-fixture'
 import { workspaceFixture } from '@/test/workspace-fixture'
-import { AccountSettings } from './AccountSettings'
+import { AccountOverview } from './AccountOverview'
 
 const signedIn = { signed_in: true, user: { email: 'ann@example.com', display_name: null } }
 const device = {
@@ -18,13 +18,13 @@ const device = {
 
 afterEach(() => vi.useRealTimers())
 
-describe('Settings → Account', () => {
+describe('Account → Overview', () => {
   it('shows nothing while accounts are off', () => {
     expect(
-      render(<AccountSettings workspace={workspaceFixture({}).workspace} />).container
+      render(<AccountOverview workspace={workspaceFixture({}).workspace} />).container
     ).toBeEmptyDOMElement()
     const off = liveAccount(accountFixture({ enabled: false }))
-    expect(render(<AccountSettings workspace={off.workspace()} />).container).toBeEmptyDOMElement()
+    expect(render(<AccountOverview workspace={off.workspace()} />).container).toBeEmptyDOMElement()
   })
 
   it('signs in with an emailed code, with errors inline', async () => {
@@ -39,7 +39,7 @@ describe('Settings → Account', () => {
         update({ ...signedIn, sign_in: { state: 'idle' } })
       },
     })
-    render(<live.Live>{(w) => <AccountSettings workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <AccountOverview workspace={w} />}</live.Live>)
     await userEvent.type(screen.getByLabelText('Email'), 'ann')
     await userEvent.click(screen.getByRole('button', { name: 'Email me a code' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid email address.')
@@ -65,7 +65,7 @@ describe('Settings → Account', () => {
         throw new Error('The account service cannot send email right now.')
       },
     })
-    render(<live.Live>{(w) => <AccountSettings workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <AccountOverview workspace={w} />}</live.Live>)
     await userEvent.type(screen.getByLabelText('Email'), 'ann@example.com')
     await userEvent.click(screen.getByRole('button', { name: 'Email me a code' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('cannot send email right now')
@@ -77,7 +77,7 @@ describe('Settings → Account', () => {
     const live = liveAccount(accountFixture({ sign_in: sent }), {
       'account.signin.cancel': (_input, update) => update({ sign_in: { state: 'idle' } }),
     })
-    render(<live.Live>{(w) => <AccountSettings workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <AccountOverview workspace={w} />}</live.Live>)
     expect(screen.getByText('Enter the 6-digit code from the sign-in email.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Use a different email' }))
     expect(live.execute).toHaveBeenCalledWith('account.signin.cancel')
@@ -95,7 +95,7 @@ describe('Settings → Account', () => {
       'account.signin.cancel': (_input, update) => update({ sign_in: { state: 'idle' } }),
     })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    render(<live.Live>{(w) => <AccountSettings workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <AccountOverview workspace={w} />}</live.Live>)
     await user.click(screen.getByRole('button', { name: 'Sign in on another device' }))
     await waitFor(() =>
       expect(open).toHaveBeenCalledWith(device.verification_uri_complete, '_blank', 'noopener,noreferrer')
@@ -117,7 +117,7 @@ describe('Settings → Account', () => {
 
   it('moves on once the other device approves, and says why a device sign-in failed', async () => {
     const live = liveAccount(accountFixture({ sign_in: device }))
-    render(<live.Live>{(w) => <AccountSettings workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <AccountOverview workspace={w} />}</live.Live>)
     act(() =>
       live.update({ sign_in: { state: 'failed', reason: 'denied', message: 'The sign-in was declined.' } })
     )
@@ -133,7 +133,7 @@ describe('Settings → Account', () => {
       { 'account.signout': (_input, update) => update({ signed_in: false, user: null }) }
     )
     const openRemote = vi.fn()
-    render(<live.Live>{(w) => <AccountSettings workspace={w} openRemote={openRemote} />}</live.Live>)
+    render(<live.Live>{(w) => <AccountOverview workspace={w} openRemote={openRemote} />}</live.Live>)
     expect(screen.getByText('Signed in as Ann')).toBeInTheDocument()
     expect(screen.getByText('ann@example.com')).toBeInTheDocument()
     expect(screen.getByText('Not shared with your devices')).toBeInTheDocument()

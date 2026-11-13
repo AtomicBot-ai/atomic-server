@@ -8,10 +8,11 @@ import {
   accountUi,
   deviceDetail,
   isAccountOverlay,
+  onAccountTab,
   pairedDevice,
-  settingsSections,
   setupAccountHint,
   shownAccount,
+  signedIn,
 } from './account-model.js'
 
 const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
@@ -64,11 +65,6 @@ describe('what the terminal may show of the account', () => {
     ['accounts on', snapshot(account()), true],
   ])('%s', (_name, workspace, shown) => {
     expect(shownAccount(workspace) !== null).toBe(shown)
-    expect(settingsSections(workspace).some((section) => section.id === 'account')).toBe(shown)
-    // Everything else stays in its order.
-    expect(settingsSections(workspace).map((section) => section.id)).toEqual(
-      expect.arrayContaining(['admin', 'shortcuts', 'hardware', 'assistants', 'connectors', 'skills'])
-    )
   })
 
   it.each([
@@ -103,14 +99,50 @@ describe('what the terminal may show of the account', () => {
   })
 })
 
-describe('a fresh account status', () => {
-  it('ends the device sign-in once the server is signed in', () => {
-    const before = waiting('account-device', account({ signed_in: false, user: null }))
-    const after = accountArrived(before, account(), 5)
-    expect(after).toMatchObject({
+describe('landing on the Account page', () => {
+  it('opens a tab on its sidebar row, or on the control given', () => {
+    expect(onAccountTab('remote')).toEqual({
+      page: 'account',
+      accountView: 'remote',
+      serverView: 'overview',
+      focus: 'account-section:remote',
+      hover: '',
+    })
+    expect(onAccountTab('overview', 'account-email')).toMatchObject({ focus: 'account-email' })
+  })
+
+  it.each([
+    ['Overview', 'overview', 'account-section:remote'],
+    ['Remote models', 'remote', 'account-share'],
+  ] as const)('keeps a sign-in started on %s there, on what comes next', (_name, view, focus) => {
+    const s = { ...createWorkspace('account'), accountView: view, overlay: 'account-email' as const }
+    expect(signedIn(s, account())).toMatchObject({
+      page: 'account',
+      accountView: view,
+      focus,
       overlay: null,
       message: 'Signed in as Ann.',
-      focus: 'server-section:remote',
+    })
+  })
+
+  it('lands a sign-in from anywhere else on Overview', () => {
+    expect(signedIn(createWorkspace('server'), account())).toMatchObject({
+      page: 'account',
+      accountView: 'overview',
+    })
+  })
+})
+
+describe('a fresh account status', () => {
+  it('ends the device sign-in once the server is signed in, on the tab it started on', () => {
+    const before = waiting('account-device', account({ signed_in: false, user: null }))
+    const after = accountArrived({ ...before, page: 'account', accountView: 'remote' }, account(), 5)
+    expect(after).toMatchObject({
+      page: 'account',
+      accountView: 'remote',
+      overlay: null,
+      message: 'Signed in as Ann.',
+      focus: 'account-share',
     })
     expect(after.workspace?.account?.signed_in).toBe(true)
   })
@@ -120,6 +152,9 @@ describe('a fresh account status', () => {
     const used = account({ remote: { ...account().remote, devices: [device] } })
     expect(pairedDevice(before.accountUi!, used)).toEqual(device)
     expect(accountArrived(before, used, 5)).toMatchObject({
+      page: 'account',
+      accountView: 'remote',
+      focus: 'account-pair',
       overlay: null,
       message: 'Home PC can now use this server.',
       accountUi: { pairing: null, known: [] },

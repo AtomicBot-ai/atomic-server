@@ -7,7 +7,7 @@ import './update-toast.css'
 
 /**
  * The notice that a device asks for access to this server (the newest request, with its check code), and
- * Review, which opens Server → Remote access to allow or deny it. Dismissed until a newer request comes;
+ * Review, which opens Account → Remote models to allow or deny it. Dismissed until a newer request comes;
  * `hidden` on the page that lists the requests already.
  */
 export function AccessRequestToast({

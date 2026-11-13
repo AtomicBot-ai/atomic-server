@@ -1,4 +1,4 @@
-/** The stacked corner notices: Review on an access request goes to Server → Remote access. */
+/** The stacked corner notices: Review on an access request goes to Account → Remote models. */
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it } from 'vitest'
@@ -12,7 +12,7 @@ function Harness({ workspace }: { workspace: Workspace }) {
   const navigation = useWorkspaceNavigation()
   return (
     <>
-      <output aria-label="Location">{`${navigation.page}/${navigation.serverSection}`}</output>
+      <output aria-label="Location">{`${navigation.page}/${navigation.accountSection}`}</output>
       <WorkspaceToasts workspace={workspace} navigation={navigation} />
     </>
   )
@@ -20,7 +20,7 @@ function Harness({ workspace }: { workspace: Workspace }) {
 
 beforeEach(() => localStorage.clear())
 
-it('stacks the update and the access request, and Review opens Server → Remote access', async () => {
+it('stacks the update and the access request, and Review opens Account → Remote models', async () => {
   const { workspace } = workspaceFixture(
     {},
     {
@@ -52,7 +52,7 @@ it('stacks the update and the access request, and Review opens Server → Remote
   const stack = container.querySelector('.workspace-toasts')!
   expect(stack.querySelectorAll('[role="status"]')).toHaveLength(2)
   await userEvent.click(screen.getByRole('button', { name: 'Review' }))
-  expect(screen.getByLabelText('Location')).toHaveTextContent('server/remote')
+  expect(screen.getByLabelText('Location')).toHaveTextContent('account/remote')
   expect(screen.queryByText(/MacBook asks for access/)).toBeNull()
   expect(screen.getByText('atc 0.3.0 is out')).toBeInTheDocument()
 })

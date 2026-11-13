@@ -1,11 +1,9 @@
-/** Server → Remote access, "Share with your devices": each state of the account and its devices. */
+/** Account → Remote models, "Share with your devices": each state of the account and its devices. */
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { AccountRemoteDevice, AccountRemoteRequest } from '@contract'
 import { accountFixture, liveAccount, remoteFixture } from '@/test/account-fixture'
-import { workspaceFixture } from '@/test/workspace-fixture'
-import { RemoteAccess } from './RemoteAccess'
 import { RemoteShare } from './RemoteShare'
 
 const user = { email: 'ann@example.com', display_name: null }
@@ -31,27 +29,6 @@ const pairing = {
 }
 
 describe('Share with your devices', () => {
-  it('is not there while accounts are off', async () => {
-    render(<RemoteAccess workspace={workspaceFixture({}).workspace} />)
-    // The tunnel and LAN panels read their status on mount.
-    await act(async () => {})
-    expect(screen.queryByRole('heading', { name: 'Share with your devices' })).toBeNull()
-    const off = liveAccount(accountFixture({ enabled: false, signed_in: true, user }))
-    expect(render(<RemoteShare workspace={off.workspace()} />).container).toBeEmptyDOMElement()
-  })
-
-  it('points a signed-out server at Settings → Account, above the tunnel and LAN controls', async () => {
-    const openAccount = vi.fn()
-    const { workspace, execute } = workspaceFixture({}, { account: accountFixture() })
-    render(<RemoteAccess workspace={workspace} openAccount={openAccount} />)
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(headings.slice(0, 2)).toEqual(['Share with your devices', 'Public remote access'])
-    expect(screen.queryByRole('switch')).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: 'Settings → Account' }))
-    expect(openAccount).toHaveBeenCalled()
-    expect(execute).not.toHaveBeenCalledWith(expect.stringMatching(/^account\./), expect.anything())
-  })
-
   it('turns sharing on with the switch, and says why it could not', async () => {
     let calls = 0
     const live = liveAccount(accountFixture({ signed_in: true, user }), {
@@ -60,7 +37,7 @@ describe('Share with your devices', () => {
         update({ remote: remoteFixture({ sharing: input.enabled === true, tunnel: 'online', addresses: 1 }) })
       },
     })
-    render(<live.Live>{(w) => <RemoteShare workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <RemoteShare workspace={w} account={w.snapshot!.account!} />}</live.Live>)
     const toggle = screen.getByRole('switch', { name: 'Share this server' })
     expect(toggle).not.toBeChecked()
     expect(screen.getByRole('status')).toHaveTextContent('Not shared with your devices')
@@ -92,7 +69,7 @@ describe('Share with your devices', () => {
         }),
       })
     )
-    render(<live.Live>{(w) => <RemoteShare workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <RemoteShare workspace={w} account={w.snapshot!.account!} />}</live.Live>)
     const asking = within(screen.getByRole('region', { name: 'Asking for access' }))
     expect(asking.getByText('MacBook')).toBeInTheDocument()
     expect(asking.getByText(/macOS ·/)).toHaveTextContent('macOS · Check code 936 468')
@@ -121,7 +98,7 @@ describe('Share with your devices', () => {
       }),
       { 'account.remote.pairing.open': () => pairing }
     )
-    render(<live.Live>{(w) => <RemoteShare workspace={w} />}</live.Live>)
+    render(<live.Live>{(w) => <RemoteShare workspace={w} account={w.snapshot!.account!} />}</live.Live>)
     expect(screen.getByText('No device has access yet.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Add a device' }))
     expect(live.execute).toHaveBeenCalledWith('account.remote.pairing.open')

@@ -1,11 +1,18 @@
 /** Signing this server in and out from the terminal, and closing an account dialog with what it started. */
 import type { AccountSignInStep, WorkspaceAccount } from '../../../contract/index.js'
-import { accountLine } from '../../../workspace-view/index.js'
 import { oneLine } from '../../controller.js'
 import type { ActionContext } from '../action-types.js'
 import type { WorkspaceState } from '../state.js'
-import { accountUi, isAccountOverlay, shownAccount, withAccount } from './account-model.js'
+import {
+  accountUi,
+  isAccountOverlay,
+  onAccountTab,
+  shownAccount,
+  signedIn,
+  withAccount,
+} from './account-model.js'
 import type { AccountUi } from './account-model.js'
+import { accountNavigationAction } from './account-navigation.js'
 import { deviceAction } from './device-actions.js'
 
 const execute = (ctx: ActionContext, operation: string, input: Record<string, unknown> = {}) =>
@@ -65,11 +72,8 @@ async function emailStep(id: string, ctx: ActionContext): Promise<void> {
       })) as WorkspaceAccount
       ctx.update((v) => ({
         ...withAccount(v, account),
-        overlay: null,
+        ...signedIn(v, account),
         accountUi: { ...accountUi(v), code: '', error: '' },
-        focus: 'server-section:remote',
-        hover: '',
-        message: `${accountLine(account)}.`,
       }))
     } else {
       const step = (await execute(ctx, 'account.signin.email.start', {
@@ -108,7 +112,7 @@ async function deviceSignIn(id: string, ctx: ActionContext): Promise<void> {
 }
 
 async function signOut(ctx: ActionContext): Promise<void> {
-  ctx.update((v) => ({ ...v, overlay: null, focus: 'account-email', hover: '', busy: true }))
+  ctx.update((v) => ({ ...v, ...onAccountTab('overview', 'account-email'), overlay: null, busy: true }))
   try {
     const account = (await execute(ctx, 'account.signout')) as WorkspaceAccount
     ctx.update((v) => ({ ...withAccount(v, account), message: 'Signed out.' }))
@@ -117,9 +121,10 @@ async function signOut(ctx: ActionContext): Promise<void> {
   }
 }
 
-/** Every `account-*` control, and `close` while an account dialog is open. */
+/** Every `account-*` control, `page:account`, and `close` while an account dialog is open. */
 export async function accountAction(id: string, ctx: ActionContext): Promise<boolean> {
   const s = ctx.get()
+  if (accountNavigationAction(id, ctx)) return true
   if (id === 'close' && isAccountOverlay(s.overlay)) {
     await closeDialog(ctx)
     return true

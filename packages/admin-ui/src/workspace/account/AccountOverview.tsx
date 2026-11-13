@@ -8,10 +8,10 @@ import { AccountSignIn } from './AccountSignIn'
 import './account.css'
 
 /**
- * Settings → Account: the Atomic Chat account this server is signed in to, or the way to sign it in.
+ * Account → Overview: the Atomic Chat account this server is signed in to, or the way to sign it in.
  * Nothing at all while accounts are off on the server (`account.enabled`).
  */
-export function AccountSettings({
+export function AccountOverview({
   workspace: w,
   openRemote,
 }: {
@@ -35,7 +35,7 @@ export function AccountSettings({
             <strong>Your devices</strong>
             <small>{sharingLine(account.remote)}</small>
           </div>
-          {openRemote && <Action onClick={openRemote}>Manage devices</Action>}
+          {openRemote && <Action onClick={() => openRemote()}>Manage devices</Action>}
         </div>
         <div className="settings-item">
           <div>

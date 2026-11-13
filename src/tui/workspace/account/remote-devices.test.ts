@@ -4,7 +4,7 @@ import type { Canvas } from '../draw/canvas.js'
 import { workspaceFrame } from '../frame.js'
 import { createWorkspace } from '../state.js'
 import type { WorkspaceState } from '../state.js'
-import { DEVICES_TITLE, deviceRows } from './remote-devices.js'
+import { REMOTE_TITLE, deviceRows } from './remote-devices.js'
 
 const request = {
   grant_id: 'r1',
@@ -35,9 +35,10 @@ const account = (over: Partial<WorkspaceAccount> = {}, remote = {}): WorkspaceAc
   ...over,
 })
 const state = (a?: WorkspaceAccount, patch: Partial<WorkspaceState> = {}): WorkspaceState => ({
-  ...createWorkspace('server'),
+  ...createWorkspace('account'),
   setupComplete: true,
-  serverView: 'remote',
+  accountView: 'remote',
+  focus: 'account-section:remote',
   remote: { state: 'online', canStop: true, url: 'https://x.trycloudflare.com' },
   workspace: {
     api: {
@@ -57,52 +58,49 @@ const state = (a?: WorkspaceAccount, patch: Partial<WorkspaceState> = {}): Works
 const screen = (c: Canvas) => c.cells.map((row) => row.map((cell) => cell.char).join('')).join('\n')
 const ids = (c: Canvas) => c.targets.map((t) => t.id)
 
-describe('Server → Remote access with the account', () => {
+describe('Account → Remote models', () => {
   it.each([
-    ['full cards on a tall screen', 120, 40, 'Copy URL'],
-    ['two-line cards on a short one', 100, 30, 'Copy URL'],
-    ['two-line cards on 80x24', 80, 24, 'Start access'],
-  ])('shows the devices first, then %s', (_name, width, height, card) => {
+    [90, 32],
+    [110, 32],
+    [120, 40],
+    [160, 50],
+    [80, 24],
+  ])('shares, adds a device, and lists who asks and who has access at %ix%i', (width, height) => {
     const c = workspaceFrame(state(account()), width, height, 0)
     const text = screen(c)
-    expect(text).toContain(DEVICES_TITLE)
+    expect(text).toContain(REMOTE_TITLE)
     expect(text).toContain('Shared with your devices over the internet and local network')
+    expect(text).toContain('Stop sharing  [s]')
     expect(text).toContain('Add a device  [a]')
     expect(text).toContain('check code 123 456')
-    expect(text).toContain('Public remote access')
-    expect(text).toContain('Local network')
-    expect(text).toContain(card)
-    expect(text.indexOf(DEVICES_TITLE)).toBeLessThan(text.indexOf('Public remote access'))
+    expect(text).toContain('Home PC · Windows · since 2026-11-10')
+    expect(text.indexOf('Asking for access')).toBeLessThan(text.indexOf('Devices with access'))
     expect(ids(c)).toEqual(
       expect.arrayContaining([
         'account-share',
         'account-pair',
         'account-allow:r1',
         'account-deny:r1',
-        'remote-toggle',
-        'lan-toggle',
-        'remote-refresh',
+        'account-revoke:d1',
       ])
     )
-    for (const t of c.targets)
+    // Nothing of Server → Remote access here.
+    expect(ids(c)).not.toContain('remote-toggle')
+    for (const t of c.targets) {
+      expect(t.x + t.width).toBeLessThanOrEqual(width)
       expect(t.y + t.height).toBeLessThanOrEqual(t.y === height - 1 ? height : height - 3)
-  })
-
-  it('lists devices with access and their Revoke on a tall screen', () => {
-    const c = workspaceFrame(state(account()), 120, 40, 0)
-    expect(screen(c)).toContain('Home PC · Windows · since 2026-11-10')
-    expect(ids(c)).toContain('account-revoke:d1')
+    }
   })
 
   it('says how many more there are when the list does not fit', () => {
-    const many = Array.from({ length: 8 }, (_, i) => ({
+    const many = Array.from({ length: 12 }, (_, i) => ({
       ...device,
       grant_id: `d${i}`,
       device_name: `PC ${i}`,
     }))
     const c = workspaceFrame(state(account({}, { devices: many })), 80, 24, 0)
     expect(screen(c)).toMatch(/… \d+ more/)
-    expect(ids(c)).toContain('lan-toggle')
+    expect(ids(c)).toContain('account-share')
   })
 
   it('offers to share before adding a device', () => {
@@ -112,27 +110,29 @@ describe('Server → Remote access with the account', () => {
     expect(ids(c)).not.toContain('account-pair')
   })
 
-  it('says to sign in when nobody is', () => {
-    const c = workspaceFrame(state(account({ signed_in: false, user: null })), 100, 30, 0)
-    expect(screen(c)).toContain('Sign in to share this server with your devices: Settings → Account')
-    expect(ids(c)).toContain('settings-section:account')
-    expect(ids(c)).not.toContain('account-share')
+  it('shows why sharing does not work', () => {
+    const c = workspaceFrame(state(account({}, { error: 'the tunnel is down' })), 120, 40, 0)
+    expect(screen(c)).toContain('Sharing is on, but the tunnel is down')
   })
 
-  it.each([
-    ['accounts off', account({ enabled: false })],
-    ['no account (not a server)', undefined],
-  ])('is the usual screen with %s', (_name, a) => {
-    const c = workspaceFrame(state(a), 100, 30, 0)
-    expect(screen(c)).not.toContain(DEVICES_TITLE)
-    expect(screen(c)).not.toContain('asks for access')
-    expect(ids(c).some((id) => id.startsWith('account-'))).toBe(false)
+  it('offers both ways to sign in while nobody is signed in', () => {
+    const c = workspaceFrame(state(account({ signed_in: false, user: null })), 110, 32, 0)
+    expect(screen(c)).toContain('Sign in to share this server’s models with your devices.')
+    expect(ids(c)).toEqual(expect.arrayContaining(['account-email', 'account-device']))
+    expect(ids(c)).not.toContain('account-share')
+    expect(screen(c)).not.toContain('Settings → Account')
+  })
+
+  it('keeps the sidebar on Remote models, under the Account title', () => {
+    const c = workspaceFrame(state(account()), 120, 40, 0)
+    expect(screen(c)).toContain('Account')
+    expect(ids(c)).toEqual(expect.arrayContaining(['account-section:overview', 'account-section:remote']))
   })
 })
 
 describe('the status line', () => {
   it('shows a device asking for access before a newer atc', () => {
-    const s = state(account())
+    const s = state(account(), { page: 'server', serverView: 'remote' })
     const atc = { version: '0.2.0', update: { version: '0.3.0', command: 'atc update', url: '' } }
     const workspace = { ...s.workspace!, atc } as WorkspaceSnapshot
     expect(screen(workspaceFrame({ ...s, workspace }, 100, 30, 0))).toContain(

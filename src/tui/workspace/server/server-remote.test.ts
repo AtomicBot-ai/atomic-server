@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { WorkspaceAccount } from '../../../contract/index.js'
 import { canvas } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import { createWorkspace } from '../state.js'
@@ -6,6 +7,7 @@ import type { WorkspaceState } from '../state.js'
 import type { ActionContext } from '../actions.js'
 import { drawServerRemote } from './server-remote.js'
 import { remoteAction } from './remote-actions.js'
+import { workspaceFrame } from '../frame.js'
 
 const missing = {
   state: 'error',
@@ -86,5 +88,88 @@ describe('the remote access screen while the server has no cloudflared', () => {
       busy: false,
       message: 'Start the API before remote access.',
     })
+  })
+})
+
+describe('the remote access screen while accounts are on', () => {
+  const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
+    enabled: true,
+    signed_in: true,
+    user: { email: 'ann@example.com', display_name: null },
+    sign_in: { state: 'idle' },
+    remote: {
+      sharing: true,
+      host_name: 'studio',
+      tunnel: 'online',
+      lan: true,
+      addresses: 2,
+      pairing: null,
+      requests: [
+        {
+          grant_id: 'r1',
+          device_name: 'Work MacBook',
+          platform: 'macos',
+          client_type: 'desktop',
+          check_code: '123456',
+          created_at: '',
+        },
+      ],
+      devices: [{ grant_id: 'd1', device_name: 'Home PC', platform: 'windows', since: 1 }],
+      error: null,
+    },
+    ...over,
+  })
+  const remote = (a?: WorkspaceAccount): WorkspaceState => ({
+    ...state({ state: 'online', canStop: true, url: 'https://x.trycloudflare.com' }),
+    setupComplete: true,
+    workspace: {
+      api: {
+        running: true,
+        host: '127.0.0.1',
+        port: 1337,
+        prefix: '/v1',
+        endpoint: 'http://127.0.0.1:1337/v1',
+      },
+      keys: [],
+      setups: [],
+      downloads: [],
+      ...(a ? { account: a } : {}),
+    } as never,
+  })
+  const text = (c: Canvas) => rows(c).join('\n')
+  const ids = (c: Canvas) => c.targets.map((t) => t.id)
+
+  // The sharing line, cut after a whole word where the row is short.
+  it.each([
+    [160, 50, /Shared with your devices over the internet and local network /],
+    [120, 40, /Shared with your devices over the… /],
+    [90, 32, /Shared with your devices… /],
+    [80, 24, /Shared with your devices over… /],
+    [60, 20, /Shared with… /],
+  ])('keeps the cards as they were, with one row to Account → Remote models at %ix%i', (w, h, line) => {
+    const on = workspaceFrame(remote(account()), w, h, 0)
+    const off = workspaceFrame(remote(), w, h, 0)
+    // The cards and their controls are where they are without accounts.
+    for (const id of ['remote-toggle', 'lan-toggle', 'remote-refresh'])
+      expect(on.targets.find((t) => t.id === id)).toEqual(off.targets.find((t) => t.id === id))
+    expect(text(on)).not.toMatch(/Asking for access|Devices with access|Add a device/)
+    expect(ids(on).filter((id) => id.startsWith('account-'))).toEqual(['account-section:remote'])
+    const pointer = on.targets.find((t) => t.id === 'account-section:remote')!
+    const refresh = on.targets.find((t) => t.id === 'remote-refresh')!
+    expect(pointer.y).toBe(refresh.y)
+    expect(pointer.x).toBeGreaterThan(refresh.x + refresh.width)
+    expect(pointer.x + pointer.width).toBeLessThanOrEqual(w)
+    expect(text(on)).toContain('Account → Remote models')
+    expect(rows(on)[pointer.y]).toMatch(line)
+  })
+
+  it('says when the devices do not share this server', () => {
+    const c = workspaceFrame(remote(account({ remote: { ...account().remote, sharing: false } })), 120, 40, 0)
+    expect(text(c)).toContain('Not shared with your devices')
+  })
+
+  it('has no pointer while accounts are off', () => {
+    for (const a of [undefined, account({ enabled: false })])
+      expect(ids(workspaceFrame(remote(a), 120, 40, 0))).not.toContain('account-section:remote')
   })
 })

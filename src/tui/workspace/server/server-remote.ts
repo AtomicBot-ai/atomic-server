@@ -1,13 +1,23 @@
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
-import { button, COLORS, text, wrap, wrapWords } from '../draw/canvas.js'
+import { button, COLORS, text, textWidth, wrap, wrapWords } from '../draw/canvas.js'
 import { panel, actionButton } from '../draw/cards.js'
-import { remoteSetupView } from '../../../workspace-view/index.js'
+import { remoteSetupView, sharingLine } from '../../../workspace-view/index.js'
 import type { RemoteSetupView } from '../../../workspace-view/index.js'
-import { devicesHeight, drawRemoteDevices } from '../account/remote-devices.js'
-import { drawRemoteCompact } from './remote-compact.js'
-/** Rows the Cloudflare and local network cards take at their full height, with the gap between them. */
-const FULL_CARDS = 17
+import { shownAccount } from '../account/account-model.js'
+
+const REFRESH = 'Refresh status',
+  POINTER = 'Account → Remote models'
+
+/** `value` in `room` cells, cut after a whole word with an ellipsis when it is longer. */
+const clip = (value: string, room: number) =>
+  textWidth(value) <= room ? value : `${wrapWords(value, room - 1)[0] ?? ''}…`
+
+/**
+ * Server → Remote access: the Cloudflare and local network cards. While accounts are on, the row of
+ * Refresh status also says whether the account's devices share this server, and opens Account → Remote
+ * models, where they do.
+ */
 export function drawServerRemote(
   c: Canvas,
   s: WorkspaceState,
@@ -17,17 +27,19 @@ export function drawServerRemote(
   bottom: number,
   focus: string
 ) {
-  // The account's devices come first; the cards keep their full height below them when the screen has
-  // the rows, and are two lines each otherwise.
-  const devices = devicesHeight(s, width, true)
-  if (!devices) return drawRemoteCards(c, s, x, y, width, bottom, focus)
-  if (bottom - y - devices - 1 >= FULL_CARDS) {
-    drawRemoteDevices(c, s, x, y, width, devices, focus, true)
-    return drawRemoteCards(c, s, x, y + devices + 1, width, bottom, focus)
-  }
-  const used = drawRemoteDevices(c, s, x, y, width, bottom - y - 7, focus, false)
-  drawRemoteCompact(c, s, x, y + used + 1, width, bottom, focus)
+  drawRemoteCards(c, s, x, y, width, bottom, focus)
+  const account = shownAccount(s.workspace)
+  if (!account) return
+  const at = x + width - textWidth(POINTER) - 2,
+    room = at - x - textWidth(REFRESH) - 5
+  if (at < x + textWidth(REFRESH) + 3) return
+  button(c, 'account-section:remote', at, bottom, POINTER, `Open ${POINTER}: share with your devices`, focus)
+  // Too narrow for a few words: the button alone.
+  if (room < 12) return
+  const line = clip(sharingLine(account.remote), room)
+  text(c, at - 1 - textWidth(line), bottom, line, COLORS.muted, room)
 }
+
 function drawRemoteCards(
   c: Canvas,
   s: WorkspaceState,
@@ -77,7 +89,7 @@ function drawRemoteCards(
     lines.slice(0, bottom - top).forEach((line, i) => text(c, x, top + i, line, COLORS.statusError, width))
   } else if (s.remote['error'] && !setup)
     text(c, x, bottom - 1, String(s.remote['error']), COLORS.statusError, width)
-  button(c, 'remote-refresh', x, bottom, 'Refresh status', 'Refresh remote access status', focus)
+  button(c, 'remote-refresh', x, bottom, REFRESH, 'Refresh remote access status', focus)
 }
 
 /** The install steps as rows: what to do, each command after a `$`, then the restart. */

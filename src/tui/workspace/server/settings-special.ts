@@ -4,7 +4,6 @@ import { drawFeatureSettings } from './feature-panel.js'
 import { scrollTrack } from '../draw/controls.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
-import { drawAccountSettings } from '../account/account-panel.js'
 import { ACCOUNT_SHORTCUTS } from '../account/account-input.js'
 import { shownAccount } from '../account/account-model.js'
 
@@ -37,7 +36,6 @@ export function drawSpecialSettings(
   bottom: number,
   focus: string
 ): boolean {
-  if (drawAccountSettings(c, s, x, y, width, focus)) return true
   if (s.settingsGroup === 'shortcuts') {
     const rows = shortcutRows(s)
     text(c, x, y, 'Keyboard shortcuts', COLORS.text, width, undefined, true)

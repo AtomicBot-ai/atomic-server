@@ -1,5 +1,11 @@
-import { LIBRARY_SECTIONS, SERVER_NAVIGATION, PLAYGROUND_TASKS } from '../../../contract/index.js'
-import { settingsSections } from '../account/account-model.js'
+import {
+  ACCOUNT_SECTIONS,
+  LIBRARY_SECTIONS,
+  SERVER_NAVIGATION,
+  SETTINGS_SECTIONS,
+  PLAYGROUND_TASKS,
+  SETTINGS_WORKSPACE_SECTIONS,
+} from '../../../contract/index.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, textWidth } from '../draw/canvas.js'
 import type { Page, WorkspaceState } from '../state.js'
@@ -12,8 +18,12 @@ const SERVER_MENU = [
   { id: 'traffic', label: 'Requests' },
 ]
 
-export function workspacePage(s: WorkspaceState): 'chat' | 'server' | 'models' | 'access' {
+/** Settings' sections in sidebar order. */
+export const SETTINGS_MENU = [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
+
+export function workspacePage(s: WorkspaceState): 'chat' | 'server' | 'models' | 'access' | 'account' {
   const page = s.page === 'tools' ? s.operationReturn : s.page
+  if (page === 'account') return 'account'
   if (['configuration', 'remote', 'model', 'proxy'].includes(s.serverView)) return 'server'
   if (['access', 'settings', 'logs', 'checks', 'commands'].includes(page)) return 'access'
   return page === 'models' ? 'models' : page === 'chat' || page === 'history' ? 'chat' : 'server'
@@ -48,33 +58,20 @@ export function drawSections(
   width: number,
   focus: string
 ) {
-  const page = workspacePage(s)
-  const items =
-    page === 'chat'
-      ? PLAYGROUND_TASKS
-      : page === 'server'
-        ? SERVER_MENU
-        : page === 'access'
-          ? settingsSections(s.workspace)
-          : LIBRARY_SECTIONS
-  const prefix =
-    page === 'chat'
-      ? 'playground-task'
-      : page === 'server'
-        ? 'server-section'
-        : page === 'access'
-          ? 'settings-section'
-          : 'library'
+  const page = workspacePage(s),
+    { items, prefix } = sectionMenu(s)
   const selected =
     page === 'chat'
       ? playgroundTask(s)
-      : page === 'server'
-        ? serverSection(s)
-        : page === 'access'
-          ? ['logs', 'checks'].includes(s.page === 'tools' ? s.operationReturn : s.page)
-            ? 'diagnostics'
-            : s.settingsGroup
-          : s.libraryView
+      : page === 'account'
+        ? s.accountView
+        : page === 'server'
+          ? serverSection(s)
+          : page === 'access'
+            ? ['logs', 'checks'].includes(s.page === 'tools' ? s.operationReturn : s.page)
+              ? 'diagnostics'
+              : s.settingsGroup
+            : s.libraryView
   if (width < 76) {
     button(
       c,
@@ -109,8 +106,14 @@ export function drawSections(
   return row + 2
 }
 
-export function sectionMenu(s: WorkspaceState) {
+/** The sections of the current page: the compact Sections dialog, and the buttons of `drawSections`. */
+export function sectionMenu(s: WorkspaceState): {
+  title: string
+  items: readonly { id: string; label: string }[]
+  prefix: string
+} {
   const page = workspacePage(s)
+  if (page === 'account') return { title: 'Account', items: ACCOUNT_SECTIONS, prefix: 'account-section' }
   return {
     title:
       page === 'server'
@@ -126,7 +129,7 @@ export function sectionMenu(s: WorkspaceState) {
         : page === 'models'
           ? LIBRARY_SECTIONS
           : page === 'access'
-            ? settingsSections(s.workspace)
+            ? SETTINGS_MENU
             : PLAYGROUND_TASKS,
     prefix:
       page === 'server'

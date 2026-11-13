@@ -31,8 +31,16 @@ export const SETTINGS_SECTIONS = [
   { id: 'tui', label: 'Interface' },
   { id: 'shortcuts', label: 'Keyboard shortcuts' },
   { id: 'hardware', label: 'Hardware' },
-  /** Shown only while `account.enabled` (the snapshot's `account.enabled`). */
-  { id: 'account', label: 'Account' },
+] as const
+
+/**
+ * The Account section, like the desktop app's: its own rail item above Help, shown only while
+ * `account.enabled` (the snapshot's `account.enabled`). Overview signs the server in and out; Remote models
+ * shares this server's models with the account's devices.
+ */
+export const ACCOUNT_SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'remote', label: 'Remote models' },
 ] as const
 
 export const SETTINGS_WORKSPACE_SECTIONS = [

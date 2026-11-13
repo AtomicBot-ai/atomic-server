@@ -146,14 +146,17 @@ comes from the workspace snapshot the SPA polls (`engines`, `host_steps`, `loads
   snapshot's `atc`, from the server's own daily look at releases): the versions, the command that installs
   it with Copy, the release page; Dismiss keeps it away for that release (`localStorage`). It shares one
   stack with the access-request notice (`WorkspaceToasts.tsx`), so the two never overlap.
-- **Account and devices** (only while the snapshot's `account.enabled`; ADR 2026-11-12). Settings → Account
-  (`workspace/account/`) signs the server in by an emailed code or a device code whose page opens in a new
-  tab, and signs it out behind a warning that every device loses access. Server → Remote access starts
-  with "Share with your devices" (`RemoteShare.tsx`, `RemoteDevices.tsx`): the switch, where devices can
+- **Account and devices** (only while the snapshot's `account.enabled`; ADRs 2026-11-12 and 2026-11-13).
+  Account is its own section, as in the desktop app: a rail item above Help (`AccountRailItem.tsx`, the
+  account's initial once signed in) and two tabs from `ACCOUNT_SECTIONS` (`account/Account.tsx`).
+  **Overview** (`AccountOverview.tsx`) signs the server in by an emailed code or a device code whose page
+  opens in a new tab, and signs it out behind a warning that every device loses access. **Remote models**
+  is "Share with your devices" (`RemoteShare.tsx`, `RemoteDevices.tsx`): the switch, where devices can
   reach the server, requests with their check code and Allow / Deny, devices with Revoke, and "Add a
   device" (`AddDeviceDialog.tsx`, lifted from the desktop): the code, the QR code the server renders as SVG
-  (shown as an `<img>`, never as markup), Copy link and the countdown. `AccessRequestToast.tsx` announces a
-  request on any other page, with Review.
+  (shown as an `<img>`, never as markup), Copy link and the countdown; signed out, it shows the sign-in.
+  Server → Remote access keeps the tunnel and the local network and ends with a line on how sharing stands
+  and Open Remote models. `AccessRequestToast.tsx` announces a request on any other page, with Review.
 - **Banner and loads.** `HostStepBanner.tsx` shows the privileged step the server waits on, with its
   command, in the Cockpit and on the Server page. A managed engine's load shows its stage and time on
   the installed model's row and in the Cockpit, with Cancel loading, and after a failure the error and

@@ -150,6 +150,6 @@ The 2026-11-07 settings layout adaptation retains the lifted component headers a
 
 | Here | From | Adapted |
 | --- | --- | --- |
-| `src/workspace/server/AddDeviceDialog.tsx` | `Atomic-Chat/web-app/src/containers/account/remote/AddDeviceDialog.tsx` @ `e630a461b` | The server's QR SVG shown as a `data:` image instead of `react-qr-code`; workspace operations (`account.remote.pairing.open`/`.close`) and snapshot polling instead of the account service hub and store; Copy link for desktop clients; English strings inlined |
+| `src/workspace/account/AddDeviceDialog.tsx` | `Atomic-Chat/web-app/src/containers/account/remote/AddDeviceDialog.tsx` @ `e630a461b` | The server's QR SVG shown as a `data:` image instead of `react-qr-code`; workspace operations (`account.remote.pairing.open`/`.close`) and snapshot polling instead of the account service hub and store; Copy link for desktop clients; English strings inlined |
 
-`src/workspace/server/RemoteShare.tsx` and `RemoteDevices.tsx` follow the layout of `containers/account/remote/ShareThisComputer.tsx` at the same revision (switch, reach line, requests with check codes, devices with Revoke) but are written for `atc`: the wording comes from `src/workspace-view/account/account-view.ts`, shared with the terminal UI.
+`src/workspace/account/RemoteShare.tsx` and `RemoteDevices.tsx` follow the layout of `containers/account/remote/ShareThisComputer.tsx` at the same revision (switch, reach line, requests with check codes, devices with Revoke) but are written for `atc`: the wording comes from `src/workspace-view/account/account-view.ts`, shared with the terminal UI. Since 2026-11-13 they live in the Account section's Remote models tab, as `routes/account/remote.tsx` places them in the desktop app.

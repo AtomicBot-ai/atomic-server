@@ -20,7 +20,7 @@ export function Server({
   section,
   onSection,
   openSettings = () => {},
-  openAccount,
+  openRemoteModels,
   openModels = () => {},
   initialAgent,
   showGuide = false,
@@ -35,7 +35,7 @@ export function Server({
   section?: string
   onSection?: (section: string) => void
   openSettings?: () => void
-  openAccount?: () => void
+  openRemoteModels?: () => void
   openModels?: (engine?: string) => void
   initialAgent?: string
   showGuide?: boolean
@@ -127,7 +127,7 @@ export function Server({
         <ServerConfiguration workspace={workspace} openKeys={() => setView('keys')} />
       )}
       {view === 'model' && <ServerModel workspace={workspace} openModels={openModels} />}
-      {view === 'remote' && <RemoteAccess workspace={workspace} openAccount={openAccount} />}
+      {view === 'remote' && <RemoteAccess workspace={workspace} openRemoteModels={openRemoteModels} />}
       {view === 'proxy' && <RuntimeSettings workspace={workspace} section="proxy" />}
       {view === 'traffic' && <Activity workspace={workspace} />}
       {view === 'keys' && <ServerKeys workspace={workspace} />}

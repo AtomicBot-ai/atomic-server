@@ -5,7 +5,7 @@ import type { AccountPairingCode } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action, Copy } from '../Controls'
 import { useDialog } from '../useDialog'
-import { useAccountPoll, useNow } from '../account/use-account-poll'
+import { useAccountPoll, useNow } from './use-account-poll'
 
 /** The QR code as an image: the SVG comes from the server and never enters the page as markup. */
 const qrSource = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`

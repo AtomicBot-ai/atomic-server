@@ -46,8 +46,7 @@ it('uses a rail and keeps contextual desktop navigation available inside detail 
   for (const page of ['access', 'settings', 'logs', 'checks', 'tools'] as const) {
     const state = { ...createWorkspace(page), operationReturn: 'logs' as const }
     const frame = workspaceFrame(state, 110, 32, 0)
-    // Account shows only while accounts are on (account/account-panel.test.ts); this snapshot has none.
-    for (const section of SETTINGS_SECTIONS.filter((v) => v.id !== 'account'))
+    for (const section of SETTINGS_SECTIONS)
       expect(frame.targets.some((v) => v.id === `settings-section:${section.id}`)).toBe(true)
     expect(workspacePage(state)).toBe('access')
   }

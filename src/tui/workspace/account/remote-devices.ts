@@ -1,15 +1,19 @@
-/** Server → Remote access: "Your devices", the account's devices that share this server's API. */
+/** Account → Remote models: share this server's models with the account's devices, and who uses them. */
 import type { AccountRemoteDevice, AccountRemoteRequest, WorkspaceAccount } from '../../../contract/index.js'
 import { deviceLabel, formatCheckCode, platformLabel, sharingLine } from '../../../workspace-view/index.js'
 import { button, COLORS, text, textWidth, wrapWords } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
-import { actionButton, panel } from '../draw/cards.js'
+import { actionButton } from '../draw/cards.js'
 import type { WorkspaceState } from '../state.js'
-import { deviceDetail, shownAccount } from './account-model.js'
+import { deviceDetail } from './account-model.js'
+import { drawSignIn } from './account-panel.js'
 
-export const DEVICES_TITLE = 'Your devices (Atomic Chat account)'
-const SIGN_IN =
-  'Sign in to share this server with your devices: Settings → Account, or run atc login in a terminal.'
+export const REMOTE_TITLE = 'Share with your devices'
+const INTRO =
+  'Devices signed in to your Atomic Chat account can use this server’s models through its API. Each device pairs once and gets its own key.'
+const SIGN_IN = 'Sign in to share this server’s models with your devices.'
+/** Rows the intro needs room for: below this the list keeps them. */
+const INTRO_ROOM = 14
 
 type Row =
   | { kind: 'heading'; text: string }
@@ -17,7 +21,7 @@ type Row =
   | { kind: 'request'; request: AccountRemoteRequest }
   | { kind: 'device'; device: AccountRemoteDevice }
 
-/** The block's list: who asks for access first, then who has it. */
+/** The list: who asks for access first, then who has it. */
 export function deviceRows(account: WorkspaceAccount): Row[] {
   const { requests, devices, sharing } = account.remote
   if (!requests.length && !devices.length)
@@ -33,15 +37,6 @@ export function deviceRows(account: WorkspaceAccount): Row[] {
     ...(devices.length ? [{ kind: 'heading' as const, text: 'Devices with access' }] : []),
     ...devices.map((device) => ({ kind: 'device' as const, device })),
   ]
-}
-
-/** Rows the block wants: its title, the sharing line and its actions, then the list; two more framed. */
-export function devicesHeight(s: WorkspaceState, width: number, framed: boolean): number {
-  const account = shownAccount(s.workspace)
-  if (!account) return 0
-  const inner = width - (framed ? 4 : 0)
-  const body = account.signed_in ? 3 + deviceRows(account).length : 2 + wrapWords(SIGN_IN, inner).length
-  return body + (framed ? 2 : 0)
 }
 
 function drawRow(c: Canvas, row: Row, x: number, y: number, width: number, focus: string) {
@@ -104,53 +99,38 @@ function drawActions(
 }
 
 /**
- * The block at `y` in at most `room` rows, framed by a card or not; the rows it took, 0 while accounts are
- * off. The list shows what fits and says how many more there are.
+ * The Remote models tab of a shown account, from `y` to `bottom`: the sign-in while nobody is signed in,
+ * else the share switch, Add a device and the list, which shows what fits and says how many more there are.
  */
-export function drawRemoteDevices(
+export function drawRemoteModels(
   c: Canvas,
   s: WorkspaceState,
+  account: WorkspaceAccount,
   x: number,
   y: number,
   width: number,
-  room: number,
-  focus: string,
-  framed: boolean
-): number {
-  const account = shownAccount(s.workspace)
-  if (!account) return 0
-  const height = Math.max(framed ? 5 : 3, Math.min(room, devicesHeight(s, width, framed)))
-  const inset = framed ? 2 : 0,
-    left = x + inset,
-    inner = width - inset * 2,
-    top = y + (framed ? 1 : 0),
-    rows = height - (framed ? 2 : 0)
-  if (framed) panel(c, x, y, width, height)
-  text(c, left, top, DEVICES_TITLE, COLORS.text, inner, undefined, true)
+  bottom: number,
+  focus: string
+) {
+  text(c, x, y, REMOTE_TITLE, COLORS.text, width, undefined, true)
   if (!account.signed_in) {
-    const lines = wrapWords(SIGN_IN, inner).slice(0, Math.max(0, rows - 2))
-    lines.forEach((line, i) => text(c, left, top + 1 + i, line, COLORS.muted, inner))
-    button(
-      c,
-      'settings-section:account',
-      left - (framed ? 1 : 0),
-      top + rows - 1,
-      'Sign in',
-      'Open Settings → Account',
-      focus
-    )
-    return height
+    const lines = wrapWords(SIGN_IN, width).slice(0, 2)
+    lines.forEach((line, i) => text(c, x, y + 2 + i, line, COLORS.muted, width))
+    return drawSignIn(c, s, account, x, y + 3 + lines.length, width, focus)
   }
+  const intro = bottom - y + 1 >= INTRO_ROOM ? wrapWords(INTRO, width).slice(0, 2) : []
+  intro.forEach((line, i) => text(c, x, y + 2 + i, line, COLORS.muted, width))
+  let row = y + 2 + (intro.length ? intro.length + 1 : 0)
   const error = account.remote.sharing && account.remote.error
-  text(c, left, top + 1, sharingLine(account.remote), error ? COLORS.statusError : COLORS.muted, inner)
-  drawActions(c, s, account, left - (framed ? 1 : 0), top + 2, focus)
+  text(c, x, row++, sharingLine(account.remote), error ? COLORS.statusError : COLORS.muted, width)
+  drawActions(c, s, account, x, row, focus)
+  row += 2
   const list = deviceRows(account),
-    capacity = Math.max(0, rows - 3),
+    capacity = Math.max(0, bottom - row + 1),
     clipped = list.length > capacity
   list
     .slice(0, clipped ? capacity - 1 : capacity)
-    .forEach((row, i) => drawRow(c, row, left, top + 3 + i, inner, focus))
+    .forEach((item, i) => drawRow(c, item, x, row + i, width, focus))
   if (clipped && capacity > 0)
-    text(c, left + 1, top + 2 + capacity, `… ${list.length - capacity + 1} more`, COLORS.muted, inner)
-  return height
+    text(c, x + 1, row + capacity - 1, `… ${list.length - capacity + 1} more`, COLORS.muted, width)
 }

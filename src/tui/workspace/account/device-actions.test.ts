@@ -42,9 +42,9 @@ const pairing = {
 
 function fixture(a: WorkspaceAccount) {
   let state: WorkspaceState = {
-    ...createWorkspace('server'),
+    ...createWorkspace('account'),
     setupComplete: true,
-    serverView: 'remote',
+    accountView: 'remote',
     workspace: { keys: [], account: a } as unknown as WorkspaceSnapshot,
   }
   const execute = vi.fn(async (name: string, _input?: Record<string, unknown>) =>

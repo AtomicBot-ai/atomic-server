@@ -17,6 +17,7 @@ export type Page =
   | 'welcome'
   | 'chat'
   | 'server'
+  | 'account'
   | 'models'
   | 'settings'
   | 'requests'
@@ -31,6 +32,7 @@ export const PAGE_FOCUS: Record<Page, string> = {
   setup: 'setup-refresh',
   chat: 'composer',
   server: 'api-toggle',
+  account: 'account-section:overview',
   models: 'library:catalog',
   settings: 'endpoint',
   history: 'history-search',

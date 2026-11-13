@@ -39,9 +39,8 @@ const device: AccountSignInStep = {
 
 function fixture(account: WorkspaceAccount, answers: Record<string, unknown> = {}) {
   let state: WorkspaceState = {
-    ...createWorkspace('access'),
+    ...createWorkspace('account'),
     setupComplete: true,
-    settingsGroup: 'account',
     workspace: { keys: [], account } as unknown as WorkspaceSnapshot,
   }
   const execute = vi.fn(async (name: string, _input?: Record<string, unknown>) => {
@@ -80,8 +79,23 @@ describe('signing in with an emailed code', () => {
     t.ctx.update((s) => ({ ...s, accountUi: { ...s.accountUi!, code: '123456' } }))
     await activate('account-email-verify', t.ctx)
     expect(t.execute).toHaveBeenLastCalledWith('account.signin.email.verify', { code: '123456' })
-    expect(t.get()).toMatchObject({ overlay: null, message: 'Signed in as ann@example.com.', busy: false })
+    expect(t.get()).toMatchObject({
+      page: 'account',
+      accountView: 'overview',
+      focus: 'account-section:remote',
+      overlay: null,
+      message: 'Signed in as ann@example.com.',
+      busy: false,
+    })
     expect(t.get().workspace?.account?.signed_in).toBe(true)
+  })
+
+  it('stays on Remote models when it was signed in from there, on the share switch', async () => {
+    const t = fixture(signedOut, { 'account.signin.email.verify': signedIn })
+    t.ctx.update((s) => ({ ...s, accountView: 'remote' }))
+    await activate('account-email-code', t.ctx)
+    await activate('account-email-verify', t.ctx)
+    expect(t.get()).toMatchObject({ page: 'account', accountView: 'remote', focus: 'account-share' })
   })
 
   it('keeps a refused code in the dialog with the reason', async () => {
@@ -149,7 +163,14 @@ describe('signing out', () => {
     expect(t.execute).not.toHaveBeenCalled()
     await activate('account-signout-confirm', t.ctx)
     expect(t.execute).toHaveBeenCalledExactlyOnceWith('account.signout', {})
-    expect(t.get()).toMatchObject({ overlay: null, message: 'Signed out.', busy: false })
+    expect(t.get()).toMatchObject({
+      page: 'account',
+      accountView: 'overview',
+      focus: 'account-email',
+      overlay: null,
+      message: 'Signed out.',
+      busy: false,
+    })
     expect(t.get().workspace?.account?.signed_in).toBe(false)
   })
 

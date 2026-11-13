@@ -1,9 +1,4 @@
-/* "Share with your devices" on Server → Remote access, and its Add a device dialog. Theme tokens only. */
-.remote-share-signed-out {
-  margin: 0;
-  font-size: 13px;
-  line-height: 20px;
-}
+/* "Share with your devices" on Account → Remote models, and its Add a device dialog. Theme tokens only. */
 .remote-share-group {
   display: grid;
   gap: 4px;

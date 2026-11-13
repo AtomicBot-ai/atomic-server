@@ -44,23 +44,22 @@ function press(s: WorkspaceState, input: string, k: Partial<Key> = {}) {
   return workspaceInput(input, key(k), s, workspaceFrame(s, 100, 30, 0))
 }
 const remote = (a = account()): WorkspaceState => ({
-  ...createWorkspace('server'),
+  ...createWorkspace('account'),
   setupComplete: true,
-  serverView: 'remote',
-  focus: 'remote-toggle',
+  accountView: 'remote',
+  focus: 'account-section:remote',
   workspace: snapshot(a),
 })
 const typing = (step: 'email' | 'code', value = ''): WorkspaceState => ({
-  ...createWorkspace('access'),
+  ...createWorkspace('account'),
   setupComplete: true,
-  settingsGroup: 'account',
   overlay: 'account-email',
   focus: 'account-field',
   workspace: snapshot(account({ signed_in: false, user: null })),
   accountUi: { ...accountUi({}), step, [step]: value },
 })
 
-describe('Server → Remote access keys', () => {
+describe('Account → Remote models keys', () => {
   it.each([
     ['a', 'account-pair'],
     ['s', 'account-share'],
@@ -72,7 +71,11 @@ describe('Server → Remote access keys', () => {
     ['signed out', remote(account({ signed_in: false, user: null }))],
     ['accounts off', remote(account({ enabled: false }))],
     ['a dialog open', { ...remote(), overlay: 'help' as const }],
-    ['another screen', { ...remote(), serverView: 'overview', focus: 'api-toggle' }],
+    ['on Overview', { ...remote(), accountView: 'overview' as const }],
+    [
+      'on Server → Remote access',
+      { ...remote(), page: 'server' as const, serverView: 'remote', focus: 'remote-toggle' },
+    ],
   ])('leaves a and s alone while %s', (_name, s) => {
     expect(press(s, 'a').action).not.toBe('account-pair')
     expect(press(s, 's').action).not.toBe('account-share')

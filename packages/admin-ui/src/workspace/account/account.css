@@ -1,4 +1,4 @@
-/* Settings → Account and the account lines on Server → Remote access. Theme tokens only. */
+/* The Account section (Overview, Remote models) and its rail item. Theme tokens only. */
 .account-sign-in {
   display: grid;
   gap: 4px;
@@ -42,18 +42,16 @@
 .account-timer {
   color: var(--ew-muted);
 }
-.account-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--ew-teal);
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-.account-link:focus-visible {
-  outline: 2px solid var(--atomic-focus-ring);
-  outline-offset: 2px;
-  border-radius: 4px;
+/* The signed-in rail item: the account's initial in a ring the size of the other rail icons. */
+.desktop-rail .rail-item .rail-avatar {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
 }

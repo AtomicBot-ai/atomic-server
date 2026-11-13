@@ -71,9 +71,8 @@ it('keeps backend configuration inside General and opens the same desktop settin
   ctx.update((s) => ({ ...s, editValue: '1555' }))
   await activate('save-edit', ctx)
   expect(execute).not.toHaveBeenCalled()
-  // Account opens only while accounts are on (account/account-panel.test.ts); this snapshot has none.
   for (const section of [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS].filter(
-    (entry) => entry.id !== 'hardware' && entry.id !== 'account'
+    (entry) => entry.id !== 'hardware'
   )) {
     await activate(`settings-section:${section.id}`, ctx)
     expect(ctx.get()).toMatchObject({

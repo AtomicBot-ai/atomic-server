@@ -22,8 +22,8 @@ export function WorkspaceToasts({
       <UpdateToast workspace={workspace} top={chat} />
       <AccessRequestToast
         workspace={workspace}
-        hidden={navigation.page === 'server' && navigation.serverSection === 'remote'}
-        onReview={accountPages(navigation).openRemote}
+        hidden={navigation.page === 'account' && navigation.accountSection === 'remote'}
+        onReview={accountPages(navigation).openRemoteModels}
       />
     </div>
   )

@@ -27,23 +27,28 @@ const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
   },
   ...over,
 })
-const settings = (a: WorkspaceAccount, group = 'account'): WorkspaceState => ({
-  ...createWorkspace('access'),
+const overview = (a: WorkspaceAccount): WorkspaceState => ({
+  ...createWorkspace('account'),
   setupComplete: true,
-  settingsGroup: group,
   workspace: { keys: [], account: a } as unknown as WorkspaceSnapshot,
+})
+const settings = (a: WorkspaceAccount, group = 'shortcuts'): WorkspaceState => ({
+  ...overview(a),
+  page: 'access',
+  settingsGroup: group,
 })
 const screen = (c: Canvas) => c.cells.map((row) => row.map((cell) => cell.char).join('')).join('\n')
 const ids = (c: Canvas) => c.targets.map((t) => t.id)
 
-describe('Settings → Account', () => {
+describe('Account → Overview', () => {
   it('offers both ways to sign in while signed out', () => {
-    const c = workspaceFrame(settings(account()), 120, 36, 0)
+    const c = workspaceFrame(overview(account()), 120, 36, 0)
+    expect(screen(c)).toContain('Atomic Chat account')
     expect(screen(c)).toContain('Not signed in')
     expect(screen(c)).toContain('Email me a code')
     expect(screen(c)).toContain('Sign in on another device')
     expect(ids(c)).toEqual(
-      expect.arrayContaining(['account-email', 'account-device', 'settings-section:account'])
+      expect.arrayContaining(['account-email', 'account-device', 'account-section:overview'])
     )
     expect(ids(c)).not.toContain('account-signout')
   })
@@ -74,12 +79,12 @@ describe('Settings → Account', () => {
       'account-email',
     ],
   ])('says so when there is %s', (_name, sign_in, words, id) => {
-    const c = workspaceFrame(settings(account({ sign_in })), 120, 36, 0)
+    const c = workspaceFrame(overview(account({ sign_in })), 120, 36, 0)
     expect(screen(c)).toContain(words)
     expect(ids(c)).toContain(id)
   })
 
-  it('shows who is signed in, the devices and Sign out', () => {
+  it('shows who is signed in, the devices with Manage devices, and Sign out', () => {
     const signedIn = account({
       signed_in: true,
       user: { email: 'ann@example.com', display_name: 'Ann' },
@@ -91,7 +96,7 @@ describe('Settings → Account', () => {
         devices: [{ grant_id: 'd1', device_name: null, platform: 'ios', since: 1 }],
       },
     })
-    const c = workspaceFrame(settings(signedIn), 120, 36, 0)
+    const c = workspaceFrame(overview(signedIn), 120, 36, 0)
     for (const words of [
       'Signed in as Ann',
       'ann@example.com',
@@ -100,7 +105,25 @@ describe('Settings → Account', () => {
       'Devices lose access and must pair again.',
     ])
       expect(screen(c)).toContain(words)
-    expect(ids(c)).toEqual(expect.arrayContaining(['account-signout', 'server-section:remote']))
+    expect(ids(c)).toEqual(expect.arrayContaining(['account-signout', 'account-section:remote']))
+    expect(screen(c)).not.toMatch(/Settings → Account|Server → Remote access/)
+  })
+
+  it.each([
+    [90, 32],
+    [110, 32],
+    [80, 24],
+    [60, 20],
+  ])('fits %ix%i signed in and signed out', (width, height) => {
+    const signedIn = account({ signed_in: true, user: { email: 'ann@example.com', display_name: 'Ann' } })
+    for (const a of [account(), signedIn]) {
+      const c = workspaceFrame(overview(a), width, height, 0)
+      expect(ids(c)).toContain(a.signed_in ? 'account-signout' : 'account-email')
+      for (const t of c.targets) {
+        expect(t.x + t.width).toBeLessThanOrEqual(width)
+        expect(t.y + t.height).toBeLessThanOrEqual(t.y === height - 1 ? height : height - 3)
+      }
+    }
   })
 
   it('counts devices and requests', () => {
@@ -119,28 +142,42 @@ describe('Settings → Account', () => {
   })
 })
 
+describe('Settings', () => {
+  it('has no Account section; the account shortcuts show only while accounts are on', () => {
+    const on = workspaceFrame(settings(account()), 120, 36, 0)
+    expect(ids(on).some((id) => id === 'settings-section:account')).toBe(false)
+    expect(ids(on)).toContain('page:account')
+    expect(shortcutRows(settings(account()))).toEqual(
+      expect.arrayContaining([
+        ['A', 'Add a device (Account → Remote models)'],
+        ['S', 'Share with your devices on or off (Account → Remote models)'],
+      ])
+    )
+    expect(shortcutRows(settings(account({ enabled: false }))).map(([key]) => key)).not.toContain('A')
+  })
+})
+
 describe('while accounts are off', () => {
   const off = account({ enabled: false })
 
-  it('has no Account section and no account shortcuts', () => {
-    const on = workspaceFrame(settings(account(), 'shortcuts'), 120, 36, 0)
-    const hidden = workspaceFrame(settings(off, 'shortcuts'), 120, 36, 0)
-    expect(ids(on)).toContain('settings-section:account')
-    expect(ids(hidden)).not.toContain('settings-section:account')
+  it('shows no Account anywhere', () => {
+    const hidden = workspaceFrame(settings(off), 120, 36, 0)
+    expect(ids(hidden).some((id) => id.startsWith('account-') || id === 'page:account')).toBe(false)
     expect(screen(hidden)).not.toContain('Account')
-    expect(shortcutRows(settings(account())).map(([key]) => key)).toEqual(expect.arrayContaining(['A', 'S']))
-    expect(shortcutRows(settings(off)).map(([key]) => key)).not.toContain('A')
   })
 
-  it('does not open Account', async () => {
-    let state = settings(off, 'admin')
-    const ctx = {
-      get: () => state,
-      update: (fn: (s: WorkspaceState) => WorkspaceState) => {
-        state = fn(state)
-      },
-    } as unknown as ActionContext
-    await activate('settings-section:account', ctx)
-    expect(state.settingsGroup).toBe('admin')
-  })
+  it.each(['page:account', 'account-section:overview', 'account-section:remote'])(
+    'does not open %s',
+    async (id) => {
+      let state = settings(off, 'admin')
+      const ctx = {
+        get: () => state,
+        update: (fn: (s: WorkspaceState) => WorkspaceState) => {
+          state = fn(state)
+        },
+      } as unknown as ActionContext
+      await activate(id, ctx)
+      expect(state).toMatchObject({ page: 'access', settingsGroup: 'admin' })
+    }
+  )
 })

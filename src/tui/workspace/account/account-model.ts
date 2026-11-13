@@ -1,6 +1,6 @@
 /** The account as the terminal shows it: what this client keeps of a flow, and what it may show at all. */
-import { SETTINGS_SECTIONS, SETTINGS_WORKSPACE_SECTIONS } from '../../../contract/index.js'
 import type {
+  ACCOUNT_SECTIONS,
   AccountPairingCode,
   AccountRemoteDevice,
   WorkspaceAccount,
@@ -56,12 +56,22 @@ export function shownAccount(workspace: WorkspaceSnapshot | null | undefined): W
   return workspace?.account?.enabled === true ? workspace.account : null
 }
 
-/** Settings sections in sidebar order; Account only while accounts are on. */
-export function settingsSections(workspace: WorkspaceSnapshot | null | undefined) {
-  const shown = shownAccount(workspace) !== null
-  return [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS].filter(
-    (section) => section.id !== 'account' || shown
-  )
+/** A tab of the Account page: Overview or Remote models. */
+export type AccountView = (typeof ACCOUNT_SECTIONS)[number]['id']
+
+/** The Account page open on `view`, focus on `focus`: the tab's sidebar row unless said otherwise. */
+export function onAccountTab(view: AccountView, focus = `account-section:${view}`) {
+  return { page: 'account' as const, accountView: view, serverView: 'overview', focus, hover: '' }
+}
+
+/** A sign-in that just finished: the tab it started on, focus on what comes next there. */
+export function signedIn(s: WorkspaceState, account: WorkspaceAccount): Partial<WorkspaceState> {
+  const view = s.page === 'account' ? s.accountView : 'overview'
+  return {
+    ...onAccountTab(view, view === 'remote' ? 'account-share' : 'account-section:remote'),
+    overlay: null,
+    message: `${accountLine(account)}.`,
+  }
 }
 
 /** The status line's account notice: a device asking for access. */
@@ -94,22 +104,14 @@ export function withAccount(s: WorkspaceState, account: WorkspaceAccount): Works
 export function accountArrived(s: WorkspaceState, account: WorkspaceAccount, now: number): WorkspaceState {
   const next = withAccount(s, account),
     ui = accountUi(s, now)
-  if (s.overlay === 'account-device' && account.signed_in)
-    return {
-      ...next,
-      overlay: null,
-      focus: 'server-section:remote',
-      hover: '',
-      message: `${accountLine(account)}.`,
-    }
+  if (s.overlay === 'account-device' && account.signed_in) return { ...next, ...signedIn(s, account) }
   const device = s.overlay === 'account-pairing' ? pairedDevice(ui, account) : null
   if (device)
     return {
       ...next,
+      ...onAccountTab('remote', 'account-pair'),
       overlay: null,
       accountUi: { ...ui, pairing: null, known: [], now },
-      focus: 'account-pair',
-      hover: '',
       message: `${deviceLabel(device)} can now use this server.`,
     }
   return { ...next, ...(s.accountUi ? { accountUi: { ...s.accountUi, now } } : {}) }

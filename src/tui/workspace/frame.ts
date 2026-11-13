@@ -12,6 +12,7 @@ import { messageText } from '../../terminal-service/index.js'
 import { updateNotice } from '../../workspace-view/index.js'
 import { drawFirstRun } from './setup/first-run.js'
 import { accountNotice } from './account/account-model.js'
+import { leaveAccountPage } from './account/account-navigation.js'
 import { drawRail, drawSidebar, serverRunning } from './navigation/sidebar.js'
 import { drawFooter } from './navigation/footer.js'
 import { drawSetup } from './setup/setup-panel.js'
@@ -27,13 +28,15 @@ import { COMPOSER_HEIGHT, drawComposer } from './chat/composer.js'
 import { newChatButton } from './chat/chat-navigation.js'
 import { drawPicker, isPicker } from './chat/picker.js'
 export function workspaceFrame(
-  s: WorkspaceState,
+  state: WorkspaceState,
   width: number,
   height: number,
   seconds: number,
   _ornament: OrnamentStyle = 'fangs',
   downloadHighlight = false
 ): Canvas {
+  // The next snapshot leaves an Account page whose accounts were turned off; it is never drawn empty.
+  const s = leaveAccountPage(state)
   const c = canvas(width, height),
     l = workspaceLayout(width, height)
   const downloads = floatingDownloadBounds(c, s)
