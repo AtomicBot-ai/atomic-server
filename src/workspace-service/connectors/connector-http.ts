@@ -1,6 +1,20 @@
 import type { ConnectorConfig } from '../../contract/index.js'
 import { object } from '../validation.js'
 import { AtcError } from '../../errors/index.js'
+
+/** A timed-out call rejects with `TimeoutError`/`AbortError`, sometimes wrapped in `fetch failed`. */
+function timedOut(error: unknown): boolean {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+  while (current !== null && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current)
+    const name = (current as { name?: unknown }).name
+    if (name === 'TimeoutError' || name === 'AbortError') return true
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
+
 function result(value: unknown, id: number) {
   const row = object(value)
   if (row['jsonrpc'] !== '2.0' || row['id'] !== id || (!('result' in row) && !('error' in row)))
@@ -23,18 +37,29 @@ export function connectorHttp(config: ConnectorConfig, request: typeof fetch) {
   return {
     async send(method: string, params?: unknown, notification = false): Promise<unknown> {
       const id = ++sequence
-      const response = await request(config.url, {
-        method: 'POST',
-        redirect: 'error',
-        signal: AbortSignal.timeout(config.timeout * 1000),
-        headers: headers(),
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          ...(!notification ? { id } : {}),
-          method,
-          ...(params ? { params } : {}),
-        }),
-      })
+      let response: Response
+      try {
+        response = await request(config.url, {
+          method: 'POST',
+          redirect: 'error',
+          signal: AbortSignal.timeout(config.timeout * 1000),
+          headers: headers(),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            ...(!notification ? { id } : {}),
+            method,
+            ...(params ? { params } : {}),
+          }),
+        })
+      } catch (error) {
+        // An absent or unresponsive server answers the user; it is not a defect of this server.
+        throw new AtcError(
+          'ATC_USAGE',
+          timedOut(error)
+            ? 'Connector connection timed out.'
+            : 'Connector is not reachable. Check that its server is running and its URL is right.'
+        )
+      }
       if (!response.ok) {
         await response.body?.cancel()
         throw new AtcError(
