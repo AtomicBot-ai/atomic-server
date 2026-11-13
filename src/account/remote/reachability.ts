@@ -30,10 +30,17 @@ function cleanPrefix(prefix: string): string {
 
 const ALL_INTERFACES = new Set(['0.0.0.0', '::', '[::]'])
 
+/**
+ * Addresses no other device can dial: loopback, link-local (`169.254/16`, `fe80::/10`, which would also
+ * need this machine's zone id) and `198.18/15`, the range VPN and proxy apps give their own tunnel
+ * interface (fake-IP TUN). Offering them would only make a device wait on a dead address first.
+ */
+const UNDIALABLE = /^(127\.|169\.254\.|198\.1[89]\.|::1$|fe[89ab][0-9a-f]:)/i
+
 function lanHost(address: string): string | null {
-  const value = address.trim()
-  if (!value || value.startsWith('127.') || value === '::1') return null
-  return value.includes(':') ? `[${value.replace(/^\[|\]$/g, '')}]` : value
+  const value = address.trim().replace(/^\[|\]$/g, '')
+  if (!value || UNDIALABLE.test(value)) return null
+  return value.includes(':') ? `[${value}]` : value
 }
 
 export function reachability(input: ReachabilityInput): Reachability {

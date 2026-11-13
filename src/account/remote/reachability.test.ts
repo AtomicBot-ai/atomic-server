@@ -30,7 +30,7 @@ describe('reachability', () => {
   })
 
   it('adds LAN addresses only while the API listens on every interface', () => {
-    const lanAddresses = ['192.168.1.5', 'fe80::1', '127.0.0.1']
+    const lanAddresses = ['192.168.1.5', 'fd7a:115c::5', '127.0.0.1']
     expect(reachability({ tunnel: null, server, lanAddresses }).endpoints).toEqual([])
     expect(
       reachability({ tunnel: null, server: { ...server, host: '0.0.0.0', prefix: 'v1/' }, lanAddresses })
@@ -39,9 +39,31 @@ describe('reachability', () => {
       lan: true,
       endpoints: [
         { kind: 'lan', url: 'http://192.168.1.5:1339/v1' },
-        { kind: 'lan', url: 'http://[fe80::1]:1339/v1' },
+        { kind: 'lan', url: 'http://[fd7a:115c::5]:1339/v1' },
       ],
     })
+  })
+
+  it.each(['198.18.0.1', '198.19.255.1', '169.254.10.2', 'fe80::1', 'FEBF::2', '::1', '127.0.0.2'])(
+    'never offers %s, which no other device can dial',
+    (address) => {
+      const lanServer = { ...server, host: '0.0.0.0' }
+      expect(reachability({ tunnel: null, server: lanServer, lanAddresses: [address] }).endpoints).toEqual([])
+    }
+  )
+
+  it('keeps addresses that only look close to those ranges', () => {
+    const lanServer = { ...server, host: '0.0.0.0' }
+    const endpoints = reachability({
+      tunnel: null,
+      server: lanServer,
+      lanAddresses: ['198.180.0.1', '10.169.254.1', '100.64.0.7'],
+    }).endpoints.map((e) => e.url)
+    expect(endpoints).toEqual([
+      'http://198.180.0.1:1339/v1',
+      'http://10.169.254.1:1339/v1',
+      'http://100.64.0.7:1339/v1',
+    ])
   })
 
   it('offers nothing while the API is stopped', () => {
