@@ -15,6 +15,8 @@ const MIN_ROUND_MS = 1_000
 export interface Loop {
   stop(): void
   wake(): void
+  /** Settles once the loop has ended, whatever ended it; never rejects. */
+  ended: Promise<void>
 }
 
 export interface LoopRound {
@@ -32,6 +34,7 @@ export function startLoop(work: LoopRound, waitSeconds: number, done: () => void
   let controller = new AbortController()
   let interrupt: (() => void) | null = null
   const loop: Loop = {
+    ended: Promise.resolve(),
     stop: () => {
       stopped = true
       controller.abort()
@@ -54,7 +57,7 @@ export function startLoop(work: LoopRound, waitSeconds: number, done: () => void
     }).finally(() => {
       interrupt = null
     })
-  void (async () => {
+  const ended = (async () => {
     let after: number | null = null
     let wait = 0
     let backoff = FIRST_BACKOFF_MS
@@ -86,7 +89,17 @@ export function startLoop(work: LoopRound, waitSeconds: number, done: () => void
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS)
       }
     }
-    done()
   })()
+    .catch((error: unknown) => {
+      // What fails after the loop gave up (a fatal step, the data folder gone at shutdown) is reported like any
+      // other failure, never left as an unhandled rejection.
+      try {
+        work.failed(error, 0)
+      } catch {
+        // Nothing left to tell.
+      }
+    })
+    .finally(done)
+  loop.ended = ended
   return loop
 }

@@ -38,7 +38,8 @@ describe('the account session', () => {
     const again = new AccountSession({ atcDir: dir, call: backend.call })
     expect((await again.load()).installation_id).toBe(id)
     expect(again.signedIn()).toBe(false)
-    expect((await stat(session.path)).mode & 0o777).toBe(0o600)
+    // Windows has no POSIX modes; the data folder's owner-only ACL guards it there.
+    if (process.platform !== 'win32') expect((await stat(session.path)).mode & 0o777).toBe(0o600)
   })
 
   it('refreshes once for callers racing on an expiring token', async () => {

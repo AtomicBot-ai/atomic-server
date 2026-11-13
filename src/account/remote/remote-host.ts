@@ -42,6 +42,7 @@ export class RemoteHost {
   private document: RemoteDocument | null = null
   private queue: Promise<unknown> = Promise.resolve()
   private loop: Loop | null = null
+  private stopping: Promise<void> = Promise.resolve()
   private requests: AccountRemoteRequest[] = []
   /** The device and key behind each request shown, as the last sync gave them. */
   private pending = new Map<string, { client_device_id: string; client_public_key: string }>()
@@ -107,7 +108,13 @@ export class RemoteHost {
   }
   stop(): void {
     this.loop?.stop()
+    this.stopping = this.loop?.ended ?? this.stopping
     this.loop = null
+  }
+  /** Settles once a stopped loop has ended and every change is written: before the data folder goes away. */
+  async settled(): Promise<void> {
+    await this.stopping
+    await this.queue
   }
   /** Something a sync reports changed (the tunnel, the server, a decision): sync now. */
   wake(): void {

@@ -42,6 +42,7 @@ describe('the account service', () => {
   }
   afterEach(async () => {
     service.stop()
+    await service.remote.settled()
     await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
   })
 

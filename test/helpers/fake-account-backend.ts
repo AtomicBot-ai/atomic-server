@@ -204,7 +204,9 @@ export class FakeAccountBackend {
       /^\/v1\/remote\/grants\/([^/]+)\/(approve|deny)$/,
       (_b, _o, [id, verb]) => {
         const grant = this.grant(id)
-        if (grant.status !== 'pending' && verb === 'approve') throw new AccountApiError(409, 'invalid_state')
+        // Like the service: approve takes a pending grant; deny a pending or an approved one.
+        const from = verb === 'approve' ? ['pending'] : ['pending', 'approved']
+        if (!from.includes(grant.status)) throw new AccountApiError(409, 'invalid_state')
         grant.status = verb === 'approve' ? 'approved' : 'denied'
         this.changed()
       },

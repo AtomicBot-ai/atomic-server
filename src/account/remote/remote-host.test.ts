@@ -53,6 +53,7 @@ describe('the remote access host', () => {
   })
   afterEach(async () => {
     host.stop()
+    await host.settled()
     await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
   })
 
@@ -93,7 +94,8 @@ describe('the remote access host', () => {
     backend.revoke(grant.id)
     await until(() => host.keys().length === 0)
     const file = await stat(join(dir, 'remote-access.json'))
-    expect(file.mode & 0o777).toBe(0o600)
+    // Windows has no POSIX modes; the data folder's owner-only ACL guards it there.
+    if (process.platform !== 'win32') expect(file.mode & 0o777).toBe(0o600)
   })
 
   it('pairs a typed code with the code letters as the secret', async () => {
@@ -181,7 +183,9 @@ describe('the remote access host', () => {
     await host.setSharing(true)
     const tablet = await allowed('iPad')
     backend.revoke(tablet.id)
-    await until(() => host.keys().length === 0)
+    // The entry is written right after the key goes: wait for the entry itself.
+    await until(() => host.view().ended.length === 1)
+    expect(host.keys()).toEqual([])
     expect(host.view().ended).toEqual([
       { grant_id: tablet.id, device_name: 'iPad', platform: 'macos', at: expect.any(Number) },
     ])
