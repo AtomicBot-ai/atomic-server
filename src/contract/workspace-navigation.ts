@@ -31,6 +31,8 @@ export const SETTINGS_SECTIONS = [
   { id: 'tui', label: 'Interface' },
   { id: 'shortcuts', label: 'Keyboard shortcuts' },
   { id: 'hardware', label: 'Hardware' },
+  /** Shown only while `account.enabled` (the snapshot's `account.enabled`). */
+  { id: 'account', label: 'Account' },
 ] as const
 
 export const SETTINGS_WORKSPACE_SECTIONS = [
@@ -46,6 +48,7 @@ export const SERVER_SETTINGS_GROUPS = [
   { id: 'models', label: 'Startup models' },
   { id: 'managed', label: 'Containers' },
   { id: 'update', label: 'Updates' },
+  { id: 'account', label: 'Account' },
   { id: 'log', label: 'Logging' },
   { id: 'proxy', label: 'Proxy' },
   { id: 'telemetry', label: 'Privacy' },
@@ -88,6 +91,7 @@ export const SETTING_LABELS: Readonly<Record<string, string>> = {
   'proxy.ignoreSsl': 'Skip proxy certificate verification',
   'update.channel': 'Release channel',
   'update.checkOnStart': 'Check for updates on start',
+  'account.enabled': 'Atomic Chat account and device sharing',
   'telemetry.enabled': 'Send error reports',
   'tui.endpoint': 'Playground endpoint',
   'tui.model': 'Last Playground model',

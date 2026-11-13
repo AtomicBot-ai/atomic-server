@@ -20,4 +20,6 @@ export interface WorkspaceServiceOptions {
   atc?: () => WorkspaceAtc
   /** How to install `cloudflared` here; added to the remote access status while the core has none to run. */
   remoteSetup?: RemoteAccessSetup
+  /** Where the account's background work says what it did. */
+  log?: { info(message: string): void; warn(message: string): void }
 }
