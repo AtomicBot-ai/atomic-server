@@ -8,7 +8,14 @@ import { sharedRead, watchSharedRead } from '../watch-shared-read'
 import { remoteSetupView } from '@view'
 import { SettingsSection } from '../SettingsForm'
 import { RemoteSetup } from './RemoteSetup'
-export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
+import { RemoteShare } from './RemoteShare'
+export function RemoteAccess({
+  workspace: w,
+  openAccount,
+}: {
+  workspace: Workspace
+  openAccount?: () => void
+}) {
   const [addresses, setAddresses] = useState<string[]>([])
   const [remote, setRemote] = useState<RecordValue>({})
   const [error, setError] = useState('')
@@ -32,6 +39,7 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
   )
   return (
     <div className="settings-form">
+      <RemoteShare workspace={w} openAccount={openAccount} />
       <SettingsSection
         title="Public remote access"
         description="Reach this server over HTTPS through a Cloudflare tunnel."

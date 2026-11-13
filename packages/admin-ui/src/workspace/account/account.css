@@ -1,0 +1,59 @@
+/* Settings → Account and the account lines on Server → Remote access. Theme tokens only. */
+.account-sign-in {
+  display: grid;
+  gap: 4px;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.account-failed {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.settings-section-fields > .account-device-row:last-child {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.account-device {
+  gap: 8px;
+}
+.account-device > p {
+  font-size: 13px;
+  line-height: 20px;
+}
+.account-device a {
+  color: var(--ew-teal);
+  overflow-wrap: anywhere;
+}
+.account-code {
+  font:
+    600 24px/32px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.12em;
+  color: var(--ew-text);
+  user-select: all;
+}
+.account-timer {
+  color: var(--ew-muted);
+}
+.account-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ew-teal);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.account-link:focus-visible {
+  outline: 2px solid var(--atomic-focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

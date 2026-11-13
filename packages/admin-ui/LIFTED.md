@@ -145,3 +145,11 @@ The provider summaries, connector cards and workspace settings above now use sha
 The 2026-11-07 runtime model card adaptation keeps the provenance of `workspace/library/install/ManagedModelInstall.tsx` (`LocalModelTable.tsx` @ `5043013`): compatibility summaries now use `ManagedCompatibility.tsx` with expandable original diagnostics. FastFlowLM/GenieX downloads use a compact variant/size/action block; FastFlowLM facts and license are separated from source notices.
 
 The 2026-11-07 settings layout adaptation retains the lifted component headers and routes native controls through `workspace/SettingsField.tsx`. Attachment settings use semantic sections and guarded draft saving; runtime, API, engine, assistant, connector and provider forms share control geometry while retaining their server operations.
+
+## Server account and device sharing (2026-11-12)
+
+| Here | From | Adapted |
+| --- | --- | --- |
+| `src/workspace/server/AddDeviceDialog.tsx` | `Atomic-Chat/web-app/src/containers/account/remote/AddDeviceDialog.tsx` @ `e630a461b` | The server's QR SVG shown as a `data:` image instead of `react-qr-code`; workspace operations (`account.remote.pairing.open`/`.close`) and snapshot polling instead of the account service hub and store; Copy link for desktop clients; English strings inlined |
+
+`src/workspace/server/RemoteShare.tsx` and `RemoteDevices.tsx` follow the layout of `containers/account/remote/ShareThisComputer.tsx` at the same revision (switch, reach line, requests with check codes, devices with Revoke) but are written for `atc`: the wording comes from `src/workspace-view/account/account-view.ts`, shared with the terminal UI.

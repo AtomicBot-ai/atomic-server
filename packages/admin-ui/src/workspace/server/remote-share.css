@@ -1,0 +1,132 @@
+/* "Share with your devices" on Server → Remote access, and its Add a device dialog. Theme tokens only. */
+.remote-share-signed-out {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.remote-share-group {
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.server-desktop .remote-share-group h3,
+.remote-share-group h3 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--ew-text);
+}
+.remote-share-group > p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+}
+.remote-share-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.remote-share-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ew-line);
+  font-size: 13px;
+  line-height: 20px;
+}
+.remote-share-list > li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.remote-share-list > li > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.remote-share-list strong {
+  font-weight: 500;
+  color: var(--ew-text);
+  overflow-wrap: anywhere;
+}
+.remote-share-list small {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+}
+.remote-share-list .ew-actions {
+  flex-wrap: nowrap;
+}
+.remote-check-code {
+  font:
+    600 12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.08em;
+  color: var(--ew-text);
+}
+.ew-modal.add-device-dialog {
+  max-width: 400px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.add-device-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+}
+.add-device-intro {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ew-muted);
+}
+/* The only fixed colour: a scanner needs dark modules on a light ground in either theme. */
+.add-device-qr {
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff;
+  line-height: 0;
+}
+.add-device-qr.expired {
+  opacity: 0.2;
+}
+.add-device-qr img {
+  display: block;
+  width: 176px;
+  height: 176px;
+}
+.add-device-or,
+.add-device-timer {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ew-muted);
+}
+.add-device-code {
+  font:
+    600 24px/32px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.12em;
+  color: var(--ew-text);
+  user-select: all;
+}
+.ew-modal.add-device-dialog .ew-actions {
+  justify-content: center;
+  margin-top: 12px;
+}
+@media (max-width: 560px) {
+  .remote-share-list > li {
+    flex-wrap: wrap;
+  }
+}

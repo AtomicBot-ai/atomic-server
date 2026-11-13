@@ -35,7 +35,10 @@ it('matches the desktop primary and workspace settings order without adding serv
   )
   const navigation = within(screen.getByRole('navigation', { name: 'Settings sections' }))
   expect(navigation.getAllByRole('button').map((button) => button.textContent)).toEqual(
-    [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS].map((section) => section.label)
+    // Accounts are off in the fixture: Settings → Account is not listed.
+    [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
+      .filter((section) => section.id !== 'account')
+      .map((section) => section.label)
   )
   expect(navigation.getByText('Workspace')).toBeInTheDocument()
   expect(navigation.queryByRole('button', { name: 'Network & API' })).not.toBeInTheDocument()

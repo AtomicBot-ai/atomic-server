@@ -78,13 +78,17 @@ export function WorkspaceNavigation({
   prepared?: string[]
   historyContainerRef?: Ref<HTMLDivElement>
 }) {
+  // Settings → Account exists only while accounts are on (`account.enabled`).
+  const accounts = workspace.snapshot?.account?.enabled === true
   const items =
     page === 'server'
       ? SERVER_NAVIGATION
       : page === 'catalog'
         ? LIBRARY_SECTIONS
         : page === 'settings'
-          ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
+          ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS].filter(
+              (item) => accounts || item.id !== 'account'
+            )
           : PLAYGROUND_TASKS
   const title = WORKSPACE_NAVIGATION.find((item) => item.id === page)?.label
   // What the Downloads page still shows: a finished transfer in the snapshot is not a pending download.

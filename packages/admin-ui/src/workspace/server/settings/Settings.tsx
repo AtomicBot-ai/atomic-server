@@ -13,19 +13,24 @@ import { HardwareSettings } from './HardwareSettings'
 import { GeneralSettings } from './GeneralSettings'
 import { InterfaceSettings } from './InterfaceSettings'
 import { WorkspaceSettings } from '../features/WorkspaceSettings'
+import { AccountSettings } from '../../account/AccountSettings'
 import './settings-desktop.css'
 
 export function Settings({
   workspace: w,
-  section,
+  section: requested,
   openCommand,
   openEngines,
+  openRemote,
 }: {
   workspace: Workspace
   section: string
   openCommand: (name: string) => void
   openEngines: () => void
+  openRemote?: () => void
 }) {
+  // Accounts off: Settings → Account is not listed, so General stands in for it.
+  const section = requested === 'account' && w.snapshot?.account?.enabled !== true ? 'admin' : requested
   return (
     <div className="settings-page settings-form">
       {section !== 'assistants' && (
@@ -67,6 +72,8 @@ export function Settings({
             ))}
           </dl>
         </section>
+      ) : section === 'account' ? (
+        <AccountSettings workspace={w} openRemote={openRemote} />
       ) : section === 'hardware' ? (
         <HardwareSettings workspace={w} />
       ) : section === 'api' ? (
