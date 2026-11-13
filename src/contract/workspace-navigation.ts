@@ -33,6 +33,16 @@ export const SETTINGS_SECTIONS = [
   { id: 'hardware', label: 'Hardware' },
 ] as const
 
+/**
+ * The Account section, like the desktop app's: its own rail item above Help, shown only while
+ * `account.enabled` (the snapshot's `account.enabled`). Overview signs the server in and out; Remote models
+ * shares this server's models with the account's devices.
+ */
+export const ACCOUNT_SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'remote', label: 'Remote models' },
+] as const
+
 export const SETTINGS_WORKSPACE_SECTIONS = [
   { id: 'assistants', label: 'Assistants' },
   { id: 'connectors', label: 'MCP connectors' },
@@ -46,6 +56,7 @@ export const SERVER_SETTINGS_GROUPS = [
   { id: 'models', label: 'Startup models' },
   { id: 'managed', label: 'Containers' },
   { id: 'update', label: 'Updates' },
+  { id: 'account', label: 'Account' },
   { id: 'log', label: 'Logging' },
   { id: 'proxy', label: 'Proxy' },
   { id: 'telemetry', label: 'Privacy' },
@@ -88,6 +99,7 @@ export const SETTING_LABELS: Readonly<Record<string, string>> = {
   'proxy.ignoreSsl': 'Skip proxy certificate verification',
   'update.channel': 'Release channel',
   'update.checkOnStart': 'Check for updates on start',
+  'account.enabled': 'Atomic Chat account and device sharing',
   'telemetry.enabled': 'Send error reports',
   'tui.endpoint': 'Playground endpoint',
   'tui.model': 'Last Playground model',

@@ -12,6 +12,7 @@ const pages: Page[] = [
   'keys',
   'chat',
   'server',
+  'account',
   'models',
   'settings',
   'requests',

@@ -1,6 +1,7 @@
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createWorkspace } from '../state.js'
 import type { WorkspaceState } from '../state.js'
+import { withAccount } from '../account/account-model.js'
 import { applyWorkspaceSnapshot } from './shared-state.js'
 import type { WorkspaceSnapshot } from '../../../contract/index.js'
 
@@ -120,5 +121,50 @@ it('leaves an endpoint chosen elsewhere where it is', () => {
   expect(applyWorkspaceSnapshot(state, at('http://127.0.0.1:62732/v1'), 2)).toMatchObject({
     endpoint: 'https://openrouter.ai/api/v1',
     endpointFollowsServer: false,
+  })
+})
+
+describe('a device that disconnected', () => {
+  const mac = { grant_id: 'g1', device_name: 'Work MacBook', platform: 'macos', at: 3_000 }
+  const MAC = 'Work MacBook disconnected from this server.'
+  const withEnded = (ended: (typeof mac)[]) =>
+    ({
+      ...snapshot,
+      account: {
+        enabled: true,
+        signed_in: true,
+        user: { email: 'ann@example.com', display_name: null },
+        sign_in: { state: 'idle' },
+        remote: { sharing: true, requests: [], devices: [], ended },
+      },
+    }) as unknown as WorkspaceSnapshot
+  const started = applyWorkspaceSnapshot(
+    { ...createWorkspace('server'), setupComplete: true },
+    withEnded([]),
+    1
+  )
+
+  it('is said once, on the snapshot that first lists it', () => {
+    const first = applyWorkspaceSnapshot(started, withEnded([mac]), 2)
+    expect(first.message).toBe(MAC)
+    expect(applyWorkspaceSnapshot({ ...first, message: '' }, withEnded([mac]), 3).message).toBe('')
+  })
+
+  it('is old news in the first snapshot after the terminal starts', () => {
+    const open = { ...createWorkspace('server'), setupComplete: true }
+    expect(applyWorkspaceSnapshot(open, withEnded([mac]), 2).message).toBe('')
+  })
+
+  it('waits for a dialog to close, then the next snapshot says it', () => {
+    const behind = applyWorkspaceSnapshot({ ...started, overlay: 'help' }, withEnded([mac]), 2)
+    expect(behind.message).toBe('')
+    const closed = { ...behind, overlay: null, message: '' }
+    expect(applyWorkspaceSnapshot(closed, withEnded([mac]), 3).message).toBe(MAC)
+  })
+
+  it('is said by the next snapshot when an answer to an action brought it', () => {
+    const answered = withAccount(started, withEnded([mac]).account!)
+    const done = { ...answered, message: 'Home PC was denied.' }
+    expect(applyWorkspaceSnapshot(done, withEnded([mac]), 2).message).toBe(MAC)
   })
 })

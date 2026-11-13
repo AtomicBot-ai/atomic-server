@@ -1,4 +1,5 @@
 import type { WorkspaceOverlay } from './overlay-types.js'
+import type { AccountUi, AccountView } from './account/account-model.js'
 import type { VariantModelChoice } from './setup/variant-model-choice.js'
 import { DEFAULT_API_PORT } from '../../contract/index.js'
 import type { ChatNotice } from './chat/recovery.js'
@@ -25,6 +26,10 @@ import type { CommandRow } from '../command-list.js'
 import { initialState, type TuiState } from '../state.js'
 export interface WorkspaceState extends WorkspaceReturnState {
   chatNotice?: ChatNotice | undefined
+  /** This terminal's part of an account flow: typed fields, the pairing code it opened, a clock. */
+  accountUi?: AccountUi | undefined
+  /** Devices whose access ended (`grant_id@at`) already said or old news; unset until the first account. */
+  accountEnded?: string[] | undefined
   chatDetail?: 'model' | 'error'
   apiPending?: 'starting' | 'stopping' | 'restarting' | undefined
   downloadAttention?: number
@@ -65,6 +70,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   serverChoice: 'engine' | 'model' | 'host' | null
   serverDraft: { engine: string; model: string } | null
   serverView: string
+  /** The open tab of the Account page. */
+  accountView: AccountView
   settingsGroup: string
   settingsExpanded: string[]
   setupGoal: string
@@ -185,6 +192,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     serverChoice: null,
     serverDraft: null,
     serverView: 'overview',
+    accountView: 'overview',
     settingsGroup: 'admin',
     settingsExpanded: [],
     setupGoal: 'chat',

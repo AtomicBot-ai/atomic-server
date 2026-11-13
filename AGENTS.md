@@ -54,6 +54,7 @@ when this table is stale or a module's `index.ts` has no comment):
 <!-- module-map:start -->
 | Module | What it is |
 | --- | --- |
+| `src/account/` | The Atomic Chat account: signing the server in, its session, and sharing its API with the account's devices. |
 | `src/admin/` | The web admin: BFF routes, sessions, gates, the event relay, the embedded SPA and the listener. |
 | `src/agent-control/` | Agents driving the workspace operations: the `atc mcp` stdio session and `atc control` input. |
 | `src/agent-launch/` | Connecting coding agents: the supported agents, their profiles in the data folder, launching. |
@@ -107,7 +108,8 @@ when this table is stale or a module's `index.ts` has no comment):
    <commit>; adapted: …`) and a line in `packages/admin-ui/LIFTED.md`.
 10. **Every dependency needs a reason.** Runtime deps today: `atomic-chat-core`; `ink` and `react`, for
     `src/tui/` only; `fflate` for document import and GenieX bundle extraction; `pdfjs-dist` and `fast-xml-parser`, for `src/document-import/` only
-    (`2026-10-23-shared-workspace-features.md`). Adding one needs an explicit "ok" from the owner and an ADR.
+    (`2026-10-23-shared-workspace-features.md`); `@hpke/*` and `uqr`, for `src/account/` only
+    (`2026-11-12-share-the-server-with-account-devices.md`). Adding one needs an explicit "ok" from the owner and an ADR.
 11. **Do only what was asked.** No drive-by refactors; propose them. **Never commit unless asked.**
 12. **Record non-trivial decisions** as a file in `docs/decisions/` (template `_TEMPLATE.md`) plus one
     line in `INDEX.md`, in the same session.

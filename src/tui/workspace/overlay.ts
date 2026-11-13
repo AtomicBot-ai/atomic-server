@@ -1,4 +1,5 @@
 import { drawVariantModelChoice } from './setup/variant-model-choice-view.js'
+import { drawAccountOverlay } from './account/account-dialogs.js'
 import { drawChatDetail } from './chat/recovery.js'
 import { drawChatFeatures } from './chat/features.js'
 import { drawFeatureOverlay } from './server/feature-panel.js'
@@ -31,6 +32,7 @@ import { tooltip } from './draw/tooltip.js'
 const ms = (v: number | null) => (v === null ? 'Not available' : `${Math.round(v)} ms`)
 export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds = 0): void {
   c.popover = { x: 3, y: 3, width: c.width - 6, height: c.height - 6 }
+  if (drawAccountOverlay(c, s, focus)) return
   if (drawChatFeatures(c, s, focus)) return
   if (drawFeatureOverlay(c, s, focus)) return
   if (s.overlay === 'chat-detail') return drawChatDetail(c, s, focus)

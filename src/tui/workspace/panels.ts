@@ -6,6 +6,7 @@ import { drawOperationPanel } from './operations/operation-panel.js'
 import { mediaTask } from './media/media-model.js'
 import { drawMediaPanel } from './media/media-panel.js'
 import { drawServer } from './server/server-panel.js'
+import { drawAccountPage } from './account/account-page.js'
 import type { Canvas } from './draw/canvas.js'
 import { button, COLORS, text, wrap } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
@@ -51,6 +52,8 @@ export function drawPanels(c: Canvas, s: WorkspaceState, b: Bounds, focus: strin
       button(c, 'refresh', x, bottom, 'Refresh', 'Refresh server status.', focus)
     } else if (!drawSpecialSettings(c, s, x, y, width, bottom, focus))
       drawSettings(c, s, x, y, width, bottom, focus)
+  } else if (s.page === 'account') {
+    drawAccountPage(c, s, x, y, width, bottom, focus)
   } else if (s.page === 'models') {
     drawLibrary(c, s, x, y, width, bottom, focus)
   } else if (s.page === 'settings') {

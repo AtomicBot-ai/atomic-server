@@ -4,16 +4,11 @@ import { mediaAction } from '../media/media-actions.js'
 import { imageAction } from '../chat/image-actions.js'
 import { remoteAction } from '../server/remote-actions.js'
 import { serverShellAction } from '../server/server-shell-actions.js'
-import {
-  WORKSPACE_OPERATIONS,
-  SETTINGS_SECTIONS,
-  PLAYGROUND_TASKS,
-  SETTINGS_WORKSPACE_SECTIONS,
-} from '../../../contract/index.js'
+import { WORKSPACE_OPERATIONS, PLAYGROUND_TASKS } from '../../../contract/index.js'
 import type { ActionContext } from '../actions.js'
 import { defaultInput, operationFields } from '../operations/operation-model.js'
 import { PAGE_FOCUS } from '../state.js'
-import { SERVER_PAGES, sectionMenu } from './navigation.js'
+import { SERVER_PAGES, SETTINGS_MENU, sectionMenu } from './navigation.js'
 
 export async function navigationAction(id: string, ctx: ActionContext): Promise<boolean> {
   if (navigationReturnAction(id, ctx)) return true
@@ -59,11 +54,7 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
   }
   if (id.startsWith('settings-section:')) {
     const group = id.slice(17)
-    if (
-      !s.setupComplete ||
-      ![...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS].some((item) => item.id === group)
-    )
-      return true
+    if (!s.setupComplete || !SETTINGS_MENU.some((item) => item.id === group)) return true
     if (group === 'hardware') {
       ctx.update((v) => ({ ...v, page: 'access', serverView: 'overview', settingsGroup: 'hardware' }))
       await navigationAction('open-operation:hardware.info', ctx)

@@ -5,15 +5,26 @@ import { record, text } from '../types'
 import type { RecordValue } from '../types'
 import { describeError } from '@/services/admin-api'
 import { sharedRead, watchSharedRead } from '../watch-shared-read'
-import { remoteSetupView } from '@view'
+import { remoteSetupView, sharingLine } from '@view'
 import { SettingsSection } from '../SettingsForm'
 import { RemoteSetup } from './RemoteSetup'
-export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
+/**
+ * Server → Remote access: the Cloudflare tunnel and the local network. Sharing with the account's devices
+ * lives in Account → Remote models; while accounts are on, a line here says how it stands and opens it.
+ */
+export function RemoteAccess({
+  workspace: w,
+  openRemoteModels,
+}: {
+  workspace: Workspace
+  openRemoteModels?: () => void
+}) {
   const [addresses, setAddresses] = useState<string[]>([])
   const [remote, setRemote] = useState<RecordValue>({})
   const [error, setError] = useState('')
   const lan = w.snapshot?.api.running && !['127.0.0.1', 'localhost', '::1'].includes(w.snapshot.api.host)
   const { execute } = w
+  const account = w.snapshot?.account?.enabled === true ? w.snapshot.account : null
   // While the server has no cloudflared, its install steps replace Start and the raw code; a program
   // that is there and would not start keeps Start, which tries it again.
   const setup = remoteSetupView(remote)
@@ -113,6 +124,20 @@ export function RemoteAccess({ workspace: w }: { workspace: Workspace }) {
             })}
         </div>
       </SettingsSection>
+      {account && openRemoteModels && (
+        <SettingsSection
+          title="Your devices"
+          description="Devices on your Atomic Chat account pair once and use this server with their own key."
+        >
+          <div className="settings-item">
+            <div>
+              <strong>Remote models</strong>
+              <small>{sharingLine(account.remote)}</small>
+            </div>
+            <Action onClick={() => openRemoteModels()}>Open Remote models</Action>
+          </div>
+        </SettingsSection>
+      )}
     </div>
   )
 }

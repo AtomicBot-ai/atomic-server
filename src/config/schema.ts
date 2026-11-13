@@ -24,7 +24,7 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 6
+export const CONFIG_VERSION = 7
 
 export interface AtcConfig {
   version: number
@@ -48,6 +48,7 @@ export interface AtcConfig {
   managed: { mode: 'off' | 'docker-tensorrt'; image?: string }
   proxy: { url?: string; noProxy: string[]; ignoreSsl: boolean }
   update: { channel: 'stable'; checkOnStart: boolean }
+  account: { enabled: boolean }
   telemetry: { enabled: boolean }
   log: { level: 'debug' | 'info' | 'warn' | 'error'; maxFiles: number; maxSizeMb: number }
 }
@@ -172,6 +173,13 @@ export const FIELDS: readonly FieldSpec[] = [
     default: true,
     description:
       'Look for a newer atc release on start and once a day; the terminal UI and the web admin say when one is out',
+  },
+  {
+    path: 'account.enabled',
+    type: 'boolean',
+    default: false,
+    description:
+      'Sign in to an Atomic Chat account and share this server with its devices (`atc login`); read when the server starts',
   },
   {
     path: 'telemetry.enabled',

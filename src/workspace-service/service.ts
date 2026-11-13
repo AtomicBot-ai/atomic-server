@@ -34,6 +34,8 @@ import { ChatJobs } from './chat/chat-jobs.js'
 import { serverOperation } from './server-operations.js'
 import { chatOperation } from './chat/chat-operations.js'
 import { EmailReminders } from './reminders/email-reminders.js'
+import { workspaceAccount } from './account-wiring.js'
+import type { AccountService } from '../account/index.js'
 import type { WorkspaceServiceOptions } from './service-options.js'
 export type { WorkspaceServiceOptions } from './service-options.js'
 export class WorkspaceService {
@@ -50,6 +52,8 @@ export class WorkspaceService {
   private chats: ChatJobs
   private engineDownloads: EngineDownloads
   private reminders: EmailReminders
+  /** The Atomic Chat account and remote access sharing (`account.*`). */
+  readonly account: AccountService
   private readonly shared = new SnapshotCache(() => this.readCore(), { now: Date.now, maxAgeMs: 1000 })
   constructor(private options: WorkspaceServiceOptions) {
     this.features = new WorkspaceFeatureService(
@@ -76,6 +80,7 @@ export class WorkspaceService {
       setups: () => this.snapshot().then((snapshot) => snapshot.setups),
       ...(options.platform ? { platform: options.platform } : {}),
     })
+    this.account = workspaceAccount(options, (name, input) => this.execute(name, input), options.log)
   }
   /**
    * Once per server, before any work: bring files of an earlier atc to where the core expects them, and
@@ -83,16 +88,21 @@ export class WorkspaceService {
    */
   start(): Promise<{ kept: string[] }> {
     this.reminders.start()
+    void this.account.start().catch(() => undefined)
     return this.downloads.fastflowlm.mutations.recover().then(() => this.downloads.artifacts.migrate())
   }
   /** Stops watching; the server calls it on shutdown, and it may be passed on unbound. */
-  readonly stop = (): void => this.reminders.stop()
+  readonly stop = (): void => {
+    this.reminders.stop()
+    this.account.stop()
+  }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
     this.foundry.event(name, payload)
     this.downloads.litert.accelerators.event(name, payload)
     this.engineDownloads.event(name, payload)
+    this.account.event(name)
     // A log line changes nothing a snapshot shows; every other event may.
     if (name !== 'core:log') this.shared.invalidate()
   }
@@ -120,6 +130,7 @@ export class WorkspaceService {
     )
     result.features = await this.features.view()
     result.reminder = this.reminders.view()
+    result.account = this.account.view()
     if (this.options.atc) result.atc = this.options.atc()
     return result
   }
@@ -171,6 +182,7 @@ export class WorkspaceService {
       { link, paths } = this.options
     await requireReadiness(operation, input, () => this.snapshot({ fresh: true }))
     if (operation === 'setup.reminder') return this.reminders.request(input)
+    if (operation.startsWith('account.')) return this.account.execute(operation, input)
     const preference = await enginePreferenceOperation(link, paths.atcDir, operation, input)
     if (preference !== NOT_CORE) return preference
     const feature = await this.features.execute(operation, input)

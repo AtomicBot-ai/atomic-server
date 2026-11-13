@@ -11,6 +11,14 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-13** — [End every device's access when sharing stops, and say when a device disconnects](2026-11-13-end-every-device-when-sharing-stops.md) — supersedes "off pauses": off revokes every grant (host kept), asks first; `remote.ended` drives a disconnect notice.
+
+- **2026-11-13** — [Give the account its own section, as the desktop app does](2026-11-13-give-the-account-its-own-section.md) — Account on the rail above Help with Overview and Remote models, in the terminal and the web; out of Settings and Server → Remote access.
+
+- **2026-11-12** — [Share the server with the account's devices](2026-11-12-share-the-server-with-account-devices.md) — the server as a remote access host: one confirmation per device, its own sealed key in the keyring while sharing is on, sealed tunnel and LAN addresses; hpke-js and uqr.
+
+- **2026-11-12** — [Sign the server in to an Atomic Chat account](2026-11-12-sign-in-to-an-atomic-chat-account.md) — email code or device code, the session in the server process, no sign-in over a live one; behind `account.enabled`.
+
 - **2026-11-11** — [Check Foundry Local runtime requirements before transferring models](2026-11-11-check-foundry-runtime-before-transferring-models.md) — check the planned revision and preserve its minimum and partial bytes across retries.
 
 - **2026-11-10** — [Sign Windows binaries with the key in Azure Key Vault](2026-11-10-sign-windows-binaries-with-azure-key-vault.md) — AzureSignTool with GitHub OIDC in the `codesign` environment, no stored secret, the same signer subject; supersedes the KeyLocker part of the 2026-10-09 release record.

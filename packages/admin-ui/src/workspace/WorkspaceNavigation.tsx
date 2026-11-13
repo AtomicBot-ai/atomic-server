@@ -19,6 +19,8 @@ import {
   Image,
   Video,
   AudioLines,
+  CircleUserRound,
+  Workflow,
 } from 'lucide-react'
 import {
   WORKSPACE_NAVIGATION,
@@ -28,11 +30,13 @@ import {
   SETTINGS_SECTIONS,
   PLAYGROUND_TASKS,
   SETTINGS_WORKSPACE_SECTIONS,
+  ACCOUNT_SECTIONS,
 } from '@contract'
 import type { Page } from './types'
 import type { Workspace } from './useWorkspace'
 import { ServerControlPanel } from './server/ServerControlPanel'
 import { AgentIcon } from './server/connection/AgentIcon'
+import { AccountRailItem } from './account/AccountRailItem'
 import { Fragment } from 'react'
 import type { Ref } from 'react'
 
@@ -51,7 +55,16 @@ const sectionIcons = {
   video: Video,
   audio: AudioLines,
 }
+/** The Account section's own icons, as the desktop app draws them; its ids repeat the server's. */
+const accountIcons = { overview: CircleUserRound, remote: Workflow }
 const icons = { server: RadioTower, catalog: Blocks, settings: Settings, playground: FlaskConical }
+const SECTIONS_LABEL = {
+  server: 'Server sections',
+  catalog: 'Catalog sections',
+  settings: 'Settings sections',
+  account: 'Account sections',
+  playground: 'Playground tasks',
+} as const
 
 export function WorkspaceNavigation({
   page,
@@ -78,6 +91,8 @@ export function WorkspaceNavigation({
   prepared?: string[]
   historyContainerRef?: Ref<HTMLDivElement>
 }) {
+  // The Account section and its rail item exist only while accounts are on (`account.enabled`).
+  const account = workspace.snapshot?.account?.enabled === true ? workspace.snapshot.account : null
   const items =
     page === 'server'
       ? SERVER_NAVIGATION
@@ -85,8 +100,10 @@ export function WorkspaceNavigation({
         ? LIBRARY_SECTIONS
         : page === 'settings'
           ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
-          : PLAYGROUND_TASKS
-  const title = WORKSPACE_NAVIGATION.find((item) => item.id === page)?.label
+          : page === 'account'
+            ? ACCOUNT_SECTIONS
+            : PLAYGROUND_TASKS
+  const title = page === 'account' ? 'Account' : WORKSPACE_NAVIGATION.find((item) => item.id === page)?.label
   // What the Downloads page still shows: a finished transfer in the snapshot is not a pending download.
   const pending = downloadRows(workspace.snapshot?.setups ?? [], workspace.snapshot?.downloads ?? []).length
   return (
@@ -110,6 +127,13 @@ export function WorkspaceNavigation({
           )
         })}
         <div className="rail-bottom">
+          {account && (
+            <AccountRailItem
+              account={account}
+              active={page === 'account'}
+              onOpen={() => navigate('account')}
+            />
+          )}
           <button className="rail-item" aria-label="Help" title="Help · F1" onClick={openHelp}>
             <LifeBuoy size={20} />
             <span>Help</span>
@@ -146,18 +170,7 @@ export function WorkspaceNavigation({
         {page === 'server' ? (
           <ServerControlPanel workspace={workspace} selectSection={selectSection} prepared={prepared} />
         ) : null}
-        <nav
-          className="sidebar-sections"
-          aria-label={
-            page === 'server'
-              ? 'Server sections'
-              : page === 'catalog'
-                ? 'Catalog sections'
-                : page === 'settings'
-                  ? 'Settings sections'
-                  : 'Playground tasks'
-          }
-        >
+        <nav className="sidebar-sections" aria-label={SECTIONS_LABEL[page]}>
           {items.map((item) => (
             <Fragment key={item.id}>
               {page === 'catalog' && item.id === 'catalog' && (
@@ -177,7 +190,10 @@ export function WorkspaceNavigation({
                 }}
               >
                 {(() => {
-                  const Icon = sectionIcons[item.id as keyof typeof sectionIcons]
+                  const Icon =
+                    page === 'account'
+                      ? accountIcons[item.id as keyof typeof accountIcons]
+                      : sectionIcons[item.id as keyof typeof sectionIcons]
                   return Icon ? <Icon size={16} aria-hidden="true" /> : null
                 })()}
                 <span>{page === 'playground' && item.id === 'chat' ? 'New chat' : item.label}</span>

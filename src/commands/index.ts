@@ -19,6 +19,8 @@ import { modelsCommand, runCommand, unloadCommand } from './models/model-command
 import { serviceCommand } from './system/service.js'
 import { chatCommand } from './access/terminal.js'
 import { tuiCommand } from './access/tui.js'
+import { accountCommand, loginCommand, logoutCommand } from './access/account.js'
+import { remoteCommand } from './access/remote.js'
 import { updateCommand } from './system/update.js'
 import { versionCommand } from './system/version.js'
 
@@ -43,6 +45,10 @@ export const ROOT = defineCommand({
     enginesCommand,
     hardwareCommand,
     apiCommand,
+    loginCommand,
+    logoutCommand,
+    accountCommand,
+    remoteCommand,
     adminCommand,
     tuiCommand,
     chatCommand,

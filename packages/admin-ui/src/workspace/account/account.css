@@ -1,0 +1,57 @@
+/* The Account section (Overview, Remote models) and its rail item. Theme tokens only. */
+.account-sign-in {
+  display: grid;
+  gap: 4px;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.account-failed {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.settings-section-fields > .account-device-row:last-child {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ew-line);
+}
+.account-device {
+  gap: 8px;
+}
+.account-device > p {
+  font-size: 13px;
+  line-height: 20px;
+}
+.account-device a {
+  color: var(--ew-teal);
+  overflow-wrap: anywhere;
+}
+.account-code {
+  font:
+    600 24px/32px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  letter-spacing: 0.12em;
+  color: var(--ew-text);
+  user-select: all;
+}
+.account-timer {
+  color: var(--ew-muted);
+}
+/* The signed-in rail item: the account's initial in a ring the size of the other rail icons. */
+.desktop-rail .rail-item .rail-avatar {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
