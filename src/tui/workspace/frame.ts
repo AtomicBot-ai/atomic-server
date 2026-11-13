@@ -11,6 +11,7 @@ import { drawServerChoice } from './server/server-settings.js'
 import { messageText } from '../../terminal-service/index.js'
 import { updateNotice } from '../../workspace-view/index.js'
 import { drawFirstRun } from './setup/first-run.js'
+import { accountNotice } from './account/account-model.js'
 import { drawRail, drawSidebar, serverRunning } from './navigation/sidebar.js'
 import { drawFooter } from './navigation/footer.js'
 import { drawSetup } from './setup/setup-panel.js'
@@ -133,11 +134,23 @@ export function workspaceFrame(
   else if (s.overlay === 'server-choice') drawServerChoice(c, s, focus)
   else if (isPicker(s.overlay)) drawPicker(c, s, focus)
   else if (s.overlay) drawOverlay(c, s, focus, seconds)
-  // The status line: what just happened, else what is in progress, else that a newer atc is out.
+  // The status line: what just happened, else what is in progress, else a device asking for access,
+  // else that a newer atc is out.
+  const request = accountNotice(s.workspace)
   const status =
-    (s.page === 'chat' && s.chatNotice ? '' : s.message) || s.base.busy || updateNotice(s.workspace?.atc)
+    (s.page === 'chat' && s.chatNotice ? '' : s.message) ||
+    s.base.busy ||
+    request ||
+    updateNotice(s.workspace?.atc)
   if (!s.overlay && status)
-    text(c, l.inset, height - 2, status, s.message ? COLORS.accent : COLORS.muted, width - l.inset * 2)
+    text(
+      c,
+      l.inset,
+      height - 2,
+      status,
+      s.message || status === request ? COLORS.accent : COLORS.muted,
+      width - l.inset * 2
+    )
   drawFooter(c, s, focus)
   // Never register invisible controls on an unusually narrow viewport.
   c.targets = c.targets

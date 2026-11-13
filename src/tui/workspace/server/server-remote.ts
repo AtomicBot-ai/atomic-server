@@ -4,7 +4,31 @@ import { button, COLORS, text, wrap, wrapWords } from '../draw/canvas.js'
 import { panel, actionButton } from '../draw/cards.js'
 import { remoteSetupView } from '../../../workspace-view/index.js'
 import type { RemoteSetupView } from '../../../workspace-view/index.js'
+import { devicesHeight, drawRemoteDevices } from '../account/remote-devices.js'
+import { drawRemoteCompact } from './remote-compact.js'
+/** Rows the Cloudflare and local network cards take at their full height, with the gap between them. */
+const FULL_CARDS = 17
 export function drawServerRemote(
+  c: Canvas,
+  s: WorkspaceState,
+  x: number,
+  y: number,
+  width: number,
+  bottom: number,
+  focus: string
+) {
+  // The account's devices come first; the cards keep their full height below them when the screen has
+  // the rows, and are two lines each otherwise.
+  const devices = devicesHeight(s, width, true)
+  if (!devices) return drawRemoteCards(c, s, x, y, width, bottom, focus)
+  if (bottom - y - devices - 1 >= FULL_CARDS) {
+    drawRemoteDevices(c, s, x, y, width, devices, focus, true)
+    return drawRemoteCards(c, s, x, y + devices + 1, width, bottom, focus)
+  }
+  const used = drawRemoteDevices(c, s, x, y, width, bottom - y - 7, focus, false)
+  drawRemoteCompact(c, s, x, y + used + 1, width, bottom, focus)
+}
+function drawRemoteCards(
   c: Canvas,
   s: WorkspaceState,
   x: number,

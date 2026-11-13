@@ -45,4 +45,9 @@ export type WorkspaceOverlay =
   | 'sections'
   | 'connection-guide'
   | 'setup-goal'
+  | 'account-email'
+  | 'account-device'
+  | 'account-signout'
+  | 'account-pairing'
+  | 'account-revoke'
   | null

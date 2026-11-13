@@ -1,4 +1,5 @@
 import type { WorkspaceOverlay } from './overlay-types.js'
+import type { AccountUi } from './account/account-model.js'
 import type { VariantModelChoice } from './setup/variant-model-choice.js'
 import { DEFAULT_API_PORT } from '../../contract/index.js'
 import type { ChatNotice } from './chat/recovery.js'
@@ -25,6 +26,8 @@ import type { CommandRow } from '../command-list.js'
 import { initialState, type TuiState } from '../state.js'
 export interface WorkspaceState extends WorkspaceReturnState {
   chatNotice?: ChatNotice | undefined
+  /** This terminal's part of an account flow: typed fields, the pairing code it opened, a clock. */
+  accountUi?: AccountUi | undefined
   chatDetail?: 'model' | 'error'
   apiPending?: 'starting' | 'stopping' | 'restarting' | undefined
   downloadAttention?: number

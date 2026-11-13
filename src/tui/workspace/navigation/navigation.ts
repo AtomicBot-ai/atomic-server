@@ -1,10 +1,5 @@
-import {
-  LIBRARY_SECTIONS,
-  SERVER_NAVIGATION,
-  SETTINGS_SECTIONS,
-  PLAYGROUND_TASKS,
-  SETTINGS_WORKSPACE_SECTIONS,
-} from '../../../contract/index.js'
+import { LIBRARY_SECTIONS, SERVER_NAVIGATION, PLAYGROUND_TASKS } from '../../../contract/index.js'
+import { settingsSections } from '../account/account-model.js'
 import type { Canvas } from '../draw/canvas.js'
 import { button, textWidth } from '../draw/canvas.js'
 import type { Page, WorkspaceState } from '../state.js'
@@ -60,7 +55,7 @@ export function drawSections(
       : page === 'server'
         ? SERVER_MENU
         : page === 'access'
-          ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
+          ? settingsSections(s.workspace)
           : LIBRARY_SECTIONS
   const prefix =
     page === 'chat'
@@ -131,7 +126,7 @@ export function sectionMenu(s: WorkspaceState) {
         : page === 'models'
           ? LIBRARY_SECTIONS
           : page === 'access'
-            ? [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
+            ? settingsSections(s.workspace)
             : PLAYGROUND_TASKS,
     prefix:
       page === 'server'

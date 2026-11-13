@@ -4,12 +4,8 @@ import { mediaAction } from '../media/media-actions.js'
 import { imageAction } from '../chat/image-actions.js'
 import { remoteAction } from '../server/remote-actions.js'
 import { serverShellAction } from '../server/server-shell-actions.js'
-import {
-  WORKSPACE_OPERATIONS,
-  SETTINGS_SECTIONS,
-  PLAYGROUND_TASKS,
-  SETTINGS_WORKSPACE_SECTIONS,
-} from '../../../contract/index.js'
+import { WORKSPACE_OPERATIONS, PLAYGROUND_TASKS } from '../../../contract/index.js'
+import { settingsSections } from '../account/account-model.js'
 import type { ActionContext } from '../actions.js'
 import { defaultInput, operationFields } from '../operations/operation-model.js'
 import { PAGE_FOCUS } from '../state.js'
@@ -59,11 +55,7 @@ export async function navigationAction(id: string, ctx: ActionContext): Promise<
   }
   if (id.startsWith('settings-section:')) {
     const group = id.slice(17)
-    if (
-      !s.setupComplete ||
-      ![...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS].some((item) => item.id === group)
-    )
-      return true
+    if (!s.setupComplete || !settingsSections(s.workspace).some((item) => item.id === group)) return true
     if (group === 'hardware') {
       ctx.update((v) => ({ ...v, page: 'access', serverView: 'overview', settingsGroup: 'hardware' }))
       await navigationAction('open-operation:hardware.info', ctx)

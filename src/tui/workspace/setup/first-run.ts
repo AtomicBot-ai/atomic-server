@@ -21,6 +21,7 @@ import { installMlxFirstModel } from './mlx-first-model.js'
 import { record } from '../library/library-model.js'
 import { accessPurposeAction, drawSetupPermissions, openFirstRunServer } from './access-purpose.js'
 import { drawFirstConnection, firstConnectionAction } from './connection-choice.js'
+import { setupAccountHint } from '../account/account-model.js'
 
 export async function firstRunAction(id: string, ctx: ActionContext): Promise<boolean> {
   if (await variantModelChoiceAction(id, ctx)) return true
@@ -191,7 +192,12 @@ export function drawFirstRun(c: Canvas, s: WorkspaceState, focus: string, second
   if (step === 'permissions') drawSetupPermissions(c, x, contentY, width, actionY - 1, focus)
   else if (step === 'cloud') drawSetupCloud(c, s, x, contentY, width, actionY - 1, focus, seconds)
   else if (step === 'media') drawSetupMedia(c, s, x, contentY, width, actionY - 1, focus, seconds)
-  else drawFirstConnection(c, x, contentY, width, actionY - 1, focus, seconds)
+  else {
+    drawFirstConnection(c, x, contentY, width, actionY - 1, focus, seconds)
+    // The last step of setup: a server nobody signed in yet says how to reach it from other devices.
+    const hint = setupAccountHint(s.workspace)
+    if (hint) text(c, x, actionY, hint, COLORS.muted, width)
+  }
   const label =
     step === 'permissions'
       ? 'Skip'
