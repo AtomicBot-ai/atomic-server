@@ -36,7 +36,7 @@ the core's CLI, not `atc`. Both would own the same data folder, so `atc` refuses
 | **data folder** | Where everything lives: models, engine builds, config, logs (`--data-folder`). | The desktop app's folder, which is separate. |
 | **account** | An Atomic Chat account the server is signed in to (`atc login`, the Account section), the same one the desktop app and the phone use. Off unless `account.enabled`. | The web admin's sign-in, which is a link from `atc admin` and has nothing to do with the account. |
 | **device** | A desktop or phone signed in to the same account that may use this server's API: it pairs once and gets its own key (`atc remote add-device`, `allow`, `revoke`). | An API key made with `atc api key`, which is the person's, not a device's. |
-| **sharing** | The server offering its API to the account's devices, through the tunnel or the local network (`atc remote share on`). Off pauses it; devices keep their pairing. | Remote access, the tunnel itself, which sharing starts. |
+| **sharing** | The server offering its API to the account's devices, through the tunnel or the local network (`atc remote share on`). Off ends every device's access; each pairs again once sharing is back on. | Remote access, the tunnel itself, which sharing starts. |
 
 ## How the pieces divide the work
 

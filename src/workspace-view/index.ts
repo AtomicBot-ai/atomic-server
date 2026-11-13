@@ -153,8 +153,10 @@ export {
   accountLine,
   countdown,
   deviceLabel,
+  endedNotice,
   formatCheckCode,
   platformLabel,
   requestNotice,
   sharingLine,
+  STOP_SHARING_DETAIL,
 } from './account/account-view.js'

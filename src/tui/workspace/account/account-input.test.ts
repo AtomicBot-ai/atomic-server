@@ -21,6 +21,7 @@ const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
     pairing: null,
     requests: [],
     devices: [],
+    ended: [],
     error: null,
   },
   ...over,
@@ -71,6 +72,10 @@ describe('Account → Remote models keys', () => {
     ['signed out', remote(account({ signed_in: false, user: null }))],
     ['accounts off', remote(account({ enabled: false }))],
     ['a dialog open', { ...remote(), overlay: 'help' as const }],
+    [
+      'stopping sharing waits for its confirmation',
+      { ...remote(), overlay: 'account-stop-sharing' as const },
+    ],
     ['on Overview', { ...remote(), accountView: 'overview' as const }],
     [
       'on Server → Remote access',

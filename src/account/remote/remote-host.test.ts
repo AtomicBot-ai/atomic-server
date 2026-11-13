@@ -131,18 +131,69 @@ describe('the remote access host', () => {
     expect(host.view().requests).toEqual([])
   })
 
-  it('pauses: sharing off refuses device keys, on again restores them', async () => {
-    await host.setSharing(true)
-    const tablet = device()
-    const grant = backend.request(tablet)
-    await until(() => host.view().requests.length === 1)
+  async function allowed(name = 'iPad') {
+    const grant = backend.request(device(name))
+    await until(() => host.view().requests.some((r) => r.grant_id === grant.id))
     await host.decide(grant.id, true)
-    await until(() => host.keys().length === 1)
+    await until(() => grant.status === 'active')
+    return grant
+  }
+
+  it('stops sharing by ending every device: keys go, grants are revoked, requests denied', async () => {
+    await host.setSharing(true)
+    const tablet = await allowed()
+    const asking = backend.request(device('Pixel'))
+    await until(() => host.view().requests.length === 1)
     await host.setSharing(false)
     expect(host.keys()).toEqual([])
-    expect(grant.status).toBe('active')
+    expect(tablet.status).toBe('revoked')
+    expect(asking.status).toBe('denied')
+    // The host stays registered: sharing again sends no new "new computer" email, and devices pair anew.
+    expect(backend.host).not.toBeNull()
     await host.setSharing(true)
-    expect(host.keys()).toHaveLength(1)
+    expect(host.keys()).toEqual([])
+    expect(host.view()).toMatchObject({ sharing: true, devices: [], requests: [] })
+  })
+
+  it('drops the keys here first, even when the account service cannot be told', async () => {
+    await host.setSharing(true)
+    const tablet = await allowed()
+    backend.failures.set('POST /v1/remote/host/sync', new AccountApiError(503, 'http_503'))
+    backend.failures.set(`DELETE /v1/remote/grants/${tablet.id}`, new AccountApiError(503, 'http_503'))
+    await expect(host.setSharing(false)).rejects.toMatchObject({ status: 503 })
+    expect(host.keys()).toEqual([])
+    expect(host.view().devices).toEqual([])
+    expect(tablet.status).toBe('active')
+    // Sharing again revokes a grant this server no longer holds a key for.
+    await host.setSharing(true)
+    await until(() => tablet.status === 'revoked')
+  })
+
+  it('removes the host as well when told to forget', async () => {
+    await host.setSharing(true)
+    const tablet = await allowed()
+    await host.setSharing(false, true)
+    expect(tablet.status).toBe('revoked')
+    expect(backend.host).toBeNull()
+  })
+
+  it('lists a device whose access ended from its side, and not one revoked here', async () => {
+    await host.setSharing(true)
+    const tablet = await allowed('iPad')
+    backend.revoke(tablet.id)
+    await until(() => host.keys().length === 0)
+    expect(host.view().ended).toEqual([
+      { grant_id: tablet.id, device_name: 'iPad', platform: 'macos', at: expect.any(Number) },
+    ])
+    const phone = await allowed('Pixel')
+    await host.revoke(phone.id)
+    await until(() => phone.status === 'revoked')
+    host.wake()
+    await until(() => backend.calls.filter((c) => c.path === '/v1/remote/host/sync').length > 6)
+    expect(host.view().ended.map((e) => e.grant_id)).toEqual([tablet.id])
+    // Stopping sharing is the person's own doing: nothing to announce, and the list starts over.
+    await host.setSharing(false)
+    expect(host.view().ended).toEqual([])
   })
 
   it('forgets every device when told to, and when the account removed this host', async () => {

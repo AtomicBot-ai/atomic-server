@@ -28,6 +28,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   chatNotice?: ChatNotice | undefined
   /** This terminal's part of an account flow: typed fields, the pairing code it opened, a clock. */
   accountUi?: AccountUi | undefined
+  /** Devices whose access ended (`grant_id@at`) already said or old news; unset until the first account. */
+  accountEnded?: string[] | undefined
   chatDetail?: 'model' | 'error'
   apiPending?: 'starting' | 'stopping' | 'restarting' | undefined
   downloadAttention?: number

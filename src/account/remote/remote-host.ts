@@ -1,11 +1,12 @@
 /**
- * This server as a remote access host: the file, the loop and what the person does — share or pause, open a
- * pairing code, allow or deny a request, revoke a device. Device keys reach the public API only while
+ * This server as a remote access host: the file, the loop and what the person does — share or stop sharing,
+ * open a pairing code, allow or deny a request, revoke a device. Device keys reach the public API only while
  * sharing is on for the account signed in now (`keys()`, sampled on every request). Every change counts in
  * memory first and is then written, so a failed write never leaves a removed key working.
  */
 import { join } from 'node:path'
-import type { AccountPairingCode, AccountRemoteRequest, WorkspaceRemoteHost } from '../../contract/index.js'
+import type { AccountPairingCode, AccountRemoteEnded, AccountRemoteRequest } from '../../contract/index.js'
+import type { WorkspaceRemoteHost } from '../../contract/index.js'
 import { readDocument, writeDocument } from '../../terminal-data/index.js'
 import { AccountApiError } from '../account-api.js'
 import { qrSvg } from '../qr.js'
@@ -15,7 +16,9 @@ import { applySync, ensureHost, type RoundContext, type UploadMark } from './hos
 import { startLoop, type Loop } from './host-loop.js'
 import { b64u, formatCode, newQrSecret, normalizeCode, pairLink } from './protocol.js'
 import { REMOTE_CODES, MAX_WAIT_SECONDS, type RemoteApi } from './remote-api.js'
-import { endAccess, forUser, parseRemoteDocument, type RemoteDocument } from './remote-store.js'
+import { endAccess, forUser, parseRemoteDocument, stopSharing, type RemoteDocument } from './remote-store.js'
+import { endGrants, grantsToEnd, type GrantsToEnd } from './host-stop.js'
+import { recentEnded, withEnded } from './host-ended.js'
 import { reachability, type Reachability, type ReachabilityInput } from './reachability.js'
 
 /** A pairing code lives 10 minutes; whatever the service says, between one minute and an hour. */
@@ -44,6 +47,8 @@ export class RemoteHost {
   private pending = new Map<string, { client_device_id: string; client_public_key: string }>()
   private reach: Reachability | null = null
   private error: string | null = null
+  /** Devices whose access ended from their side, newest first. */
+  private ended: AccountRemoteEnded[] = []
   constructor(private readonly options: RemoteHostOptions) {
     this.path = join(options.atcDir, 'remote-access.json')
   }
@@ -91,6 +96,7 @@ export class RemoteHost {
         sharing && pairing && pairing.expires_at > this.now() ? { expires_at: pairing.expires_at } : null,
       requests: sharing ? this.requests : [],
       devices: sharing && document ? devicesWithAccess(document) : [],
+      ended: sharing ? recentEnded(this.ended, this.now()) : [],
       error: sharing ? this.error : null,
     }
   }
@@ -113,6 +119,7 @@ export class RemoteHost {
     this.requests = []
     this.pending.clear()
     this.error = null
+    this.ended = []
     await this.update(endAccess)
   }
   private context(): RoundContext {
@@ -123,12 +130,20 @@ export class RemoteHost {
       update: (change) => this.update(change),
       now: () => this.now(),
       log: this.options.log,
+      // Keys a sync dropped: those devices' access ended from their side, which the clients announce.
+      ended: (keys) => {
+        if (keys.length) this.ended = withEnded(this.ended, keys, this.now())
+      },
     }
   }
   private authed<T>(work: (token: string) => Promise<T>): Promise<T> {
     return this.options.session.authed(work)
   }
-  /** Turn sharing on: register the host and start the loop. Off pauses: keys stop working, grants stay. */
+  /**
+   * Turn sharing on: register the host and start the loop. Off ends every device's access: the keys stop here
+   * first, then every request is denied and every live grant revoked on the account service, so the devices
+   * learn it and pair again next time. The host stays registered unless `forget` removes it as well.
+   */
   async setSharing(enabled: boolean, forget = false): Promise<void> {
     const user = this.options.session.user()
     if (enabled) {
@@ -141,13 +156,27 @@ export class RemoteHost {
       return
     }
     this.stop()
+    const known: GrantsToEnd = { pending: [...this.pending.keys()], live: [] }
+    let pairing = false
     this.requests = []
+    this.pending.clear()
+    this.ended = []
+    this.error = null
     // Off first: whatever the service answers, the keys stop here.
-    await this.update((d) => (forget ? endAccess(d) : { ...d, sharing: false }))
-    if (forget && user)
+    await this.update((d) => {
+      known.live = [...new Set([...d.issued, ...d.allowed].map((k) => k.grant_id))]
+      pairing = d.pairing !== null
+      return forget ? endAccess(d) : stopSharing(d)
+    })
+    if (!user) return
+    const ctx = { session: this.options.session, api: this.options.api, log: this.options.log }
+    const failure = await endGrants(ctx, await grantsToEnd(ctx, known))
+    if (pairing) await this.authed((token) => this.options.api.closePairingCode(token)).catch(() => undefined)
+    if (forget)
       await this.authed((token) => this.options.api.disableHost(token)).catch((error: unknown) => {
         if (!(error instanceof AccountApiError && error.is(REMOTE_CODES.HOST_NOT_FOUND))) throw error
       })
+    if (failure !== null) throw failure
   }
   /** A code for 10 minutes, and its QR link with a secret the account service never sees. */
   async openPairing(): Promise<AccountPairingCode> {

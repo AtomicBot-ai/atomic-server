@@ -1,5 +1,6 @@
 import type {
   AccountRemoteDevice,
+  AccountRemoteEnded,
   AccountRemoteRequest,
   WorkspaceAccount,
   WorkspaceRemoteHost,
@@ -54,6 +55,15 @@ export function requestNotice(account: WorkspaceAccount | undefined): string | n
   const request: AccountRemoteRequest | undefined = account?.remote.requests.at(-1)
   if (!request) return null
   return `${deviceLabel(request)} asks for access to this server — check code ${request.check_code}`
+}
+
+/** What stopping sharing does, said where the person confirms it. */
+export const STOP_SHARING_DETAIL =
+  'Every device loses access right away and must pair again once you share again.'
+
+/** The newest device whose access ended from its side, as a one-line notice. */
+export function endedNotice(ended: AccountRemoteEnded): string {
+  return `${deviceLabel(ended)} disconnected from this server`
 }
 
 /** `123456` → `123 456`: easier to compare across two screens. */

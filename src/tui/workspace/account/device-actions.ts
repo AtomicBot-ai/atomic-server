@@ -1,10 +1,14 @@
-/** Remote access with the account's devices: sharing, a pairing code, allowing a device and revoking one. */
+/**
+ * Remote access with the account's devices: sharing (stopping it confirmed while devices have access), a
+ * pairing code, allowing a device and revoking one.
+ */
 import type { AccountPairingCode, WorkspaceAccount } from '../../../contract/index.js'
 import { deviceLabel } from '../../../workspace-view/index.js'
 import type { ActionContext } from '../action-types.js'
 import { accountUi, shownAccount, withAccount } from './account-model.js'
 
 const DECISIONS = ['account-allow:', 'account-deny:']
+const CONTROLS = ['account-share', 'account-pair', 'account-revoke-confirm', 'account-stop-sharing-confirm']
 
 async function openPairing(ctx: ActionContext, account: WorkspaceAccount): Promise<void> {
   const pairing = (await ctx.controller.runtime.execute('account.remote.pairing.open')) as AccountPairingCode
@@ -26,14 +30,18 @@ async function openPairing(ctx: ActionContext, account: WorkspaceAccount): Promi
 /** The operation a control runs, and what the status line says once it is done. */
 function change(id: string, account: WorkspaceAccount, grant: string) {
   const { sharing, requests, devices } = account.remote
-  if (id === 'account-share')
+  // A confirmed stop turns sharing off even when another client turned it off meanwhile.
+  if (id === 'account-share' || id === 'account-stop-sharing-confirm') {
+    const enabled = id === 'account-share' && !sharing
+    const off = devices.length
+      ? 'Sharing is off. Every device lost access and must pair again once you share again.'
+      : 'Sharing is off.'
     return {
       operation: 'account.remote.share',
-      input: { enabled: !sharing },
-      done: sharing
-        ? 'Sharing is off. Paired devices stay paired and reach this server again once you turn it back on.'
-        : 'Sharing with your devices is on.',
+      input: { enabled },
+      done: enabled ? 'Sharing with your devices is on.' : off,
     }
+  }
   const allow = id.startsWith('account-allow:')
   const grantId = id === 'account-revoke-confirm' ? grant : id.slice(id.indexOf(':') + 1)
   const device = [...requests, ...devices].find((d) => d.grant_id === grantId)
@@ -70,20 +78,24 @@ export async function deviceAction(id: string, ctx: ActionContext): Promise<bool
     }))
     return true
   }
-  const ours =
-    ['account-share', 'account-pair', 'account-revoke-confirm'].includes(id) ||
-    DECISIONS.some((prefix) => id.startsWith(prefix))
+  const ours = CONTROLS.includes(id) || DECISIONS.some((prefix) => id.startsWith(prefix))
   if (!ours) return false
   if (!account?.signed_in || s.busy) return true
   if (id === 'account-pair' && !account.remote.sharing) {
     ctx.update((v) => ({ ...v, message: 'Turn on sharing with your devices first: press s.' }))
     return true
   }
+  // Stopping ends every device's access: with devices, it waits for a confirmation.
+  if (id === 'account-share' && account.remote.sharing && account.remote.devices.length) {
+    ctx.update((v) => ({ ...v, overlay: 'account-stop-sharing', focus: 'close', hover: '', message: '' }))
+    return true
+  }
+  const confirmed = id === 'account-revoke-confirm' || id === 'account-stop-sharing-confirm'
   ctx.update((v) => ({
     ...v,
     busy: true,
     message: '',
-    ...(id === 'account-revoke-confirm' ? { overlay: null, focus: 'account-share', hover: '' } : {}),
+    ...(confirmed ? { overlay: null, focus: 'account-share', hover: '' } : {}),
   }))
   try {
     if (id === 'account-pair') await openPairing(ctx, account)

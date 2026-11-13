@@ -21,6 +21,7 @@ const signedOut: WorkspaceAccount = {
     pairing: null,
     requests: [],
     devices: [{ grant_id: 'g1', device_name: 'Home PC', platform: 'windows', since: 1 }],
+    ended: [],
     error: null,
   },
 }

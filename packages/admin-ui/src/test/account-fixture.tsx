@@ -17,6 +17,7 @@ export const remoteFixture = (patch: Partial<WorkspaceRemoteHost> = {}): Workspa
   pairing: null,
   requests: [],
   devices: [],
+  ended: [],
   error: null,
   ...patch,
 })

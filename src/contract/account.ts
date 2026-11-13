@@ -37,8 +37,23 @@ export interface AccountRemoteDevice {
   since: number
 }
 
+/**
+ * A device whose access ended other than from this server: it disconnected, another device of the account
+ * revoked it, or it signed out. Stopping sharing or Revoke here lists nothing: the person did that.
+ */
+export interface AccountRemoteEnded {
+  grant_id: string
+  device_name: string | null
+  platform: string | null
+  /** ms since the epoch */
+  at: number
+}
+
 export interface WorkspaceRemoteHost {
-  /** The person turned sharing on; it stays on across restarts until turned off. */
+  /**
+   * The person turned sharing on; it stays on across restarts until turned off. Turning it off ends every
+   * device's access: each pairs again next time.
+   */
   sharing: boolean
   /** The name devices see, once this server is registered as a host. */
   host_name: string | null
@@ -52,6 +67,8 @@ export interface WorkspaceRemoteHost {
   pairing: { expires_at: number } | null
   requests: AccountRemoteRequest[]
   devices: AccountRemoteDevice[]
+  /** Devices whose access ended from their side, newest first: the last few minutes, at most five. */
+  ended: AccountRemoteEnded[]
   /** The last failure talking to the account service, for a status line; null once a round succeeds. */
   error: string | null
 }

@@ -146,3 +146,15 @@ export const endAccess = (document: RemoteDocument): RemoteDocument => ({
   allowed: [],
   issued: [],
 })
+
+/**
+ * Sharing stops: every device key, allowed request and the pairing code go, so no device reaches this server
+ * any more. The host record, the device key and the address sequence stay, for sharing again.
+ */
+export const stopSharing = (document: RemoteDocument): RemoteDocument => ({
+  ...document,
+  sharing: false,
+  pairing: null,
+  allowed: [],
+  issued: [],
+})

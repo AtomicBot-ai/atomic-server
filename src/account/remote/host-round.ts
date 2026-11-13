@@ -20,6 +20,8 @@ export interface RoundContext {
   update: (change: (document: RemoteDocument) => RemoteDocument) => Promise<RemoteDocument>
   now: () => number
   log: { info(message: string): void; warn(message: string): void }
+  /** Keys a sync dropped because their grant ended elsewhere (the device disconnected, revoked, signed out). */
+  ended?: (keys: readonly IssuedKey[]) => void
 }
 
 /** What the host last uploaded: the same addresses to the same grants need no new blobs. */
@@ -159,7 +161,9 @@ export async function applySync(
   )
   // Keep shown names current; drop keys of grants that ended.
   const names = new Map(sync.grants.map((g) => [g.id, g.client] as const))
+  let dropped: IssuedKey[] = []
   const after = await ctx.update((d) => {
+    dropped = d.issued.filter((k) => plan.dropped.includes(k.grant_id))
     const next = {
       ...d,
       allowed: d.allowed.filter((a) => waiting.has(a.grant_id) && !activated.has(a.grant_id)),
@@ -174,6 +178,7 @@ export async function applySync(
     // A round that changed nothing writes nothing.
     return JSON.stringify(next) === JSON.stringify(d) ? d : next
   })
+  ctx.ended?.(dropped)
   // Addresses: every active grant this server holds a key for.
   const active = new Set([...sync.grants.filter((g) => g.status === 'active').map((g) => g.id), ...activated])
   const targets = after.issued.filter((k) => active.has(k.grant_id))

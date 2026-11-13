@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { WorkspaceAccount, WorkspaceSnapshot } from '../../../contract/index.js'
+import type { AccountRemoteEnded, WorkspaceAccount, WorkspaceSnapshot } from '../../../contract/index.js'
 import { createWorkspace } from '../state.js'
 import type { WorkspaceState } from '../state.js'
 import {
   accountArrived,
   accountNotice,
   accountUi,
+  announceEnded,
   deviceDetail,
   isAccountOverlay,
   onAccountTab,
@@ -29,6 +30,7 @@ const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
     pairing: null,
     requests: [],
     devices: [],
+    ended: [],
     error: null,
   },
   ...over,
@@ -89,6 +91,7 @@ describe('what the terminal may show of the account', () => {
 
   it('knows its dialogs', () => {
     expect(isAccountOverlay('account-pairing')).toBe(true)
+    expect(isAccountOverlay('account-stop-sharing')).toBe(true)
     expect(isAccountOverlay('help')).toBe(false)
     expect(isAccountOverlay(null)).toBe(false)
   })
@@ -170,5 +173,105 @@ describe('a fresh account status', () => {
     const after = accountArrived(before, account({ remote: { ...account().remote, ...remote } }), 7)
     expect(after.overlay).toBe('account-pairing')
     expect(after.accountUi).toMatchObject({ pairing, now: 7 })
+  })
+})
+
+describe('devices whose access ended from their side', () => {
+  const mac = { grant_id: 'g1', device_name: 'Work MacBook', platform: 'macos', at: 3_000 }
+  const phone = { grant_id: 'g2', device_name: null, platform: 'ios', at: 2_000 }
+  const old = { grant_id: 'g3', device_name: 'Home PC', platform: 'windows', at: 1_000 }
+  const key = (e: AccountRemoteEnded) => `${e.grant_id}@${e.at}`
+  const MAC = 'Work MacBook disconnected from this server.'
+  const at = (
+    list: AccountRemoteEnded[],
+    patch: Partial<WorkspaceState> = {},
+    over = {}
+  ): WorkspaceState => ({
+    ...createWorkspace('server'),
+    workspace: snapshot(account({ remote: { ...account().remote, ended: list }, ...over })),
+    ...patch,
+  })
+  const notice = { message: 'Reply failed.', details: '', conflict: false }
+
+  it.each([
+    ['the first account this terminal sees: old news', '', at([mac, old]), '', [key(mac), key(old)]],
+    ['a new device', '', at([mac], { accountEnded: [] }), MAC, [key(mac)]],
+    [
+      'several new: the newest, and how many more',
+      '',
+      at([phone, mac, old], { accountEnded: [key(old)] }),
+      'Work MacBook disconnected from this server (and 1 more).',
+      [key(phone), key(mac), key(old)],
+    ],
+    [
+      'a device by its platform',
+      '',
+      at([phone], { accountEnded: [] }),
+      'iOS disconnected from this server.',
+      [key(phone)],
+    ],
+    ['the same device again later', '', at([mac], { accountEnded: ['g1@1'] }), MAC, [key(mac)]],
+    [
+      'nothing new; what left the list is forgotten',
+      '',
+      at([mac], { accountEnded: [key(mac), key(old)] }),
+      '',
+      [key(mac)],
+    ],
+    [
+      'a dialog on screen: it waits',
+      '',
+      at([mac, old], { accountEnded: [key(old)], overlay: 'help' }),
+      '',
+      [key(old)],
+    ],
+    [
+      'a chat notice over the status line: it waits',
+      '',
+      at([mac], { accountEnded: [], page: 'chat', chatNotice: notice }),
+      '',
+      [],
+    ],
+    [
+      'this update set its own message: it waits',
+      '',
+      at([mac], { accountEnded: [], message: 'Sharing is off.' }),
+      'Sharing is off.',
+      [],
+    ],
+    [
+      'a message from an earlier update gives way',
+      'Signed out.',
+      at([mac], { accountEnded: [], message: 'Signed out.' }),
+      MAC,
+      [key(mac)],
+    ],
+    ['accounts off: nothing', '', at([mac], { accountEnded: [] }, { enabled: false }), '', []],
+  ])('%s', (_name, message, next, said, remembered) => {
+    const after = announceEnded({ ...next, message }, next)
+    expect(after.message).toBe(said)
+    expect(after.accountEnded).toEqual(remembered)
+  })
+
+  it('says a device that disconnected behind a dialog once the dialog is gone', () => {
+    const open = announceEnded(at([]), at([mac], { accountEnded: [], overlay: 'account-pairing' }))
+    expect(open.message).toBe('')
+    // Closing a dialog clears the message; the next update says what waited, and only once.
+    const closed = { ...open, overlay: null, message: '' }
+    const said = announceEnded(closed, closed)
+    expect(said.message).toBe(MAC)
+    expect(announceEnded({ ...said, message: '' }, { ...said, message: '' }).message).toBe('')
+  })
+
+  it('lets a used pairing code say so first, and says the device that disconnected next', () => {
+    const before = { ...waiting('account-pairing', account()), accountEnded: [] }
+    const used = account({ remote: { ...account().remote, devices: [device], ended: [mac] } })
+    const paired = accountArrived(before, used, 5)
+    expect(paired).toMatchObject({
+      overlay: null,
+      message: 'Home PC can now use this server.',
+      accountEnded: [],
+    })
+    expect(accountArrived(paired, used, 6).message).toBe(MAC)
   })
 })

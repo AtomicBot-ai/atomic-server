@@ -51,7 +51,7 @@ export const ACCOUNT_OPERATIONS = [
     'account.remote.share',
     'Share with my devices',
     'secret',
-    'Turn sharing of the API with the account’s devices on (starting the API and the tunnel) or off; forget revokes every device.',
+    'Turn sharing of the API with the account’s devices on (starting the API and the tunnel) or off. Off ends every device’s access at once (each pairs again later); forget also removes this server from the account’s computers.',
     {
       properties: { enabled: { type: 'boolean' }, forget: { type: 'boolean' } },
       required: ['enabled'],

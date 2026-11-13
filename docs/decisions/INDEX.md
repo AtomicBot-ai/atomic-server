@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-13** — [End every device's access when sharing stops, and say when a device disconnects](2026-11-13-end-every-device-when-sharing-stops.md) — supersedes "off pauses": off revokes every grant (host kept), asks first; `remote.ended` drives a disconnect notice.
+
 - **2026-11-13** — [Give the account its own section, as the desktop app does](2026-11-13-give-the-account-its-own-section.md) — Account on the rail above Help with Overview and Remote models, in the terminal and the web; out of Settings and Server → Remote access.
 
 - **2026-11-12** — [Share the server with the account's devices](2026-11-12-share-the-server-with-account-devices.md) — the server as a remote access host: one confirmation per device, its own sealed key in the keyring while sharing is on, sealed tunnel and LAN addresses; hpke-js and uqr.

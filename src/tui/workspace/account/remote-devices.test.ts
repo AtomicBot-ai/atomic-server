@@ -29,6 +29,7 @@ const account = (over: Partial<WorkspaceAccount> = {}, remote = {}): WorkspaceAc
     pairing: null,
     requests: [request],
     devices: [device],
+    ended: [],
     error: null,
     ...remote,
   },
@@ -101,6 +102,11 @@ describe('Account → Remote models', () => {
     const c = workspaceFrame(state(account({}, { devices: many })), 80, 24, 0)
     expect(screen(c)).toMatch(/… \d+ more/)
     expect(ids(c)).toContain('account-share')
+  })
+
+  it('says stopping ends every device’s access', () => {
+    const share = workspaceFrame(state(account()), 120, 40, 0).targets.find((t) => t.id === 'account-share')
+    expect(share?.hint).toBe('Stop sharing; every device loses access and must pair again')
   })
 
   it('offers to share before adding a device', () => {

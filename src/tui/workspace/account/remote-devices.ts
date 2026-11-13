@@ -82,7 +82,7 @@ function drawActions(
       y,
       sharing ? 'Stop sharing  [s]' : 'Share with my devices  [s]',
       sharing
-        ? 'Stop sharing; paired devices stay paired'
+        ? 'Stop sharing; every device loses access and must pair again'
         : 'Share the API with your devices; starts the API and the tunnel',
       focus
     )

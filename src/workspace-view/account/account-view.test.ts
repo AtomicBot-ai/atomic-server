@@ -4,6 +4,7 @@ import {
   accountLine,
   countdown,
   deviceLabel,
+  endedNotice,
   formatCheckCode,
   platformLabel,
   requestNotice,
@@ -18,6 +19,7 @@ const remote = (patch: Partial<WorkspaceRemoteHost> = {}): WorkspaceRemoteHost =
   addresses: 1,
   pairing: null,
   requests: [],
+  ended: [],
   devices: [],
   error: null,
   ...patch,
@@ -86,6 +88,15 @@ describe('account view', () => {
     }
     expect(requestNotice(account({ remote: remote({ requests: [request] }) }))).toBe(
       'MacBook asks for access to this server — check code 936468'
+    )
+  })
+
+  it('says which device disconnected, by name or platform', () => {
+    expect(endedNotice({ grant_id: 'g', device_name: 'Work MacBook', platform: 'macos', at: 1 })).toBe(
+      'Work MacBook disconnected from this server'
+    )
+    expect(endedNotice({ grant_id: 'g', device_name: null, platform: 'ios', at: 1 })).toBe(
+      'iOS disconnected from this server'
     )
   })
 

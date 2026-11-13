@@ -29,6 +29,7 @@ const account = (remote: Partial<WorkspaceAccount['remote']> = {}): WorkspaceAcc
       },
     ],
     devices: [{ grant_id: 'd1', device_name: 'Home PC', platform: 'windows', since: 1 }],
+    ended: [],
     error: null,
     ...remote,
   },
@@ -66,20 +67,49 @@ function fixture(a: WorkspaceAccount) {
 
 describe('sharing with the account’s devices', () => {
   it.each([
-    [true, false, 'Sharing is off.'],
-    [false, true, 'Sharing with your devices is on.'],
-  ])('toggles sharing that is %s', async (sharing, enabled, message) => {
-    const t = fixture(account({ sharing }))
+    ['on, no devices', true, [], false, 'Sharing is off.'],
+    ['off', false, [], true, 'Sharing with your devices is on.'],
+    ['off, devices from before', false, undefined, true, 'Sharing with your devices is on.'],
+  ])('toggles sharing that is %s at once', async (_name, sharing, devices, enabled, message) => {
+    const t = fixture(account({ sharing, ...(devices ? { devices } : {}) }))
     await activate('account-share', t.ctx)
     expect(t.execute).toHaveBeenCalledExactlyOnceWith('account.remote.share', { enabled })
-    expect(t.get().message).toContain(message)
-    expect(t.get().busy).toBe(false)
+    expect(t.get()).toMatchObject({ overlay: null, busy: false, message })
+  })
+
+  it('stops sharing with devices only after its confirmation', async () => {
+    const t = fixture(account())
+    await activate('account-share', t.ctx)
+    expect(t.get()).toMatchObject({ overlay: 'account-stop-sharing', focus: 'close', message: '' })
+    expect(t.execute).not.toHaveBeenCalled()
+    await activate('close', t.ctx)
+    expect(t.get()).toMatchObject({ overlay: null, focus: 'account-share' })
+    expect(t.execute).not.toHaveBeenCalled()
+    await activate('account-share', t.ctx)
+    await activate('account-stop-sharing-confirm', t.ctx)
+    expect(t.execute).toHaveBeenCalledExactlyOnceWith('account.remote.share', { enabled: false })
+    expect(t.get()).toMatchObject({
+      overlay: null,
+      focus: 'account-share',
+      busy: false,
+      message: 'Sharing is off. Every device lost access and must pair again once you share again.',
+    })
+  })
+
+  it('keeps a confirmed stop a stop when sharing went off elsewhere meanwhile', async () => {
+    const t = fixture(account())
+    await activate('account-share', t.ctx)
+    t.ctx.update((v) => ({ ...v, workspace: { ...v.workspace!, account: account({ sharing: false }) } }))
+    await activate('account-stop-sharing-confirm', t.ctx)
+    expect(t.execute).toHaveBeenCalledExactlyOnceWith('account.remote.share', { enabled: false })
   })
 
   it('does nothing for a server that is not signed in', async () => {
     const t = fixture({ ...account(), signed_in: false, user: null })
-    for (const id of ['account-share', 'account-pair', 'account-allow:r1']) await activate(id, t.ctx)
+    for (const id of ['account-share', 'account-pair', 'account-allow:r1', 'account-stop-sharing-confirm'])
+      await activate(id, t.ctx)
     expect(t.execute).not.toHaveBeenCalled()
+    expect(t.get().overlay).toBeNull()
   })
 })
 

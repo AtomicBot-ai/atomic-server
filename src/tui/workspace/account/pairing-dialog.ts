@@ -1,6 +1,9 @@
-/** "Add a device": the pairing code, its link and QR code, and its countdown; and revoking a device. */
+/**
+ * "Add a device": the pairing code, its link and QR code, and its countdown; and the confirmations that end
+ * access: revoking a device, stopping sharing.
+ */
 import { qrTerminal } from '../../../account/index.js'
-import { countdown, deviceLabel } from '../../../workspace-view/index.js'
+import { countdown, deviceLabel, STOP_SHARING_DETAIL } from '../../../workspace-view/index.js'
 import { COLORS, text, textWidth } from '../draw/canvas.js'
 import type { Canvas } from '../draw/canvas.js'
 import type { WorkspaceState } from '../state.js'
@@ -80,6 +83,24 @@ export function drawRevokeDialog(c: Canvas, s: WorkspaceState, focus: string) {
     [
       ['account-revoke-confirm', 'Revoke device', 'Revoke its key now'],
       ['close', 'Keep it', 'Cancel without changes'],
+    ],
+    focus
+  )
+}
+
+export function drawStopSharingDialog(c: Canvas, focus: string) {
+  const d = dialog(c, 62, 10),
+    w = writer(c, d, 1)
+  w.put('Stop sharing?', COLORS.text, true, true)
+  w.skip()
+  w.put(STOP_SHARING_DETAIL)
+  buttonRow(
+    c,
+    d.x + 2,
+    d.y + d.h - 3,
+    [
+      ['account-stop-sharing-confirm', 'Stop sharing', 'End every device’s access now'],
+      ['close', 'Keep sharing', 'Cancel without changes'],
     ],
     focus
   )

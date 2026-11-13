@@ -118,4 +118,32 @@ describe('Share with your devices', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Pixel can now use this server.')
     expect(live.execute).not.toHaveBeenCalledWith('account.remote.pairing.close')
   })
+
+  it('asks before stopping while devices have access, since every device loses it', async () => {
+    const live = liveAccount(
+      accountFixture({
+        signed_in: true,
+        user,
+        remote: remoteFixture({ sharing: true, tunnel: 'online', addresses: 1, devices: [device] }),
+      }),
+      { 'account.remote.share': (_input, update) => update({ remote: remoteFixture() }) }
+    )
+    render(<live.Live>{(w) => <RemoteShare workspace={w} account={w.snapshot!.account!} />}</live.Live>)
+    await userEvent.click(screen.getByRole('switch', { name: 'Share this server' }))
+    const dialog = screen.getByRole('dialog', { name: 'Stop sharing?' })
+    expect(dialog).toHaveTextContent('1 device has access')
+    expect(dialog).toHaveTextContent('Every device loses access right away and must pair again')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep sharing' }))
+    expect(live.execute).not.toHaveBeenCalled()
+    expect(screen.getByRole('switch', { name: 'Share this server' })).toBeChecked()
+    await userEvent.click(screen.getByRole('switch', { name: 'Share this server' }))
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: 'Stop sharing?' })).getByRole('button', {
+        name: 'Stop sharing',
+      })
+    )
+    await waitFor(() => expect(live.execute).toHaveBeenCalledWith('account.remote.share', { enabled: false }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('switch', { name: 'Share this server' })).not.toBeChecked()
+  })
 })

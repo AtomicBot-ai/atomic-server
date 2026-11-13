@@ -155,8 +155,11 @@ comes from the workspace snapshot the SPA polls (`engines`, `host_steps`, `loads
   reach the server, requests with their check code and Allow / Deny, devices with Revoke, and "Add a
   device" (`AddDeviceDialog.tsx`, lifted from the desktop): the code, the QR code the server renders as SVG
   (shown as an `<img>`, never as markup), Copy link and the countdown; signed out, it shows the sign-in.
+  Turning the switch off ends every device's access, so it asks first while devices have it (ADR
+  2026-11-13 "End every device's access when sharing stops").
   Server → Remote access keeps the tunnel and the local network and ends with a line on how sharing stands
-  and Open Remote models. `AccessRequestToast.tsx` announces a request on any other page, with Review.
+  and Open Remote models. `AccessRequestToast.tsx` announces a request on any other page, with Review;
+  `DeviceEndedToast.tsx` says a device disconnected from its side (`remote.ended`) until dismissed.
 - **Banner and loads.** `HostStepBanner.tsx` shows the privileged step the server waits on, with its
   command, in the Cockpit and on the Server page. A managed engine's load shows its stage and time on
   the installed model's row and in the Cockpit, with Cancel loading, and after a failure the error and

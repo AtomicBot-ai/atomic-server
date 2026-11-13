@@ -34,6 +34,7 @@ const OPENERS: Record<string, string> = {
   'account-device': 'account-device',
   'account-signout': 'account-signout',
   'account-pairing': 'account-pair',
+  'account-stop-sharing': 'account-share',
 }
 
 /** Close an account dialog; a sign-in it showed is cancelled and an unused pairing code closed. */

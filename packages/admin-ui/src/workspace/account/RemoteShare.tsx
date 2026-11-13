@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { accountLine, sharingLine } from '@view'
+import { accountLine, sharingLine, STOP_SHARING_DETAIL } from '@view'
 import type { AccountPairingCode, WorkspaceAccount } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { SettingsField, SettingsSection } from '../SettingsForm'
 import { describeError } from '@/services/admin-api'
+import { DeleteConfirmation } from '../library/DeleteConfirmation'
 import { AddDeviceDialog } from './AddDeviceDialog'
 import { RemoteDevices } from './RemoteDevices'
 import './account.css'
@@ -12,14 +13,15 @@ import './remote-share.css'
 
 /**
  * Account → Remote models, "Share with your devices": the account's devices use this server's API, each with
- * its own key, over the tunnel or the local network. For a signed-in account only; the Account page shows
- * the sign-in instead.
+ * its own key, over the tunnel or the local network. Turning it off ends every device's access, so it asks
+ * first while devices have it. For a signed-in account only; the Account page shows the sign-in instead.
  */
 export function RemoteShare({ workspace: w, account }: { workspace: Workspace; account: WorkspaceAccount }) {
   const [pairing, setPairing] = useState<AccountPairingCode | null>(null)
   const [switching, setSwitching] = useState(false)
   const [error, setError] = useState('')
   const [added, setAdded] = useState('')
+  const [stopping, setStopping] = useState(false)
   const remote = account.remote
   const share = async (enabled: boolean) => {
     setSwitching(true)
@@ -36,7 +38,7 @@ export function RemoteShare({ workspace: w, account }: { workspace: Workspace; a
   return (
     <SettingsSection
       title="Share with your devices"
-      description="Devices signed in to your Atomic Chat account can use this server’s API. Each device pairs once and gets its own key."
+      description="Devices signed in to your Atomic Chat account can use this server’s API. Each device pairs once and gets its own key; stopping sharing ends access for all of them."
     >
       <SettingsField label="Share this server" hint={accountLine(account)}>
         <input
@@ -45,7 +47,10 @@ export function RemoteShare({ workspace: w, account }: { workspace: Workspace; a
           checked={remote.sharing}
           disabled={switching}
           aria-busy={switching || undefined}
-          onChange={(event) => void share(event.target.checked)}
+          onChange={(event) => {
+            if (!event.target.checked && remote.devices.length > 0) setStopping(true)
+            else void share(event.target.checked)
+          }}
         />
       </SettingsField>
       <div className="remote-access-body">
@@ -70,6 +75,17 @@ export function RemoteShare({ workspace: w, account }: { workspace: Workspace; a
         )}
       </div>
       <RemoteDevices workspace={w} remote={remote} />
+      {stopping && (
+        <DeleteConfirmation
+          title="Stop sharing?"
+          name={`${remote.devices.length} ${remote.devices.length === 1 ? 'device has' : 'devices have'} access`}
+          detail={STOP_SHARING_DETAIL}
+          confirm="Stop sharing"
+          cancel="Keep sharing"
+          onClose={() => setStopping(false)}
+          onConfirm={() => share(false)}
+        />
+      )}
       {pairing && (
         <AddDeviceDialog
           workspace={w}

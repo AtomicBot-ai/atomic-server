@@ -3,10 +3,17 @@ import type {
   ACCOUNT_SECTIONS,
   AccountPairingCode,
   AccountRemoteDevice,
+  AccountRemoteEnded,
   WorkspaceAccount,
   WorkspaceSnapshot,
 } from '../../../contract/index.js'
-import { accountLine, deviceLabel, platformLabel, requestNotice } from '../../../workspace-view/index.js'
+import {
+  accountLine,
+  deviceLabel,
+  endedNotice,
+  platformLabel,
+  requestNotice,
+} from '../../../workspace-view/index.js'
 import type { WorkspaceOverlay } from '../overlay-types.js'
 import type { WorkspaceState } from '../state.js'
 
@@ -46,6 +53,7 @@ export const ACCOUNT_OVERLAYS = [
   'account-signout',
   'account-pairing',
   'account-revoke',
+  'account-stop-sharing',
 ] as const satisfies readonly NonNullable<WorkspaceOverlay>[]
 
 export const isAccountOverlay = (overlay: WorkspaceOverlay): boolean =>
@@ -80,6 +88,37 @@ export function accountNotice(workspace: WorkspaceSnapshot | null | undefined): 
   return account ? requestNotice(account) : null
 }
 
+const endedKey = (ended: AccountRemoteEnded) => `${ended.grant_id}@${ended.at}`
+
+/** Devices whose access ended from their side, as one notice: the newest by name, and how many more. */
+function endedText(ended: readonly AccountRemoteEnded[]): string {
+  const newest = ended.reduce((a, b) => (b.at > a.at ? b : a))
+  return `${endedNotice(newest)}${ended.length > 1 ? ` (and ${ended.length - 1} more)` : ''}.`
+}
+
+/**
+ * `next`, the state once an account landed on `before`, with each device whose access ended said once on
+ * the status line and remembered in `accountEnded`. The first account this terminal sees is old news. A
+ * notice waits, unsaid, while something hides the status line or this update set its own message; it is
+ * said by a later update. Only entries the server still lists are remembered.
+ */
+export function announceEnded(before: WorkspaceState, next: WorkspaceState): WorkspaceState {
+  const account = shownAccount(next.workspace)
+  if (!account) return next
+  // A server older than this terminal sends no `ended`.
+  const listed = account.remote.ended ?? [],
+    keys = listed.map(endedKey)
+  const said = next.accountEnded
+  if (!said) return { ...next, accountEnded: keys }
+  const fresh = listed.filter((ended) => !said.includes(endedKey(ended)))
+  const hidden = Boolean(next.overlay) || (next.page === 'chat' && Boolean(next.chatNotice))
+  const ownMessage = next.message !== '' && next.message !== before.message
+  if (fresh.length && !hidden && !ownMessage)
+    return { ...next, message: endedText(fresh), accountEnded: keys }
+  const kept = said.filter((key) => keys.includes(key))
+  return kept.length === said.length ? next : { ...next, accountEnded: kept }
+}
+
 /** The line at the end of setup, while nobody is signed in. */
 export function setupAccountHint(workspace: WorkspaceSnapshot | null | undefined): string | null {
   const account = shownAccount(workspace)
@@ -99,9 +138,14 @@ export function withAccount(s: WorkspaceState, account: WorkspaceAccount): Works
 
 /**
  * A fresh account status: kept in the snapshot, and the end of a dialog waiting on it — the device sign-in
- * once the server is signed in, the pairing code once a new device used it.
+ * once the server is signed in, the pairing code once a new device used it. A device that disconnected is
+ * said as `announceEnded` says it.
  */
 export function accountArrived(s: WorkspaceState, account: WorkspaceAccount, now: number): WorkspaceState {
+  return announceEnded(s, arrived(s, account, now))
+}
+
+function arrived(s: WorkspaceState, account: WorkspaceAccount, now: number): WorkspaceState {
   const next = withAccount(s, account),
     ui = accountUi(s, now)
   if (s.overlay === 'account-device' && account.signed_in) return { ...next, ...signedIn(s, account) }

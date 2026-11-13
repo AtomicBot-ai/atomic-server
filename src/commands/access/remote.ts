@@ -2,7 +2,7 @@ import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import { qrTerminal } from '../../account/index.js'
 import type { AccountPairingCode, WorkspaceAccount } from '../../contract/index.js'
-import { deviceLabel, formatCheckCode, sharingLine } from '../../workspace-view/index.js'
+import { deviceLabel, formatCheckCode, sharingLine, STOP_SHARING_DETAIL } from '../../workspace-view/index.js'
 import {
   ACCOUNT_COMMANDS_HIDDEN,
   accountStatus,
@@ -102,15 +102,28 @@ export const remoteCommand = defineCommand({
   subcommands: [
     defineCommand({
       name: 'share',
-      summary: 'Turn sharing on (starting the API and the tunnel) or off',
+      summary: 'Turn sharing on (starting the API and the tunnel) or off, which ends every device’s access',
+      description:
+        'Off ends every device’s access at once: their keys stop working, the account service tells them, and each pairs again once you share again. It asks first while devices have access (--yes off a terminal).',
       positionals: [{ name: 'state', description: 'on or off', required: true }],
-      options: { forget: { type: 'boolean', description: 'With off: revoke every device as well' } },
+      options: {
+        forget: {
+          type: 'boolean',
+          description: 'With off: also remove this server from the account’s computers',
+        },
+      },
       examples: ['atc remote share on', 'atc remote share off', 'atc remote share off --forget'],
       run: async (inv, ctx) => {
         const state = inv.positionals[0]
         if (state !== 'on' && state !== 'off') throw new AtcError('ATC_USAGE', 'Use on or off.')
         const forget = state === 'off' && inv.values['forget'] === true
-        if (forget && !(await ctx.prompt.confirm('Revoke every device’s access?', { danger: true }))) return 0
+        if (state === 'off' && (forget || (await accountStatus(ctx)).remote.devices.length > 0)) {
+          ctx.out.line(STOP_SHARING_DETAIL)
+          const question = forget
+            ? 'Stop sharing and remove this server from your account?'
+            : 'Stop sharing with every device?'
+          if (!(await ctx.prompt.confirm(question, { danger: true }))) return 0
+        }
         const account = (await execute(ctx, 'account.remote.share', {
           enabled: state === 'on',
           forget,

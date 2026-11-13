@@ -115,6 +115,7 @@ describe('the remote access screen while accounts are on', () => {
         },
       ],
       devices: [{ grant_id: 'd1', device_name: 'Home PC', platform: 'windows', since: 1 }],
+      ended: [],
       error: null,
     },
     ...over,

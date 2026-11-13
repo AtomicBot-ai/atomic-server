@@ -50,4 +50,5 @@ export type WorkspaceOverlay =
   | 'account-signout'
   | 'account-pairing'
   | 'account-revoke'
+  | 'account-stop-sharing'
   | null

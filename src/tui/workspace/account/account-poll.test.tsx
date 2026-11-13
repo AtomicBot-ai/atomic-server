@@ -30,6 +30,7 @@ const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
     pairing: null,
     requests: [],
     devices: [],
+    ended: [],
     error: null,
   },
   ...over,

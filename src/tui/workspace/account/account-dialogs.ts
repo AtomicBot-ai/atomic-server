@@ -6,7 +6,7 @@ import type { Canvas } from '../draw/canvas.js'
 import { fieldControl } from '../draw/controls.js'
 import type { WorkspaceState } from '../state.js'
 import { accountUi, shownAccount } from './account-model.js'
-import { drawPairingDialog, drawRevokeDialog } from './pairing-dialog.js'
+import { drawPairingDialog, drawRevokeDialog, drawStopSharingDialog } from './pairing-dialog.js'
 import { buttonRow, dialog, writer } from './dialog-frame.js'
 
 function drawEmail(c: Canvas, s: WorkspaceState, focus: string) {
@@ -117,6 +117,7 @@ export function drawAccountOverlay(c: Canvas, s: WorkspaceState, focus: string):
   else if (s.overlay === 'account-signout') drawSignOut(c, account, focus)
   else if (s.overlay === 'account-pairing') drawPairingDialog(c, s, focus)
   else if (s.overlay === 'account-revoke') drawRevokeDialog(c, s, focus)
+  else if (s.overlay === 'account-stop-sharing') drawStopSharingDialog(c, focus)
   else return false
   return true
 }

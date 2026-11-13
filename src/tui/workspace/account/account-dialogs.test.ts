@@ -24,6 +24,7 @@ const account = (over: Partial<WorkspaceAccount> = {}): WorkspaceAccount => ({
       { grant_id: 'd1', device_name: 'Home PC', platform: 'windows', since: 1 },
       { grant_id: 'd2', device_name: null, platform: 'ios', since: 1 },
     ],
+    ended: [],
     error: null,
   },
   ...over,
@@ -151,5 +152,14 @@ describe('confirmations', () => {
     const c = workspaceFrame(dialog('account-revoke', account(), { grant: 'd1' }), 100, 30, 0)
     expect(screen(c)).toContain('Home PC loses access to this server from its next request.')
     expect(ids(c)).toContain('account-revoke-confirm')
+  })
+
+  it('says what stopping sharing does to every device', () => {
+    const c = workspaceFrame(dialog('account-stop-sharing'), 100, 30, 0)
+    const text = screen(c)
+    expect(text).toContain('Stop sharing?')
+    expect(text).toContain('Every device loses access right away and must pair again')
+    // Cancelling is Esc, in the footer: the dialog draws no second Close.
+    expect(ids(c)).toContain('account-stop-sharing-confirm')
   })
 })

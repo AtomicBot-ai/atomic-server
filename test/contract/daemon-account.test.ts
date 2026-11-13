@@ -1,7 +1,7 @@
 /**
  * Sharing the server through the account (ADR 2026-11-12-share-the-server-with-account-devices), against a
  * real core and the account service in memory: a device that was allowed gets its own key, the public API
- * accepts it next to the keyring's, and refuses it again once the device is revoked.
+ * accepts it next to the keyring's, and refuses it again once the device is revoked or sharing stops.
  */
 import { AtomicCore } from '@atomic-chat/core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -144,5 +144,57 @@ describe('sharing the server with the account’s devices', () => {
 
     await execute('account.remote.revoke', { grant_id: grant.id })
     expect((await models(credential.api_key)).status).toBe(401)
+  }, 60_000)
+
+  it('ends every device’s access when sharing stops, and names a device that disconnected', async () => {
+    if (!(await execute<WorkspaceAccount>('account.status')).signed_in) {
+      await execute('account.signin.email.start', { email: 'ann@example.com' })
+      await execute('account.signin.email.verify', { code: '123456' })
+    }
+    await execute('account.remote.share', { enabled: true })
+    const allow = async (name: string) => {
+      const secret = newDeviceSecret()
+      const grant = backend.request({ name, publicKey: devicePublicKey(secret) })
+      await until(async () =>
+        (await execute<WorkspaceAccount>('account.status')).remote.requests.some(
+          (r) => r.grant_id === grant.id
+        )
+      )
+      await execute('account.remote.decide', { grant_id: grant.id, allow: true })
+      await until(() => grant.status === 'active' && grant.blob !== null)
+      return { grant, credential: await openCredential(secret, grant.id, grant.envelope!) }
+    }
+    const tablet = await allow('iPad')
+    const phone = await allow('Pixel')
+
+    // The phone disconnects on its side: the server names it.
+    backend.revoke(phone.grant.id)
+    await until(async () =>
+      (await execute<WorkspaceAccount>('account.status')).remote.ended.some((e) => e.device_name === 'Pixel')
+    )
+
+    const addresses = await openEndpoints(
+      unb64u(tablet.credential.grant_secret),
+      tablet.grant.id,
+      tablet.grant.blob!
+    )
+    const port = new URL(addresses.endpoints[0]!.url).port
+    const models = () =>
+      fetch(`http://127.0.0.1:${port}/v1/models`, {
+        headers: { authorization: `Bearer ${tablet.credential.api_key}` },
+      })
+    expect((await models()).status).toBe(200)
+    // Devices have access, so it asks first; off a terminal that takes --yes.
+    expect((await atc(['remote', 'share', 'off'])).code).not.toBe(0)
+    expect(tablet.grant.status).toBe('active')
+    const off = await atc(['remote', 'share', 'off', '--yes'])
+    expect(off).toMatchObject({ code: 0 })
+    expect(off.out).toContain('Not shared with your devices')
+    expect(tablet.grant.status).toBe('revoked')
+    expect((await models()).status).toBe(401)
+    // The host stays on the account, so sharing again sends no new "new computer" email.
+    expect(backend.host).not.toBeNull()
+    const account = await execute<WorkspaceAccount>('account.status')
+    expect(account.remote).toMatchObject({ sharing: false, devices: [], ended: [] })
   }, 60_000)
 })
