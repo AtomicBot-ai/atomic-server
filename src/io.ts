@@ -60,17 +60,29 @@ export interface AtcIo {
 /** The part of a stream a writer uses. */
 export interface PipeStream {
   write(chunk: string, done: (error?: Error | null) => void): boolean
+  /** Present on a real stream: the other way a closed pipe shows up. */
+  on?(event: 'error', listener: (error: Error) => void): unknown
+}
+
+/** The pipe's reader is gone; the output has nowhere left to go. */
+function isClosedPipe(error: unknown): boolean {
+  return (error as { code?: unknown } | null | undefined)?.code === 'EPIPE'
 }
 
 /**
  * Writes to a pipe, and `flush` resolves once the pipe has taken every write: the Bun binary's
  * `process.exit` drops what a pipe could not take at once (a `--json` document cut at 64 KiB). It counts
  * each write's own callback rather than waiting for a 'drain' event, which a write that came back false
- * is not certain to see; a write the pipe refused for good (EPIPE) counts as done.
+ * is not certain to see; a write the pipe refused for good (EPIPE) counts as done, delivered either as
+ * a throw from `write` or as the stream's 'error' event.
  */
 export function pipeWriter(stream: PipeStream) {
   let pending = 0
   const idle: Array<() => void> = []
+  stream.on?.('error', (error) => {
+    // A closed pipe ends the output; any other stream failure is still a failure.
+    if (!isClosedPipe(error)) throw error
+  })
   return {
     write: (text: string) => {
       const done = () => {
@@ -83,6 +95,7 @@ export function pipeWriter(stream: PipeStream) {
       } catch (error) {
         // A write that threw never calls back: it must not hold the exit.
         done()
+        if (isClosedPipe(error)) return
         throw error
       }
     },
