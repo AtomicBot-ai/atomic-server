@@ -23,7 +23,11 @@ export async function agentAction(id: string, ctx: ActionContext): Promise<boole
     patch({ busy: true, message: 'Finding a model for this agent...' })
     try {
       const models = await controller.models(serverEndpoint(s), true)
-      if (!models.length) throw new Error('Load a text model in Models before opening an agent.')
+      // An empty but successful list is a precondition, not a failure: the refusal stays a message.
+      if (!models.length) {
+        patch({ message: 'Load a text model in Models before opening an agent.' })
+        return true
+      }
       patch({
         agent: id.slice(6) as AgentId,
         agentModel: models.includes(s.model) ? s.model : models[0]!,
