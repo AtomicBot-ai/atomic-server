@@ -223,3 +223,4 @@ add a new one that says which record it supersedes.
 - [2026-11-07 — Reuse the API listener when connecting an agent](2026-11-07-reuse-api-for-connections.md)
 
 - [2026-11-07 — Package a runtime that does not inherit Windows sockets](2026-11-07-prevent-windows-socket-inheritance.md)
+- **2026-11-15** — [Diagnose CLI chat failures with finite tags](2026-11-15-diagnose-cli-chat-failures.md) — name the terminal chat client's exact failure branches and approved transport causes; the original crash stays unfixed until an event names the branch.

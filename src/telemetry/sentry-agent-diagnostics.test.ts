@@ -197,3 +197,68 @@ describe('bounded chat.stream diagnostic tags', () => {
     expect(nativeFailureTags(chain)).toEqual({})
   })
 })
+
+// The `atc chat` command streams through src/terminal-service/client.ts, so these branches
+// reach the same reporting boundary as chat.stream and stay unnamed without finite tags.
+const cliChatContext = { component: 'cli', operation: 'chat' }
+
+describe('bounded CLI chat client diagnostic tags', () => {
+  it('names the CLI chat client branches the terminal chat command throws', () => {
+    expect(
+      nativeFailureTags(new Error('Use an HTTP endpoint without credentials, a query, or a fragment.'))
+    ).toEqual({
+      diagnostic_code: 'CLI_CHAT_ENDPOINT_INVALID',
+    })
+    expect(
+      nativeFailureTags(new Error('The server reported a generation error. Inspect the server log.'))
+    ).toEqual({
+      diagnostic_code: 'CLI_CHAT_GENERATION_ERROR',
+    })
+    expect(nativeFailureTags(new Error('The server returned an empty response.'))).toEqual({
+      diagnostic_code: 'CLI_CHAT_EMPTY_RESPONSE',
+    })
+    expect(
+      nativeFailureTags(new Error('The response ended before completion. The partial reply is kept.'))
+    ).toEqual({
+      diagnostic_code: 'CLI_CHAT_STREAM_TRUNCATED',
+    })
+
+    // The report stays scrubbed while carrying the branch and its transport cause.
+    const transport = Object.assign(new Error('socket reset for private-fixture-endpoint'), {
+      code: 'UND_ERR_SOCKET',
+    })
+    const report = failureReport(
+      new Error('The response ended before completion. The partial reply is kept.', {
+        cause: transport,
+      }),
+      cliChatContext
+    )
+    expect(report).toMatchObject({
+      source: 'event_listener',
+      level: 'error',
+      error: { name: 'Error', message: 'Unexpected failure in chat' },
+      tags: {
+        component: 'cli',
+        operation: 'chat',
+        diagnostic_code: 'CLI_CHAT_STREAM_TRUNCATED',
+        diagnostic_cause_code: 'UND_ERR_SOCKET',
+      },
+    })
+    expect(JSON.stringify(report)).not.toContain('private-fixture')
+
+    // Edited messages, unapproved codes and cyclic chains add no tag.
+    expect(
+      nativeFailureTags(new Error('The server returned an empty response. private-fixture-detail'))
+    ).toEqual({})
+    const unapproved = Object.assign(new Error('private-fixture-detail'), {
+      code: 'CLI_CHAT_PRIVATE_CODE',
+    })
+    expect(nativeFailureTags(new Error('wrapper', { cause: unapproved }))).toEqual({})
+    const first = new Error('The server reported a generation error. Inspect the server log.')
+    const second = new Error('cycle', { cause: first })
+    Object.defineProperty(first, 'cause', { value: second })
+    expect(nativeFailureTags(first)).toEqual({
+      diagnostic_code: 'CLI_CHAT_GENERATION_ERROR',
+    })
+  })
+})
