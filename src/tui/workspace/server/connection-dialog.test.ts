@@ -9,6 +9,7 @@ function fixture(step = 'review'): WorkspaceState {
     setupComplete: true,
     overlay: 'connection-guide',
     focus: 'guide-configure',
+    connectionEngines: ['llamacpp-upstream'],
     installed: [{ id: 'chosen', name: 'Chosen model', provider: 'llamacpp-upstream' }],
     workspace: { api: { running: false, port: 1337 }, setups: [], downloads: [] } as never,
     connection: {

@@ -53,6 +53,8 @@ export interface ConnectionDraft {
   status: string
   error: string
   command: string
+  agentConfigured?: boolean
+  agentSetupNote?: string
   endpoint: string
   keyId: string
 }

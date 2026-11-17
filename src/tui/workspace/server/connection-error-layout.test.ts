@@ -11,6 +11,7 @@ function fixture(error: string): WorkspaceState {
     firstRun: 'connect',
     overlay: 'connection-guide',
     focus: 'guide-configure',
+    connectionEngines: ['llamacpp-upstream'],
     installed: [{ id: 'chosen-model', name: 'Chosen model', provider: 'llamacpp-upstream' }],
     workspace: {
       api: { running: true, port: 1337 },

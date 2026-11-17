@@ -2,9 +2,21 @@
 
 import { join } from 'node:path'
 import { AtcError } from '../errors/index.js'
-import { AGENTS, agentProfile, checkAgentWindow, servedWindow, type AgentId } from '../agent-launch/index.js'
+import {
+  AGENTS,
+  agentProfile,
+  checkAgentWindow,
+  configureCoreAgent,
+  coreAgent,
+  servedWindow,
+} from '../agent-launch/index.js'
 import type { ClientKeys } from '../terminal-data/index.js'
-import { WORKSPACE_OPERATIONS, type WorkspaceInput, type WorkspaceSnapshot } from '../contract/index.js'
+import {
+  CONNECTION_AGENTS,
+  WORKSPACE_OPERATIONS,
+  type WorkspaceInput,
+  type WorkspaceSnapshot,
+} from '../contract/index.js'
 import type { WorkspaceServiceOptions } from './service-options.js'
 import type { WorkspaceMetrics } from './snapshot/metrics.js'
 import { object, sanitized } from './validation.js'
@@ -17,6 +29,13 @@ import { workspaceLogs } from './workspace-logs.js'
 import { NOT_CORE } from './not-core.js'
 import { apiDownloadWait } from '../workspace-view/index.js'
 import { startApi } from '../terminal-service/index.js'
+import { SerialWork } from './serial.js'
+
+const agentWrites = new SerialWork()
+const agentCatalog = CONNECTION_AGENTS.flatMap(({ id }) => {
+  const agent = coreAgent(id)
+  return agent ? [{ id, name: agent.name, bins: [agent.detectBin], docs: agent.docsUrl }] : []
+})
 
 export interface ServerParts {
   restoreSelection?: () => Promise<boolean>
@@ -72,12 +91,14 @@ export async function serverOperation(
       return {
         ...publicEndpoint(object(await link.server.status()), config),
         keys: await keys.list(),
-        agents: AGENTS,
+        agents: agentCatalog,
+        configurable_agents: options.agentHost ? agentCatalog.map(({ id }) => id) : [],
       }
     case 'connection.agents':
-      return AGENTS
+      return agentCatalog
+    case 'connection.configure':
     case 'connection.profile': {
-      const agent = String(input['agent']) as AgentId,
+      const agent = String(input['agent']),
         model = String(input['model']),
         state = await link.server.status(),
         base = publicEndpoint(object(state), config).endpoint,
@@ -94,14 +115,27 @@ export async function serverOperation(
         ),
         model
       )
-      checkAgentWindow(AGENTS.find((a) => a.id === agent)?.name ?? agent, model, context_length)
+      const launch_command = `${commandPrefix(options)} connect ${shellWord(agent)} --model ${shellWord(model)}${input['key_id'] ? ` --key-id ${shellWord(String(input['key_id']))}` : ''}`
+      if (operation === 'connection.configure') {
+        const host = options.agentHost
+        if (!host) throw new AtcError('ATC_USAGE', 'Agent configuration is unavailable on this host.')
+        const result = await agentWrites.run('agent-config', () =>
+          configureCoreAgent(agent, base, model, key, host, context_length)
+        )
+        return 'reason' in result
+          ? { configured: false, reason: result.reason }
+          : { configured: true, launch_command }
+      }
+      const legacy = AGENTS.find((a) => a.id === agent)
+      if (!legacy) throw new AtcError('ATC_USAGE', 'This agent does not have an isolated launch profile.')
+      checkAgentWindow(legacy.name, model, context_length)
       return {
         agent,
         endpoint: base,
         model,
         context_length: context_length ?? null,
         profile: agentProfile(
-          agent,
+          legacy.id,
           base,
           model,
           key,
@@ -109,7 +143,7 @@ export async function serverOperation(
           1,
           context_length
         ),
-        launch_command: `${commandPrefix(options)} connect ${agent} --model ${shellWord(model)}${input['key_id'] ? ` --key-id ${shellWord(String(input['key_id']))}` : ''}`,
+        launch_command,
       }
     }
     case 'keys.list':

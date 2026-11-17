@@ -216,13 +216,33 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       await execute('setup.complete', { model_id: d.model })
       const info = record(await execute('connection.info'))
       let command = ''
-      if (d.path === 'agent' && PROFILE_AGENTS.includes(d.agent)) {
+      let agentConfigured: boolean | undefined
+      let agentSetupNote = ''
+      if (
+        d.path === 'agent' &&
+        Array.isArray(info['configurable_agents']) &&
+        info['configurable_agents'].includes(d.agent)
+      ) {
+        patch({ status: 'Configuring agent on this host' })
+        const configured = record(
+          await execute('connection.configure', { agent: d.agent, model: d.model, key_id: keyId })
+        )
+        agentConfigured = configured['configured'] === true
+        agentSetupNote = String(configured['reason'] ?? '')
+        command = String(configured['launch_command'] ?? '')
+      } else if (d.path === 'agent' && PROFILE_AGENTS.includes(d.agent)) {
         const profile = record(
           await execute('connection.profile', { agent: d.agent, model: d.model, key_id: keyId })
         )
         command = String(profile['launch_command'] ?? profile['command'] ?? '')
       }
-      patch({ step: 'done', command, endpoint: String(info['endpoint'] ?? (await c.localEndpoint())) })
+      patch({
+        step: 'done',
+        command,
+        ...(agentConfigured === undefined ? {} : { agentConfigured }),
+        agentSetupNote,
+        endpoint: String(info['endpoint'] ?? (await c.localEndpoint())),
+      })
     } catch (e) {
       patch({ step: 'review', error: e instanceof Error ? e.message : String(e) })
     }

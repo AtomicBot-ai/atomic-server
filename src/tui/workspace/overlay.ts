@@ -20,7 +20,7 @@ import { drawEnginePanel } from './library/engine-panel.js'
 import { drawGoalSetup } from './setup/goal-setup.js'
 import { drawOperationOverlay } from './operations/operation-panel.js'
 import { sectionMenu } from './navigation/navigation.js'
-import { AGENTS } from '../../agent-launch/index.js'
+import { coreAgent } from '../../agent-launch/index.js'
 import { button, COLORS, text, wrap } from './draw/canvas.js'
 import type { Canvas } from './draw/canvas.js'
 import type { WorkspaceState } from './state.js'
@@ -163,17 +163,11 @@ export function drawOverlay(c: Canvas, s: WorkspaceState, focus: string, seconds
     b('library:downloads', 9, 'Downloads', 'Review background downloads and resume interrupted jobs.')
     b('choose-goal', 10, 'Set up a service', 'Prepare an engine and model for your clients.')
   } else if (s.overlay === 'agent') {
-    put(2, `Use with ${AGENTS.find((a) => a.id === s.agent)?.name}`, COLORS.accent)
+    put(2, `Use with ${coreAgent(s.agent)?.name ?? s.agent}`, COLORS.accent)
     put(4, 'Atomic Server provides the model for this session.', COLORS.muted)
     b('agent-model', 6, `Model: ${s.agentModel}`, 'Choose the next available model.')
     put(8, 'Launch switches this terminal to the agent. Exit it to return.', COLORS.muted)
-    put(
-      10,
-      s.agent === 'atomic-agent'
-        ? 'Uses a separate server profile for Atomic Agent.'
-        : 'Your existing provider settings are preserved.',
-      COLORS.muted
-    )
+    put(10, 'Uses this host’s agent configuration.', COLORS.muted)
     b('launch-agent', h - 3, 'Launch and switch', 'Open the agent with Atomic Server as its model provider.')
     button(c, 'close', x + 25, y + h - 3, 'Cancel', 'Return to Server.', focus)
     return

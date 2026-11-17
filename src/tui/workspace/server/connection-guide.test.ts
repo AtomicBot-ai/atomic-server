@@ -53,8 +53,15 @@ it('opens an agent sidebar item at review and verifies before preparing its conn
   await activate('guide-copy', ctx)
   expect(ctx.copy).toHaveBeenCalledWith('atc connect codex --model local-model')
 })
-it('opens Hermes from the card title and shows progress while checking installed models', async () => {
+it('opens Hermes from the card title, shows progress, and configures it through core', async () => {
   const { ctx, execute } = fixture()
+  execute.mockImplementation(async (name) => {
+    if (name === 'keys.list') return [{ id: 'key' }]
+    if (name === 'connection.info') return { configurable_agents: ['hermes'] }
+    if (name === 'connection.configure')
+      return { configured: true, launch_command: 'atc connect hermes --model local-model' }
+    return {}
+  })
   type Installed = Awaited<ReturnType<WorkspaceController['installed']>>
   let complete!: (models: Installed) => void
   ctx.controller.installed = vi.fn(
@@ -79,6 +86,17 @@ it('opens Hermes from the card title and shows progress while checking installed
     connection: { step: 'review', agent: 'hermes', model: 'local-model' },
   })
   expect(execute).not.toHaveBeenCalled()
+  await activate('guide-configure', ctx)
+  expect(execute).toHaveBeenCalledWith('connection.configure', {
+    agent: 'hermes',
+    model: 'local-model',
+    key_id: 'key',
+  })
+  expect(ctx.get().connection).toMatchObject({
+    step: 'done',
+    agentConfigured: true,
+    command: 'atc connect hermes --model local-model',
+  })
 })
 it('returns failed inference to review without a success state or agent command', async () => {
   const { ctx, execute } = fixture(true)

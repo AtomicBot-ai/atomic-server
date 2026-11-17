@@ -43,7 +43,7 @@ These are capability or terminal adaptations, not claims of exact desktop featur
 - Foundry Local uses the inline catalog family layout. A missing engine opens its installation controls; accelerator preparation runs from the family and returns there. Core compatibility blockers remain enforced.
 - Managed engine host permissions, engine-specific options and some diagnostics retain the existing server operation forms. Native desktop settings that have no server equivalent are not copied.
 - The terminal uses ASCII art and responsive text columns instead of raster model artwork. Search and credential text entry use a focused terminal editor. Compact terminals use a section menu and fewer metadata columns; supported minimum is 54×24.
-- Hardware memory-fit estimates, undocumented model metadata and native provider OAuth are not fabricated. External agent installation/config-file writing is offered only where a supported launch profile exists; other agents receive manual connection details.
+- Hardware memory-fit estimates, undocumented model metadata and native provider OAuth are not fabricated. The connection guide uses core to configure supported agents on the server host. Editors without a core writer and agents absent from that host receive manual connection details.
 - A working Cloudflare installation is required for remote tunnels. API/engine failures are shown as failures, not simulated success.
 
 ## User journeys and verification
