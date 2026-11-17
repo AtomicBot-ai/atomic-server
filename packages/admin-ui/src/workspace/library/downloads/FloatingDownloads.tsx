@@ -8,13 +8,7 @@ import { useDownloadEstimate } from './useDownloadEstimate'
 import { useDownloadAttention } from './download-attention'
 import './floating-downloads.css'
 
-export function FloatingDownloads({
-  workspace,
-  onboarding = false,
-}: {
-  workspace: Workspace
-  onboarding?: boolean
-}) {
+export function FloatingDownloads({ workspace }: { workspace: Workspace }) {
   const [open, setOpen] = useState(false)
   const attention = useDownloadAttention()
   const rows = prioritizeDownloads(
@@ -29,7 +23,7 @@ export function FloatingDownloads({
       {first && (
         <aside
           key={attention}
-          className={`floating-downloads ${onboarding ? 'during-setup' : ''} ${attention ? 'download-attention' : ''}`}
+          className={`floating-downloads ${attention ? 'download-attention' : ''}`}
           aria-label="Download status"
         >
           <button onClick={() => setOpen(true)} aria-label="View downloads">

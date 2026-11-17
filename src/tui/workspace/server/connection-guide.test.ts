@@ -29,6 +29,7 @@ function fixture(fail = false) {
     send: vi.fn(),
     controller: {
       installed: async () => [{ id: 'local-model', name: 'Local model', provider: 'llamacpp-upstream' }],
+      setup: { installed: async () => ['llamacpp-upstream'] },
       runtime: { execute },
       localEndpoint: async () => 'http://localhost:1337/v1',
     } as unknown as WorkspaceController,

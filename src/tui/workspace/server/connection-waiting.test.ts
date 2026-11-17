@@ -36,6 +36,7 @@ function fixture() {
     send: vi.fn(),
     controller: {
       installed: async () => [],
+      setup: { installed: async () => ['llamacpp-upstream'] },
       runtime: { execute },
       localEndpoint: async () => 'http://localhost:1777/v1',
     } as unknown as WorkspaceController,
@@ -68,9 +69,7 @@ it.each(['agent', 'endpoint'])(
       expect(content(ctx.get(), width)).toContain('Waiting for the model download')
     }
     await activate('guide-engine', ctx)
-    expect(connectionChoices(ctx.get())).toEqual([
-      { value: 'llamacpp-upstream', label: 'llama.cpp', selected: true },
-    ])
+    expect(connectionChoices(ctx.get())).toEqual([])
     await activate('close', ctx)
     await activate('guide-configure', ctx)
     expect(execute).not.toHaveBeenCalled()

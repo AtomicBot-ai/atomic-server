@@ -5,11 +5,11 @@ import { workspaceLocation } from '../navigation/navigation-return.js'
 import { record } from '../library/library-model.js'
 import { setupAction } from '../setup/setup-actions.js'
 import { connectionPickerAction } from './connection-picker.js'
+import { connectionModels, connectionSelection, readConnectionEngines } from './connection-selection.js'
 import {
   connectionApiOperation,
   connectionDownload,
   connectionDownloadTarget,
-  connectionModelState,
 } from '../../../workspace-view/index.js'
 const rows = (value: unknown) =>
   Array.isArray(value)
@@ -30,11 +30,11 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
         : step === 'endpoint'
           ? 'guide-next'
           : current
-  const patch = (p: Partial<ConnectionDraft>) =>
+  const patch = (p: Partial<ConnectionDraft>, focus?: string) =>
     ctx.update((v) => ({
       ...v,
       connection: v.connection ? { ...v.connection, ...p } : null,
-      focus: v.connection ? focusFor(p.step, v.focus) : v.focus,
+      focus: v.connection ? (focus ?? focusFor(p.step, v.focus)) : v.focus,
       hover: '',
     }))
   if (id === 'guide-manual') {
@@ -43,23 +43,20 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
     return true
   }
   if (id === 'guide-open' || id.startsWith('guide-agent:')) {
-    const installed = await c.installed()
+    const [installed, connectionEngines] = await Promise.all([c.installed(), readConnectionEngines(c)])
     if (s.firstRun && ctx.get().firstRun !== s.firstRun) return true
     const download = connectionDownloadTarget(connectionDownload(s.workspace?.setups ?? []))
     const preferred =
       s.setup?.selections[0]?.plan.model_id ?? s.setup?.path?.job?.model ?? (s.model || download.model)
-    const chosen = preferred ? installed.find((m) => m.id === preferred) : installed[0]
-    const selected = connectionModelState(
-      preferred || chosen?.id || '',
-      installed,
-      s.workspace?.setups ?? [],
-      s.workspace?.downloads ?? [],
-      s.setup?.selections[0]?.plan.provider ?? s.setup?.path?.job?.engine ?? download.provider
-    )
+    const models = { ...s, installed, connectionEngines }
+    const model = preferred || connectionModels(models)[0]?.id || ''
+    const provider = s.setup?.selections[0]?.plan.provider ?? s.setup?.path?.job?.engine ?? download.provider
+    const selected = connectionSelection(models, model, provider, false)
     const agent = id.startsWith('guide-agent:') ? id.slice(12) : ''
     ctx.update((v) => ({
       ...v,
       installed,
+      connectionEngines,
       connectionReturn: s.firstRun ? undefined : (s.connectionReturn ?? workspaceLocation(s)),
       overlay: 'connection-guide',
       focus: agent ? 'guide-configure' : 'guide-path:agent',
@@ -67,7 +64,7 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
         step: agent ? 'review' : 'choose',
         path: 'agent',
         agent: agent || 'claude',
-        model: chosen?.id ?? preferred ?? '',
+        model,
         provider: selected.provider,
         port: String(v.workspace?.api.port || DEFAULT_API_PORT),
         more: false,
@@ -149,13 +146,7 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
     const key = await c.runtime.execute('keys.reveal', { id: d.keyId })
     await ctx.copy(typeof key === 'string' ? key : String(record(key)['token'] ?? record(key)['key'] ?? ''))
   } else if (id === 'guide-configure') {
-    const selected = connectionModelState(
-      d.model,
-      s.installed,
-      s.workspace?.setups ?? [],
-      s.workspace?.downloads ?? [],
-      d.provider
-    )
+    const selected = connectionSelection(s)
     if (!selected.ready) {
       patch({ error: selected.status })
       return true
@@ -164,8 +155,18 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       patch({ error: selected.provider ? guidePortError(d.port) : 'Choose a downloaded model.' })
       return true
     }
-    patch({ step: 'preparing', error: '', status: 'Loading model' })
+    patch({ step: 'preparing', error: '', status: 'Checking installed engines' })
+    const connectionEngines = await readConnectionEngines(c)
+    ctx.update((v) => ({ ...v, connectionEngines }))
+    if (!connectionEngines?.includes(selected.provider)) {
+      const error = connectionEngines
+        ? 'The selected engine is no longer installed.'
+        : 'Could not check installed engines.'
+      patch({ step: 'review', error }, 'guide-engine')
+      return true
+    }
     try {
+      patch({ status: 'Loading model' })
       const execute = (name: string, input: Record<string, unknown> = {}) => c.runtime.execute(name, input)
       await execute('models.load', { provider: selected.provider, model_id: d.model })
       patch({ status: 'Preparing API key' })

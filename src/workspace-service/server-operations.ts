@@ -128,6 +128,7 @@ export async function serverOperation(
       return { revoked: true }
     case 'setup.manual': {
       if (
+        input['restore_selected'] !== false &&
         !(await readWorkspaceSetup(paths))?.complete &&
         !apiDownloadWait(await readSnapshot()) &&
         (await restoreSelection?.())

@@ -26,9 +26,11 @@
   outline: 1px solid var(--ew-teal);
 }
 .cloud-provider-card.connected {
-  background: #27292b;
-  color: #aeb5b4;
-  border-color: #454b4a;
+  background: var(--ew-panel);
+  color: var(--ew-text);
+}
+.cloud-provider-card:enabled:hover {
+  background: var(--ew-raised);
 }
 .cloud-provider-card.connected .cloud-provider-icon {
   opacity: 0.5;

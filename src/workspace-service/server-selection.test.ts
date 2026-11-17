@@ -93,6 +93,14 @@ it('leaves unfinished downloads alone when finishing onboarding', async () => {
   expect(start).not.toHaveBeenCalled()
   expect((await service.snapshot()).setup?.complete).toBe(true)
 })
+it('records setup completion without loading an installed selected model when restoration is disabled', async () => {
+  const { service, load, start } = await fixture(false)
+  await service.execute('setup.manual', { restore_selected: false })
+  expect(load).not.toHaveBeenCalled()
+  expect(start).not.toHaveBeenCalled()
+  expect((await service.snapshot()).setup).toMatchObject({ mode: 'manual', complete: true })
+  expect((await service.snapshot()).selection.model).toBe('device-model')
+})
 it('does not mark setup finished when the engine refuses to load and lets the user retry', async () => {
   const { service, load } = await fixture()
   load.mockRejectedValueOnce(new Error('Not enough memory'))

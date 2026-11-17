@@ -37,10 +37,9 @@ async function openOnboardingReview(name = 'Old model') {
   if (name !== 'Old model')
     await userEvent.click(await screen.findByRole('button', { name: `${name} Downloaded` }))
   await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
   await userEvent.click(
     within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {
@@ -202,10 +201,9 @@ it('saves the actual download model before handoff instead of restoring a previo
   expect(screen.getByRole('dialog', { name: 'Install model' })).toBeInTheDocument()
   await act(async () => finishSave())
   await screen.findByRole('heading', { name: 'Permissions' })
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
   await userEvent.click(
     within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {

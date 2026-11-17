@@ -11,6 +11,20 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-17** — [Pair terminal connection engines with models](2026-11-17-pair-terminal-connection-engines-with-models.md) — filter the connection guide by active engines and compatible downloads.
+
+- **2026-11-17** — [Open the dashboard from terminal onboarding](2026-11-17-open-dashboard-from-terminal-onboarding.md) — save completion and let downloads continue without loading the selected model.
+
+- **2026-11-17** — [Save dashboard exit without starting a model](2026-11-17-save-dashboard-exit-without-starting-model.md) — record completion before navigating without loading the selected model.
+
+- **2026-11-17** — [Open the dashboard from the final web onboarding step](2026-11-17-open-dashboard-from-web-onboarding.md) — offer direct dashboard access while downloads continue.
+
+- **2026-11-17** — [Open web onboarding at the first action](2026-11-17-open-web-onboarding-at-the-first-action.md) — start on model selection or engine selection based on the server's active builds.
+
+- **2026-11-17** — [Use the workspace UI for web onboarding](2026-11-17-share-workspace-ui-with-web-onboarding.md) — shared theme, directory rows and provider dialogs with one scroll area and stable navigation.
+
+- **2026-11-17** — [Give web onboarding one active engine or model step](2026-11-17-separate-web-onboarding-engine-and-model-actions.md) — full-page engine choice, dismissible FastFlowLM and GenieX review and refreshed model compatibility.
+
 - **2026-11-12** — [Preserve Foundry Local tool markers](2026-11-12-preserve-foundry-tool-markers.md) — save the resolver's pair in new installations and use core 0.23.4 for the Foundry host and existing models.
 
 - **2026-11-11** — [Check Foundry Local runtime requirements before transferring models](2026-11-11-check-foundry-runtime-before-transferring-models.md) — check the planned revision and preserve its minimum and partial bytes across retries.

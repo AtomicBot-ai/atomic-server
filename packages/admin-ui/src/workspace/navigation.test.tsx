@@ -131,7 +131,6 @@ describe('shared workspace structure', () => {
       )
     current = workspace(fixture({ setup }), execute)
     render(<WorkspaceApp />)
-    if (opens) await userEvent.click(await screen.findByRole('button', { name: 'Press any key' }))
     await screen.findByRole('navigation', { name: 'Main' })
     if (opens) {
       const dialog = within(screen.getByRole('dialog', { name: 'Set up Atomic Server' }))

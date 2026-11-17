@@ -48,6 +48,7 @@ export type { DownloadRow } from './downloads/downloads.js'
 export {
   connectionDownload,
   connectionDownloadTarget,
+  connectionModelProviders,
   connectionModelState,
   serverPanelSelection,
 } from './setup/connection-model.js'

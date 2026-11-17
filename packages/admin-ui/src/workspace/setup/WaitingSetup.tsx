@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { connectionDownload, downloadStopped, reminderSet, setupDownloadsPending } from '@view'
 import type { Workspace } from '../useWorkspace'
-import { Action } from '../Controls'
 import { SettingsField } from '../SettingsField'
 import { DownloadGame } from '../games/DownloadGame'
 import { describeError } from '@/services/admin-api'
@@ -14,15 +13,7 @@ type EmailStatus = 'idle' | 'invalid' | 'saving' | 'failed'
  * registers the address and sends the email itself once the download is done (`setup.reminder`), so it
  * arrives with this page closed; the address stays in this form, the server keeps only a token.
  */
-export function WaitingSetup({
-  workspace,
-  onBack,
-  onContinue,
-}: {
-  workspace: Workspace
-  onBack: () => void
-  onContinue: () => void | Promise<unknown>
-}) {
+export function WaitingSetup({ workspace }: { workspace: Workspace }) {
   const [email, setEmail] = useState(''),
     [emailStatus, setEmailStatus] = useState<EmailStatus>('idle'),
     [emailError, setEmailError] = useState('')
@@ -34,14 +25,15 @@ export function WaitingSetup({
   return (
     <div className="waiting-setup">
       <p role="status">
-        {stopped
-          ? 'The download is stopped. Open Downloads to resume it.'
-          : pending
-            ? 'Keep playing or continue while your model downloads.'
-            : 'Your model is downloaded. Continue to finish setup.'}
+        {!workspace.snapshot
+          ? 'Checking download status…'
+          : stopped
+            ? 'The download is stopped. Open Downloads to resume it.'
+            : pending
+              ? 'The download can continue while you use the control panel.'
+              : 'Your model is downloaded. Continue to finish setup.'}
       </p>
       <div className="waiting-setup-grid">
-        <DownloadGame inline onClose={() => {}} />
         <div className="waiting-side">
           {pending && (
             <form
@@ -112,12 +104,7 @@ export function WaitingSetup({
             </form>
           )}
         </div>
-        <div className="waiting-actions">
-          <Action onClick={onBack}>Back</Action>
-          <Action primary onClick={onContinue}>
-            {pending ? "I can't wait - take me to the control panel" : 'Continue'}
-          </Action>
-        </div>
+        {(pending || !workspace.snapshot) && <DownloadGame inline onClose={() => {}} />}
       </div>
     </div>
   )

@@ -20,12 +20,9 @@ export async function setupAction(
         ? s
         : { ...s, focus: value, selected: 0, hover: '', overlay: null }
     )
-  if (id === 'setup-picker-close') {
+  if (id === 'setup-picker-close' || id === 'library-close') {
     operations.get(c)?.abort()
-    return returnToConnection(ctx)
-  }
-  if (id === 'library-close') {
-    operations.get(c)?.abort()
+    if (id === 'setup-picker-close') return returnToConnection(ctx)
     update((s) => ({ ...s, page: 'models', setup: null, overlay: null, focus: 'install-models', hover: '' }))
     return true
   }
@@ -81,6 +78,10 @@ export async function setupAction(
   if (!id.startsWith('setup-')) return false
   const view = get().setup
   if (!view) return true
+  if (view.destination === 'dashboard' && (id === 'setup-finish' || id === 'setup-path-finish')) {
+    update((s) => ({ ...s, setup: null }))
+    return true
+  }
   if (isPathAction(id, view) && (await engineSetupAction(id, ctx))) return true
   if (id === 'setup-intro') {
     if (get().setupComplete) return setupAction('library-close', ctx)

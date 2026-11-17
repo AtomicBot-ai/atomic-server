@@ -17,7 +17,7 @@ it.each([false, true])(
     })
     render(
       <>
-        <CloudProviders workspace={workspace} onboarding />
+        <CloudProviders workspace={workspace} />
         <button>Other control</button>
       </>
     )
@@ -25,7 +25,7 @@ it.each([false, true])(
     const key = screen.getByLabelText('API key', { exact: false })
     await userEvent.type(key, 'invalid-key')
     await userEvent.click(screen.getByRole('button', { name: 'Connect', exact: true }))
-    if (moved) await userEvent.click(screen.getByRole('button', { name: 'Other control' }))
+    if (moved) screen.getByRole('button', { name: 'Other control' }).focus()
     else (document.activeElement as HTMLElement).blur()
     await act(async () => reject(new Error('The provider rejected this API key.')))
     expect(screen.getByRole('alert')).toHaveTextContent('rejected this API key')

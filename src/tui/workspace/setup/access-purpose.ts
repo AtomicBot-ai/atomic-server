@@ -15,36 +15,43 @@ const PERMISSIONS = [
 ] as const
 
 /** Finishing with a local model can load an engine; show that work and prevent duplicate finishes. */
-export async function finishFirstRun(ctx: ActionContext) {
-  ctx.update((s) => ({ ...s, busy: true, message: 'Preparing your server…' }))
+export async function finishFirstRun(ctx: ActionContext, restoreSelected = true) {
+  ctx.update((s) => ({
+    ...s,
+    busy: true,
+    message: restoreSelected ? 'Preparing your server…' : 'Saving setup…',
+  }))
   try {
-    await ctx.controller.runtime.execute('setup.manual')
+    if (restoreSelected) await ctx.controller.runtime.execute('setup.manual')
+    else await ctx.controller.runtime.execute('setup.manual', { restore_selected: false })
   } finally {
     ctx.update((s) => ({ ...s, busy: false }))
   }
 }
 
-export async function openFirstRunServer(ctx: ActionContext) {
+export async function openFirstRunServer(ctx: ActionContext, restoreSelected = true) {
   const s = ctx.get(),
-    setup = s.setup,
-    model = setup?.selections[0]?.plan.model_id ?? setup?.path?.job?.model ?? s.model
-  await finishFirstRun(ctx)
-  ctx.update((v) => ({
-    ...v,
-    setupComplete: true,
-    firstRun: null,
-    finalSetup: null,
-    setup:
-      setup?.preparing || setup?.selections.length || setup?.path?.job
-        ? { ...setup, destination: 'server' }
-        : null,
-    page: 'server',
-    overlay: null,
-    serverView: 'overview',
-    focus: 'server-search',
-    model,
-    message: '',
-  }))
+    pending = s.setup
+  await finishFirstRun(ctx, restoreSelected)
+  ctx.update((v) => {
+    const setup = v.setup ?? pending
+    return {
+      ...v,
+      setupComplete: true,
+      firstRun: null,
+      finalSetup: null,
+      setup:
+        setup?.preparing || setup?.selections.length || setup?.path?.job
+          ? { ...setup, destination: restoreSelected ? 'server' : 'dashboard' }
+          : null,
+      page: 'server',
+      overlay: null,
+      serverView: 'overview',
+      focus: 'server-search',
+      model: setup?.selections[0]?.plan.model_id ?? setup?.path?.job?.model ?? v.model,
+      message: '',
+    }
+  })
 }
 
 export async function accessPurposeAction(id: string, ctx: ActionContext): Promise<boolean> {

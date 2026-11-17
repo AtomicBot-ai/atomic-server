@@ -32,10 +32,9 @@ it.each([
   )
   fireEvent.click(screen.getByRole('dialog', { name: 'Set up Atomic Server' }).parentElement!)
   expect(screen.getByRole('heading', { name: 'Permissions' })).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: new RegExp(label!) }))
   expect(screen.getByRole('heading', { name: 'Getting your model ready' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('dialog', { name: 'Set up Atomic Server' }).parentElement!)
@@ -48,10 +47,10 @@ it.each([
   expect(execute).toHaveBeenCalledWith('setup.reminder', { email: 'test@example.com' })
   expect(screen.getByLabelText('Email me when it is ready')).toHaveValue('')
   expect(screen.queryByText(/preview/i)).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Back', exact: true }).closest('.waiting-actions')).not.toBeNull()
+  expect(screen.getByRole('button', { name: 'Back', exact: true }).closest('footer')).not.toBeNull()
   expect(execute.mock.calls.some(([operation]) => operation === 'setup.manual')).toBe(false)
   expect(screen.getByLabelText('Download status').closest('.workspace-status-header')).not.toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: "I can't wait - take me to the control panel" }))
+  await userEvent.click(screen.getByRole('button', { name: 'Open control panel' }))
   expect(execute).toHaveBeenCalledWith('setup.manual')
   expect(onDestination).toHaveBeenCalledWith(destination)
 })
@@ -73,6 +72,25 @@ it('keeps paused download status truthful and exposes existing controls in a dis
 
 const downloading = [{ setup_id: 's1', stage: 'downloading_model', plan: { model_id: 'Qwen' } }]
 
+it('goes directly from the connection step to the dashboard while a model downloads', async () => {
+  const { workspace, execute } = workspaceFixture({}, { setup: null, setups: downloading })
+  const onClose = vi.fn()
+  const onDestination = vi.fn()
+  render(
+    <SetupWizard workspace={workspace} onClose={onClose} onOpenGoal={vi.fn()} onDestination={onDestination} />
+  )
+  for (const step of ['Permissions', 'Remote providers', 'Image and video models']) {
+    await screen.findByRole('heading', { name: step })
+    await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  }
+  expect(screen.queryByRole('button', { name: 'Skip setup' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Go to dashboard' }))
+  expect(execute).toHaveBeenCalledWith('setup.manual', { restore_selected: false })
+  expect(onClose).toHaveBeenCalledOnce()
+  expect(onDestination).not.toHaveBeenCalled()
+  expect(screen.queryByRole('region', { name: 'Minesweeper' })).not.toBeInTheDocument()
+})
+
 it('registers the address with the server, shows its refusal, then the reminder the server keeps', async () => {
   let answer: (() => void) | null = null
   const replies: Array<() => Promise<unknown>> = [
@@ -88,7 +106,7 @@ it('registers the address with the server, shows its refusal, then the reminder 
     { 'setup.reminder': () => replies.shift()!() },
     { setups: downloading }
   )
-  const view = render(<WaitingSetup workspace={workspace} onBack={vi.fn()} onContinue={vi.fn()} />)
+  const view = render(<WaitingSetup workspace={workspace} />)
   const input = screen.getByLabelText('Email me when it is ready')
   const notify = screen.getByRole('button', { name: 'Notify me' })
   expect(input).toHaveAccessibleDescription(/agree to one email when this model is ready/)
@@ -127,7 +145,7 @@ it('offers no email once the model is downloaded', () => {
     {},
     { setups: [{ setup_id: 's1', stage: 'ready', plan: { model_id: 'Qwen' } }] }
   )
-  render(<WaitingSetup workspace={workspace} onBack={vi.fn()} onContinue={vi.fn()} />)
+  render(<WaitingSetup workspace={workspace} />)
   expect(screen.getByText('Your model is downloaded. Continue to finish setup.')).toBeInTheDocument()
   expect(screen.queryByLabelText('Email me when it is ready')).not.toBeInTheDocument()
 })
@@ -159,7 +177,7 @@ it.each(['Configure an endpoint', 'Connect an agent'])(
     expect(screen.getByRole('region', { name: 'Minesweeper' })).toBeInTheDocument()
     expect(onDestination).not.toHaveBeenCalled()
     expect(execute).not.toHaveBeenCalledWith('setup.manual')
-    await userEvent.click(screen.getByRole('button', { name: "I can't wait - take me to the control panel" }))
+    await userEvent.click(screen.getByRole('button', { name: 'Open control panel' }))
     expect(onDestination).toHaveBeenCalledOnce()
   }
 )
