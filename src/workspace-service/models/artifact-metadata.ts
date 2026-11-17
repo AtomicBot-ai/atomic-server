@@ -7,12 +7,25 @@ interface Tree {
   siblings: { rfilename: string; size?: number; lfs?: { size: number; sha256: string } }[]
 }
 
+const HUB = 'https://huggingface.co'
+
+/** A mirror only counts when it is an absolute HTTP(S) URL; anything else means the public Hub. */
+function hubOrigin(hub: string | undefined): string {
+  try {
+    const url = new URL(hub ?? '')
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href.replace(/\/+$/, '') : HUB
+  } catch {
+    return HUB
+  }
+}
+
 export async function artifactMetadata(
   plan: ArtifactPlan,
   request: typeof fetch,
   token?: string,
-  hub = 'https://huggingface.co'
+  hub?: string
 ): Promise<ArtifactPlan> {
+  const origin = hubOrigin(hub)
   const trees = new Map<string, Promise<Tree>>()
   const files = await Promise.all(
     plan.files.map(async (item) => {
@@ -28,7 +41,7 @@ export async function artifactMetadata(
       if (!reading) {
         reading = (async () => {
           const response = await request(
-            `${hub.replace(/\/+$/, '')}/api/models/${repo}/revision/${revision}?blobs=true&files_metadata=true`,
+            `${origin}/api/models/${repo}/revision/${revision}?blobs=true&files_metadata=true`,
             {
               signal: AbortSignal.timeout(15000),
               redirect: 'error',
