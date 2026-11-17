@@ -123,7 +123,16 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'setup.manual',
     'Set up manually',
     'configure',
-    'Finish onboarding without an inference check. If a saved local model is already installed, load it and start the API; pending downloads continue through their setup flow.'
+    'Finish onboarding without an inference check. By default, load an installed saved model and start the API. Pending downloads continue through their setup flow.',
+    {
+      properties: {
+        restore_selected: {
+          type: 'boolean',
+          description:
+            'Set to false to record setup completion without loading the selected model or starting the API.',
+        },
+      },
+    }
   ),
   operation(
     'setup.complete',

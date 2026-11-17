@@ -23,12 +23,27 @@ it.each([
   await page.setViewportSize({ width, height })
   await page.reload()
   await page.getByRole('heading', { name: 'Permissions' }).waitFor()
-  await page.getByRole('button', { name: 'Skip', exact: true }).click()
-  await page.getByRole('button', { name: 'Continue without permissions' }).click()
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('heading', { name: 'Remote providers' }).waitFor()
-  await page.getByRole('button', { name: 'Skip', exact: true }).click()
+  const provider = page.getByRole('button', { name: 'OpenRouter', exact: true })
+  const grid = page.locator('.first-run .cloud-provider-grid')
+  expect(
+    await grid.evaluate(
+      (element) =>
+        (
+          globalThis as unknown as { getComputedStyle(node: unknown): { overflowY: string } }
+        ).getComputedStyle(element).overflowY
+    )
+  ).toBe('visible')
+  await provider.click()
+  const providerDialog = page.getByRole('dialog', { name: 'Connect OpenRouter' })
+  await providerDialog.getByLabel('API key', { exact: false }).waitFor()
+  await page.keyboard.press('Escape')
+  await providerDialog.waitFor({ state: 'detached' })
+  expect(await provider.and(page.locator(':focus')).count()).toBe(1)
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('heading', { name: 'Image and video models' }).waitFor()
-  await page.getByRole('button', { name: 'Skip', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('button', { name: /Configure an endpoint/ }).click()
   await page.getByLabel('Email me when it is ready').waitFor()
   const content = page.locator('.first-run .first-run-content')

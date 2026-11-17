@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { engineName, engineStatus } from '@view'
 import type { WorkspaceSnapshot } from '@contract'
 import { Empty } from '../../Controls'
+import { DirectoryRow } from '../../DirectoryRow'
 import { record, text } from '../../types'
 import type { RecordValue } from '../../types'
 import './engine-directory.css'
@@ -52,32 +53,32 @@ export function EnginesTab({
                 <h2>{title}</h2>
                 <span>{group.length}</span>
               </div>
-              <ul className="engine-directory-list">
+              <ul className="directory-list">
                 {group.map((entry) => (
                   <li key={entry.id}>
-                    <button
+                    <DirectoryRow
                       id={`engine-directory-${entry.id}`}
-                      type="button"
                       className="engine-directory-item"
+                      title={engineName(entry.id)}
+                      detail={entry.build}
                       aria-label={engineName(entry.id)}
                       aria-describedby={`engine-directory-${entry.id}-detail`}
                       aria-haspopup="dialog"
                       onClick={() => onSettings(entry.id)}
-                    >
-                      <span className="engine-directory-copy">
-                        <strong>{engineName(entry.id)}</strong>
-                        {entry.build && <small>{entry.build}</small>}
-                      </span>
-                      <span
-                        className="engine-directory-status"
-                        data-installed={entry.installed}
-                        id={`engine-directory-${entry.id}-detail`}
-                      >
-                        {entry.status}
-                        {entry.build && <span className="sr-only"> · {entry.build}</span>}
-                      </span>
-                      <ChevronRight size={16} aria-hidden="true" />
-                    </button>
+                      trailing={
+                        <>
+                          <span
+                            className="engine-directory-status"
+                            data-installed={entry.installed}
+                            id={`engine-directory-${entry.id}-detail`}
+                          >
+                            {entry.status}
+                            {entry.build && <span className="sr-only"> · {entry.build}</span>}
+                          </span>
+                          <ChevronRight size={16} aria-hidden="true" />
+                        </>
+                      }
+                    />
                     {entry.error && (
                       <p role="alert" className="engine-directory-error">
                         {entry.error}

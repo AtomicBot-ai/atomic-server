@@ -91,6 +91,39 @@ it('passes from media directly to server destination cards without opening the c
   })
 })
 
+it.each(['download', 'ready'] as const)(
+  'opens the dashboard without loading the model in state %s',
+  async (stage) => {
+    const t = fixture()
+    t.ctx.update((s) => ({
+      ...s,
+      firstRun: 'connect',
+      setup: {
+        ...newSetup('server'),
+        stage,
+        preparing: stage === 'download',
+        selections: [{ plan: { model_id: 'qwen' } }] as never,
+      },
+    }))
+    expect(shown(t.ctx.get())).toContain('Go to dashboard')
+    await t.action('first-skip')
+    expect(t.execute).toHaveBeenCalledExactlyOnceWith('setup.manual', { restore_selected: false })
+    expect(t.ctx.get()).toMatchObject({
+      firstRun: null,
+      finalSetup: null,
+      page: 'server',
+      serverView: 'overview',
+      setupComplete: true,
+      setup: { destination: 'dashboard' },
+      model: 'qwen',
+    })
+    t.ctx.update((s) => ({ ...s, setup: { ...s.setup!, stage: 'ready', preparing: false } }))
+    await setupAction('setup-finish', t.ctx)
+    expect(t.execute).toHaveBeenCalledTimes(1)
+    expect(t.ctx.get().setup).toBeNull()
+  }
+)
+
 it.each([
   [54, 24],
   [80, 24],

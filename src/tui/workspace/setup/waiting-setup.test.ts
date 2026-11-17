@@ -235,7 +235,7 @@ it.each(['endpoint', 'agent'])(
   }
 )
 
-it.each(['endpoint', 'agent', 'skip'])(
+it.each(['endpoint', 'agent'])(
   'keeps %s on Minesweeper when only an engine is downloading',
   async (destination) => {
     const t = fixture()
@@ -248,7 +248,7 @@ it.each(['endpoint', 'agent', 'skip'])(
       },
     }))
     t.ctx.controller.runtime.snapshot = vi.fn(async () => t.ctx.get().workspace!)
-    await t.action(destination === 'skip' ? 'first-skip' : `first-connect:${destination}`)
+    await t.action(`first-connect:${destination}`)
     expect(t.ctx.get().finalSetup).toBeTruthy()
     expect(shown(t.ctx.get())).toContain("I can't wait")
     expect(t.execute).not.toHaveBeenCalledWith('setup.manual')

@@ -48,7 +48,7 @@ it('keeps both destination cards on Minesweeper when the selected engine has no 
         true
       )
     }
-    await page.getByRole('button', { name: "I can't wait - take me to the control panel" }).click()
+    await page.getByRole('button', { name: 'Open control panel' }).click()
     await page.getByRole('dialog', { name: 'Set up Atomic Server' }).waitFor({ state: 'detached' })
     const waiting = page.getByRole('button', { name: 'Engine download paused', exact: true })
     await waiting.waitFor()

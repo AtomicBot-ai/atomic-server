@@ -34,43 +34,36 @@ it('keeps notification refusals local while forwarding unexpected request failur
       return fetch(...args)
     }
   })
-  await page.getByRole('button', { name: 'Allow', exact: true }).click()
   const reports = () =>
     page.evaluate(() => (globalThis as unknown as { clientErrorReports: number }).clientErrorReports)
-  for (const permission of ['unavailable', 'denied', 'default', 'error', 'granted']) {
+  for (const permission of ['denied', 'default', 'error', 'granted']) {
     await page.evaluate((permission) => {
       Object.defineProperty(globalThis, 'Notification', {
         configurable: true,
-        value:
-          permission === 'unavailable'
-            ? undefined
-            : {
-                permission: 'default',
-                requestPermission: async () => {
-                  if (permission === 'error') throw new TypeError('Notification permission request failed')
-                  return permission
-                },
-              },
+        value: {
+          permission: 'default',
+          requestPermission: async () => {
+            if (permission === 'error') throw new TypeError('Notification permission request failed')
+            return permission
+          },
+        },
       })
     }, permission)
     const response =
       permission === 'error'
         ? page.waitForResponse((res) => res.url().endsWith('/api/client-errors'))
         : undefined
-    await page.getByRole('button', { name: 'Allow access', exact: true }).click()
+    await page.getByRole('button', { name: 'Allow notifications', exact: true }).click()
     if (permission === 'granted') {
-      await page.getByRole('dialog', { name: 'Allow notifications?' }).waitFor({ state: 'detached' })
-      await page.getByRole('button', { name: 'Allowed', exact: true }).waitFor()
+      await page.getByRole('status').filter({ hasText: 'Allowed' }).waitFor()
       expect(await reports()).toBe(1)
     } else {
       const message =
-        permission === 'unavailable'
-          ? 'Notifications are unavailable in this browser.'
-          : permission === 'error'
-            ? 'Notification permission request failed'
-            : 'Notifications were not allowed. Change the site permission in your browser to retry.'
+        permission === 'error' ? 'Notification permission request failed' : 'Notifications were not allowed.'
       await page.getByRole('alert').filter({ hasText: message }).waitFor()
-      expect(await page.getByRole('button', { name: 'Allow access', exact: true }).isEnabled()).toBe(true)
+      expect(await page.getByRole('button', { name: 'Allow notifications', exact: true }).isEnabled()).toBe(
+        true
+      )
       expect(await reports()).toBe(permission === 'error' ? 1 : 0)
     }
     if (response) {
