@@ -8,6 +8,7 @@ import { fakeTerminal, eventually } from '../helpers/fake-terminal.js'
 import { tmpDataFolder } from '../helpers/tmp-data-folder.js'
 import { createWorkspace } from '../../src/tui/workspace/state.js'
 import { workspaceFrame } from '../../src/tui/workspace/frame.js'
+import { join } from 'node:path'
 it('releases mouse capture before handing off and returns to Server without stopping the API', async () => {
   const tmp = tmpDataFolder(),
     terminal = fakeTerminal(120, 36),
@@ -26,8 +27,8 @@ it('releases mouse capture before handing off and returns to Server without stop
     agentHost: {
       folder: tmp.paths.dataFolder,
       cwd: tmp.paths.dataFolder,
-      env: {},
-      find: () => '/fake/atag',
+      env: { HOME: tmp.paths.dataFolder },
+      find: (name) => (name === 'atag' ? '/fake/atag' : undefined),
       exec: async () => ({ code: 0, stdout: '0.6.6', stderr: '', timedOut: false }),
       platform: 'linux',
       request: (async () => Response.json({ data: [{ id: 'test-model' }] })) as typeof fetch,
@@ -35,7 +36,18 @@ it('releases mouse capture before handing off and returns to Server without stop
     launchAgent: async (launch) => {
       expect(terminal.stdout.writes.join('')).toContain('\u001b[?1006l')
       expect(launch.command).toBe('/fake/atag')
-      expect(launch.env['ATOMIC_AGENT_STATE_DIR']).toContain(tmp.paths.dataFolder)
+      const config = await readTextFile(join(tmp.paths.dataFolder, '.atomic-agent', 'config.json'))
+      expect(JSON.parse(config!)).toMatchObject({
+        llm: {
+          activeTextProvider: 'atomic-chat',
+          providers: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'atomic-chat',
+              defaultChatModel: 'test-model',
+            }),
+          ]),
+        },
+      })
       launched = true
     },
     deps: {
