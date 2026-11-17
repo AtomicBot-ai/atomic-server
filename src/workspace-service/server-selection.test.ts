@@ -98,8 +98,9 @@ it('records setup completion without loading an installed selected model when re
   await service.execute('setup.manual', { restore_selected: false })
   expect(load).not.toHaveBeenCalled()
   expect(start).not.toHaveBeenCalled()
-  expect((await service.snapshot()).setup).toMatchObject({ mode: 'manual', complete: true })
-  expect((await service.snapshot()).selection.model).toBe('device-model')
+  const snapshot = await service.snapshot()
+  expect(snapshot.setup).toMatchObject({ mode: 'manual', complete: true })
+  expect(snapshot.selection?.model).toBe('device-model')
 })
 it('does not mark setup finished when the engine refuses to load and lets the user retry', async () => {
   const { service, load } = await fixture()
