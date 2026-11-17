@@ -25,8 +25,8 @@ it('counts a connection prepared during first-run after returning to Overview', 
       'models.installed': [model],
       'models.catalog': [],
       'keys.list': [{ id: 'key' }],
-      'connection.info': { endpoint: 'http://127.0.0.1:1337/v1' },
-      'connection.profile': () =>
+      'connection.info': { endpoint: 'http://127.0.0.1:1337/v1', configurable_agents: ['codex'] },
+      'connection.configure': () =>
         new Promise((resolve) => {
           finishProfile = resolve
         }),
@@ -45,21 +45,24 @@ it('counts a connection prepared during first-run after returning to Overview', 
   await userEvent.click(setup.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(setup.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(setup.getByRole('button', { name: /Connect an agent/ }))
-  expect(screen.queryByRole('dialog', { name: 'Set up Atomic Server' })).not.toBeInTheDocument()
-  await userEvent.click(screen.getAllByRole('button', { name: 'Codex CLI', exact: true })[0])
+  expect(setup.getByRole('heading', { name: 'Choose your agent' })).toBeInTheDocument()
+  await userEvent.keyboard('{Escape}')
+  await userEvent.click(setup.getByRole('button', { name: /Connect an agent/ }))
+  await userEvent.click(setup.getByRole('button', { name: 'Codex CLI', exact: true }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Configure & start' })).toBeEnabled())
   await userEvent.click(screen.getByRole('button', { name: 'Configure & start' }))
   await waitFor(() => expect(finishProfile).toBeDefined())
   view.rerender(<WorkspaceApp />)
-  expect(screen.queryByRole('dialog', { name: 'Set up Atomic Server' })).not.toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: 'Preparing your server' })).toBeInTheDocument()
-  await act(async () => finishProfile({ launch_command: 'atc connect codex --model local-model' }))
+  expect(setup.getByRole('heading', { name: 'Preparing your server' })).toBeInTheDocument()
+  await act(async () =>
+    finishProfile({ configured: true, launch_command: 'atc connect codex --model local-model' })
+  )
   expect(await screen.findByText('atc connect codex --model local-model')).toBeInTheDocument()
   await userEvent.click(await screen.findByRole('button', { name: 'Done', exact: true }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /Connections.*1 prepared/ })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Connection prepared' })).toBeInTheDocument()
-  expect(execute.mock.calls.filter(([name]) => name === 'setup.manual')).toHaveLength(1)
+  expect(execute.mock.calls.filter(([name]) => name === 'setup.manual')).toHaveLength(0)
   Object.defineProperty(window, 'innerWidth', { value: 700, configurable: true })
   fireEvent(window, new Event('resize'))
   await userEvent.click(screen.getByRole('button', { name: 'Toggle sidebar' }))

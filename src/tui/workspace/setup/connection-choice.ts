@@ -4,8 +4,9 @@ import { finalSetupState } from './waiting-setup.js'
 import type { ActionContext } from '../actions.js'
 import type { Canvas } from '../draw/canvas.js'
 import { drawConnectionChoices } from '../server/connection-art.js'
+import { connectionGuideAction } from '../server/connection-guide-actions.js'
 
-/** Desktop onboarding hands off to the owning page; its connection wizard stays optional. */
+/** Keep agent setup in onboarding until the user finishes the guide. */
 export async function firstConnectionAction(id: string, ctx: ActionContext): Promise<boolean> {
   const leavingWait = id === 'wait-continue'
   if (leavingWait && ctx.get().finalSetup) {
@@ -31,6 +32,8 @@ export async function firstConnectionAction(id: string, ctx: ActionContext): Pro
     }))
     return true
   }
+  if (id === 'first-connect:agent' && (!leavingWait || !firstRunDownloadsPending(ctx.get())))
+    return connectionGuideAction('guide-open:agent', ctx)
   await finishFirstRun(ctx)
   const endpoint = id === 'first-connect:endpoint'
   ctx.update((s) => ({

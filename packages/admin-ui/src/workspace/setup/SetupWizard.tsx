@@ -20,6 +20,8 @@ import { Permissions } from './Permissions'
 import { Destinations } from './Purpose'
 import { OptionalMedia } from './OptionalMedia'
 import { WaitingSetup } from './WaitingSetup'
+import { ConnectionGuide } from '../server/connection/ConnectionGuide'
+import { SetupFooter } from './SetupFooter'
 import './onboarding.css'
 
 const SETUP_STEP_LABELS: Record<FirstRunStep, string> = {
@@ -41,13 +43,14 @@ export function SetupWizard({
   onClose,
   onOpenGoal,
   onDestination,
+  onPrepared,
+  onConfigure,
 }: {
   workspace: Workspace
   onClose: () => void
   onOpenGoal: (id: string, agent?: string) => void
   onPrepared?: (id: string) => void
   onConfigure?: () => void
-  onChat?: () => void
   onDestination?: (destination: Destination) => void
 }) {
   const [step, setStep] = useState<FirstRunStep>(w.snapshot?.setups.length ? 'permissions' : 'model')
@@ -60,7 +63,7 @@ export function SetupWizard({
   const [engineDialog, setEngineDialog] = useState('')
   const [choosingEngine, setChoosingEngine] = useState(false)
   const [engineRevision, setEngineRevision] = useState(0)
-  const choosing = useRef(false)
+  const [agentSetup, setAgentSetup] = useState(false)
   const [category, setCategory] = useState('image')
   const [modelActionContainer, setModelActionContainer] = useState<HTMLDivElement | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -68,12 +71,12 @@ export function SetupWizard({
   useEffect(() => {
     if (content.current) content.current.scrollTop = 0
     heading.current?.focus({ preventScroll: true })
-  }, [step, waiting])
+  }, [step, waiting, agentSetup])
   const finishing = w.pending.includes('setup.manual')
   const checking = finishing || w.pending.includes('cloud.connect')
   const dialog = useDialog(
     () => {
-      if (!checking) {
+      if (!checking && !agentSetup) {
         if (waiting) {
           setWaiting(null)
           return
@@ -106,6 +109,11 @@ export function SetupWizard({
     if (onDestination) onDestination(destination)
     else onOpenGoal('api')
   }
+  const continueTo = (destination: Destination) => {
+    if (destination === 'endpoint') return finish(destination)
+    setWaiting(null)
+    setAgentSetup(true)
+  }
   return (
     <div className="wizard-overlay first-run-overlay">
       <section
@@ -131,13 +139,15 @@ export function SetupWizard({
             ))}
           </ol>
           <main ref={content} className="first-run-content">
-            <h1 ref={heading} tabIndex={-1}>
-              {waiting
-                ? waitingPending
-                  ? 'Getting your model ready'
-                  : 'Your model is downloaded'
-                : FIRST_RUN_TITLES[step]}
-            </h1>
+            {!agentSetup && (
+              <h1 ref={heading} tabIndex={-1}>
+                {waiting
+                  ? waitingPending
+                    ? 'Getting your model ready'
+                    : 'Your model is downloaded'
+                  : FIRST_RUN_TITLES[step]}
+              </h1>
+            )}
             {waiting && <WaitingSetup workspace={{ ...w, snapshot: waitingSnapshot }} />}
             {!waiting && step === 'model' && (
               <FirstModel
@@ -177,64 +187,53 @@ export function SetupWizard({
                 />
               </>
             )}
-            {!waiting && step === 'connect' && w.error && (
+            {!waiting && !agentSetup && step === 'connect' && w.error && (
               <Action onClick={() => setStep('model')}>Choose another model</Action>
             )}
-            {!waiting && step === 'connect' && (
-              <Destinations
-                choose={async (destination) => {
-                  if (choosing.current) return
-                  choosing.current = true
-                  try {
-                    // Decide on the server's word, not the last poll (none right after the admin opens); when
-                    // the server cannot say, wait: the waiting screen lets the person go on anyway.
-                    const snapshot = await w.refresh()
-                    if (!snapshot || setupDownloadsPending(snapshot))
-                      setWaiting({ destination, snapshot, previous: w.snapshot })
-                    else await finish(destination)
-                  } finally {
-                    choosing.current = false
-                  }
-                }}
+            {agentSetup ? (
+              <ConnectionGuide
+                workspace={w}
+                onboarding
+                onConfigure={onConfigure}
+                onPrepared={onPrepared}
+                onClose={() => setAgentSetup(false)}
+                onDone={onClose}
               />
+            ) : (
+              !waiting &&
+              step === 'connect' && (
+                <Destinations
+                  refresh={() => w.refresh()}
+                  choose={(destination, snapshot) => {
+                    if (setupDownloadsPending(snapshot))
+                      setWaiting({ destination, snapshot, previous: w.snapshot })
+                    else return continueTo(destination)
+                  }}
+                />
+              )
             )}
           </main>
         </div>
-        <footer className="first-run-footer">
-          <Action
+        {!agentSetup && (
+          <SetupFooter
+            step={step}
             disabled={checking}
-            onClick={() => {
+            actionRef={setModelActionContainer}
+            back={() => {
               if (waiting) setWaiting(null)
               else if (step === 'model') setChoosingEngine(true)
               else setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1])
             }}
-          >
-            Back
-          </Action>
-          <div className="first-run-actions" ref={setModelActionContainer}>
-            {waiting ? (
-              <Action primary disabled={checking} onClick={() => finish(waiting.destination)}>
-                {waitingPending ? 'Open control panel' : 'Continue'}
-              </Action>
-            ) : (
-              <>
-                <span className="first-run-skip">
-                  <Action
-                    disabled={checking}
-                    onClick={step === 'connect' ? () => openDashboard(false) : skip}
-                  >
-                    {step === 'connect' ? 'Go to dashboard' : 'Skip setup'}
-                  </Action>
-                </span>
-                {['permissions', 'cloud', 'media'].includes(step) && (
-                  <Action primary disabled={checking} onClick={next}>
-                    Continue
-                  </Action>
-                )}
-              </>
-            )}
-          </div>
-        </footer>
+            waiting={
+              waiting && {
+                label: waitingPending ? 'Open control panel' : 'Continue',
+                continue: () => (waitingPending ? finish : continueTo)(waiting.destination),
+              }
+            }
+            skip={step === 'connect' ? () => openDashboard(false) : skip}
+            next={next}
+          />
+        )}
         {review && step === 'model' && (
           <SetupReview
             revision={engineRevision}

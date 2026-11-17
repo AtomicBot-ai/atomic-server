@@ -13,6 +13,7 @@ function fixture() {
     firstRun: 'connect' as const,
     model: 'qwen',
     workspace: {
+      api: { port: 1337 },
       setups: [
         { id: 'download', stage: 'downloading', plan: { model_id: 'qwen', total_download_bytes: 100 } },
       ],
@@ -28,7 +29,11 @@ function fixture() {
     send: vi.fn(),
     copy: vi.fn(),
     cancel: vi.fn(),
-    controller: { runtime: { execute } } as unknown as WorkspaceController,
+    controller: {
+      installed: async () => [{ id: 'qwen', name: 'Qwen', provider: 'llamacpp-upstream' }],
+      setup: { installed: async () => ['llamacpp-upstream'] },
+      runtime: { execute },
+    } as unknown as WorkspaceController,
   }
   return { ctx, execute, action: (id: string) => activate(id, ctx) }
 }
@@ -90,6 +95,31 @@ const shown = (state: ReturnType<typeof createWorkspace>, width = 120, height = 
   workspaceFrame(state, width, height, 0)
     .cells.map((row) => row.map((cell) => cell.char).join(''))
     .join('\n')
+
+it.each([false, true])('opens agent selection inside onboarding after waiting=%s', async (wait) => {
+  const t = fixture()
+  if (wait) await t.action('first-connect:agent')
+  t.ctx.update((s) => ({
+    ...s,
+    workspace: { ...s.workspace!, setups: [{ id: 'download', stage: 'ready', plan: { model_id: 'qwen' } }] },
+  }))
+  t.ctx.controller.runtime.snapshot = vi.fn(async () => t.ctx.get().workspace!)
+  await t.action(wait ? 'wait-continue' : 'first-connect:agent')
+  expect(t.ctx.get()).toMatchObject({
+    firstRun: 'connect',
+    finalSetup: null,
+    page: 'welcome',
+    overlay: 'connection-guide',
+    connection: { step: 'agent', model: 'qwen' },
+  })
+  expect(shown(t.ctx.get())).toContain('Choose your agent')
+  await t.action('guide-select:codex')
+  expect(t.ctx.get().connection).toMatchObject({ step: 'review', agent: 'codex', model: 'qwen' })
+  await t.action('guide-back')
+  await t.action('guide-back')
+  expect(t.ctx.get()).toMatchObject({ firstRun: 'connect', overlay: null, focus: 'first-connect:agent' })
+  expect(t.execute).not.toHaveBeenCalled()
+})
 
 it('registers the address with the server, validates it, and Escape returns to the explicit destination choice', async () => {
   const t = fixture()

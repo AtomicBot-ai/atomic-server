@@ -13,6 +13,7 @@ export function ConnectionHeading({
   name,
   heading,
   onClose,
+  showDownloads = true,
 }: {
   workspace: Workspace
   step: string
@@ -20,6 +21,7 @@ export function ConnectionHeading({
   name: string
   heading: Ref<HTMLHeadingElement>
   onClose: () => void
+  showDownloads?: boolean
 }) {
   const chosen = ['review', 'preparing', 'done'].includes(step)
   const title =
@@ -46,7 +48,7 @@ export function ConnectionHeading({
           {title}
         </h2>
       </div>
-      <FloatingDownloads workspace={workspace} />
+      {showDownloads && <FloatingDownloads workspace={workspace} />}
       <Action ariaLabel="Close setup guide" disabled={step === 'preparing'} onClick={onClose}>
         <X size={18} />
       </Action>
