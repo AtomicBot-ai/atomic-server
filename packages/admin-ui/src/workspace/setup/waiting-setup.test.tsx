@@ -72,6 +72,25 @@ it('keeps paused download status truthful and exposes existing controls in a dis
 
 const downloading = [{ setup_id: 's1', stage: 'downloading_model', plan: { model_id: 'Qwen' } }]
 
+it('continues to agent selection when the download finishes while waiting', async () => {
+  const { workspace, execute } = workspaceFixture({}, { setup: null, setups: downloading })
+  const onDestination = vi.fn()
+  const wizard = () => (
+    <SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} onDestination={onDestination} />
+  )
+  const view = render(wizard())
+  for (let i = 0; i < 3; i++)
+    await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
+  expect(screen.getByRole('heading', { name: 'Getting your model ready' })).toBeInTheDocument()
+  workspace.snapshot = { ...workspace.snapshot!, setups: [] }
+  view.rerender(wizard())
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  expect(screen.getByRole('heading', { name: 'Choose your agent' })).toBeInTheDocument()
+  expect(execute).not.toHaveBeenCalledWith('setup.manual')
+  expect(onDestination).not.toHaveBeenCalled()
+})
+
 it('goes directly from the connection step to the dashboard while a model downloads', async () => {
   const { workspace, execute } = workspaceFixture({}, { setup: null, setups: downloading })
   const onClose = vi.fn()

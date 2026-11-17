@@ -1,5 +1,5 @@
 /** Cases from the October 2026 bug hunt over the web admin: each one failed before its fix. */
-import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { WORKSPACE_OPERATIONS } from '@contract'
@@ -146,11 +146,7 @@ it('keeps the server on the network the person chose when an agent connection is
   await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
-  await userEvent.click(
-    within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {
-      name: 'Configure',
-    })
-  )
+  await userEvent.click(screen.getByRole('button', { name: 'Codex CLI', exact: true }))
   await userEvent.click(await screen.findByRole('button', { name: 'Configure & start' }))
   await waitFor(() => expect(execute).toHaveBeenCalledWith('api.start', expect.anything()))
   const config = execute.mock.calls.find(([name]) => name === 'config.update')?.[1] as {

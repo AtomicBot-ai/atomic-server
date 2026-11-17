@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
@@ -41,11 +41,7 @@ async function openOnboardingReview(name = 'Old model') {
   await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
-  await userEvent.click(
-    within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {
-      name: 'Configure',
-    })
-  )
+  await userEvent.click(screen.getByRole('button', { name: 'Codex CLI', exact: true }))
   expect(screen.getByRole('heading', { name: 'Connect Codex CLI' })).toBeInTheDocument()
 }
 it('changes models inside onboarding without losing the selected agent or visiting a previous stage', async () => {
@@ -137,7 +133,7 @@ it('explicit picker Back preserves endpoint settings and the current model', asy
   expect(screen.getByText('http://127.0.0.1:1777/v1')).toBeInTheDocument()
 })
 
-it('preserves the selected installed model through onboarding handoff and guide reopening', async () => {
+it('preserves the selected installed model when reopening the guide inside onboarding', async () => {
   let savedModel = ''
   const { workspace, execute } = workspaceFixture(
     {
@@ -156,11 +152,8 @@ it('preserves the selected installed model through onboarding handoff and guide 
   await waitFor(() => expect(screen.getByLabelText('Model')).toHaveValue('new-model'))
   expect(execute).toHaveBeenCalledWith('config.update', { values: { 'tui.model': 'new-model' } })
   await userEvent.click(screen.getByRole('button', { name: 'Close setup guide' }))
-  await userEvent.click(
-    within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {
-      name: 'Configure',
-    })
-  )
+  await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
+  await userEvent.click(screen.getByRole('button', { name: 'Codex CLI', exact: true }))
   await waitFor(() => expect(screen.getByLabelText('Model')).toHaveValue('new-model'))
   await userEvent.click(screen.getByRole('button', { name: 'Configure & start' }))
   await screen.findByRole('heading', { name: 'Codex CLI connection is ready' })
@@ -205,11 +198,7 @@ it('saves the actual download model before handoff instead of restoring a previo
   await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
-  await userEvent.click(
-    within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {
-      name: 'Configure',
-    })
-  )
+  await userEvent.click(screen.getByRole('button', { name: 'Codex CLI', exact: true }))
   await waitFor(() => expect(screen.getByLabelText('Model')).toHaveValue(downloadedId))
   expect(screen.getByRole('button', { name: 'Configure & start' })).toBeDisabled()
   expect(execute).not.toHaveBeenCalledWith('models.load', expect.anything())

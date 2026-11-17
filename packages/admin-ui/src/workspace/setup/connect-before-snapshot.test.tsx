@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import type { WorkspaceSnapshot } from '@contract'
@@ -58,7 +58,7 @@ it('chooses once while it reads the server', async () => {
     snapshotFixture({ setup: null })
   )
   await userEvent.dblClick(await screen.findByRole('button', { name: /Configure an endpoint/ }))
-  answer(snapshotFixture({ setup: null, setups: [] }))
+  await act(async () => answer(snapshotFixture({ setup: null, setups: [] })))
   await vi.waitFor(() => expect(manual(workspace)).toHaveLength(1))
   await new Promise((resolve) => setTimeout(resolve, 50))
   expect(manual(workspace)).toHaveLength(1)

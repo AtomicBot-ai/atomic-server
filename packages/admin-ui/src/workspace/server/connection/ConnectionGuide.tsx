@@ -26,14 +26,18 @@ export function ConnectionGuide({
   initialAgent,
   preferredModel,
   preferredProvider,
+  onboarding = false,
   onClose,
+  onDone = onClose,
   onBack,
   onSettings,
   onPrepared,
   onConfigure,
 }: ConnectionGuideProps) {
-  const { step, setStep, heading } = useConnectionStep(initialAgent ? 'review' : 'choose')
-  useConnectionEscape(onClose, step === 'preparing')
+  const { step, setStep, heading } = useConnectionStep(
+    initialAgent ? 'review' : onboarding ? 'agent' : 'choose'
+  )
+  const dismiss = step === 'done' ? onDone : onClose
   const [path, setPath] = useState<'agent' | 'endpoint'>('agent')
   const [agent, setAgent] = useState(initialAgent ?? 'claude')
   const [more, setMore] = useState(false)
@@ -51,6 +55,7 @@ export function ConnectionGuide({
     setProvider,
   } = useConnectionModel(w, preferredModel, preferredProvider)
   const retryFocus = useConnectionRetryFocus(checking, modelError, retryModels)
+  useConnectionEscape(dismiss, step === 'preparing', onboarding ? retryFocus.ref : undefined)
   const [port, setPort] = useState(String(w.snapshot?.api.port || DEFAULT_API_PORT))
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -122,7 +127,8 @@ export function ConnectionGuide({
         agent={path === 'agent' ? agent : undefined}
         name={name}
         heading={heading}
-        onClose={onClose}
+        onClose={dismiss}
+        showDownloads={!onboarding}
       />
       {(error || modelError) && (
         <p role="alert" className="ew-error">
@@ -235,7 +241,7 @@ export function ConnectionGuide({
             >
               Connect another tool
             </Action>
-            <Action primary onClick={onClose}>
+            <Action primary onClick={onDone}>
               Done
             </Action>
           </div>
@@ -244,7 +250,10 @@ export function ConnectionGuide({
       {(['agent', 'endpoint', 'review'].includes(step) || (step === 'choose' && onBack)) && (
         <div className="wizard-bottom">
           <Action
-            onClick={() => (step === 'choose' ? onBack?.() : setStep(step === 'review' ? path : 'choose'))}
+            onClick={() => {
+              if (step === 'choose' || (onboarding && step === 'agent')) (onBack ?? onClose)()
+              else setStep(step === 'review' ? path : 'choose')
+            }}
           >
             Back
           </Action>
@@ -260,11 +269,13 @@ export function ConnectionGuide({
           )}
         </div>
       )}
-      <ConnectionHelp
-        disabled={step === 'preparing'}
-        onSettings={onSettings}
-        onModels={() => setPickingModel(true)}
-      />
+      {onSettings && (
+        <ConnectionHelp
+          disabled={step === 'preparing'}
+          onSettings={onSettings}
+          onModels={() => setPickingModel(true)}
+        />
+      )}
       {pickingModel && (
         <ConnectionModelPicker
           workspace={w}

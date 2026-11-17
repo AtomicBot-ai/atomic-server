@@ -45,7 +45,8 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
     ctx.update((v) => ({ ...v, serverView: 'overview', focus: 'api-toggle' }))
     return true
   }
-  if (id === 'guide-open' || id.startsWith('guide-agent:')) {
+  const openingAgentSetup = id === 'guide-open:agent'
+  if (id === 'guide-open' || openingAgentSetup || id.startsWith('guide-agent:')) {
     if (s.message === READING_CONNECTION_OPTIONS) return true
     const openingHere = () => {
       const current = ctx.get()
@@ -88,10 +89,11 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       connectionEngines,
       connectionReturn: s.firstRun ? undefined : (s.connectionReturn ?? workspaceLocation(s)),
       overlay: 'connection-guide',
-      focus: agent ? 'guide-configure' : 'guide-path:agent',
+      ...(openingAgentSetup ? { finalSetup: null } : {}),
+      focus: agent ? 'guide-configure' : openingAgentSetup ? 'guide-select:claude' : 'guide-path:agent',
       message: '',
       connection: {
-        step: agent ? 'review' : 'choose',
+        step: agent ? 'review' : openingAgentSetup ? 'agent' : 'choose',
         path: 'agent',
         agent: agent || 'claude',
         model,
@@ -137,6 +139,10 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
     const error = guidePortError(d.port)
     patch(error ? { error } : { step: 'review', error: '' })
   } else if (id === 'guide-back') {
+    if (s.firstRun === 'connect' && d.step === 'agent') {
+      ctx.update((v) => ({ ...v, connection: null, overlay: null, focus: 'first-connect:agent', hover: '' }))
+      return true
+    }
     patch({ step: d.step === 'review' ? d.path : 'choose', error: '' })
     ctx.update((v) => ({
       ...v,

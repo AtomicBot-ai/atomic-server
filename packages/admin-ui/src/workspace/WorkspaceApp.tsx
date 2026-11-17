@@ -270,12 +270,6 @@ function WorkspaceContent() {
             setPage('server')
             setServerSection(destination === 'endpoint' ? 'configuration' : 'overview')
           }}
-          onChat={() => {
-            setWizard(false)
-            setSetupDismissed(true)
-            setPage('playground')
-            setTask('chat')
-          }}
           onConfigure={() => setWizard(true)}
           workspace={workspace}
           onPrepared={(id) => setPrepared((items) => [...new Set([...items, id])])}
