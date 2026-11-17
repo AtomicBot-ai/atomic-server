@@ -28,7 +28,7 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
   const name = connectionAgentName(d.agent)
   const launchable =
     d.path === 'agent' &&
-    PROFILE_AGENTS.includes(d.agent) &&
+    (d.agentConfigured ?? PROFILE_AGENTS.includes(d.agent)) &&
     serverRunning(s) &&
     (d.step === 'done' || (s.setupComplete && !s.firstRun))
   if (d.step === 'choose') {
@@ -138,7 +138,12 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
     put(`Model: ${d.model}`)
     put(d.endpoint, COLORS.muted)
     const detail =
-      d.command || (d.path === 'agent' ? `In ${name}, enter this endpoint, API key and model ID.` : '')
+      d.command ||
+      (d.path === 'agent'
+        ? [d.agentSetupNote, `In ${name}, enter this endpoint, API key and model ID.`]
+            .filter(Boolean)
+            .join(' ')
+        : '')
     const lines = wrap(detail, width),
       count = Math.max(0, bottom - y - (launchable ? 5 : 4))
     lines

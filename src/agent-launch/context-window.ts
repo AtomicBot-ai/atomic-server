@@ -50,12 +50,17 @@ export async function readServedWindow(
 }
 
 /** Refuses a known window too small for the agent; an unknown one is left to the agent. */
-export function checkAgentWindow(agent: string, model: string, contextLength: number | undefined): void {
-  if (contextLength === undefined || contextLength >= AGENT_MIN_CONTEXT) return
+export function checkAgentWindow(
+  agent: string,
+  model: string,
+  contextLength: number | undefined,
+  minimum = AGENT_MIN_CONTEXT
+): void {
+  if (contextLength === undefined || contextLength >= minimum) return
   const tokens = (n: number) => n.toLocaleString('en-US')
   throw new AtcError(
     'ATC_USAGE',
-    `${agent} needs a context window of at least ${tokens(AGENT_MIN_CONTEXT)} tokens; ${model} is served with ${tokens(contextLength)}.`,
+    `${agent} needs a context window of at least ${tokens(minimum)} tokens; ${model} is served with ${tokens(contextLength)}.`,
     {
       hint: 'Load the model with a larger context size (turn off "Fit context to device memory" in the engine settings), or choose a smaller model.',
     }

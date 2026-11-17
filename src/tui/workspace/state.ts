@@ -19,7 +19,6 @@ import type { LibraryRow, LibraryView } from './library/library-model.js'
 import type { WorkspaceSnapshot, WorkspaceOperation } from '../../contract/index.js'
 import type { Conversation, ConversationSummary, ClientKeyView } from '../../terminal-data/index.js'
 import type { SetupView, EngineChoice } from '../../terminal-setup/index.js'
-import type { AgentId } from '../../agent-launch/index.js'
 import type { ChatImage, ChatMessage, RequestRow } from '../../terminal-service/index.js'
 import type { CommandRow } from '../command-list.js'
 import { initialState, type TuiState } from '../state.js'
@@ -128,7 +127,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
   engines: EngineChoice[]
   pickerBusy: boolean
   pickerError: string
-  agent: AgentId
+  agent: string
   agentModel: string
   commands: CommandRow[]
   base: TuiState

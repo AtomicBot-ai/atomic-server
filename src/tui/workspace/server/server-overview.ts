@@ -72,7 +72,18 @@ export function drawServerOverview(
       COLORS.muted,
       cardWidth - 4
     )
-    button(c, id, cx + 2, cy + 3, 'Configure >', `Configure ${agent.label}`, focus, false, true)
+    const active = focus === id
+    text(
+      c,
+      cx + 2,
+      cy + 3,
+      active ? '>Configure > ' : ' Configure > ',
+      active ? COLORS.ground : COLORS.text,
+      cardWidth - 4,
+      active ? COLORS.accent : COLORS.surface,
+      true
+    )
+    c.targets.push({ id, x: cx, y: cy, width: cardWidth, height: 5, hint: `Configure ${agent.label}` })
   })
   scrollTrack(c, x + width - 1, y, rows * 5, offset, capacity, agents.length)
   if (!agents.length) text(c, x, y + 1, 'No matching agents.', COLORS.muted, width)
