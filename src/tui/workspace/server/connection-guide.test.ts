@@ -10,6 +10,7 @@ import { workspaceFrame } from '../frame.js'
 import type { WorkspaceController } from '../controller.js'
 import { FIRST_RUN_STEPS } from '../../../contract/index.js'
 import { hit } from '../draw/canvas.js'
+import { workspaceInput } from '../input.js'
 function fixture(fail = false) {
   let state = { ...createWorkspace('server'), setupComplete: true }
   const execute = vi.fn(async (name: string) => {
@@ -51,6 +52,33 @@ it('opens an agent sidebar item at review and verifies before preparing its conn
   expect(calls.indexOf('setup.complete')).toBeLessThan(calls.indexOf('connection.profile'))
   await activate('guide-copy', ctx)
   expect(ctx.copy).toHaveBeenCalledWith('atc connect codex --model local-model')
+})
+it('opens Hermes from the card title and shows progress while checking installed models', async () => {
+  const { ctx, execute } = fixture()
+  type Installed = Awaited<ReturnType<WorkspaceController['installed']>>
+  let complete!: (models: Installed) => void
+  ctx.controller.installed = vi.fn(
+    () =>
+      new Promise<Installed>((resolve) => {
+        complete = resolve
+      })
+  )
+  ctx.update((s) => ({ ...s, serverQuery: 'Hermes Agent' }))
+  const frame = workspaceFrame(ctx.get(), 120, 36, 0)
+  const card = frame.targets.find((target) => target.id === 'server-agent:0')!
+  const { action } = workspaceInput(`\x1b[<0;${card.x + 8};${card.y + 2}M`, {} as never, ctx.get(), frame)
+  expect(action).toBe('server-agent:0')
+  const opening = activate(action!, ctx)
+  await vi.waitFor(() => expect(ctx.get().message).toBe('Checking installed models and engines…'))
+  expect(ctx.get().overlay).toBeNull()
+  complete([{ id: 'local-model', name: 'Local model', provider: 'llamacpp-upstream' }])
+  await opening
+  expect(ctx.get()).toMatchObject({
+    message: '',
+    overlay: 'connection-guide',
+    connection: { step: 'review', agent: 'hermes', model: 'local-model' },
+  })
+  expect(execute).not.toHaveBeenCalled()
 })
 it('returns failed inference to review without a success state or agent command', async () => {
   const { ctx, execute } = fixture(true)

@@ -1,5 +1,6 @@
 import type { ConnectionDraft } from '../../../contract/index.js'
 import { CONNECTION_AGENTS, DEFAULT_API_PORT, PROFILE_AGENTS } from '../../../contract/index.js'
+import { setupWait } from '../../../terminal-setup/index.js'
 import type { ActionContext } from '../actions.js'
 import { workspaceLocation } from '../navigation/navigation-return.js'
 import { record } from '../library/library-model.js'
@@ -17,6 +18,8 @@ const rows = (value: unknown) =>
     : Array.isArray(record(value)['rows'])
       ? (record(value)['rows'] as unknown[]).map(record)
       : []
+const READING_CONNECTION_OPTIONS = 'Checking installed models and engines…'
+
 export async function connectionGuideAction(id: string, ctx: ActionContext): Promise<boolean> {
   if (connectionPickerAction(id, ctx)) return true
   const s = ctx.get(),
@@ -43,8 +46,34 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
     return true
   }
   if (id === 'guide-open' || id.startsWith('guide-agent:')) {
-    const [installed, connectionEngines] = await Promise.all([c.installed(), readConnectionEngines(c)])
-    if (s.firstRun && ctx.get().firstRun !== s.firstRun) return true
+    if (s.message === READING_CONNECTION_OPTIONS) return true
+    const openingHere = () => {
+      const current = ctx.get()
+      return (
+        current.message === READING_CONNECTION_OPTIONS &&
+        current.page === s.page &&
+        current.overlay === s.overlay &&
+        current.firstRun === s.firstRun
+      )
+    }
+    ctx.update((v) => ({ ...v, message: READING_CONNECTION_OPTIONS }))
+    const options = await setupWait(
+      Promise.all([c.installed(), readConnectionEngines(c)]),
+      new AbortController().signal
+    ).catch((error: unknown) => {
+      if (openingHere())
+        ctx.update((v) => ({
+          ...v,
+          message: `Could not open connection setup. ${error instanceof Error ? error.message : String(error)}`,
+        }))
+      return null
+    })
+    if (!openingHere()) {
+      ctx.update((v) => (v.message === READING_CONNECTION_OPTIONS ? { ...v, message: '' } : v))
+      return true
+    }
+    if (!options) return true
+    const [installed, connectionEngines] = options
     const download = connectionDownloadTarget(connectionDownload(s.workspace?.setups ?? []))
     const preferred =
       s.setup?.selections[0]?.plan.model_id ?? s.setup?.path?.job?.model ?? (s.model || download.model)
@@ -60,6 +89,7 @@ export async function connectionGuideAction(id: string, ctx: ActionContext): Pro
       connectionReturn: s.firstRun ? undefined : (s.connectionReturn ?? workspaceLocation(s)),
       overlay: 'connection-guide',
       focus: agent ? 'guide-configure' : 'guide-path:agent',
+      message: '',
       connection: {
         step: agent ? 'review' : 'choose',
         path: 'agent',

@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-17** — [Show progress when opening terminal agent setup](2026-11-17-show-terminal-agent-setup-progress.md) — make the full agent card clickable and show the options check.
+
 - **2026-11-17** — [Pair terminal connection engines with models](2026-11-17-pair-terminal-connection-engines-with-models.md) — filter the connection guide by active engines and compatible downloads.
 
 - **2026-11-17** — [Open the dashboard from terminal onboarding](2026-11-17-open-dashboard-from-terminal-onboarding.md) — save completion and let downloads continue without loading the selected model.
