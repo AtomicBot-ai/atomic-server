@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-18** — [Use the published core integrations API](2026-11-18-use-published-core-integrations.md) — pin core 0.24.2 and remove the dependency patch.
+
 - **2026-11-17** — [Configure agents through core](2026-11-17-configure-agents-through-core.md) — use the shared registry for host configuration and launches.
 
 - **2026-11-17** — [Show progress when opening terminal agent setup](2026-11-17-show-terminal-agent-setup-progress.md) — make the full agent card clickable and show the options check.
