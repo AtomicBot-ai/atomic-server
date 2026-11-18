@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-18** — [Filter the Strata catalog on the server](2026-11-18-filter-strata-catalog-on-server.md) — share host-aware quantization groups between the web and terminal catalogs.
+
 - **2026-11-18** — [Use the published core integrations API](2026-11-18-use-published-core-integrations.md) — pin core 0.24.2 and remove the dependency patch.
 
 - **2026-11-17** — [Configure agents through core](2026-11-17-configure-agents-through-core.md) — use the shared registry for host configuration and launches.

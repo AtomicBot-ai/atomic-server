@@ -5,8 +5,7 @@ import './engine-drawer.css'
 import { useConfirmation } from '../../use-confirmation'
 import { EngineReload } from './EngineReload'
 import { useEngineSettingsData } from './use-engine-settings-data'
-import { useEffect, useState } from 'react'
-import type { GpuFacts } from '@atomic-chat/core/contracts'
+import { useState } from 'react'
 import {
   changedValues,
   engineFamily,
@@ -18,9 +17,10 @@ import {
 import { useDialog } from '../../useDialog'
 import type { Workspace } from '../../useWorkspace'
 import { Action } from '../../Controls'
-import { record, rows, text } from '../../types'
+import { record, text } from '../../types'
 import type { RecordValue } from '../../types'
 import { SETTING_GROUPS, commonSetting, editableSetting, settingGroup } from './engine-setting-groups'
+import { useEngineGpuOptions } from './use-engine-gpu-options'
 import { EngineSettingField } from './EngineSettingField'
 
 export function EngineSettings({
@@ -59,14 +59,7 @@ export function EngineSettings({
   }
   const dialog = useDialog(close),
     { execute } = w
-  const [gpus, setGpus] = useState<GpuFacts[]>([])
-  useEffect(() => {
-    if (engineFamily(provider) !== 'managed') return
-    void execute('environments.list').then(
-      (list) => setGpus((rows(list)[0]?.gpus as GpuFacts[]) ?? []),
-      () => {}
-    )
-  }, [provider, execute])
+  const { gpus, strataGpus } = useEngineGpuOptions(execute, provider)
   const fields: RecordValue[] = (
     schema.length
       ? schema
@@ -222,6 +215,7 @@ export function EngineSettings({
                   saved={saved}
                   update={update}
                   gpus={gpus}
+                  strataGpus={provider === 'strata' ? strataGpus : undefined}
                   managed={engineFamily(provider) === 'managed'}
                 />
               ))}

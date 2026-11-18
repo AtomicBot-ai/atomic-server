@@ -4,6 +4,7 @@ import {
   downloadStopped,
   downloadSpeed,
   downloadStateLabel,
+  strataPreparationNotice,
   formatEta,
 } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
@@ -32,7 +33,13 @@ export function drawFloatingDownloads(
     owner = downloadOwner(row),
     eta = downloadEta(row, downloadSpeed(row, s.transferSamples[row.id]?.speed ?? 0)),
     status = downloadStateLabel(row.state),
-    remaining = paused ? '' : eta !== undefined && eta >= 0 ? `~${formatEta(eta)}` : 'Estimating…'
+    remaining = paused
+      ? ''
+      : strataPreparationNotice(row, row.state)
+        ? 'This can take a few minutes.'
+        : eta !== undefined && eta >= 0
+          ? `~${formatEta(eta)}`
+          : 'Estimating…'
   const targetId = row['pending'] ? 'first-downloads' : 'download-status'
   if (height === 1) {
     button(

@@ -235,7 +235,10 @@ export function drawCatalogBrowser(
     if (s.busy) text(c, x + 2, controlY, 'Reading versions...', COLORS.muted, width - 4)
     else if (job && !ready)
       button(c, 'library:downloads', x + 2, controlY, 'View download', 'Open download controls', focus)
-    else if (loaded || (ready && record(job?.['plan'])['category'])) {
+    else if (
+      (loaded && !(model.source?.['format'] === 'strata' && s.catalogVariants.length > 1)) ||
+      (ready && record(job?.['plan'])['category'])
+    ) {
       const mediaReady = ready && record(job?.['plan'])['category']
       button(
         c,

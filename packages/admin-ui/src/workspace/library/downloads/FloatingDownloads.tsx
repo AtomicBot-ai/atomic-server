@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { downloadStateLabel, downloadStopped, downloadRows, formatEta, prioritizeDownloads } from '@view'
+import {
+  downloadStateLabel,
+  downloadStopped,
+  downloadRows,
+  formatEta,
+  prioritizeDownloads,
+  strataPreparationNotice,
+} from '@view'
 import type { Workspace } from '../../useWorkspace'
 import { Downloads } from './Downloads'
 import { useDialog } from '../../useDialog'
@@ -43,13 +50,14 @@ function DownloadEta({ row }: { row: Record<string, unknown> }) {
   const { eta } = useDownloadEstimate(row)
   return (
     <small>
-      {downloadStopped(String(row.state))
-        ? row.kind === 'engine'
-          ? 'Open Downloads to retry'
-          : 'Open Downloads to resume'
-        : eta !== undefined && Number.isFinite(eta) && eta >= 0
-          ? `${formatEta(eta)} remaining`
-          : 'Estimating time…'}
+      {strataPreparationNotice(row, String(row.state)) ??
+        (downloadStopped(String(row.state))
+          ? row.kind === 'engine'
+            ? 'Open Downloads to retry'
+            : 'Open Downloads to resume'
+          : eta !== undefined && Number.isFinite(eta) && eta >= 0
+            ? `${formatEta(eta)} remaining`
+            : 'Estimating time…')}
     </small>
   )
 }

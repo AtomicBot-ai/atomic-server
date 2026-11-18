@@ -1,4 +1,4 @@
-import { downloadEta, downloadOwner, downloadStateLabel, formatEta } from '@view'
+import { downloadEta, downloadOwner, downloadStateLabel, formatEta, strataPreparationNotice } from '@view'
 import { useDownloadEstimate } from './useDownloadEstimate'
 import { DeleteConfirmation } from '../DeleteConfirmation'
 import { useState } from 'react'
@@ -56,13 +56,16 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
   const id = text(job.id ?? job.setup_id ?? job.task_id, '')
   const state = text(job.state ?? job.stage ?? job.status ?? job.phase, 'Queued')
   const model = record(job.model)
-  const media = Boolean(job.category || job.artifact_id || record(job.plan).category)
+  const plan = record(job.plan)
+  const preparation = strataPreparationNotice(job, state)
+  const media = Boolean(job.category || job.artifact_id || plan.category)
   const failed = ['failed', 'cancelled', 'interrupted', 'paused'].includes(state)
   const eta = downloadEta({ ...job, total: size, transferred }, speed)
   const name = text(
-    job.model_id ??
-      record(job.plan).name ??
-      record(job.plan).model_id ??
+    (job.kind === 'strata-model' ? plan.name : undefined) ??
+      job.model_id ??
+      plan.name ??
+      plan.model_id ??
       model.id ??
       job.filename ??
       job.name ??
@@ -77,9 +80,17 @@ function Download({ job, workspace: w }: { job: RecordValue; workspace: Workspac
       <progress aria-label="Download progress" value={percent} max={100} />
       <div className="download-detail">
         <small>
-          {size ? `${bytes(transferred)} / ${bytes(size)}` : 'Size pending'}
-          {!completed && !failed && speed ? ` · ${bytes(speed)}/s` : ''}
-          {!completed && !failed && eta !== undefined && eta !== null ? ` · ${formatEta(eta)} remaining` : ''}
+          {preparation && (
+            <span>
+              {preparation}
+              {size ? ' · ' : ''}
+            </span>
+          )}
+          {size ? `${bytes(transferred)} / ${bytes(size)}` : preparation ? '' : 'Size pending'}
+          {!preparation && !completed && !failed && speed ? ` · ${bytes(speed)}/s` : ''}
+          {!preparation && !completed && !failed && eta !== undefined && eta !== null
+            ? ` · ${formatEta(eta)} remaining`
+            : ''}
         </small>
         <div className="ew-actions">
           {job.kind === 'engine' && failed && (

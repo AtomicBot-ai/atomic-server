@@ -28,6 +28,7 @@ export function catalogCards(result: unknown, format: CatalogFormat, engine = ''
         id: m.model_id,
         title: m.name,
         summary: '',
+        ...(format === 'strata' ? { recommended: m.recommended, disk_warning: m.summary } : {}),
         format: format === 'strata' ? 'Strata' : 'FastFlowLM',
         providers: [format],
         [format]: m,

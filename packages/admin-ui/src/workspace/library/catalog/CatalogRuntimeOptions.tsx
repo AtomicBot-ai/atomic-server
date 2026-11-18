@@ -28,10 +28,12 @@ export function CatalogRuntimeOptions({
   workspace,
   model,
   onStarted,
+  installedVariants,
 }: {
   workspace: Workspace
   model: RecordValue
   onStarted?: () => void
+  installedVariants?: string[] | undefined
 }) {
   const variants = VARIANT_ENGINES.find((v) => model[v.key])
   const [engine, setEngine] = useState('')
@@ -80,6 +82,7 @@ export function CatalogRuntimeOptions({
               workspace={workspace}
               model={current}
               onStarted={onStarted}
+              installedVariants={installedVariants}
               onEngine={() => setEngineDialog(true)}
             />
           ) : variants.key === 'foundry' ? (

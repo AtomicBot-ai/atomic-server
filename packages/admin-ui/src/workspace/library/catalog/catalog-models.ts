@@ -89,7 +89,11 @@ export function installedCatalogMatches(
   setups: unknown[] = []
 ): boolean {
   if (modelFormat(model) === 'strata')
-    return modelProviders(installed).includes('strata') && modelId(installed) === modelId(model)
+    return (
+      modelProviders(installed).includes('strata') &&
+      (modelId(installed) === modelId(model) ||
+        rows(record(model.strata).variants).some((v) => v.id === modelId(installed)))
+    )
   if (modelFormat(model) === 'fastflowlm')
     return fastFlowLmFamilyMatches(
       modelId(installed),

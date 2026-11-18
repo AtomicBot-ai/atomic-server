@@ -9,7 +9,7 @@ import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import type { ManagedModelJob, ManagedModelPlan, ModelCheckResult } from '../../contract/index.js'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
-import { formatSize, verdictLine } from '../../workspace-view/index.js'
+import { formatSize, strataPreparationNotice, verdictLine } from '../../workspace-view/index.js'
 import { workspace } from '../server/control.js'
 import { follow, followDisplay } from './follow.js'
 
@@ -86,7 +86,12 @@ export async function followSetup(
   const off = ctx.io.onInterrupt?.(() => interrupt.abort()) ?? (() => {})
   const display = followDisplay<Awaited<ReturnType<typeof jobState>>>(
     { io: ctx.io, progress: ctx.progress, flags: ctx.flags },
-    (j) => ({ stage: j.stage, text: `${job.label}: ${j.stage}`, done: j.transferred, total: j.total })
+    (j) => ({
+      stage: j.stage,
+      text: `${job.label}: ${strataPreparationNotice(job, j.stage) ?? j.stage}`,
+      done: j.transferred,
+      total: j.total,
+    })
   )
   try {
     const result = await follow({

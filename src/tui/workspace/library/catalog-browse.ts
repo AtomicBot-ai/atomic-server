@@ -69,6 +69,11 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
           item.id === row.id &&
           (!['geniex', 'fastflowlm', 'strata'].includes(String(row.source?.['format'])) ||
             item.provider === row.source?.['format'])
+      ) &&
+      !(
+        row.source?.['format'] === 'strata' &&
+        Array.isArray(row.source['variants']) &&
+        row.source['variants'].length > 1
       )
     )
       return true
@@ -87,7 +92,7 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
         : Array.isArray(raw)
           ? raw.map(record).map((quant) => ({
               value: String(quant['id']),
-              label: `${quant['id']}${sizeOf(quant) ? ' · ' + bytes(sizeOf(quant)) : ''}`,
+              label: `${quant['label'] ?? quant['id']}${sizeOf(quant) ? ' · ' + bytes(sizeOf(quant)) : ''}`,
             }))
           : []
     // A response from an older row must not replace the currently open family.

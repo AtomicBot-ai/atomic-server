@@ -7,6 +7,7 @@ import { describeError } from '@/services/admin-api'
 import { RuntimeModelFacts } from './RuntimeModelFacts'
 import { ModelInstallFrame } from './ModelInstallFrame'
 import { useVariantModel } from './use-variant-model'
+import { StrataQuantMenu } from './StrataQuantMenu'
 import './runtime-model.css'
 
 export function GenieModelInstall({
@@ -17,6 +18,7 @@ export function GenieModelInstall({
   onClose,
   onStarted,
   onEngine,
+  installedVariants = [],
 }: {
   engine?: 'geniex' | 'fastflowlm' | 'strata'
   workspace: Workspace
@@ -25,6 +27,7 @@ export function GenieModelInstall({
   onClose?: () => void
   onStarted?: (id: string, modelId: string) => void | Promise<void>
   onEngine: () => void
+  installedVariants?: string[] | undefined
 }) {
   const initial = useMemo<RecordValue & { model_id: string }>(
     () => ({ ...initialModel, model_id: text(initialModel.model_id, '') }),
@@ -42,7 +45,13 @@ export function GenieModelInstall({
     [pending, setPending] = useState(false)
   const request = useRef<{ digest: string; id: string } | null>(null)
   const choice = variants.find((v) => v.id === selected) ?? variants[0]
+  const installed = engine === 'strata' && installedVariants.includes(text(choice?.id, ''))
+  const changeVariant = (id: string) => {
+    select(id)
+    setError('')
+  }
   const verdict = record(choice?.verdict)
+  const estimates = record(verdict.estimates)
   const metadata = engine === 'geniex' ? model : { ...model, ...choice }
   const download = async () => {
     if (!choice || pending || checking || readError) return
@@ -74,16 +83,20 @@ export function GenieModelInstall({
       <div className="runtime-model-download">
         <div className="runtime-model-variant">
           {model.recommended === true && <span className="runtime-model-badge">Recommended</span>}
-          {variants.length > 1 ? (
+          {engine === 'strata' && variants.length > 1 && choice ? (
+            <StrataQuantMenu
+              variants={variants}
+              selected={choice}
+              disabled={pending || checking}
+              onChange={changeVariant}
+            />
+          ) : variants.length > 1 ? (
             <Field label="Variant">
               <select
                 aria-label="Variant"
                 value={choice ? text(choice.id) : ''}
                 disabled={pending || checking}
-                onChange={(e) => {
-                  select(e.target.value)
-                  setError('')
-                }}
+                onChange={(e) => changeVariant(e.target.value)}
               >
                 {variants.map((v) => (
                   <option key={text(v.id)} value={text(v.id)}>
@@ -94,8 +107,8 @@ export function GenieModelInstall({
             </Field>
           ) : (
             <div>
-              <small className="ew-muted">Variant</small>
-              <strong>{text(choice?.id, 'No variant available')}</strong>
+              <small className="ew-muted">{engine === 'strata' ? 'Quantization' : 'Variant'}</small>
+              <strong>{text(choice?.label ?? choice?.id, 'No variant available')}</strong>
             </div>
           )}
         </div>
@@ -103,7 +116,9 @@ export function GenieModelInstall({
           <small>Download size</small>
           <strong>{size}</strong>
         </div>
-        {checking || readError ? null : verdict.verdict === 'ok' ? (
+        {installed ? (
+          <span>Installed</span>
+        ) : checking || readError ? null : verdict.verdict === 'ok' ? (
           <Action primary disabled={pending} onClick={download}>
             {pending ? 'Preparing download…' : 'Download'}
           </Action>
@@ -136,6 +151,25 @@ export function GenieModelInstall({
         <p className="runtime-model-feedback" role="status">
           {text(verdict.reason, text(verdict.verdict, 'No compatible variant available.'))}
         </p>
+      )}
+      {engine === 'strata' && (
+        <dl className="runtime-model-facts">
+          {Object.entries({
+            'Required disk space': estimates.required_disk_bytes,
+            'RAM': estimates.ram_bytes,
+            'VRAM': estimates.vram_bytes,
+            'Unified memory': estimates.unified_memory_bytes,
+          }).flatMap(([label, value]) =>
+            typeof value === 'number' && value > 0
+              ? [
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{formatSize(value)}</dd>
+                  </div>,
+                ]
+              : []
+          )}
+        </dl>
       )}
       {engine !== 'geniex' && <RuntimeModelFacts metadata={metadata} />}
       {model.origin === 'qualcomm' && <p className="ew-muted">Qualcomm AI Hub</p>}

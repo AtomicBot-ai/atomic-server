@@ -153,3 +153,18 @@ it('removes Save and changed markers when an implicit Off default is restored', 
   expect(field.closest('.engine-setting')).not.toHaveClass('setting-changed')
   expect(screen.queryByText('Details & default · changed')).not.toBeInTheDocument()
 })
+
+it('offers Auto and the Apple GPU for Strata when the core reports aarch64', async () => {
+  const { workspace } = workspaceFixture({
+    'settings.get': { revision: 1, values: {} },
+    'settings.schema': { descriptors: settingsSchema('strata') },
+    'hardware.info': { info: { cpu: { arch: 'aarch64', name: 'Apple M4 Max' }, os_type: 'macos', gpus: [] } },
+  })
+  render(<EngineSettings provider="strata" workspace={workspace} onClose={() => {}} />)
+  await userEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+  const select = await screen.findByLabelText('GPU card')
+  expect(select).toHaveValue('')
+  const apple = await within(select).findByRole('option', { name: 'Apple M4 Max' })
+  await userEvent.selectOptions(select, apple)
+  expect(select).toHaveValue('apple:0')
+})

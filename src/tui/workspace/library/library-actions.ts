@@ -1,3 +1,4 @@
+import { selectLocalModel } from '../chat/model-selection.js'
 import { returnToEngineCatalog } from './engine-catalog-return.js'
 import { withInstalledRows } from './catalog-installed.js'
 import { readCatalog, invalidateCatalogRead, catalogReadGuard } from './catalog-read.js'
@@ -21,6 +22,13 @@ export async function libraryAction(id: string, ctx: ActionContext): Promise<boo
       row = s.libraryRows[Number(variant[1])]
     if (s.busy || !row || s.catalogOpen !== row.id) return true
     const value = s.catalogVariants[Number(variant[2])]?.value ?? ''
+    if (row.source?.['format'] === 'strata') {
+      const installed = s.installed.findIndex((item) => item.provider === 'strata' && item.id === value)
+      if (installed >= 0) {
+        await selectLocalModel(`installed:${installed}`, ctx)
+        return true
+      }
+    }
     ctx.update((v) => ({ ...v, catalogVariant: value }))
     return libraryAction(`catalog-download:${variant[1]}`, ctx)
   }

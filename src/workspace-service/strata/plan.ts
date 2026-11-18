@@ -4,7 +4,7 @@ import { strataSourceDigest } from '@atomic-chat/core/client'
 import type { StrataModelDescriptor } from '@atomic-chat/core/contracts'
 import { AtcError } from '../../errors/index.js'
 import type { WorkspaceServiceOptions } from '../service-options.js'
-import { strataCatalog } from './catalog.js'
+import { checkStrataVariant, strataCatalogSource } from './catalog.js'
 
 export async function strataPlan(
   options: WorkspaceServiceOptions,
@@ -15,10 +15,13 @@ export async function strataPlan(
   if (importDirectory && !isAbsolute(importDirectory))
     throw new AtcError('ATC_USAGE', 'Use an absolute Strata import directory on the server.')
   const normalized = model.replace(/^strata\//, '')
-  const { rows } = await strataCatalog(options, normalized, refresh)
-  const row = rows.find(({ id }) => id === normalized)
-  if (!row) throw new AtcError('ATC_USAGE', 'Choose a variant from atc models catalog --engine strata.')
-  const { descriptor, check } = row.source
+  const { descriptors } = await strataCatalogSource(options, refresh)
+  const descriptor = descriptors.find(({ variant_id }) => variant_id === normalized)
+  if (!descriptor)
+    throw new AtcError('ATC_USAGE', 'Choose a variant from atc models catalog --engine strata.')
+  const {
+    source: { check },
+  } = await checkStrataVariant(options, descriptor)
   const source_digest = await strataSourceDigest(descriptor)
   const blockers: string[] = []
   if (check.verdict !== 'ok' && check.verdict !== 'engine-not-installed')

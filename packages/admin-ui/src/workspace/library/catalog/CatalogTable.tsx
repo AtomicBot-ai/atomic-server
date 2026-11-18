@@ -136,6 +136,7 @@ export function CatalogTable({
                           <ModelMark model={model} />
                           <span>
                             <strong>{text(model.title ?? model.name, id)}</strong>
+                            {model.recommended === true && <small>Recommended</small>}
                             {status && (
                               <small className="hub-device-compact" data-model-status={status}>
                                 {status}

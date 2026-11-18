@@ -18,6 +18,7 @@ export const strataPullOptions = {
 
 interface Plan {
   model_id: string
+  name?: string
   digest: string
   blockers: string[]
   import_directory?: string
@@ -58,7 +59,7 @@ export async function pullStrataModel(ctx: CommandContext, model: string, values
   return followSetup(ctx, service, {
     kind: 'strata-model',
     id,
-    label: plan.model_id,
+    label: plan.name ?? plan.model_id,
     cancel: `atc models pull --engine strata --cancel ${id}`,
     retry: `atc models pull ${modelId} --engine strata --request-id ${id}`,
   })

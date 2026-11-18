@@ -25,6 +25,10 @@ export function downloadStateLabel(state: string, completed = false): string {
   if (state === 'preparing') return 'Preparing model'
   return downloadHeld(state) ? 'Paused' : state.replaceAll('_', ' ')
 }
+export function strataPreparationNotice(job: Record<string, unknown>, state: string): string | undefined {
+  if (job['kind'] === 'strata-model' && state === 'preparing')
+    return 'Preparing Strata model. This can take a few minutes.'
+}
 export function downloadControl(job: DownloadRow, action: 'pause' | 'resume') {
   const owner = downloadOwner(job)
   if (!owner) return null

@@ -8,6 +8,12 @@ import {
   fastFlowLmFamilyMatches,
 } from '../../../workspace-view/index.js'
 
+function strataVariantIds(row: LibraryRow | undefined): string[] {
+  const variants = row?.source?.['variants']
+  return row?.source?.['format'] === 'strata' && Array.isArray(variants)
+    ? variants.map((variant) => String(record(variant)['id']))
+    : []
+}
 function matches(job: Record<string, unknown>, id: string) {
   const plan = record(job['plan'])
   return (
@@ -25,9 +31,10 @@ const rank = (job: Record<string, unknown>) =>
       : 1
 /** A family retains the current quantized transfer, ahead of earlier attempts. */
 export function modelJob(s: WorkspaceState, id: string) {
+  const ids = [id, ...strataVariantIds(s.libraryRows.find((row) => row.id === id))]
   return (s.workspace?.setups ?? [])
     .map(record)
-    .filter((job) => matches(job, id))
+    .filter((job) => ids.some((variant) => matches(job, variant)))
     .reverse()
     .sort((a, b) => rank(b) - rank(a))[0]
 }
@@ -37,7 +44,8 @@ export function matchesCatalogInstallation(
   setups: unknown[] = []
 ) {
   if (!row) return false
-  if (row.source?.['format'] === 'strata') return model.provider === 'strata' && model.id === row.id
+  if (row.source?.['format'] === 'strata')
+    return model.provider === 'strata' && (model.id === row.id || strataVariantIds(row).includes(model.id))
   if (row.source?.['format'] === 'fastflowlm')
     return fastFlowLmFamilyMatches(model.id, model.provider, row.id, row.source['variants'])
   return catalogModelMatches(model.id, row.id, setups, model.repository)
@@ -93,7 +101,8 @@ export function catalogDeviceStatus(s: WorkspaceState, model: LibraryRow) {
         (s.catalogFilters.engine === 'llamacpp' && provider === 'llamacpp-upstream')
     )
   const files = s.installed.filter((file) => matchesCatalogInstallation(model, file, s.workspace?.setups))
-  const jobs = (s.workspace?.setups ?? []).map(record).filter((job) => matches(job, model.id))
+  const ids = [model.id, ...strataVariantIds(model)]
+  const jobs = (s.workspace?.setups ?? []).map(record).filter((job) => ids.some((id) => matches(job, id)))
   const candidates = [
     ...files.map((file) => ({
       model: file.id,

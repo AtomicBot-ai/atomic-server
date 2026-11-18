@@ -1,7 +1,7 @@
 // Lifted from Atomic-Chat/web-app/src/containers/hub/ModelListRow.tsx @ 5043013; adapted: live server catalog and available metadata.
 import { useEffect, useState } from 'react'
 import type { RecordValue, Execute } from '../../types'
-import { record, text } from '../../types'
+import { record, rows, text } from '../../types'
 import { Empty } from '../../Controls'
 import type { Workspace } from '../../useWorkspace'
 import { InstalledModels } from './InstalledModels'
@@ -111,7 +111,8 @@ export function CatalogBrowse({
   const isInstalled = (id: string) =>
     installed.some((m) => installedCatalogMatches(m, catalog.find((row) => idOf(row) === id) ?? { id }))
   const deviceStatus = (model: RecordValue) =>
-    catalogStatus(workspace?.snapshot, model, installed, category, filters.engine)
+    catalogStatus(workspace?.snapshot, model, installed, category, filters.engine) ||
+    (modelFormat(model) === 'strata' ? text(model.disk_warning, '') : '')
   const available = [
     ...catalog,
     ...installed.filter(
@@ -146,34 +147,48 @@ export function CatalogBrowse({
       }
       return value(b) - value(a)
     })
-  const detail = (model: RecordValue) => (
-    <>
-      {category === 'text' && Boolean(model.description ?? model.summary) && (
-        <p>{text(model.description ?? model.summary)}</p>
-      )}
-      {isInstalled(idOf(model)) && workspace ? (
-        <InstalledModels
-          compact
-          workspace={workspace}
-          installed={installed.filter((m) => installedCatalogMatches(m, model))}
-          loading={false}
-          browse={() => {}}
-          openCommand={importFile}
-          onChanged={() => setRevision((v) => v + 1)}
-        />
-      ) : isInstalled(idOf(model)) ? (
-        <span>Downloaded</span>
-      ) : workspace &&
-        (['safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(
-          modelFormat(model)
-        ) ||
-          managedRepository === idOf(model)) ? (
-        <CatalogRuntimeOptions workspace={workspace} model={model} onStarted={onStarted} />
-      ) : (
-        <CatalogModelOptions {...{ model, category, execute, choose, onNoGguf }} />
-      )}
-    </>
-  )
+  const detail = (model: RecordValue) => {
+    const installedVariants = installed.filter((m) => installedCatalogMatches(m, model))
+    const hasInstallation = installedVariants.length > 0
+    const canInstallAnotherQuant = rows(record(model.strata).variants).some(
+      (variant) => !installedVariants.some((item) => modelId(item) === variant.id)
+    )
+    const runtimeOptions =
+      ['safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(modelFormat(model)) ||
+      managedRepository === idOf(model)
+    return (
+      <>
+        {category === 'text' && Boolean(model.description ?? model.summary) && (
+          <p>{text(model.description ?? model.summary)}</p>
+        )}
+        {hasInstallation &&
+          (workspace ? (
+            <InstalledModels
+              compact
+              workspace={workspace}
+              installed={installedVariants}
+              loading={false}
+              browse={() => {}}
+              openCommand={importFile}
+              onChanged={() => setRevision((v) => v + 1)}
+            />
+          ) : (
+            <span>Downloaded</span>
+          ))}
+        {workspace && runtimeOptions && (!hasInstallation || canInstallAnotherQuant) && (
+          <CatalogRuntimeOptions
+            workspace={workspace}
+            model={model}
+            onStarted={onStarted}
+            installedVariants={installedVariants.map(modelId)}
+          />
+        )}
+        {!hasInstallation && (!workspace || !runtimeOptions) && (
+          <CatalogModelOptions {...{ model, category, execute, choose, onNoGguf }} />
+        )}
+      </>
+    )
+  }
   return (
     <>
       <CatalogToolbar

@@ -111,6 +111,7 @@ export {
   downloadStopped,
   downloadHeld,
   downloadStateLabel,
+  strataPreparationNotice,
   downloadControl,
 } from './downloads/download-controls.js'
 export type { DownloadOwner } from './downloads/download-controls.js'
