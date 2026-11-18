@@ -22,18 +22,33 @@ const plan: ArtifactPlan = {
   load: {},
 }
 
-it.each(['', '   ', 'hf-mirror.example'])(
-  'ignores a Hub mirror that is not an absolute HTTP URL (%j)',
-  async (mirror) => {
-    const request = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
-      // The runtime's fetch parses the URL itself; a relative one fails there, not in atc.
-      expect(new URL(String(input)).origin).toBe('https://huggingface.co')
-      return Response.json(tree)
-    })
-    const result = await artifactMetadata(plan, request, undefined, mirror)
-    expect(result.total_download_bytes).toBe(4)
-    expect(String(request.mock.calls[0]![0])).toBe(
-      `https://huggingface.co/api/models/a/model/revision/${A}?blobs=true&files_metadata=true`
-    )
-  }
-)
+it.each([
+  '',
+  '   ',
+  'hf-mirror.example',
+  'https:mirror.example',
+  'ftp://mirror.example',
+  'https://user:secret@mirror.example',
+  'https://mirror.example/hub?query=1',
+  'https://mirror.example/hub#fragment',
+])('rejects an invalid configured Hub without sending a request (%j)', async (mirror) => {
+  const request = vi.fn<typeof fetch>()
+  await expect(artifactMetadata(plan, request, 'hub-token', mirror)).rejects.toMatchObject({
+    code: 'ATC_USAGE',
+    message: expect.stringContaining('HF_ENDPOINT'),
+  })
+  expect(request).not.toHaveBeenCalled()
+})
+
+it.each([
+  [undefined, 'https://huggingface.co'],
+  ['https://mirror.example/hub/', 'https://mirror.example/hub'],
+])('sends the token to the selected Hub (%j)', async (mirror, destination) => {
+  const request = vi.fn<typeof fetch>(async () => Response.json(tree))
+  const result = await artifactMetadata(plan, request, 'hub-token', mirror)
+  expect(result.total_download_bytes).toBe(4)
+  expect(request).toHaveBeenCalledWith(
+    `${destination}/api/models/a/model/revision/${A}?blobs=true&files_metadata=true`,
+    expect.objectContaining({ headers: { Authorization: 'Bearer hub-token' }, redirect: 'error' })
+  )
+})
