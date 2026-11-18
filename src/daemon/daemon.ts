@@ -153,6 +153,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
       env: io.env,
       probePort: host.probePort,
+      agentHost: { env: io.env, platform: host.facts.platform, find: host.findOnPath, exec: host.exec },
       ...(options.errors ? { errors: options.errors } : {}),
     })
     // A failed move leaves media where it was: its records still name those paths, so it still loads.

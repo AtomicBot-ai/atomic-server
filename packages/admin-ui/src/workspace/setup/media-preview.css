@@ -1,11 +1,8 @@
-/* The media preview (`MediaPreview.tsx`), after the desktop's `.ob-media-scene` rules @ 2d0323463. It bleeds
-   over the card's 20px side padding to its edges. It is a dark studio shot in either theme, so what sits on it
-   keeps light-on-dark colours; the line under it takes the card's own border colour. */
+/* Lifted from the desktop media preview @ 2d0323463; adapted to compact workspace cards. */
 .first-media-scene {
   position: relative;
   isolation: isolate;
-  height: 240px;
-  margin: 0 -20px 22px;
+  height: clamp(104px, 21dvh, 168px);
   overflow: hidden;
   border-bottom: 1px solid;
   border-bottom-color: inherit;
@@ -52,9 +49,4 @@
 .first-media-grid .first-media-toggle:focus-visible {
   outline: 2px solid #bee8df;
   outline-offset: 3px;
-}
-@media (max-width: 600px) {
-  .first-media-scene {
-    height: 230px;
-  }
 }

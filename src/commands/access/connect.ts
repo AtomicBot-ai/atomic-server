@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { AGENTS, prepareAgent, runAgent } from '../../agent-launch/index.js'
+import { AGENTS, coreAgent, prepareCoreAgent, runAgent } from '../../agent-launch/index.js'
 import { AtcError, defineCommand } from '../../cli/index.js'
 import { ClientKeys } from '../../terminal-data/index.js'
 import { workspace, operation } from '../server/control.js'
@@ -8,7 +8,7 @@ export const connectCommand = defineCommand({
   summary: 'Connection details or launch an installed agent',
   group: 'access',
   positionals: [
-    { name: 'agent', description: 'atomic-agent, claude, codex or opencode; omit for connection details' },
+    { name: 'agent', description: 'Agent ID from the connection catalog; omit for connection details' },
   ],
   options: {
     'model': { type: 'string', description: 'Model ID; defaults to first ready chat model' },
@@ -18,8 +18,7 @@ export const connectCommand = defineCommand({
   run: async (inv, ctx) => {
     const id = inv.positionals[0]
     if (!id) return operation(ctx, 'connection.info')
-    const agent = AGENTS.find((a) => a.id === id)
-    if (!agent) throw new AtcError('ATC_USAGE', `Choose ${AGENTS.map((a) => a.id).join(', ')}.`)
+    if (!coreAgent(id)) throw new AtcError('ATC_USAGE', 'This agent uses manual endpoint setup.')
     const service = await workspace(ctx)
     const state = await service.snapshot()
     if (!state.api.running)
@@ -33,14 +32,20 @@ export const connectCommand = defineCommand({
         hint: 'atc models list; atc run <model>',
       })
     const keyId = typeof inv.values['key-id'] === 'string' ? inv.values['key-id'] : undefined
-    if (inv.values['export'] || ctx.flags.json)
+    if (inv.values['export'] || ctx.flags.json) {
+      if (!AGENTS.some((agent) => agent.id === id))
+        throw new AtcError(
+          'ATC_USAGE',
+          'This agent cannot export an isolated launch profile. Run connect in a terminal.'
+        )
       return operation(ctx, 'connection.profile', { agent: id, model, ...(keyId ? { key_id: keyId } : {}) })
+    }
     if (!ctx.io.isTTY.stdin || !ctx.io.isTTY.stdout)
       throw new AtcError('ATC_USAGE', 'Use --export in a script, or launch the agent from a terminal.')
     const keys = new ClientKeys(ctx.paths.atcDir)
     const key = await keys.get(keyId)
     if (!key) throw new AtcError('ATC_USAGE', 'The selected API key no longer exists.')
-    const launch = await prepareAgent(agent.id, state.api.endpoint, model, key, {
+    const launch = await prepareCoreAgent(id, state.api.endpoint, model, key, {
       env: ctx.io.env,
       cwd: ctx.io.cwd,
       folder: join(ctx.paths.atcDir, 'agents'),

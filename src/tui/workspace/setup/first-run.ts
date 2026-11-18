@@ -121,6 +121,10 @@ export async function firstRunAction(id: string, ctx: ActionContext): Promise<bo
     return true
   }
   if (id === 'first-skip') {
+    if (s.firstRun === 'connect') {
+      await openFirstRunServer(ctx, false)
+      return true
+    }
     const workspace = await Promise.resolve()
       .then(() => ctx.controller.runtime.snapshot())
       .catch(() => ctx.get().workspace)
@@ -211,8 +215,9 @@ export function drawFirstRun(c: Canvas, s: WorkspaceState, focus: string, second
   )
   button(c, 'first-back', x, backY, '< Back', 'Return to the previous choice', focus)
   const nextX = x + width - label.length - 6
-  const skipX = step === 'connect' ? x + width - 12 : nextX - 15
-  quietButton(c, 'first-skip', skipX, backY, 'Skip setup', 'Open workspace; downloads continue', focus)
+  const skipLabel = step === 'connect' ? 'Go to dashboard' : 'Skip setup'
+  const skipX = step === 'connect' ? x + width - skipLabel.length - 2 : nextX - 15
+  quietButton(c, 'first-skip', skipX, backY, skipLabel, 'Open workspace; downloads continue', focus)
   if (step === 'connect') {
     if (s.message && !s.busy)
       actionButton(c, 'first-model', x + 13, backY, 'Choose model', 'Return to model selection', focus)

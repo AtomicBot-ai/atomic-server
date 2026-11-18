@@ -12,6 +12,11 @@ import { pathJob } from '../setup/engine-setup.js'
 import { setupWait } from '../../../terminal-setup/index.js'
 import { cloudAction } from '../library/cloud-actions.js'
 import { firstRunAction } from '../setup/first-run.js'
+import {
+  connectionModels,
+  connectionSelection,
+  readConnectionEngines,
+} from '../server/connection-selection.js'
 type Update = (fn: (s: WorkspaceState) => WorkspaceState) => void
 export function useWorkspaceData(
   s: WorkspaceState,
@@ -109,39 +114,35 @@ export function useWorkspaceData(
       if (polling.current || !c.current) return
       polling.current = true
       const endpoint = latest.current.endpoint,
-        server = latest.current.endpointFollowsServer
+        server = latest.current.endpointFollowsServer,
+        checkingConnection = Boolean(latest.current.connection)
       try {
-        const [local, remote] = await Promise.allSettled([
+        const [local, remote, engines] = await Promise.allSettled([
           c.current.installed(),
           c.current.models(endpoint, server),
+          checkingConnection ? readConnectionEngines(c.current) : Promise.resolve(null),
         ])
         if (!live || latest.current.endpoint !== endpoint) return
         update((v) => {
-          const chosen =
-            local.status === 'fulfilled'
-              ? v.connection?.model
-                ? local.value.find((m) => m.id === v.connection?.model)
-                : local.value[0]
-              : undefined
-          return {
+          const next = {
             ...v,
             installed: local.status === 'fulfilled' ? local.value : v.installed,
-            connection:
-              v.connection && chosen
-                ? {
-                    ...v.connection,
-                    model: chosen.id,
-                    provider: (chosen.providers ?? [chosen.provider]).includes(v.connection.provider)
-                      ? v.connection.provider
-                      : chosen.provider,
-                  }
-                : v.connection,
+            connectionEngines:
+              checkingConnection && v.connection && engines.status === 'fulfilled' && engines.value
+                ? engines.value
+                : v.connectionEngines,
             models: remote.status === 'fulfilled' ? remote.value : [],
             modelsUpdated: Date.now(),
             modelsError:
               remote.status === 'rejected'
                 ? 'Endpoint offline. Start the server or check the connection.'
                 : '',
+          }
+          if (!v.connection || v.connection.provider) return next
+          const model = v.connection.model || connectionModels(next)[0]?.id || ''
+          return {
+            ...next,
+            connection: { ...v.connection, model, provider: connectionSelection(next, model).provider },
           }
         })
       } finally {

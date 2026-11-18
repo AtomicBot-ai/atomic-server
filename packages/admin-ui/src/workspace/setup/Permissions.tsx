@@ -1,168 +1,51 @@
 // Lifted from Atomic-Chat/web-app/src/preview/onboarding/Onboarding.tsx @ 807b4d9; adapted: actual browser permissions.
-import { useEffect, useState } from 'react'
-import { Bell, Check, ShieldCheck } from 'lucide-react'
-import { Action } from '../Controls'
-import { useDialog } from '../useDialog'
+import { useState } from 'react'
+import { Bell } from 'lucide-react'
 import { describeError } from '@/services/admin-api'
+import { Action } from '../Controls'
+import { StatusIndicator } from '../StatusIndicator'
+import './onboarding-model.css'
 
-const permissions = [
-  {
-    id: 'notifications',
-    title: 'Notifications',
-    Icon: Bell,
-    reason: 'Know when a model is ready or a long task finishes.',
-    detail: 'Allow this browser to show download and task notifications.',
-  },
-] as const
-export function Permissions({ onGranted }: { onGranted: (granted: boolean) => void }) {
-  const [allowed, setAllowed] = useState<Record<string, boolean>>({})
-  const [selected, setSelected] = useState<(typeof permissions)[number] | null>(null)
-  useEffect(() => {
-    let live = true
-    const check = async () => {
-      const values: Record<string, boolean> = {
-        notifications: typeof Notification !== 'undefined' && Notification.permission === 'granted',
-      }
-      if (live) {
-        setAllowed(values)
-        onGranted(Object.values(values).some(Boolean))
-      }
-    }
-    void check()
-    return () => {
-      live = false
-    }
-  }, [onGranted])
-  return (
-    <>
-      <p>Choose what you want to enable. Everything here is optional.</p>
-      <div className="first-permissions">
-        {permissions.map((p) => (
-          <article key={p.id}>
-            <p.Icon size={23} />
-            <div>
-              <h2>{p.title}</h2>
-              <p>{p.reason}</p>
-            </div>
-            <Action onClick={() => setSelected(p)}>
-              {allowed[p.id] ? (
-                <>
-                  <Check size={14} /> Allowed
-                </>
-              ) : (
-                'Allow'
-              )}
-            </Action>
-          </article>
-        ))}
-      </div>
-      {selected && (
-        <PermissionDialog
-          item={selected}
-          close={() => setSelected(null)}
-          granted={() => {
-            setAllowed((v) => ({ ...v, [selected.id]: true }))
-            onGranted(true)
-            setSelected(null)
-          }}
-        />
-      )}
-    </>
-  )
-}
-function PermissionDialog({
-  item,
-  close,
-  granted,
-}: {
-  item: (typeof permissions)[number]
-  close: () => void
-  granted: () => void
-}) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState('')
-  const ref = useDialog(() => {
-    if (!busy) close()
-  })
+export function Permissions() {
+  const supported = typeof Notification !== 'undefined'
+  const [allowed, setAllowed] = useState(() => supported && Notification.permission === 'granted')
+  const [error, setError] = useState('')
+
   const request = async () => {
-    setBusy(true)
     setError('')
+    if (typeof Notification === 'undefined') {
+      setError('Notifications are unavailable in this browser.')
+      return
+    }
     try {
-      if (item.id === 'notifications') {
-        if (typeof Notification === 'undefined') {
-          setError('Notifications are unavailable in this browser.')
-          return
-        }
-        if ((await Notification.requestPermission()) !== 'granted') {
-          setError('Notifications were not allowed. Change the site permission in your browser to retry.')
-          return
-        }
-      }
-      granted()
+      if ((await Notification.requestPermission()) === 'granted') setAllowed(true)
+      else setError('Notifications were not allowed. You can change this in your browser settings.')
     } catch (e) {
       setError(describeError(e))
-    } finally {
-      setBusy(false)
     }
   }
+
   return (
-    <div className="wizard-overlay">
-      <section
-        ref={ref}
-        tabIndex={-1}
-        className="wizard first-permission-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Allow ${item.title.toLowerCase()}?`}
-      >
-        <item.Icon size={30} />
-        <h2>Allow {item.title.toLowerCase()}?</h2>
-        <p>{item.detail}</p>
-        {error && (
-          <p role="alert" className="ew-error">
-            {error}
-          </p>
-        )}
-        <div className="ew-actions">
-          <Action disabled={busy} onClick={close}>
-            Not now
-          </Action>
-          <Action primary disabled={busy} onClick={request}>
-            {busy ? 'Waiting for browser…' : 'Allow access'}
-          </Action>
+    <div className="first-permissions">
+      <article className="settings-card">
+        <Bell size={23} aria-hidden="true" />
+        <div>
+          <h2>Notifications</h2>
+          <p>{supported ? 'Optional browser permission.' : 'Unavailable in this browser.'}</p>
         </div>
-      </section>
-    </div>
-  )
-}
-export function PermissionsWarning({
-  close,
-  proceed,
-}: {
-  close: () => void
-  proceed: () => void | Promise<void>
-}) {
-  const ref = useDialog(close)
-  return (
-    <div className="wizard-overlay">
-      <section
-        ref={ref}
-        tabIndex={-1}
-        className="wizard first-permission-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Continue without permissions?"
-      >
-        <ShieldCheck size={30} />
-        <h2>Continue without permissions?</h2>
-        <p>Download notifications may be unavailable. You can enable them later in your browser settings.</p>
-        <div className="ew-actions">
-          <Action onClick={close}>Review permissions</Action>
-          <Action primary onClick={proceed}>
-            Continue without permissions
-          </Action>
-        </div>
-      </section>
+        {allowed ? (
+          <span role="status">
+            <StatusIndicator tone="positive">Allowed</StatusIndicator>
+          </span>
+        ) : supported ? (
+          <Action onClick={request}>Allow notifications</Action>
+        ) : null}
+      </article>
+      {error && (
+        <p role="alert" className="ew-error">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

@@ -66,6 +66,8 @@ export function SetupReview({
         engine={kind}
         workspace={w}
         model={record(model[kind])}
+        revision={revision}
+        onClose={onClose}
         onEngine={() => onEngine(kind)}
         onStarted={onStarted}
       />

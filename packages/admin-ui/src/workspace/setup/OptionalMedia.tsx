@@ -10,6 +10,7 @@ import { downloadRows } from '@view'
 import { MediaPreview } from './MediaPreview'
 import { OptionalMediaDownload } from './OptionalMediaDownload'
 import { mediaDownload } from './media-download'
+import './onboarding-model.css'
 
 export function OptionalMedia({
   workspace: w,
@@ -61,43 +62,45 @@ export function OptionalMedia({
           const job = mediaDownload([...(w.snapshot?.setups ?? []), ...(w.snapshot?.downloads ?? [])], id)
           const state = text(record(job).stage ?? record(job).state, '')
           return (
-            <article key={category} className={job ? 'selected' : ''}>
+            <article key={category} className="settings-card">
               <MediaPreview modality={category === 'image' ? 'image' : 'video'} />
-              <h2>
-                {choice
-                  ? text(choice.name ?? choice.title ?? choice.id)
-                  : category === 'image'
-                    ? 'Image models'
-                    : 'Video models'}
-              </h2>
-              {!catalogs[category] ? (
-                <p role="status">Loading models…</p>
-              ) : models.length === 0 ? (
-                <p>No compatible models available.</p>
-              ) : (
-                <>
-                  {Boolean(choice?.description ?? choice?.summary) && (
-                    <p>{text(choice?.description ?? choice?.summary)}</p>
-                  )}
-                  {typeof choice?.size === 'number' && <small>{bytes(choice.size)} download</small>}
-                  {job ? (
-                    <OptionalMediaDownload
-                      job={downloadRows([job], w.snapshot?.downloads ?? [], true)[0] ?? job}
-                      name={text(choice?.name ?? choice?.title, id)}
-                      execute={execute}
-                      remove={() =>
-                        setRemoving({
-                          id: text(record(job).id ?? record(job).setup_id),
-                          name: text(choice?.name ?? choice?.title, id),
-                          ready: state === 'ready',
-                        })
-                      }
-                    />
-                  ) : (
-                    <Action onClick={() => select(choice!, category)}>Add to queue</Action>
-                  )}
-                </>
-              )}
+              <div className="first-media-details">
+                <h2>
+                  {choice
+                    ? text(choice.name ?? choice.title ?? choice.id)
+                    : category === 'image'
+                      ? 'Image models'
+                      : 'Video models'}
+                </h2>
+                {!catalogs[category] ? (
+                  <p role="status">Loading models…</p>
+                ) : models.length === 0 ? (
+                  <p>No compatible models available.</p>
+                ) : (
+                  <>
+                    {Boolean(choice?.description ?? choice?.summary) && (
+                      <p>{text(choice?.description ?? choice?.summary)}</p>
+                    )}
+                    {typeof choice?.size === 'number' && <small>{bytes(choice.size)} download</small>}
+                    {job ? (
+                      <OptionalMediaDownload
+                        job={downloadRows([job], w.snapshot?.downloads ?? [], true)[0] ?? job}
+                        name={text(choice?.name ?? choice?.title, id)}
+                        execute={execute}
+                        remove={() =>
+                          setRemoving({
+                            id: text(record(job).id ?? record(job).setup_id),
+                            name: text(choice?.name ?? choice?.title, id),
+                            ready: state === 'ready',
+                          })
+                        }
+                      />
+                    ) : (
+                      <Action onClick={() => select(choice!, category)}>Add to queue</Action>
+                    )}
+                  </>
+                )}
+              </div>
             </article>
           )
         })}

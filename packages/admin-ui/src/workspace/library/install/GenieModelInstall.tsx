@@ -1,25 +1,41 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Action, Field } from '../../Controls'
 import type { Workspace } from '../../useWorkspace'
 import { record, rows, text, type RecordValue } from '../../types'
 import { formatSize } from '@view'
 import { describeError } from '@/services/admin-api'
 import { RuntimeModelFacts } from './RuntimeModelFacts'
+import { ModelInstallFrame } from './ModelInstallFrame'
+import { useVariantModel } from './use-variant-model'
 import './runtime-model.css'
 
 export function GenieModelInstall({
   workspace,
   engine = 'geniex',
-  model,
+  model: initialModel,
+  revision = 0,
+  onClose,
   onStarted,
   onEngine,
 }: {
   engine?: 'geniex' | 'fastflowlm'
   workspace: Workspace
   model: RecordValue
+  revision?: number
+  onClose?: () => void
   onStarted?: (id: string, modelId: string) => void | Promise<void>
   onEngine: () => void
 }) {
+  const initial = useMemo<RecordValue & { model_id: string }>(
+    () => ({ ...initialModel, model_id: text(initialModel.model_id, '') }),
+    [initialModel]
+  )
+  const [retry, setRetry] = useState(0)
+  const {
+    model,
+    checking,
+    error: readError,
+  } = useVariantModel(initial, engine, revision + retry, workspace.execute)
   const variants = rows(model.variants)
   const [selected, select] = useState(text(model.default_variant, text(variants[0]?.id, '')))
   const [error, setError] = useState(''),
@@ -29,7 +45,7 @@ export function GenieModelInstall({
   const verdict = record(choice?.verdict)
   const metadata = engine === 'fastflowlm' ? { ...model, ...choice } : model
   const download = async () => {
-    if (!choice || pending) return
+    if (!choice || pending || checking || readError) return
     setPending(true)
     setError('')
     try {
@@ -53,7 +69,7 @@ export function GenieModelInstall({
     typeof choice?.size_bytes === 'number' && choice.size_bytes > 0
       ? formatSize(choice.size_bytes)
       : 'Size unavailable'
-  return (
+  const content = (
     <section className="runtime-model" aria-label="Model download">
       <div className="runtime-model-download">
         <div className="runtime-model-variant">
@@ -63,7 +79,7 @@ export function GenieModelInstall({
               <select
                 aria-label="Variant"
                 value={choice ? text(choice.id) : ''}
-                disabled={pending}
+                disabled={pending || checking}
                 onChange={(e) => {
                   select(e.target.value)
                   setError('')
@@ -87,19 +103,28 @@ export function GenieModelInstall({
           <small>Download size</small>
           <strong>{size}</strong>
         </div>
-        {verdict.verdict === 'ok' ? (
+        {checking || readError ? null : verdict.verdict === 'ok' ? (
           <Action primary disabled={pending} onClick={download}>
             {pending ? 'Preparing download…' : 'Download'}
           </Action>
         ) : ['engine-not-installed', 'environment-not-ready', 'requires-newer-engine'].includes(
             text(verdict.verdict)
           ) ? (
-          <Action onClick={onEngine}>
+          <Action primary={Boolean(onClose)} onClick={onEngine}>
             {engine === 'fastflowlm' ? 'Set up FastFlowLM' : 'Install GenieX'}
           </Action>
         ) : null}
       </div>
-      {verdict.verdict !== 'ok' && (
+      {checking && <p role="status">Checking device availability…</p>}
+      {readError && (
+        <div>
+          <p role="alert" className="inline-error">
+            {readError}
+          </p>
+          <Action onClick={() => setRetry((n) => n + 1)}>Retry compatibility check</Action>
+        </div>
+      )}
+      {!checking && !readError && verdict.verdict !== 'ok' && (
         <p role="status">{text(verdict.reason, text(verdict.verdict, 'No compatible variant available.'))}</p>
       )}
       {engine === 'fastflowlm' && <RuntimeModelFacts metadata={metadata} />}
@@ -116,5 +141,18 @@ export function GenieModelInstall({
         </p>
       )}
     </section>
+  )
+  return onClose ? (
+    <ModelInstallFrame
+      title={text(model.name ?? model.model_id)}
+      pending={pending}
+      onClose={() => {
+        if (!pending) onClose()
+      }}
+    >
+      {content}
+    </ModelInstallFrame>
+  ) : (
+    content
   )
 }

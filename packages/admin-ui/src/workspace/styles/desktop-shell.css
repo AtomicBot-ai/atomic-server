@@ -445,92 +445,6 @@
   width: 88px;
 }
 
-/* First run mirrors the desktop's separate content and ongoing download panel. */
-.first-run-overlay {
-  background: var(--ew-bg, #111318);
-  padding: 24px;
-}
-.first-run.wizard {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
-  grid-template-rows: 1fr auto;
-  width: min(1160px, 100%);
-  min-height: min(720px, 94vh);
-  max-height: 94vh;
-  padding: 0;
-  overflow: auto;
-}
-.first-run-content {
-  padding: 42px;
-  min-width: 0;
-  overflow: auto;
-}
-.first-run-content > h1 {
-  font-size: 28px;
-  margin-bottom: 20px;
-}
-.first-run:not(:has(.first-run-downloads)) .first-run-content {
-  grid-column: 1 / -1;
-}
-.first-run-downloads {
-  border-left: 1px solid #30343d;
-  padding: 24px 16px;
-  background: #171a20;
-}
-.first-run-downloads .ew-panel {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-.first-run-downloads p {
-  font-size: 12px;
-  color: #a5acb8;
-}
-.first-run-footer {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: space-between;
-  border-top: 1px solid #30343d;
-  padding: 18px 32px;
-}
-.first-model-grid {
-  display: grid;
-  gap: 8px;
-  max-height: 310px;
-  overflow-y: auto;
-  margin-bottom: 18px;
-}
-.first-model-card {
-  text-align: left;
-  border: 1px solid #383e49;
-  border-radius: 10px;
-  padding: 16px;
-  background: #1b1f27;
-  color: inherit;
-  display: grid;
-  gap: 6px;
-}
-.first-model-card.selected {
-  border-color: #87aaff;
-  background: #252f44;
-}
-.first-model-card span,
-.first-model-card small {
-  color: #a5acb8;
-  font-size: 12px;
-}
-.onboarding-options article {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 16px 0;
-  border-bottom: 1px solid #30343d;
-}
-.onboarding-options p {
-  color: #a5acb8;
-  font-size: 13px;
-}
 .connection-guide {
   border: 1px solid #414a5d;
   border-radius: 12px;
@@ -550,19 +464,6 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-@media (max-width: 850px) {
-  .first-run.wizard {
-    grid-template-columns: 1fr;
-  }
-  .first-run-content {
-    padding: 24px;
-  }
-  .first-run-downloads {
-    border-left: 0;
-    border-top: 1px solid #30343d;
-  }
-}
-
 /* The desktop's sidebar toggle stays available at every width. */
 @media (min-width: 901px) {
   .desktop-workspace .desktop-topbar {

@@ -6,6 +6,12 @@ import { record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import { useDialog } from '../useDialog'
 import { EngineSetup } from '../library/engines/EngineSetup'
+import { ChevronRight } from 'lucide-react'
+import { Action, Empty } from '../Controls'
+import { DirectoryRow } from '../DirectoryRow'
+import { WorkspaceBrand } from '../WorkspaceBrand'
+import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
+import '../setup/onboarding.css'
 
 /** Managed engines explain prerequisites in their plan, even before a runtime is installed. */
 const offered = (e: RecordValue) =>
@@ -25,7 +31,7 @@ export function EngineChooser({
 }: {
   workspace: Workspace
   onContinue: () => void
-  onBack: () => void
+  onBack?: () => void
   onLater?: () => void
 }) {
   const [engines, setEngines] = useState<RecordValue[]>([])
@@ -37,7 +43,7 @@ export function EngineChooser({
   const { execute } = w
   const dialog = useDialog(
     () => {
-      if (!busy) onBack()
+      if (!busy) onBack?.()
     },
     true,
     { dismissOnOutside: false }
@@ -85,41 +91,75 @@ export function EngineChooser({
     }
   }
   return (
-    <div className="modal-shade">
+    <div className="wizard-overlay first-run-overlay">
       <section
         ref={dialog}
         tabIndex={-1}
-        className="ew-modal"
+        className="wizard first-run"
         role="dialog"
         aria-modal="true"
         aria-label="Choose your engine"
       >
-        <h1>Choose your engine</h1>
-        <div className="intent-grid">
-          {engines.map((e) => (
-            <button key={text(e.engine)} disabled={busy || loading} onClick={() => choose(e)}>
-              {engineName(text(e.engine))}
-              {e.active ? ' · Installed' : ''}
-            </button>
-          ))}
-        </div>
-        {loading && <p role="status">Finding compatible engines…</p>}
-        {!loading && !engines.length && !error && <p>No compatible engines available.</p>}
-        {busy && <p role="status">Preparing your engine…</p>}
-        {error && (
-          <>
-            <p role="alert">{error}</p>
-            <button onClick={() => setRetry((v) => v + 1)}>Retry</button>
-          </>
-        )}
-        <button disabled={busy} onClick={onBack}>
-          Back
-        </button>
-        {onLater && (
-          <button disabled={busy} onClick={onLater}>
-            Set up later
-          </button>
-        )}
+        <header className="workspace-status-header desktop-topbar">
+          <WorkspaceBrand />
+          <FloatingDownloads workspace={w} />
+        </header>
+        <main className="first-run-content">
+          <h1>Choose your engine</h1>
+          <p className="ew-muted setup-step-description">
+            The engine determines which local models you can run.
+          </p>
+          {loading && <Empty>Finding compatible engines…</Empty>}
+          {!loading && !engines.length && !error && <Empty>No compatible engines available.</Empty>}
+          {busy && <p role="status">Preparing your engine…</p>}
+          {error && (
+            <div className="setup-feedback">
+              <p role="alert" className="ew-error">
+                {error}
+              </p>
+              <Action onClick={() => setRetry((v) => v + 1)}>Retry</Action>
+            </div>
+          )}
+          {engines.length > 0 && (
+            <ul className="directory-list">
+              {engines.map((e) => {
+                const engine = text(e.engine)
+                const status = e.active
+                  ? engine === 'fastflowlm'
+                    ? 'Build installed'
+                    : 'Installed'
+                  : engineFamily(engine) === 'managed'
+                    ? 'Review requirements'
+                    : 'Available to install'
+                return (
+                  <li key={engine}>
+                    <DirectoryRow
+                      title={engineName(engine)}
+                      aria-label={e.active ? `${engineName(engine)} · ${status}` : engineName(engine)}
+                      aria-describedby={e.active ? undefined : `choose-engine-${engine}-status`}
+                      detail={<span id={`choose-engine-${engine}-status`}>{status}</span>}
+                      disabled={busy || loading}
+                      onClick={() => choose(e)}
+                      trailing={<ChevronRight size={16} aria-hidden="true" />}
+                    />
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </main>
+        <footer className={`first-run-footer${onBack ? '' : ' first-run-footer-forward'}`}>
+          {onBack && (
+            <Action disabled={busy} onClick={onBack}>
+              Back
+            </Action>
+          )}
+          {onLater && (
+            <Action disabled={busy} onClick={onLater}>
+              Set up later
+            </Action>
+          )}
+        </footer>
         {panel && (
           <EngineSetup
             workspace={w}

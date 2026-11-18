@@ -66,6 +66,7 @@ export function ConnectionGuide({
     onConfigure?.()
     setStep('preparing')
     setError('')
+    setProfile(null)
     try {
       setStatus('Loading model')
       await execute('models.load', { provider: engine, model_id: modelId })
@@ -89,7 +90,14 @@ export function ConnectionGuide({
       await execute('setup.complete', { model_id: modelId })
       const info = record(await execute('connection.info'))
       setEndpoint(text(info.endpoint, `http://127.0.0.1:${port}${w.snapshot?.api.prefix ?? '/v1'}`))
-      if (path === 'agent' && PROFILE_AGENTS.includes(agent)) {
+      if (
+        path === 'agent' &&
+        Array.isArray(info.configurable_agents) &&
+        info.configurable_agents.includes(agent)
+      ) {
+        setStatus('Configuring agent on the server host')
+        setProfile(record(await execute('connection.configure', { agent, model: modelId, key_id: key })))
+      } else if (path === 'agent' && PROFILE_AGENTS.includes(agent)) {
         setStatus('Preparing agent connection')
         setProfile(record(await execute('connection.profile', { agent, model: modelId, key_id: key })))
       }
@@ -202,14 +210,18 @@ export function ConnectionGuide({
               return typeof v === 'string' ? v : text(record(v).token ?? record(v).key, '')
             }}
           />
-          {path === 'agent' && !profile && (
+          {path === 'agent' && !profile?.launch_command && !profile?.command && (
             <p>
+              {profile?.reason ? `${text(profile.reason)} ` : ''}
               In {name}, choose an OpenAI-compatible provider and paste this endpoint, API key, and model ID.
             </p>
           )}
-          {profile && (
+          {(profile?.launch_command || profile?.command) && (
             <>
-              <p>Run this command to launch {name} with the prepared connection.</p>
+              <p>
+                Run this command {profile.configured === true ? 'on the server host ' : ''}to launch {name}{' '}
+                with the prepared connection.
+              </p>
               <pre>{text(profile.launch_command ?? profile.command)}</pre>
               <Copy value={text(profile.launch_command ?? profile.command, '')} label="Copy launch command" />
             </>
