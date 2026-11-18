@@ -5,9 +5,28 @@ title: "Diagnose CLI chat failures with finite tags"
 
 # 2026-11-15 — Diagnose CLI chat failures with finite tags
 
-- **Context:** ATOMIC-CHAT-SERVER-1S (`7848662602`) reported `Error: cli chat: unknown` on `atc@0.2.18` (dist `b869424b124d`, the current base) with component `cli` and operation `chat`, one occurrence. The frames end at `src/terminal-service/client.ts:110` inside the SSE reading loop of `streamChat`, which the `atc chat` command reaches through `src/commands/access/terminal.ts:101`. `failureReport` scrubs the exception to `Unexpected failure in chat` and adds only `reportCodeOf(error)`, which is `undefined` for a plain `Error`, so the report names neither the branch nor the cause. `streamChat` throws four plain `Error`s (invalid endpoint, server-reported generation error, empty response body, truncated stream), and `JSON.parse` of a malformed frame throws a dynamic `SyntaxError` that no exact-message rule can name.
-- **Decision:** Add four exact-message mappings from `src/terminal-service/client.ts` to the bounded diagnostic observer — `CLI_CHAT_ENDPOINT_INVALID`, `CLI_CHAT_GENERATION_ERROR`, `CLI_CHAT_EMPTY_RESPONSE`, `CLI_CHAT_STREAM_TRUNCATED` — and inspect allowlisted transport cause codes across up to five `Error` causes. Message scrubbing, filtering of expected failures, severity, consent and exit behaviour stay unchanged.
-- **Consequences:** The next `cli chat` event identifies the failing client branch, or the transport cause when the stream read itself rejects. An event carrying neither tag comes from a dynamic-message branch (a `JSON.parse` `SyntaxError` or a `The server reported ...`/`Request returned HTTP <status>` message built at runtime), which then needs its own handling decision. The original crash is not fixed by this record: if the mapped branch is a genuine client defect it is fixed separately; if it is a provider or transport condition, its handling is decided separately. Remove or replace the rules once that decision is made.
-- **Alternatives:** Reclassifying the truncation and generation-error branches as expected refusals or remote errors immediately was rejected because one uncoded event cannot show which branch fired, and changing reporting boundary exclusions requires an owner policy decision. Reporting raw messages, the server's own error text or parsed frame contents was rejected to preserve user privacy. Treating the single event as a defect fix candidate was rejected because no reproduction, endpoint or model is recorded.
-- **Owner:** team.
-- **Links:** [Sentry ATOMIC-CHAT-SERVER-1S](https://atomic-chat.sentry.io/issues/7848662602/), `src/terminal-service/client.ts`, `src/telemetry/native-diagnostics.ts`, `docs/decisions/2026-11-04-diagnose-chat-stream-failures.md`.
+## Context
+
+ATOMIC-CHAT-SERVER-1S reported a generic CLI chat error in the SSE reader. The reporter
+scrubs free-form exception text, so it could not distinguish a provider-reported generation
+error from an incomplete stream. The client also preserves the message from a non-2xx HTTP
+response for the caller. A message lookup could mistake that remote text for a local error.
+
+## Decision
+
+Have the terminal client attach a bounded diagnostic code when it rejects a parsed endpoint,
+finds an absent response body, reads a generation error in SSE, or reaches the end of an
+incomplete stream. The reporter reads that metadata from the error class. Existing allowlisted
+transport codes still identify failures in the response reader, and the reporter still scrubs
+remote HTTP text.
+
+## Consequences
+
+A tagged event identifies the client branch that produced it. Invalid URL syntax, malformed
+SSE and arbitrary HTTP messages can still reach the reporter without a terminal chat code.
+CLI output, exit status and the reporting rules use their existing behaviour.
+
+Owner: team
+
+References: [Sentry ATOMIC-CHAT-SERVER-1S](https://atomic-chat.sentry.io/issues/7848662602/),
+`src/terminal-service/client.ts`, `src/telemetry/native-diagnostics.ts`.
