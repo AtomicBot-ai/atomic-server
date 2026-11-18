@@ -17,14 +17,32 @@ export async function callPublic(
   const endpoint = publicEndpoint(object(state), config).endpoint,
     key = await keys.get()
   const start = Date.now()
-  const response = await request(`${endpoint}${path}`, {
-    method: body ? 'POST' : 'GET',
-    redirect: 'error',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-    signal: AbortSignal.timeout(body ? 600000 : 10000),
-  })
-  const text = await response.text()
+  const deadlineMs = body ? 600000 : 10000
+  // The call's own deadline expiry arrives as a bare abort (DOMException `TimeoutError`), which has a
+  // numeric `code` and no cause, so the failure boundary cannot classify it. Answer it as a refusal.
+  const withinDeadline = async <T>(run: () => Promise<T>): Promise<T> => {
+    try {
+      return await run()
+    } catch (error) {
+      const name = (error as { name?: unknown } | null)?.name
+      if (name === 'AbortError' || name === 'TimeoutError')
+        throw new AtcError(
+          'ATC_USAGE',
+          `The API did not answer within ${deadlineMs / 1000} seconds. Check the loaded model and its engine log.`
+        )
+      throw error
+    }
+  }
+  const response = await withinDeadline(() =>
+    request(`${endpoint}${path}`, {
+      method: body ? 'POST' : 'GET',
+      redirect: 'error',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      signal: AbortSignal.timeout(deadlineMs),
+    })
+  )
+  const text = await withinDeadline(() => response.text())
   let result: unknown
   try {
     result = JSON.parse(text)
