@@ -18,7 +18,11 @@ function matches(job: Record<string, unknown>, id: string) {
   )
 }
 const rank = (job: Record<string, unknown>) =>
-  ['queued', 'downloading', 'verifying'].includes(String(job['stage'])) ? 3 : job['stage'] === 'ready' ? 2 : 1
+  ['queued', 'downloading', 'verifying', 'preparing'].includes(String(job['stage']))
+    ? 3
+    : job['stage'] === 'ready'
+      ? 2
+      : 1
 /** A family retains the current quantized transfer, ahead of earlier attempts. */
 export function modelJob(s: WorkspaceState, id: string) {
   return (s.workspace?.setups ?? [])
@@ -33,6 +37,7 @@ export function matchesCatalogInstallation(
   setups: unknown[] = []
 ) {
   if (!row) return false
+  if (row.source?.['format'] === 'strata') return model.provider === 'strata' && model.id === row.id
   if (row.source?.['format'] === 'fastflowlm')
     return fastFlowLmFamilyMatches(model.id, model.provider, row.id, row.source['variants'])
   return catalogModelMatches(model.id, row.id, setups, model.repository)

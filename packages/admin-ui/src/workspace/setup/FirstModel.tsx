@@ -88,7 +88,9 @@ export function FirstModel({
           const id = text(local.id ?? local.model_id, '')
           const repo = text(catalog.id ?? catalog.model_id, '')
           const variants = rows(
-            record(catalog.fastflowlm ?? catalog.geniex ?? catalog.litert ?? catalog.foundry).variants
+            record(
+              catalog.strata ?? catalog.fastflowlm ?? catalog.geniex ?? catalog.litert ?? catalog.foundry
+            ).variants
           ).map((v) => text(catalog.geniex || catalog.fastflowlm ? record(v.record).variant_id : v.id, ''))
           return (
             catalogModelMatches(id, repo, undefined, text(local.repository, '') || undefined) ||

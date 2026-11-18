@@ -43,6 +43,10 @@ export async function selectLocalModel(id: string, ctx: ActionContext, selection
     [index, picked] = id.slice(10).split(':')
   const model = state.installed[Number(index)]
   if (!model) return
+  if (model.disabled_reason) {
+    ctx.update((s) => ({ ...s, message: model.disabled_reason! }))
+    return
+  }
   const provider = picked ?? modelProvider(state.engine, model.provider),
     engine = state.engine.split('|')[0] === provider ? state.engine : provider
   const fresh = selection ?? beginModelSelection(ctx)

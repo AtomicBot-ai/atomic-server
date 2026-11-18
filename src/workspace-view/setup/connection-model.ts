@@ -36,6 +36,7 @@ const VARIANT_JOBS: Record<string, string> = {
   'litert-model': 'litert-lm',
   'geniex-model': 'geniex',
   'fastflowlm-model': 'fastflowlm',
+  'strata-model': 'strata',
 }
 
 export function connectionDownloadTarget(job: unknown) {

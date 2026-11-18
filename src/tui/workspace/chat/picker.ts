@@ -46,6 +46,7 @@ export function pickerRows(s: WorkspaceState): PickerRow[] {
   }
   // A model under each provider that lists it; llama.cpp's two are one row, the engine choice picks.
   const rows: PickerRow[] = s.installed.flatMap((m, i) => {
+    if (m.disabled_reason) return []
     const providers = [
       ...new Set((m.providers ?? [m.provider]).map((p) => (LLAMA.includes(p) ? m.provider : p))),
     ]

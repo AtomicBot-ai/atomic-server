@@ -18,6 +18,12 @@
   flex: 1 1 240px;
   min-width: 0;
 }
+.runtime-model-feedback {
+  margin: 12px 0 0;
+  color: var(--ew-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
 .runtime-model-variant .ew-field {
   margin: 0;
 }

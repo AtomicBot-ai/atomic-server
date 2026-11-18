@@ -278,6 +278,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       boot,
       shutdown: async () => {
         sessions.stop()
+        workspace.stop()
         await core.shutdown()
         await cleanup()
       },

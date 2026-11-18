@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, expect, it } from 'vitest'
-import { bytesOnDisk } from './on-disk.js'
+import { bytesOnDisk, reusablePartial } from './on-disk.js'
 
 const dirs: string[] = []
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })))
@@ -44,4 +44,26 @@ it('counts a single-stream partial by its size, a finished file by its size, not
   rmSync(`${file}.tmp`)
   writeFileSync(file, Buffer.alloc(100))
   expect(await bytesOnDisk(file, URL, 100)).toBe(100)
+})
+
+it('credits only durable ranges for the pinned transfer and rejects truncated or stale staging', async () => {
+  const file = join(dir(), 'model.gguf')
+  writeFileSync(`${file}.url`, URL)
+  writeFileSync(`${file}.tmp`, Buffer.alloc(100))
+  writeFileSync(
+    `${file}.ranges`,
+    JSON.stringify({
+      url: URL,
+      size: 100,
+      ranges: [
+        { start: 0, end: 49, next: 30 },
+        { start: 50, end: 99, next: 60 },
+      ],
+    })
+  )
+  expect(await reusablePartial(file, URL, 100, true)).toBe(40)
+  expect(await reusablePartial(file, URL, 100, false)).toBe(0)
+  expect(await reusablePartial(file, URL, 110, true)).toBe(0)
+  writeFileSync(`${file}.tmp`, Buffer.alloc(59))
+  expect(await reusablePartial(file, URL, 100, true)).toBe(0)
 })

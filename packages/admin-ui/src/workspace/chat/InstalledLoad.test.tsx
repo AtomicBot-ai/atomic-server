@@ -55,3 +55,17 @@ it('exposes a failed downloaded-model read and retries without showing loaded du
   expect(await screen.findByRole('button', { name: 'Load Qwen with vLLM' })).toBeEnabled()
   expect(screen.queryByRole('button', { name: 'Load Qwen with MLX' })).not.toBeInTheDocument()
 })
+
+it('shows the server reason and prevents loading Strata while preparing', async () => {
+  const execute = vi
+    .spyOn(workspaceApi, 'execute')
+    .mockResolvedValue([
+      { id: 'qwen', name: 'Qwen', provider: 'strata', disabled_reason: 'Preparing model' },
+    ] as never)
+  render(<InstalledLoad disabled={false} />)
+  const button = await screen.findByRole('button', { name: 'Load Qwen with Strata' })
+  expect(button).toBeDisabled()
+  expect(button).toHaveTextContent('Preparing model')
+  await userEvent.click(button)
+  expect(execute).not.toHaveBeenCalledWith('models.load', expect.anything())
+})

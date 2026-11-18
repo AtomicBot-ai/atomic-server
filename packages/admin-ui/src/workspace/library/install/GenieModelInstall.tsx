@@ -18,7 +18,7 @@ export function GenieModelInstall({
   onStarted,
   onEngine,
 }: {
-  engine?: 'geniex' | 'fastflowlm'
+  engine?: 'geniex' | 'fastflowlm' | 'strata'
   workspace: Workspace
   model: RecordValue
   revision?: number
@@ -43,7 +43,7 @@ export function GenieModelInstall({
   const request = useRef<{ digest: string; id: string } | null>(null)
   const choice = variants.find((v) => v.id === selected) ?? variants[0]
   const verdict = record(choice?.verdict)
-  const metadata = engine === 'fastflowlm' ? { ...model, ...choice } : model
+  const metadata = engine === 'geniex' ? model : { ...model, ...choice }
   const download = async () => {
     if (!choice || pending || checking || readError) return
     setPending(true)
@@ -51,7 +51,7 @@ export function GenieModelInstall({
     try {
       const plan = await workspace.execute<{ digest: string; variant_id: string; blockers: string[] }>(
         `${engine}.plan`,
-        { model: model.model_id, variant: choice.id }
+        engine === 'strata' ? { model: choice.id } : { model: model.model_id, variant: choice.id }
       )
       if (plan.blockers.length) throw new Error(plan.blockers.join(' '))
       if (request.current?.digest !== plan.digest)
@@ -111,11 +111,19 @@ export function GenieModelInstall({
             text(verdict.verdict)
           ) ? (
           <Action primary={Boolean(onClose)} onClick={onEngine}>
-            {engine === 'fastflowlm' ? 'Set up FastFlowLM' : 'Install GenieX'}
+            {engine === 'fastflowlm'
+              ? 'Set up FastFlowLM'
+              : engine === 'strata'
+                ? 'Install Strata'
+                : 'Install GenieX'}
           </Action>
         ) : null}
       </div>
-      {checking && <p role="status">Checking device availability…</p>}
+      {checking && (
+        <p className="runtime-model-feedback" role="status">
+          Checking device availability…
+        </p>
+      )}
       {readError && (
         <div>
           <p role="alert" className="inline-error">
@@ -125,9 +133,11 @@ export function GenieModelInstall({
         </div>
       )}
       {!checking && !readError && verdict.verdict !== 'ok' && (
-        <p role="status">{text(verdict.reason, text(verdict.verdict, 'No compatible variant available.'))}</p>
+        <p className="runtime-model-feedback" role="status">
+          {text(verdict.reason, text(verdict.verdict, 'No compatible variant available.'))}
+        </p>
       )}
-      {engine === 'fastflowlm' && <RuntimeModelFacts metadata={metadata} />}
+      {engine !== 'geniex' && <RuntimeModelFacts metadata={metadata} />}
       {model.origin === 'qualcomm' && <p className="ew-muted">Qualcomm AI Hub</p>}
       {model.unverified === true && (
         <p className="runtime-model-source">Hugging Face · not verified by Atomic Chat</p>

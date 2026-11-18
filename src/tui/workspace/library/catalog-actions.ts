@@ -19,7 +19,7 @@ import { engineAction } from './engine-actions.js'
 import { record } from './library-model.js'
 
 export type LibraryFormat = CatalogFormat
-const ACTIVE = ['queued', 'downloading', 'verifying']
+const ACTIVE = ['queued', 'downloading', 'verifying', 'preparing']
 
 /** Formats the text catalog offers on this host: GGUF, plus what the core's engines here run. */
 export const libraryFormats = (engines: readonly string[]): LibraryFormat[] => catalogFormatsFor(engines)
@@ -81,29 +81,30 @@ export async function catalogAction(id: string, ctx: ActionContext): Promise<boo
     await readCatalog(ctx)
     return true
   }
-  if (
-    (id === 'library-remove' && s.libraryView === 'installed') ||
-    id.startsWith('fastflowlm-delete:') ||
-    id.startsWith('geniex-delete:') ||
-    id.startsWith('installed-delete:')
-  ) {
-    const model = id.startsWith('fastflowlm-delete:')
-      ? s.installed.find(
-          (m) =>
-            m.store === 'fastflowlm' && m.id === decodeURIComponent(id.slice('fastflowlm-delete:'.length))
-        )
-      : id.startsWith('geniex-delete:')
-        ? s.installed.find(
-            (m) => m.store === 'geniex' && m.id === decodeURIComponent(id.slice('geniex-delete:'.length))
+  const [target, encoded] = id.split(':', 2)
+  const store =
+    target === 'strata-delete'
+      ? 'strata'
+      : target === 'fastflowlm-delete'
+        ? 'fastflowlm'
+        : target === 'geniex-delete'
+          ? 'geniex'
+          : undefined
+  if ((id === 'library-remove' && s.libraryView === 'installed') || store || target === 'installed-delete') {
+    const model =
+      encoded === undefined
+        ? s.installed[s.selected]
+        : s.installed.find(
+            (m) => (store === undefined || m.store === store) && m.id === decodeURIComponent(encoded)
           )
-        : id.startsWith('installed-delete:')
-          ? s.installed.find((m) => m.id === decodeURIComponent(id.slice(17)))
-          : s.installed[s.selected]
     if (model)
       patch({
         overlay: 'remove-model',
         libraryRemove: model.id,
-        removeModelStore: model.store === 'geniex' || model.store === 'fastflowlm' ? model.store : undefined,
+        removeModelStore:
+          model.store === 'geniex' || model.store === 'fastflowlm' || model.store === 'strata'
+            ? model.store
+            : undefined,
         focus: 'close',
       })
     return true
@@ -153,6 +154,7 @@ const JOB_TOOLS: Readonly<Record<string, string>> = {
   'foundry-model': 'foundry',
   'geniex-model': 'geniex',
   'fastflowlm-model': 'fastflowlm',
+  'strata-model': 'strata',
   'litert-model': 'litert',
 }
 

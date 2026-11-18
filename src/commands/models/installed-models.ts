@@ -58,7 +58,9 @@ export async function removeInstalled(ctx: CommandContext, id: string): Promise<
   try {
     result = await service.execute('models.remove', {
       model_id: id,
-      ...(row?.store === 'geniex' || row?.store === 'fastflowlm' ? { store: row.store } : {}),
+      ...(row?.store === 'geniex' || row?.store === 'fastflowlm' || row?.store === 'strata'
+        ? { store: row.store }
+        : {}),
     })
   } catch (error) {
     if (error instanceof AtomicCoreError && error.code === 'MANAGED_STOP_UNCONFIRMED')

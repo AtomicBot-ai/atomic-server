@@ -130,3 +130,41 @@ it('keeps FastFlowLM review in a dialog and rechecks the chosen variant after en
   )
   expect(execute).toHaveBeenCalledWith('config.update', { values: { 'tui.model': variant } })
 })
+
+it('offers Strata in onboarding and reviews the models from its own catalog', async () => {
+  const model = 'qwen36-q4'
+  let selected = 'llamacpp-upstream'
+  const { workspace, execute } = workspaceFixture(
+    {
+      'engines.list': enginesList(['llamacpp-upstream', 'strata']),
+      'engines.selected': () => ({ engine: selected }),
+      'engines.select': ({ engine }: { engine: string }) => (selected = engine),
+      'models.catalog': [{ id: 'repo/gguf', name: 'A GGUF model' }],
+      'models.installed': [],
+      'models.search': {
+        models: [
+          {
+            model_id: model,
+            name: 'Qwen for Strata',
+            default_variant: model,
+            variants: [{ id: model, size_bytes: 2048, verdict: { verdict: 'ok' } }],
+          },
+        ],
+      },
+    },
+    { setup: null }
+  )
+  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Back' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Strata · Installed' }))
+  expect(await screen.findByRole('button', { name: /^Qwen for Strata/ })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
+  expect(execute).toHaveBeenCalledWith('models.search', { engine: 'strata', query: '' })
+  expect(screen.queryByRole('button', { name: 'A GGUF model' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  const review = await screen.findByRole('dialog', { name: 'Install Qwen for Strata' })
+  expect(within(review).getByText(model)).toBeInTheDocument()
+  expect(within(review).getByRole('button', { name: 'Download', exact: true })).toBeEnabled()
+})

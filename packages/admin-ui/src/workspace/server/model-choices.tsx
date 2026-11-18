@@ -1,41 +1,24 @@
 // Lifted from Atomic-Chat/web-app/src/containers/server-concept/EngineModelFields.tsx @ 5043013; adapted: only metadata returned by the server, with the desktop engine identities.
-import { Cpu } from 'lucide-react'
 import { engineName, formatSize } from '@view'
+import { EngineMark } from '../EngineMark'
 import { ModelMark } from '../library/catalog/ModelMark'
 import { text } from '../types'
 import type { RecordValue } from '../types'
 import type { DetailChoice } from './DetailPicker'
 
-const engineDetails: Record<string, { logo: string; detail: string; monochrome?: boolean }> = {
-  'llamacpp-upstream': {
-    logo: '/engine-brands/llamacpp.svg',
-    detail: 'CPU & GPU inference',
-    monochrome: true,
-  },
-  'llamacpp': {
-    logo: '/engine-brands/llamacpp.svg',
-    detail: 'Quantized KV cache · lower memory use',
-    monochrome: true,
-  },
-  'mlx': { logo: '/engine-brands/mlx.png', detail: 'Optimized for Apple silicon' },
-  'atomic-prism': {
-    logo: '/model-brands/images/model-provider/prism-ml.webp',
-    detail: 'Compact inference for Bonsai models',
-    monochrome: true,
-  },
+const engineDetails: Record<string, string> = {
+  'llamacpp-upstream': 'CPU & GPU inference',
+  'llamacpp': 'Quantized KV cache · lower memory use',
+  'mlx': 'Optimized for Apple silicon',
+  'atomic-prism': 'Compact inference for Bonsai models',
 }
 
 export function engineChoice(id: string): DetailChoice {
-  const info = engineDetails[id]
   return {
     id,
     name: engineName(id),
-    detail: info?.detail,
-    icon: (
-      <span className={`server-picker-logo ${info?.monochrome ? 'monochrome' : ''}`} aria-hidden="true">
-        {info ? <img src={info.logo} alt="" /> : <Cpu size={28} />}
-      </span>
-    ),
+    detail: engineDetails[id],
+    icon: <EngineMark engine={id} />,
   }
 }
 

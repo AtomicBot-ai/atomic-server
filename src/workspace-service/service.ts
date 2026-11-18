@@ -1,3 +1,4 @@
+import { strataOperation } from './strata/operations.js'
 import type { FastFlowLmOperation } from '@atomic-chat/core/contracts'
 import { flmOperation } from './fastflowlm/operations.js'
 import { suspendDownloadingApi } from './snapshot/download-api.js'
@@ -52,6 +53,11 @@ export class WorkspaceService {
   private reminders: EmailReminders
   private readonly shared = new SnapshotCache(() => this.readCore(), { now: Date.now, maxAgeMs: 1000 })
   constructor(private options: WorkspaceServiceOptions) {
+    const catalogUrl = options.env?.['ATOMIC_MODEL_CATALOG_URL']
+    if (catalogUrl && options.env?.['ATC_MODEL_CATALOG_URL'] === undefined) {
+      // Keep the existing workspace override first and share the core override as its fallback.
+      options = this.options = { ...options, env: { ...options.env, ATC_MODEL_CATALOG_URL: catalogUrl } }
+    }
     this.features = new WorkspaceFeatureService(
       options.paths.atcDir,
       options.fetch ?? fetch,
@@ -86,7 +92,10 @@ export class WorkspaceService {
     return this.downloads.fastflowlm.mutations.recover().then(() => this.downloads.artifacts.migrate())
   }
   /** Stops watching; the server calls it on shutdown, and it may be passed on unbound. */
-  readonly stop = (): void => this.reminders.stop()
+  readonly stop = (): void => {
+    this.reminders.stop()
+    this.downloads.strata.stop()
+  }
   event(name: string, payload: unknown): void {
     this.metrics.event(name, payload)
     this.loads.event(name, payload)
@@ -115,6 +124,7 @@ export class WorkspaceService {
       ...(await this.downloads.managed.list()),
       ...(await this.downloads.foundry.list()),
       ...(await this.downloads.geniex.journal.list()),
+      ...(await this.downloads.strata.list()),
       ...(await this.downloads.fastflowlm.journal.list()),
       ...(await this.downloads.litert.models.list())
     )
@@ -177,6 +187,8 @@ export class WorkspaceService {
     if (feature !== NOT_CORE) return feature
     const cloud = await cloudOperation(link, paths, this.request, operation, input)
     if (cloud !== NOT_CORE) return sanitized(cloud)
+    const strata = strataOperation(this.downloads.strata, operation, input)
+    if (strata !== NOT_CORE) return sanitized(await strata)
     const flm = await flmOperation(this.options, this.downloads.fastflowlm, operation, input)
     if (flm !== NOT_CORE) return flm
     const genie = this.downloads.geniex

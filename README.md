@@ -61,6 +61,8 @@ system, hardware and compatible builds; `atc engines list` shows what is availab
   see [Foundry Local](#foundry-local) for platforms and setup.
 - **LiteRT-LM** (`litert-lm`) — Google's `.litertlm` models on supported CPU, GPU or Intel NPU
   accelerators; see [LiteRT-LM](#litert-lm) for platforms and setup.
+- **Strata** (`strata`) runs pinned Qwen and DeepSeek variants on compatible GPU bundles. See
+  [Strata on Atomic Server](docs/strata.md) for installation and recovery.
 - **stable-diffusion.cpp** (`sd-cpp`) — image generation.
 - **audio.cpp** (`audio-cpp`) — speech, music and sound effects; see
   [Audio generation](#audio-generation).

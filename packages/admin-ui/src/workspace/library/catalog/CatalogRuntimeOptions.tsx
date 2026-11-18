@@ -19,6 +19,7 @@ import { modelId } from './catalog-models'
 const VARIANT_ENGINES = [
   { key: 'foundry', engine: 'foundry-local', catalog: 'Foundry' },
   { key: 'fastflowlm', engine: 'fastflowlm', catalog: 'FastFlowLM' },
+  { key: 'strata', engine: 'strata', catalog: 'Strata' },
   { key: 'geniex', engine: 'geniex', catalog: 'GenieX' },
   { key: 'litert', engine: 'litert-lm', catalog: 'LiteRT-LM' },
 ] as const
@@ -48,7 +49,9 @@ export function CatalogRuntimeOptions({
         engine: variants.engine,
         query: modelId(model),
       })
-      const next = rows(result).find((candidate) => candidate.model_id === modelId(model))
+      const next = rows(variants.key === 'strata' ? record(result).models : result).find(
+        (candidate) => candidate.model_id === modelId(model)
+      )
       if (!next) throw new Error(`This model is no longer in the ${variants.catalog} catalog.`)
       setCurrent(next)
     } catch (e) {
@@ -71,7 +74,7 @@ export function CatalogRuntimeOptions({
               {error} <Action onClick={refreshVariants}>Retry</Action>
             </p>
           )}
-          {variants.key === 'geniex' || variants.key === 'fastflowlm' ? (
+          {variants.key === 'geniex' || variants.key === 'fastflowlm' || variants.key === 'strata' ? (
             <GenieModelInstall
               engine={variants.key}
               workspace={workspace}
@@ -120,9 +123,10 @@ export function CatalogRuntimeOptions({
           }}
         />
       )}
-      {engineDialog && (variants?.key === 'geniex' || variants?.key === 'fastflowlm') && (
-        <EngineSettings workspace={workspace} provider={variants.engine} onClose={closeEngineDialog} />
-      )}
+      {engineDialog &&
+        (variants?.key === 'geniex' || variants?.key === 'fastflowlm' || variants?.key === 'strata') && (
+          <EngineSettings workspace={workspace} provider={variants.engine} onClose={closeEngineDialog} />
+        )}
       {engineDialog && variants?.key === 'foundry' && (
         <FoundryLocal workspace={workspace} onClose={closeEngineDialog} />
       )}

@@ -1,3 +1,4 @@
+import { StrataSetups } from '../strata/setups.js'
 import { FlmSetups } from '../fastflowlm/setups.js'
 import type { EngineDownloads } from '../engines/engine-downloads.js'
 import { join } from 'node:path'
@@ -37,6 +38,11 @@ export function modelDownloads(
     downloader,
     geniex: new GenieSetups(options, downloader),
     fastflowlm: new FlmSetups(options, downloader),
+    strata: new StrataSetups(
+      options,
+      downloader,
+      engines ? (taskId) => engines.ensure('strata', 'strata-engine-' + taskId) : undefined
+    ),
     artifacts: new ArtifactService(options, catalog, request, downloader, engines?.ensure.bind(engines)),
     managed: new ManagedModelSetups({
       ...(options.errors ? { errors: options.errors } : {}),

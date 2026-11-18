@@ -67,7 +67,7 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
       s.installed.some(
         (item) =>
           item.id === row.id &&
-          (!['geniex', 'fastflowlm'].includes(String(row.source?.['format'])) ||
+          (!['geniex', 'fastflowlm', 'strata'].includes(String(row.source?.['format'])) ||
             item.provider === row.source?.['format'])
       )
     )
@@ -77,7 +77,7 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
     const raw = source['variants'] ?? transformer['quants'] ?? source['quants']
     const variants =
       s.libraryCategory === 'text' &&
-      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(
+      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(
         String(source['format'] ?? 'gguf')
       )
         ? (await ctx.controller.files(row.id)).map((file) => ({

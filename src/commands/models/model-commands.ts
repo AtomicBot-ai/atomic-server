@@ -1,3 +1,4 @@
+import { pullStrataModel, strataPullOptions } from './strata-commands.js'
 import { pullFlmModel } from './fastflowlm-commands.js'
 import { resumeGgufPull } from './resume-gguf.js'
 import { randomUUID } from 'node:crypto'
@@ -57,6 +58,7 @@ const CANCEL: Record<string, string> = {
   'litert-lm': 'litert.cancel',
   'geniex': 'geniex.cancel',
   'fastflowlm': 'fastflowlm.cancel',
+  'strata': 'strata.cancel',
   'mlx': 'artifacts.cancel',
 }
 const engineOption = {
@@ -127,7 +129,7 @@ export const modelsCommand = defineCommand({
       positionals: [
         {
           name: 'query',
-          description: 'Search words or owner/repo (optional for foundry-local, litert-lm and geniex)',
+          description: 'Search words or owner/repo (optional for engine catalogs)',
         },
       ],
       options: engineOption,
@@ -153,7 +155,7 @@ export const modelsCommand = defineCommand({
     }),
     defineCommand({
       name: 'pull',
-      summary: 'Plan and start a durable download: GGUF, or with --engine an MLX or managed checkpoint',
+      summary: 'Plan and start a durable model installation',
       positionals: [
         { name: 'model', description: 'owner/repo[:file.gguf], or owner/repo[@revision] with --engine' },
       ],
@@ -164,10 +166,7 @@ export const modelsCommand = defineCommand({
           placeholder: 'engine',
         },
         'detach': { type: 'boolean', description: 'Start a managed download without following it' },
-        'refresh': {
-          type: 'boolean',
-          description: 'FastFlowLM: review the latest catalog for a model update',
-        },
+        ...strataPullOptions,
         'device': {
           type: 'string',
           description: 'Foundry Local: the variant for npu, gpu or cpu',
@@ -180,7 +179,7 @@ export const modelsCommand = defineCommand({
         },
         'cancel': {
           type: 'string',
-          description: 'Cancel a managed, Foundry Local, LiteRT-LM or GenieX download (with its --engine)',
+          description: 'Cancel an engine-specific download (with its --engine)',
           placeholder: 'request-id',
         },
         'file': { type: 'string', description: 'Exact filename in the repository' },
@@ -197,6 +196,9 @@ export const modelsCommand = defineCommand({
         if (!inv.positionals[0]) throw new AtcError('ATC_USAGE', 'Name the model to download.')
         if (inv.values['engine'] === 'foundry-local')
           return pullFoundryModel(ctx, inv.positionals[0], inv.values)
+        if (inv.values.engine === 'strata') return pullStrataModel(ctx, inv.positionals[0], inv.values)
+        if (inv.values['import-dir'])
+          throw new AtcError('ATC_USAGE', 'Use --import-dir with --engine strata.')
         if (inv.values.engine === 'fastflowlm') return pullFlmModel(ctx, inv.positionals[0], inv.values)
         if (inv.values.engine === 'geniex') return pullGenieModel(ctx, inv.positionals[0], inv.values)
         if (inv.values['engine'] === 'litert-lm') return pullLiteRtModel(ctx, inv.positionals[0], inv.values)

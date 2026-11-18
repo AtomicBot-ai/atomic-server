@@ -136,6 +136,8 @@ The 2026-11-06 onboarding adaptation scopes `setup/FirstModel.tsx` to the select
 
 The onboarding wizard now shares `intro/EngineChooser.tsx` with the intro: managed runtime consent and readiness precede model selection, Back/Escape retain wizard state, and returning from an engine panel rechecks the selected model's compatibility (`setup/SetupEngineDialog.tsx`).
 
+- `workspace/EngineMark.tsx` and `public/engine-brands/{vllm,sglang,foundry-local,litert-lm,geniex,fastflowlm}.svg` follow Atomic-Chat `web-app/src/{lib/utils.ts,containers/server/ServerPageParts.tsx}` and `web-app/public/images/model-provider/` @ `07e4b8737`. The picker and onboarding use the same engine logos and initial-letter fallback, including Strata's `S`.
+
 The 2026-11-07 adaptation replaces the Foundry native variant menu in `workspace/library/install/FoundryModelInstall.tsx` (original `LocalModelTable.tsx` @ `5043013`) with `VariantChoices.tsx`, shared with LiteRT-LM. Short device/readiness labels and a separate reason keep expanded catalog rows within the viewport. `use-variant-model.ts` refreshes core verdicts when setup returns from engine preparation. Engine dialogs now separate Overview from Settings while retaining staged edits.
 
 The provider summaries, connector cards and workspace settings above now use shared non-interactive status indicators; skill upload uses the shared English file-picker control. Onboarding provider rows grow to accommodate connection status. Original provenance headers are retained.

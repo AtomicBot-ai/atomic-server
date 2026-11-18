@@ -76,13 +76,15 @@ export function downloadRows(
       done +=
         Number(record(plan['engine'])['download_size'] ?? 0) + Number(record(plan['model'])['size'] ?? 0)
     if (['verifying', 'registering'].includes(progressPhase) || completed.has(phase)) done = size
+    const preparing = phase === 'preparing' && job['kind'] === 'strata-model'
+    const preparation = record(job['preparation'])
     result.push({
       ...job,
       id,
       // What both lists name the row by: a store job's repository, a Foundry Local job's variant.
       model_id: job['model_id'] ?? plan['variant_id'] ?? plan['repository'] ?? plan['model_id'],
-      total: size,
-      transferred: done,
+      total: preparing ? Number(preparation['total_bytes'] ?? 0) : size,
+      transferred: preparing ? Number(preparation['completed_bytes'] ?? 0) : done,
       state: phase || 'queued',
       completed: completed.has(phase),
       owner: plan['category'] ? 'artifacts' : 'setup',

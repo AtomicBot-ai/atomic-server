@@ -9,6 +9,7 @@ import { EngineSetup } from '../library/engines/EngineSetup'
 import { ChevronRight } from 'lucide-react'
 import { Action, Empty } from '../Controls'
 import { DirectoryRow } from '../DirectoryRow'
+import { EngineMark } from '../EngineMark'
 import { WorkspaceBrand } from '../WorkspaceBrand'
 import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
 import '../setup/onboarding.css'
@@ -16,11 +17,13 @@ import '../setup/onboarding.css'
 /** Managed engines explain prerequisites in their plan, even before a runtime is installed. */
 const offered = (e: RecordValue) =>
   engineFamily(text(e.engine)) === 'managed' ||
-  ((e.engine === 'mlx' || ['llamacpp', 'fastflowlm'].includes(engineFamily(text(e.engine)))) &&
+  ((e.engine === 'mlx' || ['llamacpp', 'fastflowlm', 'strata'].includes(engineFamily(text(e.engine)))) &&
     Boolean(e.latest)) ||
   (Boolean(e.active) &&
     (e.engine === 'mlx' ||
-      ['llamacpp', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(engineFamily(text(e.engine)))))
+      ['llamacpp', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(
+        engineFamily(text(e.engine))
+      )))
 
 /** Shared onboarding chooser; closing a runtime panel returns here without cancelling its operation. */
 export function EngineChooser({
@@ -138,6 +141,7 @@ export function EngineChooser({
                       aria-label={e.active ? `${engineName(engine)} · ${status}` : engineName(engine)}
                       aria-describedby={e.active ? undefined : `choose-engine-${engine}-status`}
                       detail={<span id={`choose-engine-${engine}-status`}>{status}</span>}
+                      leading={<EngineMark engine={engine} />}
                       disabled={busy || loading}
                       onClick={() => choose(e)}
                       trailing={<ChevronRight size={16} aria-hidden="true" />}

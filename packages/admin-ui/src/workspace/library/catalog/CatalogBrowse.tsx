@@ -164,7 +164,9 @@ export function CatalogBrowse({
       ) : isInstalled(idOf(model)) ? (
         <span>Downloaded</span>
       ) : workspace &&
-        (['safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(modelFormat(model)) ||
+        (['safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(
+          modelFormat(model)
+        ) ||
           managedRepository === idOf(model)) ? (
         <CatalogRuntimeOptions workspace={workspace} model={model} onStarted={onStarted} />
       ) : (

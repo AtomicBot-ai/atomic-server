@@ -69,7 +69,7 @@ export function drawSetupBrowser(
       } else put(row++, `${name}  /  ${v.busy ? 'Checking...' : 'No compatible build available'}`)
     }
     for (const engine of registered.filter((e) =>
-      ['managed', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(engineFamily(e))
+      ['managed', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(engineFamily(e))
     ))
       b(
         `setup-engine:${engine}`,
