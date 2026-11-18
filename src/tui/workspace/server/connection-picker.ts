@@ -10,31 +10,32 @@ import { panel } from '../draw/cards.js'
 import { computeRowWindow } from '../../row-window.js'
 import { mouseReport } from '../input/mouse-report.js'
 import { agentChoiceInput } from './connection-agent-list.js'
-import { connectionModelState } from '../../../workspace-view/index.js'
+import { connectionModelProviders } from '../../../workspace-view/index.js'
+import { connectionModels, connectionSelection } from './connection-selection.js'
 const isPicker = (s: WorkspaceState) => ['connection-model', 'connection-engine'].includes(s.overlay ?? '')
 const field = (s: WorkspaceState) => (s.overlay === 'connection-engine' ? 'engine' : 'model')
 export function connectionChoices(s: WorkspaceState) {
   const d = s.connection
   if (!d) return []
-  const selected = connectionModelState(
-    d.model,
-    s.installed,
-    s.workspace?.setups ?? [],
-    s.workspace?.downloads ?? [],
-    d.provider
-  )
-  return field(s) === 'model'
-    ? [
-        ...(!selected.ready && d.model
-          ? [{ value: d.model, label: `${d.model} · Not downloaded`, selected: true }]
-          : []),
-        ...s.installed.map((m) => ({ value: m.id, label: m.name || m.id, selected: m.id === d.model })),
-      ]
-    : selected.providers.map((provider) => ({
+  if (field(s) === 'engine') {
+    const providers = new Set(s.installed.flatMap(connectionModelProviders))
+    return (s.connectionEngines ?? [])
+      .filter((provider) => providers.has(provider))
+      .map((provider) => ({
         value: provider,
         label: engineName(provider),
-        selected: provider === selected.provider,
+        selected: provider === d.provider,
       }))
+  }
+  const pending = d.model && !s.installed.some((model) => model.id === d.model)
+  return [
+    ...(pending ? [{ value: d.model, label: `${d.model} · Not downloaded`, selected: true }] : []),
+    ...connectionModels(s, d.provider).map((model) => ({
+      value: model.id,
+      label: model.name || model.id,
+      selected: model.id === d.model,
+    })),
+  ]
 }
 const optionId = (value: string) => `connection-option:${encodeURIComponent(value)}`
 export function connectionPickerAction(id: string, ctx: ActionContext): boolean {
@@ -55,7 +56,7 @@ export function connectionPickerAction(id: string, ctx: ActionContext): boolean 
     ctx.update((v) => ({
       ...v,
       overlay: next.overlay,
-      focus: selected ? optionId(selected.value) : 'close',
+      focus: selected ? optionId(selected.value) : id === 'guide-model' ? 'guide-models' : 'close',
       hover: '',
     }))
     return true
@@ -63,29 +64,18 @@ export function connectionPickerAction(id: string, ctx: ActionContext): boolean 
   if (!id.startsWith('connection-option:') || !isPicker(s)) return false
   const choice = connectionChoices(s).find((c) => optionId(c.value) === id)
   if (!choice) return true
-  const selected = connectionModelState(
-    choice.value,
-    s.installed,
-    s.workspace?.setups ?? [],
-    s.workspace?.downloads ?? [],
-    d.provider
-  )
+  const choosingModel = field(s) === 'model'
+  const pair = choosingModel
+    ? { model: choice.value, provider: connectionSelection(s, choice.value, d.provider).provider }
+    : {
+        provider: choice.value,
+        model: connectionModels(s, choice.value).some((model) => model.id === d.model) ? d.model : '',
+      }
   ctx.update((v) => ({
     ...v,
-    connection: v.connection
-      ? {
-          ...v.connection,
-          ...(field(s) === 'model'
-            ? {
-                model: choice.value,
-                provider: selected.provider,
-              }
-            : { provider: choice.value }),
-          error: '',
-        }
-      : null,
+    connection: v.connection ? { ...v.connection, ...pair, error: '' } : null,
     overlay: 'connection-guide',
-    focus: `guide-${field(s)}`,
+    focus: choosingModel || !pair.model ? 'guide-model' : 'guide-engine',
     hover: '',
   }))
   return true
@@ -120,7 +110,12 @@ export function connectionGuideInput(
     : key.end
       ? choices.length - 1
       : Math.max(0, Math.min(choices.length - 1, at + direction * delta))
-  return { patch: { focus: choices[next] ? optionId(choices[next]!.value) : 'close', hover: '' } }
+  return {
+    patch: {
+      focus: choices[next] ? optionId(choices[next]!.value) : field(s) === 'model' ? 'guide-models' : 'close',
+      hover: '',
+    },
+  }
 }
 export function drawConnectionPicker(c: Canvas, s: WorkspaceState, focus: string) {
   const anchor = c.targets.find((target) => target.id === `guide-${field(s)}`)
@@ -180,6 +175,18 @@ export function drawConnectionPicker(c: Canvas, s: WorkspaceState, focus: string
         'Open the model catalog for this connection',
         focus
       )
-    else text(c, x + 2, y + 3, 'Choose a downloaded model first.', COLORS.muted, width - 4)
+    else {
+      text(
+        c,
+        x + 2,
+        y + 3,
+        s.connectionEngines === null
+          ? 'Could not check installed engines.'
+          : 'No installed engine matches a downloaded model.',
+        COLORS.muted,
+        width - 4
+      )
+      button(c, 'close', x + 2, y + 4, 'Back', 'Return to the connection', focus)
+    }
   }
 }

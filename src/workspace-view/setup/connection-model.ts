@@ -60,24 +60,36 @@ export function connectionDownloadTarget(job: unknown) {
   }
 }
 
+/** An explicit empty provider list is authoritative; older rows only carry a single provider. */
+export function connectionModelProviders(model: unknown): string[] {
+  const row = record(model)
+  return [
+    ...new Set(
+      (Array.isArray(row['providers']) ? row['providers'] : [row['provider']]).filter(
+        (provider): provider is string => typeof provider === 'string' && provider !== ''
+      )
+    ),
+  ]
+}
+
 /** Readiness never starts a connection: the user must still choose Configure & start. */
 export function connectionModelState(
   model: string,
   installed: readonly unknown[],
   setups: readonly unknown[],
   downloads: readonly unknown[],
-  preferredProvider = ''
+  preferredProvider = '',
+  installedProviders?: readonly string[]
 ) {
   const local = installed.map(record).find((row) => (row['id'] ?? row['model_id']) === model),
-    job = connectionDownload(setups, model),
+    job = model ? connectionDownload(setups, model) : undefined,
     target = connectionDownloadTarget(job),
     pendingProvider = target.provider || preferredProvider,
-    available = local
-      ? Array.isArray(local['providers'])
-        ? local['providers'].map(String)
-        : [String(local['provider'] ?? '')]
-      : [pendingProvider],
-    providers = [...new Set(available.filter(Boolean))],
+    providers = local
+      ? connectionModelProviders(local).filter(
+          (provider) => !installedProviders || installedProviders.includes(provider)
+        )
+      : [pendingProvider].filter(Boolean),
     provider = providers.includes(preferredProvider) ? preferredProvider : (providers[0] ?? ''),
     row = job
       ? downloadRows([job], downloads).find((item) => item.id === String(job['id'] ?? job['setup_id'] ?? ''))
@@ -85,7 +97,7 @@ export function connectionModelState(
     state = row?.state ?? (job ? String(job['stage'] ?? job['state'] ?? '') : ''),
     percent = row && row.total > 0 ? Math.min(100, Math.floor((row.transferred / row.total) * 100)) : null
   const pendingEngine = downloadRows([], downloads).find(
-    (item) => item['kind'] === 'engine' && item['engine'] === provider
+    (item) => item['kind'] === 'engine' && item['engine'] === (provider || preferredProvider)
   )
   let status = 'Choose a model to continue.'
   if (model) {
@@ -96,7 +108,9 @@ export function connectionModelState(
     else if (local)
       status = providers.length
         ? 'Model ready. Configure the connection to continue.'
-        : 'No compatible inference engine. Choose a different model.'
+        : installedProviders
+          ? 'No installed engine can run this model. Choose another engine or model.'
+          : 'No compatible inference engine. Choose a different model.'
     else if (downloadHeld(state)) status = 'Download paused. Resume it to continue.'
     else if (/failed|interrupted/.test(state)) status = 'Download failed. Resume it to retry.'
     else if (/removed|deleted/.test(state) || !job)
@@ -105,7 +119,7 @@ export function connectionModelState(
     else status = `Waiting for the model download${percent === null ? '…' : ` · ${percent}%`}`
   }
   return {
-    ready: Boolean(local && !pendingEngine),
+    ready: Boolean(local && provider && !pendingEngine),
     providers,
     provider,
     status,

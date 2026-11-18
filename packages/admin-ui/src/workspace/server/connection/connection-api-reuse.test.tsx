@@ -4,6 +4,26 @@ import { expect, it, vi } from 'vitest'
 import { workspaceFixture } from '@/test/workspace-fixture'
 import { ConnectionGuide } from './ConnectionGuide'
 
+it('configures Hermes on the server host through core', async () => {
+  const { workspace, execute } = workspaceFixture({
+    'models.installed': [{ id: 'qwen', name: 'Qwen', providers: ['llamacpp-upstream'] }],
+    'keys.list': [{ id: 'key' }],
+    'connection.info': { endpoint: 'http://127.0.0.1:1339/v1', configurable_agents: ['hermes'] },
+    'connection.configure': { configured: true, launch_command: 'atc connect hermes --model qwen' },
+  })
+  render(
+    <ConnectionGuide workspace={workspace} initialAgent="hermes" onClose={vi.fn()} onSettings={vi.fn()} />
+  )
+  await userEvent.click(await screen.findByRole('button', { name: 'Configure & start' }))
+  expect(await screen.findByRole('button', { name: 'Copy launch command' })).toBeInTheDocument()
+  expect(execute).toHaveBeenCalledWith('connection.configure', {
+    agent: 'hermes',
+    model: 'qwen',
+    key_id: 'key',
+  })
+  expect(screen.getByText(/on the server host to launch Hermes Agent/)).toBeInTheDocument()
+})
+
 it.each([true, false])('connects without restarting the unchanged API (running=%s)', async (running) => {
   const { workspace, execute } = workspaceFixture({
     'models.installed': [{ id: 'qwen', name: 'Qwen', providers: ['llamacpp-upstream'] }],

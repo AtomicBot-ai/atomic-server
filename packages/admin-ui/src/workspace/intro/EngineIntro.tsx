@@ -1,63 +1,69 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { setupFinished } from '@view'
 import { useWorkspace } from '../useWorkspace'
 import { record, rows } from '../types'
-import { IntroScreen } from './IntroScreen'
+import { Action } from '../Controls'
+import { WorkspaceBrand } from '../WorkspaceBrand'
 import { EngineChooser } from './EngineChooser'
 
 export function EngineIntro({ onContinue }: { onContinue: () => void }) {
   const w = useWorkspace()
-  const [stage, setStage] = useState<'checking' | 'choose' | 'engines' | 'ready'>('checking')
+  const [choosing, setChoosing] = useState(false)
   const { snapshot, execute } = w
   const checking = useRef(false)
   const completed = useRef(false)
+  const proceed = useCallback(() => {
+    if (completed.current) return
+    completed.current = true
+    onContinue()
+  }, [onContinue])
+
   useEffect(() => {
-    if (setupFinished(snapshot?.setup) && !completed.current) {
-      completed.current = true
-      onContinue()
-    }
-  }, [snapshot?.setup, stage, onContinue])
-  useEffect(() => {
-    if (!snapshot || stage !== 'checking' || checking.current) return
-    checking.current = true
-    if (setupFinished(snapshot.setup)) return
-    if (snapshot.setups.length > 0 || snapshot.downloads.some((row) => record(row).kind === 'engine')) {
-      onContinue()
+    if (!snapshot || completed.current) return
+    if (setupFinished(snapshot.setup)) {
+      proceed()
       return
     }
+    if (choosing || checking.current) return
+    if (snapshot.setups.length > 0 || snapshot.downloads.some((row) => record(row).kind === 'engine')) {
+      proceed()
+      return
+    }
+    checking.current = true
     void execute('engines.list')
       .then((result) => {
         if (completed.current) return
-        if (rows(record(result).engines).some((e) => e.active)) setStage('ready')
-        else {
-          setStage('choose')
-        }
+        if (rows(record(result).engines).some((e) => e.active)) proceed()
+        else setChoosing(true)
       })
-      .catch(() => setStage('engines'))
-  }, [snapshot, stage, execute, onContinue])
-  if (stage === 'engines')
-    return (
-      <EngineChooser
-        workspace={w}
-        onContinue={onContinue}
-        onBack={() => setStage('choose')}
-        onLater={onContinue}
-      />
-    )
+      .catch(() => {
+        if (!completed.current) setChoosing(true)
+      })
+  }, [snapshot, choosing, execute, proceed])
+
+  if (choosing) return <EngineChooser workspace={w} onContinue={proceed} onLater={proceed} />
+
   return (
-    <IntroScreen
-      key={stage}
-      onContinue={stage === 'ready' ? onContinue : () => setStage('engines')}
-      disabled={stage === 'checking' && !w.error}
-      label={
-        stage === 'ready'
-          ? 'Press any key'
-          : stage === 'checking'
-            ? w.error
-              ? 'Retry connection'
-              : 'Checking setup…'
-            : 'Choose engine'
-      }
-    />
+    <main className="wizard-overlay first-run-overlay" aria-label="Checking setup">
+      <div className="wizard first-run">
+        <header className="workspace-status-header desktop-topbar">
+          <WorkspaceBrand />
+        </header>
+        <div className="first-run-content">
+          {w.error ? (
+            <div className="setup-feedback">
+              <p role="alert" className="ew-error">
+                {w.error}
+              </p>
+              <Action onClick={w.refresh}>Retry connection</Action>
+            </div>
+          ) : (
+            <p role="status" className="ew-muted">
+              Checking setup…
+            </p>
+          )}
+        </div>
+      </div>
+    </main>
   )
 }

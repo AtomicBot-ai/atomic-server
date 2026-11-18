@@ -1,4 +1,5 @@
 import type { CoreLink } from '../core-link/index.js'
+import type { IntegrationHost } from '../agent-launch/index.js'
 import type { AtcConfig, AtcPaths } from '../config/index.js'
 import type { ErrorSink } from '../telemetry/index.js'
 import type { RemoteAccessSetup, WorkspaceAtc } from '../contract/index.js'
@@ -12,6 +13,8 @@ export interface WorkspaceServiceOptions {
   selfCommand?: readonly string[]
   /** The server's environment: `HF_TOKEN` for gated model downloads. */
   env?: NodeJS.ProcessEnv
+  /** The account and tools used to configure agents installed on the server host. */
+  agentHost?: IntegrationHost
   /** atc's own error reports: failed model downloads go there. */
   errors?: ErrorSink
   /** Is a port free on every address that can shadow it? `api.start` refuses a busy one. */

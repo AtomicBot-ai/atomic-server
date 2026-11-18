@@ -362,7 +362,7 @@ Usage: atc connect [agent] [options]
 Connection details or launch an installed agent
 
 Arguments:
-  [agent]  atomic-agent, claude, codex or opencode; omit for connection details
+  [agent]  Agent ID from the connection catalog; omit for connection details
 
 Options:
       --model <value>   Model ID; defaults to first ready chat model

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FIRST_RUN_STEPS, FIRST_RUN_TITLES } from '@contract'
 import { setupFinished, setupDownloadsPending } from '@view'
-import type { FirstRunStep } from '@contract'
+import type { FirstRunStep, WorkspaceSnapshot } from '@contract'
 import type { Workspace } from '../useWorkspace'
 import { Action } from '../Controls'
 import { record, text } from '../types'
@@ -16,12 +16,25 @@ import { FloatingDownloads } from '../library/downloads/FloatingDownloads'
 import { WorkspaceBrand } from '../WorkspaceBrand'
 import { CloudProviders } from '../library/cloud/CloudProviders'
 import { FirstModel } from './FirstModel'
-import { Permissions, PermissionsWarning } from './Permissions'
+import { Permissions } from './Permissions'
 import { Destinations } from './Purpose'
 import { OptionalMedia } from './OptionalMedia'
 import { WaitingSetup } from './WaitingSetup'
 import './onboarding.css'
-import './onboarding-model.css'
+
+const SETUP_STEP_LABELS: Record<FirstRunStep, string> = {
+  model: 'Local model',
+  permissions: 'Permissions',
+  cloud: 'Remote providers',
+  media: 'Media models',
+  connect: 'Connection',
+}
+type Destination = 'endpoint' | 'agents'
+type Waiting = {
+  destination: Destination
+  snapshot: WorkspaceSnapshot | null
+  previous: WorkspaceSnapshot | null
+}
 
 export function SetupWizard({
   workspace: w,
@@ -35,10 +48,13 @@ export function SetupWizard({
   onPrepared?: (id: string) => void
   onConfigure?: () => void
   onChat?: () => void
-  onDestination?: (destination: 'endpoint' | 'agents') => void
+  onDestination?: (destination: Destination) => void
 }) {
   const [step, setStep] = useState<FirstRunStep>(w.snapshot?.setups.length ? 'permissions' : 'model')
-  const [waitingDestination, setWaitingDestination] = useState<'endpoint' | 'agents' | null>(null)
+  const [waiting, setWaiting] = useState<Waiting | null>(null)
+  // Use the refresh result until the workspace publishes its next snapshot.
+  const waitingSnapshot = waiting && w.snapshot === waiting.previous ? waiting.snapshot : w.snapshot
+  const waitingPending = !waitingSnapshot || setupDownloadsPending(waitingSnapshot)
   const [modelChoice, setModelChoice] = useState('')
   const [review, setReview] = useState<RecordValue | null>(null)
   const [engineDialog, setEngineDialog] = useState('')
@@ -46,22 +62,20 @@ export function SetupWizard({
   const [engineRevision, setEngineRevision] = useState(0)
   const choosing = useRef(false)
   const [category, setCategory] = useState('image')
-  const [mediaAdded, setMediaAdded] = useState(false)
-  const [cloudConnected, setCloudConnected] = useState(false)
-  const [permissionsGranted, setPermissionsGranted] = useState(false)
-  const [permissionExit, setPermissionExit] = useState<'cloud' | 'chat' | null>(null)
   const [modelActionContainer, setModelActionContainer] = useState<HTMLDivElement | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
+  const content = useRef<HTMLElement>(null)
   useEffect(() => {
-    heading.current?.focus()
-  }, [step])
+    if (content.current) content.current.scrollTop = 0
+    heading.current?.focus({ preventScroll: true })
+  }, [step, waiting])
   const finishing = w.pending.includes('setup.manual')
   const checking = finishing || w.pending.includes('cloud.connect')
   const dialog = useDialog(
     () => {
       if (!checking) {
-        if (waitingDestination) {
-          setWaitingDestination(null)
+        if (waiting) {
+          setWaiting(null)
           return
         }
         const previous = FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1]
@@ -72,23 +86,22 @@ export function SetupWizard({
     true,
     { dismissOnOutside: false }
   )
-  const skip = async () => {
-    const snapshot = await w.refresh()
-    if (setupDownloadsPending(snapshot ?? w.snapshot)) {
-      setStep('connect')
-      setWaitingDestination('endpoint')
-      return
-    }
-    if (!setupFinished(w.snapshot?.setup)) await w.execute('setup.manual')
+  const openDashboard = async (restoreSelected: boolean) => {
+    if (!setupFinished(w.snapshot?.setup))
+      await w.execute('setup.manual', { restore_selected: restoreSelected })
     onClose()
   }
-  const leavePermissions = (destination: 'cloud' | 'chat') => {
-    if (!permissionsGranted) setPermissionExit(destination)
-    else if (destination === 'cloud') setStep('cloud')
-    else void skip()
+  const skip = async () => {
+    const snapshot = (await w.refresh()) ?? w.snapshot
+    if (setupDownloadsPending(snapshot)) {
+      setStep('connect')
+      setWaiting({ destination: 'endpoint', snapshot, previous: w.snapshot })
+      return
+    }
+    await openDashboard(true)
   }
   const next = () => setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) + 1] ?? 'connect')
-  const finish = async (destination: 'endpoint' | 'agents') => {
+  const finish = async (destination: Destination) => {
     if (!setupFinished(w.snapshot?.setup)) await w.execute('setup.manual')
     if (onDestination) onDestination(destination)
     else onOpenGoal('api')
@@ -99,139 +112,129 @@ export function SetupWizard({
         ref={dialog}
         tabIndex={-1}
         className="wizard first-run"
+        hidden={choosingEngine}
         role="dialog"
         aria-modal="true"
         aria-label="Set up Atomic Server"
       >
-        <header className="workspace-status-header">
+        <header className="workspace-status-header desktop-topbar">
           <WorkspaceBrand />
-          <FloatingDownloads workspace={w} onboarding />
+          <FloatingDownloads workspace={w} />
         </header>
         {finishing && <p role="status">Preparing your server…</p>}
-        <main className={`first-run-content ${step === 'model' ? 'first-run-model' : ''}`}>
-          {
+        <div className="first-run-body">
+          <ol className="first-run-steps" aria-label="Setup steps">
+            {FIRST_RUN_STEPS.map((item) => (
+              <li key={item} aria-current={item === step ? 'step' : undefined}>
+                {SETUP_STEP_LABELS[item]}
+              </li>
+            ))}
+          </ol>
+          <main ref={content} className="first-run-content">
             <h1 ref={heading} tabIndex={-1}>
-              {waitingDestination
-                ? setupDownloadsPending(w.snapshot)
+              {waiting
+                ? waitingPending
                   ? 'Getting your model ready'
                   : 'Your model is downloaded'
                 : FIRST_RUN_TITLES[step]}
             </h1>
-          }
-          {waitingDestination && (
-            <WaitingSetup
-              workspace={w}
-              onBack={() => setWaitingDestination(null)}
-              onContinue={() => finish(waitingDestination)}
-            />
-          )}
-          {!waitingDestination && step === 'model' && (
-            <FirstModel
-              key={engineRevision}
-              workspace={w}
-              initialChoice={modelChoice}
-              onChoice={setModelChoice}
-              actionContainer={modelActionContainer}
-              select={async (m, installed) => {
-                if (installed) {
-                  await w.execute('config.update', { values: { 'tui.model': text(m.id ?? m.model_id) } })
-                  next()
-                } else setReview(m)
-              }}
-            />
-          )}
-          {!waitingDestination && step === 'permissions' && <Permissions onGranted={setPermissionsGranted} />}
-          {!waitingDestination && step === 'cloud' && (
-            <>
-              <CloudProviders workspace={w} onboarding onConnected={() => setCloudConnected(true)} />
-            </>
-          )}
-          {!waitingDestination && step === 'media' && (
-            <>
-              <OptionalMedia
+            {waiting && <WaitingSetup workspace={{ ...w, snapshot: waitingSnapshot }} />}
+            {!waiting && step === 'model' && (
+              <FirstModel
+                key={engineRevision}
                 workspace={w}
-                select={(model, kind) => {
-                  setCategory(kind)
-                  setReview(model)
+                initialChoice={modelChoice}
+                onChoice={setModelChoice}
+                actionContainer={modelActionContainer}
+                select={async (m, installed) => {
+                  if (installed) {
+                    await w.execute('config.update', { values: { 'tui.model': text(m.id ?? m.model_id) } })
+                    next()
+                  } else setReview(m)
                 }}
               />
-            </>
-          )}
-          {!waitingDestination && step === 'connect' && w.error && (
-            <Action onClick={() => setStep('model')}>Choose another model</Action>
-          )}
-          {!waitingDestination && step === 'connect' && (
-            <Destinations
-              choose={async (destination) => {
-                if (choosing.current) return
-                choosing.current = true
-                try {
-                  // Decide on the server's word, not the last poll (none right after the admin opens); when
-                  // the server cannot say, wait: the waiting screen lets the person go on anyway.
-                  const snapshot = await w.refresh()
-                  if (!snapshot || setupDownloadsPending(snapshot)) setWaitingDestination(destination)
-                  else await finish(destination)
-                } finally {
-                  choosing.current = false
-                }
-              }}
-            />
-          )}
-        </main>
-        {!waitingDestination && (
-          <footer className="first-run-footer">
-            <Action
-              disabled={checking}
-              onClick={() =>
-                step === 'model'
-                  ? setChoosingEngine(true)
-                  : setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1])
-              }
-            >
-              Back
-            </Action>
-            {
-              <div className="first-run-actions" ref={setModelActionContainer}>
+            )}
+            {!waiting && step === 'permissions' && <Permissions />}
+            {!waiting && step === 'cloud' && (
+              <>
+                <p className="ew-muted setup-step-description">
+                  Connect a provider to use its models. You can also do this later from the Catalog.
+                </p>
+                <CloudProviders workspace={w} />
+              </>
+            )}
+            {!waiting && step === 'media' && (
+              <>
+                <p className="ew-muted setup-step-description">
+                  Optionally queue a model for image or video generation.
+                </p>
+                <OptionalMedia
+                  workspace={w}
+                  select={(model, kind) => {
+                    setCategory(kind)
+                    setReview(model)
+                  }}
+                />
+              </>
+            )}
+            {!waiting && step === 'connect' && w.error && (
+              <Action onClick={() => setStep('model')}>Choose another model</Action>
+            )}
+            {!waiting && step === 'connect' && (
+              <Destinations
+                choose={async (destination) => {
+                  if (choosing.current) return
+                  choosing.current = true
+                  try {
+                    // Decide on the server's word, not the last poll (none right after the admin opens); when
+                    // the server cannot say, wait: the waiting screen lets the person go on anyway.
+                    const snapshot = await w.refresh()
+                    if (!snapshot || setupDownloadsPending(snapshot))
+                      setWaiting({ destination, snapshot, previous: w.snapshot })
+                    else await finish(destination)
+                  } finally {
+                    choosing.current = false
+                  }
+                }}
+              />
+            )}
+          </main>
+        </div>
+        <footer className="first-run-footer">
+          <Action
+            disabled={checking}
+            onClick={() => {
+              if (waiting) setWaiting(null)
+              else if (step === 'model') setChoosingEngine(true)
+              else setStep(FIRST_RUN_STEPS[FIRST_RUN_STEPS.indexOf(step) - 1])
+            }}
+          >
+            Back
+          </Action>
+          <div className="first-run-actions" ref={setModelActionContainer}>
+            {waiting ? (
+              <Action primary disabled={checking} onClick={() => finish(waiting.destination)}>
+                {waitingPending ? 'Open control panel' : 'Continue'}
+              </Action>
+            ) : (
+              <>
                 <span className="first-run-skip">
                   <Action
                     disabled={checking}
-                    onClick={() => (step === 'permissions' ? leavePermissions('chat') : skip())}
+                    onClick={step === 'connect' ? () => openDashboard(false) : skip}
                   >
-                    Skip setup
+                    {step === 'connect' ? 'Go to dashboard' : 'Skip setup'}
                   </Action>
                 </span>
                 {['permissions', 'cloud', 'media'].includes(step) && (
-                  <Action
-                    primary
-                    disabled={checking}
-                    onClick={() => (step === 'permissions' ? leavePermissions('cloud') : next())}
-                  >
-                    {(
-                      step === 'permissions'
-                        ? permissionsGranted
-                        : step === 'cloud'
-                          ? cloudConnected
-                          : mediaAdded
-                    )
-                      ? 'Continue'
-                      : 'Skip'}
+                  <Action primary disabled={checking} onClick={next}>
+                    Continue
                   </Action>
                 )}
-              </div>
-            }
-          </footer>
-        )}
-        {permissionExit && (
-          <PermissionsWarning
-            close={() => setPermissionExit(null)}
-            proceed={async () => {
-              const destination = permissionExit
-              setPermissionExit(null)
-              if (destination === 'cloud') setStep('cloud')
-              else await skip()
-            }}
-          />
-        )}
+              </>
+            )}
+          </div>
+        </footer>
         {review && step === 'model' && (
           <SetupReview
             revision={engineRevision}
@@ -263,7 +266,6 @@ export function SetupWizard({
             onStarted={(result) => {
               if (!text(record(result).id ?? record(result).setup_id, ''))
                 throw new Error('The server did not return a download ID. Open Downloads to check its state.')
-              setMediaAdded(true)
             }}
           />
         )}
@@ -277,17 +279,17 @@ export function SetupWizard({
             }}
           />
         )}
-        {choosingEngine && (
-          <EngineChooser
-            workspace={w}
-            onBack={() => setChoosingEngine(false)}
-            onContinue={() => {
-              setChoosingEngine(false)
-              setEngineRevision((v) => v + 1)
-            }}
-          />
-        )}
       </section>
+      {choosingEngine && (
+        <EngineChooser
+          workspace={w}
+          onBack={() => setChoosingEngine(false)}
+          onContinue={() => {
+            setChoosingEngine(false)
+            setEngineRevision((v) => v + 1)
+          }}
+        />
+      )}
     </div>
   )
 }

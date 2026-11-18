@@ -40,7 +40,14 @@ import './styles/secondary-forms.css'
 
 export function WorkspaceApp() {
   const [intro, setIntro] = useState(true)
-  return intro ? <EngineIntro onContinue={() => setIntro(false)} /> : <WorkspaceContent />
+  const theme = useThemeStore((state) => state.theme)
+  return intro ? (
+    <div style={workspaceTheme(theme)} className="eye-workspace desktop-workspace">
+      <EngineIntro onContinue={() => setIntro(false)} />
+    </div>
+  ) : (
+    <WorkspaceContent />
+  )
 }
 function WorkspaceContent() {
   const theme = useThemeStore((state) => state.theme)

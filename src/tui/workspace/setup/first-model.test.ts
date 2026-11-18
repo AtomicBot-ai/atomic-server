@@ -212,7 +212,7 @@ it('keeps grouped choices reachable when a background download reduces the catal
   }
 })
 
-it.each(['endpoint', 'agent', 'skip'])(
+it.each(['endpoint', 'agent'])(
   'keeps %s on Minesweeper while file lookup is still preparing the first download',
   async (destination) => {
     const t = fixture()
@@ -228,7 +228,7 @@ it.each(['endpoint', 'agent', 'skip'])(
     const preparing = firstRunAction('first-model-continue', t.ctx)
     await vi.waitFor(() => expect(t.ctx.get().setup?.preparing).toBe(true))
     t.ctx.update((s) => ({ ...s, firstRun: 'connect' }))
-    await firstRunAction(destination === 'skip' ? 'first-skip' : `first-connect:${destination}`, t.ctx)
+    await firstRunAction(`first-connect:${destination}`, t.ctx)
     expect(t.ctx.get().page).toBe('welcome')
     expect(t.ctx.get().finalSetup).toBeTruthy()
     expect(t.ctx.controller.runtime.execute).not.toHaveBeenCalledWith('setup.manual')

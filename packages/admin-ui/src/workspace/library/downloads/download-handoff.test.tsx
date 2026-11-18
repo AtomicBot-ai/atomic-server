@@ -28,7 +28,7 @@ const model = snapshotFixture({
   downloads: [{ taskId: 'transfer', transferred: 250, total: 1000 }],
 })
 function Status() {
-  return <FloatingDownloads workspace={useWorkspace()} onboarding />
+  return <FloatingDownloads workspace={useWorkspace()} />
 }
 
 it('replaces the engine with model progress without input when snapshots take longer than the polling interval', async () => {

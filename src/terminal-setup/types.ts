@@ -65,7 +65,7 @@ export interface SetupView {
   path: EngineSetupPath | null
   engine: string
   /** Preserve the chosen workspace destination when a background first model becomes ready. */
-  destination?: 'chat' | 'server'
+  destination?: 'chat' | 'server' | 'dashboard'
   /** Core-reported hardware summary used by first run. Memory is in MiB. */
   device?: { name: string; memory: number }
   query: string

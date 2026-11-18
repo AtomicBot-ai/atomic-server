@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
@@ -7,27 +7,33 @@ import { CloudProviders } from './CloudProviders'
 import { SetupWizard } from '../../setup/SetupWizard'
 import { DeleteConfirmation } from '../DeleteConfirmation'
 
-it('Escape returns the inline provider step to permissions without an intermediate provider list', async () => {
-  const close = vi.fn()
-  const { workspace } = workspaceFixture(
+it('onboarding opens the shared provider dialog on demand and Escape returns to the provider list', async () => {
+  const { workspace, execute } = workspaceFixture(
     { 'cloud.list': { providers: [] } },
     { setups: [{ id: 'job', stage: 'downloading' }] as never }
   )
-  render(<SetupWizard workspace={workspace} onClose={close} onOpenGoal={vi.fn()} />)
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
+  render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  expect(screen.getByRole('heading', { name: 'Remote providers' })).toBeInTheDocument()
+  expect(screen.queryByLabelText('API key', { exact: false })).not.toBeInTheDocument()
   const provider = screen.getByRole('button', { name: 'OpenAI', exact: true })
   await userEvent.click(provider)
-  const dialog = screen.getByRole('region', { name: 'Connect OpenAI' })
+  const dialog = screen.getByRole('dialog', { name: 'Connect OpenAI' })
   await userEvent.type(within(dialog).getByLabelText('API key', { exact: false }), 'private-value')
   await userEvent.keyboard('{Escape}')
-  expect(screen.queryByRole('region', { name: 'Connect OpenAI' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Connect OpenAI' })).not.toBeInTheDocument()
+  expect(provider).toHaveFocus()
+  expect(screen.getByRole('heading', { name: 'Remote providers' })).toBeInTheDocument()
+  expect(execute).not.toHaveBeenCalledWith('cloud.connect', expect.anything())
+  await userEvent.click(screen.getByRole('button', { name: 'Anthropic', exact: true }))
+  expect(
+    within(screen.getByRole('dialog', { name: 'Connect Anthropic' })).getByLabelText('API key', {
+      exact: false,
+    })
+  ).toHaveValue('')
+  await userEvent.keyboard('{Escape}')
+  await userEvent.keyboard('{Escape}')
   expect(screen.getByRole('heading', { name: 'Permissions' })).toBeInTheDocument()
-  expect(close).not.toHaveBeenCalled()
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(screen.getByRole('button', { name: 'OpenAI', exact: true }))
-  expect(screen.getByLabelText('API key', { exact: false })).toHaveValue('')
 })
 it('Escape closes the library provider form and returns focus to its card', async () => {
   const { workspace } = workspaceFixture({ 'cloud.list': { providers: [] } })
@@ -46,7 +52,7 @@ it('Escape on Custom Endpoint shows its page with an Add endpoint action', async
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Add endpoint' })).toBeInTheDocument()
 })
-it('keeps Skip setup directly before Skip in the same footer action group', async () => {
+it('keeps Skip setup directly before Continue in the same footer action group', async () => {
   const { workspace } = workspaceFixture({}, { setups: [{ id: 'job', stage: 'downloading' }] as never })
   render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
   await act(async () => {})
@@ -56,33 +62,23 @@ it('keeps Skip setup directly before Skip in the same footer action group', asyn
     within(group as HTMLElement)
       .getAllByRole('button')
       .map((button) => button.textContent)
-  ).toEqual(['Skip setup', 'Skip'])
+  ).toEqual(['Skip setup', 'Continue'])
   expect(skip.closest('.first-run-skip')).not.toBeNull()
   expect(screen.getByRole('button', { name: 'Back', exact: true })).toBeInTheDocument()
 })
-it('keeps onboarding provider selection inline and allows switching without an intermediate dialog', async () => {
-  const { workspace } = workspaceFixture({ 'cloud.list': { providers: [] } })
-  render(<CloudProviders workspace={workspace} onboarding />)
-  await userEvent.click(screen.getByRole('button', { name: 'OpenAI', exact: true }))
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(screen.getByRole('region', { name: 'Connect OpenAI' })).toBeInTheDocument()
-  expect(screen.getByLabelText('API key', { exact: false })).toHaveFocus()
-  await userEvent.type(screen.getByLabelText('API key', { exact: false }), 'previous-key')
-  await userEvent.click(screen.getByRole('button', { name: 'Anthropic', exact: true }))
-  expect(screen.getByRole('region', { name: 'Connect Anthropic' })).toBeInTheDocument()
-  expect(screen.getByLabelText('API key', { exact: false })).toHaveValue('')
-  expect(screen.getByLabelText('API key', { exact: false })).toHaveFocus()
-})
-
-it('lets a download confirmation handle Escape before the inline provider editor', async () => {
+it('lets a download confirmation handle Escape before the provider dialog', async () => {
   const { workspace } = workspaceFixture({ 'cloud.list': { providers: [] } })
   const closed = vi.fn()
   function Example() {
     const [removing, setRemoving] = useState(false)
+    useEffect(() => {
+      const open = () => setRemoving(true)
+      window.addEventListener('open-download-confirmation', open)
+      return () => window.removeEventListener('open-download-confirmation', open)
+    }, [])
     return (
       <>
-        <CloudProviders workspace={workspace} onboarding />
-        <button onClick={() => setRemoving(true)}>Remove Qwen</button>
+        <CloudProviders workspace={workspace} />
         {removing && (
           <DeleteConfirmation
             title="Remove download?"
@@ -102,11 +98,11 @@ it('lets a download confirmation handle Escape before the inline provider editor
   render(<Example />)
   await userEvent.click(screen.getByRole('button', { name: 'OpenAI', exact: true }))
   await userEvent.type(screen.getByLabelText('API key', { exact: false }), 'draft-key')
-  await userEvent.click(screen.getByRole('button', { name: 'Remove Qwen' }))
+  await act(async () => window.dispatchEvent(new Event('open-download-confirmation')))
   await userEvent.keyboard('{Escape}')
   expect(closed).toHaveBeenCalledOnce()
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(screen.getByRole('region', { name: 'Connect OpenAI' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Remove download?' })).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: 'Connect OpenAI' })).toBeInTheDocument()
   expect(screen.getByLabelText('API key', { exact: false })).toHaveValue('draft-key')
 })
 

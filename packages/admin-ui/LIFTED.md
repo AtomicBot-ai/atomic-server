@@ -36,7 +36,7 @@ The following flow adaptations use the owner's local `atomic-chat-ui` redesign (
 | `src/workspace/WorkspaceNavigation.tsx` | `web-app/src/components/left-sidebar/NavigationRail.tsx`, `containers/ServerSidebar.tsx`, `SettingsMenu.tsx` | Server sections and a secondary Playground |
 | `../../src/contract/desktop-flows.ts` | `Atomic-Chat/web-app/src/constants/integrations.ts` @ `5043013` | Agent names/order shared with TUI; existing Claude wire ID retained |
 
-The intro logo `src/workspace/intro/atomic-logo.png` is copied from the selected desktop redesign's `web-app/public/images/transparent-logo.png` at `c9fa1e66` plus local preview changes. `IntroScreen.tsx` itself is local: its animation and layout are this package's CSS.
+The intro logo `src/workspace/intro/atomic-logo.png` is copied from the selected desktop redesign's `web-app/public/images/transparent-logo.png` at `c9fa1e66` plus local preview changes.
 
 Cloud connection cards and their editor in `src/workspace/library/cloud/CloudProviders.tsx` follow
 `web-app/src/preview/onboarding/Onboarding.tsx` at `1c01e2a`, with real server validation replacing the
@@ -98,7 +98,7 @@ at `5043013`. They are bundled locally and declared in `desktop-parity.css` so t
 Server control-panel tint, running-border animation, agent-card rhythm and settings/connection composition
 follow `containers/server-control-panel.css` and `containers/server-concept/{desktop,setup-details}.css` at the same revision.
 
-- `workspace/library/cloud/CloudProviderEditor.tsx`, `CloudProviderDialog.tsx`, `onboarding-providers.css`, `workspace/setup/OptionalMediaDownload.tsx`: desktop `preview/onboarding/Onboarding.tsx` and `onboarding.css` @ `5043013`; inline onboarding credentials, scrollable provider tiles, live validation and separate media pause/remove actions. `workspace/library/catalog/catalog-table.css` follows `containers/hub/LocalModelTable.tsx` at the same revision; native responsive table styling split from `catalog-desktop.css`.
+- `workspace/library/cloud/CloudProviderEditor.tsx`, `CloudProviderDialog.tsx`, `workspace/setup/OptionalMediaDownload.tsx`: desktop `preview/onboarding/Onboarding.tsx` and `onboarding.css` @ `5043013`; shared provider dialogs, live validation and separate media pause/remove actions. `workspace/library/catalog/catalog-table.css` follows `containers/hub/LocalModelTable.tsx` at the same revision; native responsive table styling split from `catalog-desktop.css`.
 
 `workspace/styles/desktop-controls.css` adapts the native control geometry in
 `web-app/src/containers/server-concept/desktop.css` @ `5043013`: pill actions,

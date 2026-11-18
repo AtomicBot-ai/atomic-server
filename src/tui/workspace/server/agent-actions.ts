@@ -1,6 +1,5 @@
 /** The agent sidebar: a model for the agent, a model switch, and the handoff that leaves the terminal. */
 import type { ActionContext } from '../action-types.js'
-import type { AgentId } from '../../../agent-launch/index.js'
 import { serverEndpoint } from './connection.js'
 import type { WorkspaceState } from '../state.js'
 
@@ -23,10 +22,16 @@ export async function agentAction(id: string, ctx: ActionContext): Promise<boole
     patch({ busy: true, message: 'Finding a model for this agent...' })
     try {
       const models = await controller.models(serverEndpoint(s), true)
-      if (!models.length) throw new Error('Load a text model in Models before opening an agent.')
+      if (!models.length) {
+        patch({ message: 'Load a text model in Models before opening an agent.' })
+        return true
+      }
+      const agent = id.slice(6)
+      const preferred =
+        s.connection?.step === 'done' && s.connection.agent === agent ? s.connection.model : s.model
       patch({
-        agent: id.slice(6) as AgentId,
-        agentModel: models.includes(s.model) ? s.model : models[0]!,
+        agent,
+        agentModel: models.includes(preferred) ? preferred : models[0]!,
         models,
         overlay: 'agent',
         focus: 'launch-agent',

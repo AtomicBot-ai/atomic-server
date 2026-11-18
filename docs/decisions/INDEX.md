@@ -11,6 +11,24 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-17** — [Configure agents through core](2026-11-17-configure-agents-through-core.md) — use the shared registry for host configuration and launches.
+
+- **2026-11-17** — [Show progress when opening terminal agent setup](2026-11-17-show-terminal-agent-setup-progress.md) — make the full agent card clickable and show the options check.
+
+- **2026-11-17** — [Pair terminal connection engines with models](2026-11-17-pair-terminal-connection-engines-with-models.md) — filter the connection guide by active engines and compatible downloads.
+
+- **2026-11-17** — [Open the dashboard from terminal onboarding](2026-11-17-open-dashboard-from-terminal-onboarding.md) — save completion and let downloads continue without loading the selected model.
+
+- **2026-11-17** — [Save dashboard exit without starting a model](2026-11-17-save-dashboard-exit-without-starting-model.md) — record completion before navigating without loading the selected model.
+
+- **2026-11-17** — [Open the dashboard from the final web onboarding step](2026-11-17-open-dashboard-from-web-onboarding.md) — offer direct dashboard access while downloads continue.
+
+- **2026-11-17** — [Open web onboarding at the first action](2026-11-17-open-web-onboarding-at-the-first-action.md) — start on model selection or engine selection based on the server's active builds.
+
+- **2026-11-17** — [Use the workspace UI for web onboarding](2026-11-17-share-workspace-ui-with-web-onboarding.md) — shared theme, directory rows and provider dialogs with one scroll area and stable navigation.
+
+- **2026-11-17** — [Give web onboarding one active engine or model step](2026-11-17-separate-web-onboarding-engine-and-model-actions.md) — full-page engine choice, dismissible FastFlowLM and GenieX review and refreshed model compatibility.
+
 - **2026-11-12** — [Preserve Foundry Local tool markers](2026-11-12-preserve-foundry-tool-markers.md) — save the resolver's pair in new installations and use core 0.23.4 for the Foundry host and existing models.
 
 - **2026-11-11** — [Check Foundry Local runtime requirements before transferring models](2026-11-11-check-foundry-runtime-before-transferring-models.md) — check the planned revision and preserve its minimum and partial bytes across retries.
@@ -161,6 +179,7 @@ add a new one that says which record it supersedes.
 - **2026-11-01** — [Add audio.cpp before the core pin has it](2026-11-01-add-audio-cpp-before-the-core-pin.md) — `audio.*`, the `audio-cpp` engine, the catalog and a web studio ship against local contract copies; a core without audio is detected by its missing routes, offers nothing and answers one plain refusal; `core-workaround` markers fail lint when the pin moves.
 - **2026-11-02** — [Preserve audio selection after Stop](2026-11-02-preserve-audio-selection-after-stop.md) — retained core capabilities preserve the studio draft and catalog duration while the engine process is stopped; explicit unload clears the selection; ARM tests synchronise on worker requests and progress events.
 - **2026-11-01** — [Pin model catalog and resume plans](2026-11-01-pin-model-catalog-and-resume-plans.md) — use the unified catalog, record immutable source commits and resume saved plans.
+- **2026-11-18** — [Validate the Hub destination before fetching artifact metadata](2026-11-18-validate-hub-destination-before-artifact-metadata.md) — reject a malformed mirror before sending requests with `HF_TOKEN`.
 - **2026-11-02** — [Distinguish unavailable quantizations from invalid catalogs](2026-11-02-distinguish-unavailable-quants-from-invalid-catalogs.md) — unknown explicit choices are usage refusals; broken catalog lists remain reportable, and valid selection stays unchanged.
 - **2026-11-02** — [Keep managed-model compatibility refusals local](2026-11-02-keep-managed-model-refusals-local.md) — display incompatible or empty engine verdicts without reporting an action failure; preserve genuine check exceptions.
 - **2026-11-02** — [Pin core 0.20.7 for audio](2026-11-02-pin-core-0-20-7-for-audio.md) — use the released audio contracts and engine registry; drop temporary feature detection; preserve both catalogs and verify audio file provenance before downloading.

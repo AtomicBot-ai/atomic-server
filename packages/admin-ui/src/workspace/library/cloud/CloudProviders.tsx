@@ -9,32 +9,21 @@ import { CloudProviderEditor } from './CloudProviderEditor'
 import { record, text } from '../../types'
 import type { RecordValue } from '../../types'
 import './cloud-providers.css'
-import './onboarding-providers.css'
 import { CloudProviderMark } from './CloudProviderMark'
 import { CustomProviderSummary } from './CustomProviderSummary'
 import { CloudProviderDialog } from './CloudProviderDialog'
 import { describeError } from '@/services/admin-api'
-export function CloudProviders({
-  workspace: w,
-  onboarding = false,
-  onConnected,
-  custom = false,
-}: {
-  workspace: Workspace
-  onboarding?: boolean
-  onConnected?: () => void
-  custom?: boolean
-}) {
+export function CloudProviders({ workspace: w, custom = false }: { workspace: Workspace; custom?: boolean }) {
   const editorSession = useRef(0)
   const initialProviders = useRef(false)
   const [providers, setProviders] = useState<RecordValue[]>([])
-  const [provider, setProvider] = useState(onboarding ? 'openrouter' : '')
-  const [url, setUrl] = useState(onboarding ? 'https://openrouter.ai/api/v1' : '')
+  const [provider, setProvider] = useState('')
+  const [url, setUrl] = useState('')
   const [key, setKey] = useState('')
   const [models, setModels] = useState('')
   const [error, setError] = useState('')
   const [revision, setRevision] = useState(0)
-  const [editing, setEditing] = useState(onboarding)
+  const [editing, setEditing] = useState(false)
   const [checking, setChecking] = useState(false)
   const { execute } = w
   useEffect(
@@ -93,7 +82,6 @@ export function CloudProviders({
       setError('Enter a provider name and a valid HTTP or HTTPS endpoint.')
       return
     }
-    editorSession.current += 1
     setChecking(true)
     setError('')
     try {
@@ -110,19 +98,7 @@ export function CloudProviders({
       )
       setProviders((p) => [...p.filter((v) => v.provider !== provider.trim()), result])
       setProvider(provider.trim())
-      onConnected?.()
-      setKey('')
-      if (onboarding) {
-        const currentIndex = choices.findIndex((p) => p.id === provider)
-        const next = [...choices.slice(currentIndex + 1), ...choices.slice(0, currentIndex)].find(
-          (p) => p.id && !providers.some((saved) => saved.provider === p.id && saved.connected)
-        )
-        if (next) {
-          setProvider(next.id)
-          setUrl(next.url)
-          setModels('')
-        }
-      } else setEditing(false)
+      closeEditor()
       setRevision((v) => v + 1)
     } catch (e) {
       setError(describeError(e))
@@ -131,10 +107,7 @@ export function CloudProviders({
     }
   }
   return (
-    <div
-      className={`cloud-providers${onboarding ? ' onboarding-providers' : ''}${editing ? ' has-provider-editor' : ''}`}
-      aria-busy={checking}
-    >
+    <div className="cloud-providers" aria-busy={checking}>
       {custom && (
         <CustomProviderSummary
           providers={providers.filter(
@@ -172,7 +145,8 @@ export function CloudProviders({
                 aria-label={p.name}
                 className={`cloud-provider-card ${connected ? 'connected' : ''} ${editing && provider === p.id ? 'selected' : ''}`}
                 aria-pressed={editing && provider === p.id}
-                disabled={checking || (onboarding && connected)}
+                aria-haspopup="dialog"
+                disabled={checking}
                 onClick={() => {
                   const config = providers.find((v) => v.provider === p.id)
                   setProvider(p.id)
@@ -217,14 +191,12 @@ export function CloudProviders({
       )}
       {editing && (
         <CloudProviderDialog
-          inline={onboarding}
           name={choices.find((p) => p.id === provider)?.name ?? 'Custom provider'}
           checking={checking}
           onClose={closeEditor}
         >
           <CloudProviderEditor
             name={choices.find((p) => p.id === provider)?.name ?? 'Custom provider'}
-            onboarding={onboarding}
             checking={checking}
             error={error}
             validUrl={validUrl}

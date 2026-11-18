@@ -39,14 +39,11 @@ it('counts a connection prepared during first-run after returning to Overview', 
   )
   current = workspace
   const view = render(<WorkspaceApp />)
-  // Installed engines still require the explicit intro continuation before onboarding.
-  await userEvent.click(await screen.findByRole('button', { name: /Press any key/ }))
   const setup = within(await screen.findByRole('dialog', { name: 'Set up Atomic Server' }))
   await userEvent.click(await setup.findByRole('button', { name: 'Continue' }))
-  await userEvent.click(setup.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(setup.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(setup.getByRole('button', { name: 'Skip', exact: true }))
+  await userEvent.click(setup.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(setup.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(setup.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(setup.getByRole('button', { name: /Connect an agent/ }))
   expect(screen.queryByRole('dialog', { name: 'Set up Atomic Server' })).not.toBeInTheDocument()
   await userEvent.click(screen.getAllByRole('button', { name: 'Codex CLI', exact: true })[0])
