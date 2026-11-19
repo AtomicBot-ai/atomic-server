@@ -3,6 +3,7 @@ import { changedValues, gpuLabel } from '@view'
 import { SettingsField as Field } from '../../SettingsForm'
 import { record, text } from '../../types'
 import type { RecordValue } from '../../types'
+import type { StrataGpuOption } from './use-engine-gpu-options'
 import { descriptorDefault, inactiveSetting } from './engine-setting-groups'
 export function EngineSettingField({
   field,
@@ -11,6 +12,7 @@ export function EngineSettingField({
   update,
   gpus = [],
   managed = false,
+  strataGpus,
 }: {
   field: RecordValue
   values: RecordValue
@@ -19,6 +21,7 @@ export function EngineSettingField({
   /** The environment's cards: a managed engine's `gpu_id` is one of them, never typed. */
   gpus?: GpuFacts[]
   managed?: boolean
+  strataGpus?: StrataGpuOption[] | undefined
 }) {
   const name = text(field.key),
     props = record(field.controllerProps),
@@ -58,7 +61,24 @@ export function EngineSettingField({
           </details>
         }
       >
-        {name === 'gpu_id' && managed ? (
+        {name === 'gpu_id' && strataGpus ? (
+          <select
+            aria-label="GPU card"
+            disabled={Boolean(disabled)}
+            value={text(value, '')}
+            onChange={(e) => update(name, e.target.value)}
+          >
+            <option value="">Auto</option>
+            {strataGpus.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+            {Boolean(value) && !strataGpus.some(({ id }) => id === value) && (
+              <option value={text(value)}>Unavailable GPU: {text(value)}</option>
+            )}
+          </select>
+        ) : name === 'gpu_id' && managed ? (
           <select
             aria-label="GPU card"
             disabled={Boolean(disabled) || !gpus.length}

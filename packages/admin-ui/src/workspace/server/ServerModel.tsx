@@ -25,7 +25,7 @@ export function ServerModel({
   const [engine, setEngine] = useState('')
   const [model, setModel] = useState('')
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
   const { execute } = w
@@ -67,9 +67,11 @@ export function ServerModel({
   )
   return (
     <section className="server-settings server-model-settings" aria-label="Engine and model settings">
-      {(error || engineError) && <p role="alert">{error || engineError}</p>}
+      {(error || engineError || loadError) && <p role="alert">{error || engineError || loadError}</p>}
       {loading ? (
-        <p role="status">Loading models…</p>
+        <div className="server-settings-panel" role="status">
+          <StatusIndicator pending>Loading models…</StatusIndicator>
+        </div>
       ) : (
         <>
           <fieldset className="server-settings-panel" disabled={applying}>
@@ -83,7 +85,7 @@ export function ServerModel({
                 onChange={(value) => {
                   setEngine(value)
                   setModel('')
-                  setNotice('')
+                  setLoadError('')
                 }}
               />
               <DetailPicker
@@ -95,15 +97,21 @@ export function ServerModel({
                 disabled={applying}
                 onChange={(value) => {
                   setModel(value)
-                  setNotice('')
+                  setLoadError('')
                 }}
               />
             </div>
-            <div className="ew-actions">
+            <div className="server-model-actions">
               <Action primary={!compatible.length} onClick={() => openModels(selectedEngine || undefined)}>
                 Browse models
               </Action>
-              {loaded && <StatusIndicator tone="positive">Loaded</StatusIndicator>}
+              <span role="status">
+                {applying ? (
+                  <StatusIndicator pending>Loading model…</StatusIndicator>
+                ) : loaded ? (
+                  <StatusIndicator tone="positive">Loaded</StatusIndicator>
+                ) : null}
+              </span>
             </div>
           </fieldset>
           {!loaded && selectedModel && (
@@ -114,7 +122,7 @@ export function ServerModel({
                 onClick={() => {
                   setEngine('')
                   setModel('')
-                  setNotice('')
+                  setLoadError('')
                 }}
               >
                 Discard
@@ -123,12 +131,14 @@ export function ServerModel({
                 primary
                 onClick={async () => {
                   setApplying(true)
+                  setLoadError('')
                   try {
                     await execute('models.load', { provider: selectedEngine, model_id: selectedModel })
                     setEngine('')
                     setModel('')
-                    setNotice('Model loaded.')
                     await w.refresh()
+                  } catch (failure) {
+                    setLoadError(describeError(failure))
                   } finally {
                     setApplying(false)
                   }
@@ -138,7 +148,6 @@ export function ServerModel({
               </Action>
             </div>
           )}
-          {notice && <p role="status">{notice}</p>}
         </>
       )}
     </section>

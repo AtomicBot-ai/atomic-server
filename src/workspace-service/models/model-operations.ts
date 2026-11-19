@@ -1,3 +1,4 @@
+import { installedStrata } from '../strata/installed.js'
 import { flmInstalled } from '../fastflowlm/operations.js'
 /**
  * The `models.*` operations of the workspace: the catalog, Hub search (Foundry Local's and LiteRT-LM's
@@ -7,6 +8,7 @@ import { flmInstalled } from '../fastflowlm/operations.js'
  */
 
 import { searchCatalog } from './catalog-search.js'
+import { strataCatalog } from '../strata/catalog.js'
 import { randomUUID } from 'node:crypto'
 import { basename, isAbsolute, join, resolve } from 'node:path'
 import { AtomicCoreError } from '@atomic-chat/core'
@@ -99,6 +101,8 @@ export async function modelOperation(
         }
       )
     case 'models.catalog':
+      if (input['engine'] === 'strata')
+        return strataCatalog(d.options, String(input['query'] ?? ''), input['refresh'] === true)
       if (input['engine'] === 'litert-lm') return liteRtSearch(liteRtDeps(d), { huggingface: false })
       if (isManagedEngine(String(input['engine'] ?? ''))) return managedCatalog(link, String(input['engine']))
       return d.catalog.list(
@@ -107,6 +111,8 @@ export async function modelOperation(
         input['refresh'] === true
       )
     case 'models.search':
+      if (input['engine'] === 'strata')
+        return strataCatalog(d.options, String(input['query'] ?? ''), input['refresh'] === true)
       if (input['engine'] === 'litert-lm')
         return liteRtSearch(liteRtDeps(d), { query: String(input['query'] ?? ''), huggingface: true })
       if (input['engine'] === 'foundry-local')
@@ -142,6 +148,7 @@ export async function modelOperation(
         [
           ...(await installedModels(paths.layout)),
           ...(await flmInstalled(d.options)),
+          ...(await installedStrata(d.options)),
           ...(await new ModelRegistry(paths.layout, 'mlx').list()).map((m) => ({
             id: m.id,
             name: String(m.yml.name ?? m.id),

@@ -11,6 +11,10 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-18** — [Filter the Strata catalog on the server](2026-11-18-filter-strata-catalog-on-server.md) — share host-aware quantization groups between the web and terminal catalogs.
+
+- **2026-11-18** — [Use the published core integrations API](2026-11-18-use-published-core-integrations.md) — pin core 0.24.2 and remove the dependency patch.
+
 - **2026-11-17** — [Configure agents through core](2026-11-17-configure-agents-through-core.md) — use the shared registry for host configuration and launches.
 
 - **2026-11-17** — [Show progress when opening terminal agent setup](2026-11-17-show-terminal-agent-setup-progress.md) — make the full agent card clickable and show the options check.
@@ -242,4 +246,14 @@ add a new one that says which record it supersedes.
 - [2026-11-07 — Reuse the API listener when connecting an agent](2026-11-07-reuse-api-for-connections.md)
 
 - [2026-11-07 — Package a runtime that does not inherit Windows sockets](2026-11-07-prevent-windows-socket-inheritance.md)
+
+- [2026-11-17 — Read Strata sources through the embedded core and workspace](2026-11-17-use-core-strata-sources.md)
+
+- [2026-11-17 — Journal Strata acquisition and guard model replacement](2026-11-17-journal-strata-model-install.md)
+
+- [2026-11-17 — Pass reusable Strata staging bytes to the core](2026-11-17-credit-strata-resume-bytes.md)
+
+- [2026-11-18 — Use the active Web theme for the chat composer](2026-11-18-theme-web-chat-composer.md)
+
+- [2026-11-18 — Share desktop engine marks and align model feedback](2026-11-18-align-web-engine-model-feedback.md)
 - **2026-11-15** — [Diagnose CLI chat failures with finite tags](2026-11-15-diagnose-cli-chat-failures.md) — tag client-detected failures without interpreting remote HTTP text as a client diagnostic.

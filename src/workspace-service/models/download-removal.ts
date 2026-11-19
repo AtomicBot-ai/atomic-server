@@ -125,6 +125,7 @@ export async function removeDownload(
       options,
       installed
     )
+  if (owner === 'strata') return downloads.strata.discard(id)
   if (owner === 'fastflowlm') return downloads.fastflowlm.discard(id)
   if (owner === 'geniex') {
     const journal = downloads.geniex.journal

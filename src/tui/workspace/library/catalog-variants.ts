@@ -11,6 +11,7 @@ import { record } from './library-model.js'
 const VARIANT_CATALOGS = {
   foundry: { engine: 'foundry-local', ops: 'foundry' },
   fastflowlm: { engine: 'fastflowlm', ops: 'fastflowlm' },
+  strata: { engine: 'strata', ops: 'strata' },
   geniex: { engine: 'geniex', ops: 'geniex' },
   litert: { engine: 'litert-lm', ops: 'litert' },
 } as const
@@ -77,7 +78,10 @@ export async function variantCatalogAction(id: string, ctx: ActionContext) {
     }
     if (!variant) throw new Error('No compatible variant is available for this model.')
     const plan = record(
-      await ctx.controller.runtime.execute(`${ops}.plan`, { model: row.id, variant: variant['id'] })
+      await ctx.controller.runtime.execute(
+        `${ops}.plan`,
+        format === 'strata' ? { model: variant['id'] } : { model: row.id, variant: variant['id'] }
+      )
     )
     if (!fresh()) return true
     const blockers = Array.isArray(plan['blockers']) ? plan['blockers'].join(' ') : ''

@@ -22,9 +22,10 @@ import {
 import { validateProxyConfig } from './protocol.js'
 import type { ProxyConfig } from './protocol.js'
 import { policyFetchFor } from './proxy-fetch.js'
-import { downloadRanged, rangedBytes, readRangeState } from './ranges.js'
+import { downloadRanged } from './ranges.js'
+import { DEFAULT_STREAMS, reusablePartial, usesRanges } from './on-disk.js'
 import { preflightSize } from './size.js'
-import { downloadSingle, partialBytes } from './single.js'
+import { downloadSingle } from './single.js'
 import {
   defaultVerifyDeps,
   VALIDATION_CANCELLED_MESSAGE,
@@ -84,8 +85,6 @@ export interface DownloaderDeps {
   log?: (level: 'info' | 'warn', message: string) => void
 }
 
-export const DEFAULT_STREAMS = 4
-export const MIN_RANGED_BYTES = 32 * 1024 * 1024
 /** `onProgress` fires at most once per this many new bytes (and at every file's end). */
 const PROGRESS_STEP_BYTES = 1024 * 1024
 
@@ -144,7 +143,6 @@ export class Downloader {
     const sleep = this.deps.sleep ?? defaultSleep
     const retryBaseMs = this.deps.retryBaseMs ?? 1000
     const streams = this.deps.streams ?? DEFAULT_STREAMS
-    const minRanged = this.deps.minRangedBytes ?? MIN_RANGED_BYTES
     for (const item of items) {
       const problem = item.proxy ? validateProxyConfig(item.proxy) : undefined
       if (problem) throw Object.assign(new Error(`Error: ${problem}`), { code: PROXY_CONFIG_INVALID })
@@ -162,7 +160,7 @@ export class Downloader {
         )
       )
     const total = sizes.reduce((a, b) => a + b, 0)
-    const ranged = items.map((item, i) => streams > 1 && !!item.sha256 && (sizes[i] ?? 0) >= minRanged)
+    const ranged = items.map((item, i) => usesRanges(item, sizes[i] ?? 0, streams, this.deps.minRangedBytes))
 
     const roots = await allowedRoots(dataFolder, options.allowedRoots ?? [])
     const savePaths: string[] = []
@@ -185,8 +183,7 @@ export class Downloader {
       await rm(`${savePath}.segments`, { recursive: true, force: true })
       if (!resume || reused.has(i)) continue
       const identity = item.resume_key ?? item.url
-      const state = ranged[i] ? await readRangeState(savePath, identity, sizes[i] ?? 0) : undefined
-      share.partials.push(state ? rangedBytes(state.ranges) : ((await partialBytes(savePath, identity)) ?? 0))
+      share.partials.push(await reusablePartial(savePath, identity, sizes[i] ?? 0, ranged[i] === true))
     }
     for (const [root, share] of remaining) {
       const space = checkFreeSpace(

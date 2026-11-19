@@ -19,7 +19,7 @@ export function catalogFormats(engines: readonly RecordValue[]): CatalogFormat[]
 export function catalogCards(result: unknown, format: CatalogFormat, engine = ''): RecordValue[] {
   if (format === 'gguf' || format === 'mlx') return rows(result)
   const r = record(result)
-  if (format === 'fastflowlm')
+  if (format === 'fastflowlm' || format === 'strata')
     return rows(r.models).map((m) => {
       const variants = rows(m.variants)
       const selected =
@@ -28,9 +28,10 @@ export function catalogCards(result: unknown, format: CatalogFormat, engine = ''
         id: m.model_id,
         title: m.name,
         summary: '',
-        format: 'FastFlowLM',
-        providers: ['fastflowlm'],
-        fastflowlm: m,
+        ...(format === 'strata' ? { recommended: m.recommended, disk_warning: m.summary } : {}),
+        format: format === 'strata' ? 'Strata' : 'FastFlowLM',
+        providers: [format],
+        [format]: m,
         size_bytes: selected?.size_bytes,
         context_length: selected?.context_length ?? m.context_length,
       }

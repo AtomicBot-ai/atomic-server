@@ -178,7 +178,7 @@ export function drawCatalogBrowser(
     const available = bottom - rowY,
       detail = wrap(
         String(
-          (model.source?.['format'] === 'fastflowlm'
+          (['fastflowlm', 'strata'].includes(String(model.source?.['format']))
             ? variantNext(model.source, s.catalogVariant).variant?.['summary']
             : '') ||
             model.description ||
@@ -215,7 +215,7 @@ export function drawCatalogBrowser(
     const ready = job?.['stage'] === 'ready',
       loaded = s.installed.find(
         (item) =>
-          (!['geniex', 'fastflowlm'].includes(String(model.source?.['engine'])) ||
+          (!['geniex', 'fastflowlm', 'strata'].includes(String(model.source?.['engine'])) ||
             item.provider === model.source?.['engine']) &&
           (matchesCatalogInstallation(model, item, s.workspace?.setups) ||
             item.id === record(job?.['plan'])['variant_id'] ||
@@ -235,7 +235,10 @@ export function drawCatalogBrowser(
     if (s.busy) text(c, x + 2, controlY, 'Reading versions...', COLORS.muted, width - 4)
     else if (job && !ready)
       button(c, 'library:downloads', x + 2, controlY, 'View download', 'Open download controls', focus)
-    else if (loaded || (ready && record(job?.['plan'])['category'])) {
+    else if (
+      (loaded && !(model.source?.['format'] === 'strata' && s.catalogVariants.length > 1)) ||
+      (ready && record(job?.['plan'])['category'])
+    ) {
       const mediaReady = ready && record(job?.['plan'])['category']
       button(
         c,
@@ -255,7 +258,9 @@ export function drawCatalogBrowser(
             ? `fastflowlm-delete:${encodeURIComponent(loaded!.id)}`
             : loaded!.store === 'geniex'
               ? `geniex-delete:${encodeURIComponent(loaded!.id)}`
-              : `installed-delete:${encodeURIComponent(loaded!.id)}`,
+              : loaded!.store === 'strata'
+                ? `strata-delete:${encodeURIComponent(loaded!.id)}`
+                : `installed-delete:${encodeURIComponent(loaded!.id)}`,
         x + 17,
         controlY,
         'X Delete',

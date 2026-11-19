@@ -147,3 +147,15 @@ it('routes FastFlowLM through its pinned server installer', async () => {
     plan_digest: 'checked-plan',
   })
 })
+
+it('reviews the Strata variant on the server and queues the verified plan', async () => {
+  const t = fixture('strata')
+  const libraryRows = await loadVariantCatalog(t.ctx, 'strata')
+  t.ctx.update((s) => ({ ...s, libraryRows, catalogVariant: 'model-cpu' }))
+  await variantCatalogAction('catalog-download:0', t.ctx)
+  expect(t.execute).toHaveBeenCalledWith('strata.plan', { model: 'model-cpu' })
+  expect(t.execute).toHaveBeenCalledWith('strata.install', {
+    request_id: 'terminal-checked-plan',
+    plan_digest: 'checked-plan',
+  })
+})

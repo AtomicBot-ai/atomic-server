@@ -67,8 +67,13 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
       s.installed.some(
         (item) =>
           item.id === row.id &&
-          (!['geniex', 'fastflowlm'].includes(String(row.source?.['format'])) ||
+          (!['geniex', 'fastflowlm', 'strata'].includes(String(row.source?.['format'])) ||
             item.provider === row.source?.['format'])
+      ) &&
+      !(
+        row.source?.['format'] === 'strata' &&
+        Array.isArray(row.source['variants']) &&
+        row.source['variants'].length > 1
       )
     )
       return true
@@ -77,7 +82,7 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
     const raw = source['variants'] ?? transformer['quants'] ?? source['quants']
     const variants =
       s.libraryCategory === 'text' &&
-      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm'].includes(
+      !['mlx', 'safetensors', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'].includes(
         String(source['format'] ?? 'gguf')
       )
         ? (await ctx.controller.files(row.id)).map((file) => ({
@@ -87,7 +92,7 @@ export async function catalogBrowseAction(id: string, ctx: ActionContext) {
         : Array.isArray(raw)
           ? raw.map(record).map((quant) => ({
               value: String(quant['id']),
-              label: `${quant['id']}${sizeOf(quant) ? ' · ' + bytes(sizeOf(quant)) : ''}`,
+              label: `${quant['label'] ?? quant['id']}${sizeOf(quant) ? ' · ' + bytes(sizeOf(quant)) : ''}`,
             }))
           : []
     // A response from an older row must not replace the currently open family.

@@ -43,6 +43,7 @@ export function modelFormat(model: RecordValue): string {
   const providers = modelProviders(model)
   if (providers.includes('mlx')) return 'mlx'
   if (providers.includes('foundry-local')) return 'foundry'
+  if (providers.includes('strata')) return 'strata'
   if (providers.includes('fastflowlm')) return 'fastflowlm'
   if (providers.includes('geniex')) return 'geniex'
   if (providers.includes('litert-lm')) return 'litert'
@@ -87,6 +88,12 @@ export function installedCatalogMatches(
   model: RecordValue,
   setups: unknown[] = []
 ): boolean {
+  if (modelFormat(model) === 'strata')
+    return (
+      modelProviders(installed).includes('strata') &&
+      (modelId(installed) === modelId(model) ||
+        rows(record(model.strata).variants).some((v) => v.id === modelId(installed)))
+    )
   if (modelFormat(model) === 'fastflowlm')
     return fastFlowLmFamilyMatches(
       modelId(installed),

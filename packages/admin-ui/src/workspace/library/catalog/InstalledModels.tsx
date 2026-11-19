@@ -75,7 +75,9 @@ export function InstalledModels({
           .filter((m) => JSON.stringify(m).toLowerCase().includes(query.toLowerCase()))
           .map((row, i) => {
             const rowId = text(row.id ?? row.model_id, String(i))
-            const id = ['geniex', 'fastflowlm'].includes(text(row.store)) ? `${row.store}:${rowId}` : rowId
+            const id = ['geniex', 'fastflowlm', 'strata'].includes(text(row.store))
+              ? `${row.store}:${rowId}`
+              : rowId
             // The providers the core says list this model (`models.installed`), never a list kept here.
             const providers = modelProviders(row)
             const selectedEngine = chosen[id] ?? providers[0] ?? ''
@@ -96,7 +98,10 @@ export function InstalledModels({
             const stage = load
               ? loadStageText({ ...load, elapsed_ms: load.elapsed_ms + Math.max(0, Date.now() - load.at) })
               : ''
-            const state = stage || (pending === id ? 'Loading' : (loaded?.state ?? 'Installed · not loaded'))
+            const state =
+              text(row.disabled_reason, '') ||
+              stage ||
+              (pending === id ? 'Loading' : (loaded?.state ?? 'Installed · not loaded'))
             const loadModel = async () => {
               setPending(id)
               setFailures((f) => ({ ...f, [id]: '' }))
@@ -147,6 +152,7 @@ export function InstalledModels({
                   <Action
                     disabled={
                       waiting ||
+                      Boolean(row.disabled_reason) ||
                       Boolean(pending) ||
                       Boolean(loaded && ['ready', 'running', 'loaded'].includes(loaded.state))
                     }
@@ -227,7 +233,9 @@ export function InstalledModels({
             else
               await w.execute('models.remove', {
                 model_id: removing.model_id ?? removing.id,
-                ...(['geniex', 'fastflowlm'].includes(text(removing.store)) ? { store: removing.store } : {}),
+                ...(['geniex', 'fastflowlm', 'strata'].includes(text(removing.store))
+                  ? { store: removing.store }
+                  : {}),
               })
             onChanged?.()
           }}

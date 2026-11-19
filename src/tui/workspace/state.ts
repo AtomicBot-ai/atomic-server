@@ -87,7 +87,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
     returnOverlay?: WorkspaceState['overlay']
   } | null
   libraryRemove: string
-  removeModelStore?: 'geniex' | 'fastflowlm' | undefined
+  removeModelStore?: 'geniex' | 'fastflowlm' | 'strata' | undefined
   modelLoad?: { provider: string; model: string } | null
   modelVision: boolean | null
   loadError: { provider: string; model: string; message: string } | null
@@ -114,6 +114,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
   secret: string
   /** `providers`: every provider the core says lists the model; `provider` the first. */
   installed: {
+    disabled_reason?: string | null
     id: string
     provider: string
     name: string
