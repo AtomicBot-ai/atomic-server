@@ -42,7 +42,7 @@ it('keeps the selected model in the same header while planning outlasts the engi
   expect(shown(s)).toContain('Downloads 2')
   s.workspace = { setups: [], downloads: [{ ...engine, stage: 'ready' }] } as never
   expect(shown(s)).toContain('Qwen 4B')
-  expect(shown(s)).toContain('preparing')
+  expect(shown(s)).toContain('Preparing model')
   const frame = workspaceFrame(s, 90, 32, 0)
   expect(frame.targets.some((target) => target.id === 'download-more')).toBe(true)
   expect(frame.targets.some((target) => target.id.startsWith('download-pause:'))).toBe(false)

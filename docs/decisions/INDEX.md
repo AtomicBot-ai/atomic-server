@@ -183,6 +183,7 @@ add a new one that says which record it supersedes.
 - **2026-11-01** — [Add audio.cpp before the core pin has it](2026-11-01-add-audio-cpp-before-the-core-pin.md) — `audio.*`, the `audio-cpp` engine, the catalog and a web studio ship against local contract copies; a core without audio is detected by its missing routes, offers nothing and answers one plain refusal; `core-workaround` markers fail lint when the pin moves.
 - **2026-11-02** — [Preserve audio selection after Stop](2026-11-02-preserve-audio-selection-after-stop.md) — retained core capabilities preserve the studio draft and catalog duration while the engine process is stopped; explicit unload clears the selection; ARM tests synchronise on worker requests and progress events.
 - **2026-11-01** — [Pin model catalog and resume plans](2026-11-01-pin-model-catalog-and-resume-plans.md) — use the unified catalog, record immutable source commits and resume saved plans.
+- **2026-11-18** — [Validate the Hub destination before fetching artifact metadata](2026-11-18-validate-hub-destination-before-artifact-metadata.md) — reject a malformed mirror before sending requests with `HF_TOKEN`.
 - **2026-11-02** — [Distinguish unavailable quantizations from invalid catalogs](2026-11-02-distinguish-unavailable-quants-from-invalid-catalogs.md) — unknown explicit choices are usage refusals; broken catalog lists remain reportable, and valid selection stays unchanged.
 - **2026-11-02** — [Keep managed-model compatibility refusals local](2026-11-02-keep-managed-model-refusals-local.md) — display incompatible or empty engine verdicts without reporting an action failure; preserve genuine check exceptions.
 - **2026-11-02** — [Pin core 0.20.7 for audio](2026-11-02-pin-core-0-20-7-for-audio.md) — use the released audio contracts and engine registry; drop temporary feature detection; preserve both catalogs and verify audio file provenance before downloading.
@@ -255,3 +256,4 @@ add a new one that says which record it supersedes.
 - [2026-11-18 — Use the active Web theme for the chat composer](2026-11-18-theme-web-chat-composer.md)
 
 - [2026-11-18 — Share desktop engine marks and align model feedback](2026-11-18-align-web-engine-model-feedback.md)
+- **2026-11-15** — [Diagnose CLI chat failures with finite tags](2026-11-15-diagnose-cli-chat-failures.md) — tag client-detected failures without interpreting remote HTTP text as a client diagnostic.

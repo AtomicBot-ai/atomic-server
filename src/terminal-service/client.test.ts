@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { failureReport } from '../telemetry/index.js'
 import { endpointUrl, sameEndpoint, listChatModels, streamChat } from './client.js'
 
 function response(chunks: string[]) {
@@ -126,6 +127,54 @@ describe('a refused chat request', () => {
         onText: () => {},
       })
     ).rejects.toThrow('maximum context length is 4096 tokens')
+  })
+})
+
+describe('CLI chat failure reports', () => {
+  const context = { component: 'cli', operation: 'chat' }
+
+  async function chatFailure(reply: () => Response, endpoint = 'http://host/v1'): Promise<unknown> {
+    return streamChat({
+      endpoint,
+      model: 'm',
+      messages: [],
+      request: vi.fn<typeof fetch>(async () => reply()),
+      signal: new AbortController().signal,
+      onText: () => {},
+    }).catch((cause: unknown) => cause)
+  }
+
+  it.each([
+    {
+      code: 'CLI_CHAT_ENDPOINT_INVALID',
+      endpoint: 'file:///private-fixture',
+      reply: () => new Response(null),
+    },
+    { code: 'CLI_CHAT_EMPTY_RESPONSE', reply: () => new Response(null) },
+    {
+      code: 'CLI_CHAT_GENERATION_ERROR',
+      reply: () => new Response('data: {"error":{"message":"private-fixture"}}\n\n'),
+    },
+    { code: 'CLI_CHAT_STREAM_TRUNCATED', reply: () => new Response(delta('partial reply')) },
+  ])('reports $code only from the local client branch', async ({ code, endpoint, reply }) => {
+    const error = await chatFailure(reply, endpoint)
+    const report = failureReport(error, context)
+    expect(report).toMatchObject({
+      level: 'error',
+      error: { name: 'Error', message: 'Unexpected failure in chat' },
+      tags: { ...context, diagnostic_code: code },
+    })
+    expect(JSON.stringify(report)).not.toContain('private-fixture')
+  })
+
+  it('keeps a matching message from a remote HTTP error out of the local diagnostic tags', async () => {
+    const message = 'The response ended before completion. The partial reply is kept.'
+    const error = await chatFailure(() => Response.json({ error: { message } }, { status: 502 }))
+
+    expect(error).toMatchObject({ message })
+    const report = failureReport(error, context)
+    expect(report).toMatchObject({ error: { message: 'Unexpected failure in chat' }, tags: context })
+    expect(report?.tags).not.toHaveProperty('diagnostic_code')
   })
 })
 

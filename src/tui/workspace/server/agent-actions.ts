@@ -22,7 +22,10 @@ export async function agentAction(id: string, ctx: ActionContext): Promise<boole
     patch({ busy: true, message: 'Finding a model for this agent...' })
     try {
       const models = await controller.models(serverEndpoint(s), true)
-      if (!models.length) throw new Error('Load a text model in Models before opening an agent.')
+      if (!models.length) {
+        patch({ message: 'Load a text model in Models before opening an agent.' })
+        return true
+      }
       const agent = id.slice(6)
       const preferred =
         s.connection?.step === 'done' && s.connection.agent === agent ? s.connection.model : s.model

@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { AtomicCore } from '@atomic-chat/core'
+import { AtomicCore, CORE_VERSION } from '@atomic-chat/core'
 import { CoreClient } from '@atomic-chat/core/client'
 import { expect, it, vi } from 'vitest'
 import { readAdminToken } from '../../src/admin/index.js'
@@ -50,7 +50,7 @@ it('uses the server’s local Strata manifest and model catalog without fetching
       createCore: (options) => AtomicCore.create({ ...options, fetch: offline }),
     })
 
-    expect(daemon.core.version).toBe('0.24.0')
+    expect(daemon.core.version).toBe(CORE_VERSION)
     const client = new CoreClient({ baseUrl: daemon.link.endpoint.baseUrl, token: daemon.core.controlToken })
     await expect(client.strataPreparations()).resolves.toEqual([])
     await expect(daemon.link.request('POST', '/engine-builds/strata/catalog', {})).resolves.toMatchObject({

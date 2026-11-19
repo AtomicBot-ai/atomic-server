@@ -13,6 +13,7 @@ it('uses the server’s Strata catalog, host verdicts and revisioned engine sett
   const paths = atcPathsFor(t.io.env['ATC_DATA_FOLDER']!)
   const { link } = t
   link.responses['POST /engines/versions'] = { engines: [{ engine: 'strata', kind: 'engine-build' }] }
+  link.responses['POST /engine-builds/strata/catalog'] = { host_backend_id: 'macos-arm64-metal' }
   link.responses['POST /models/strata/check'] = {
     verdict: 'platform-unsupported',
     reason: 'No compatible GPU on this server.',
