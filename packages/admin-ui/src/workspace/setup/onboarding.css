@@ -164,3 +164,14 @@ html:not(.dark) .desktop-workspace .first-run {
     flex: 0 1 min(100%, 280px);
   }
 }
+/* The last step's pointer to sharing the server with the account's devices (accounts on, signed out). */
+.first-run-account-hint {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ew-muted);
+}
+.first-run-account-hint code {
+  color: var(--ew-text);
+}

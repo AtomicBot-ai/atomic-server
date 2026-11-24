@@ -62,3 +62,33 @@
   color: var(--ew-text, inherit);
   background: var(--ew-raised, #242b27);
 }
+/* The corner notices share one stack (`WorkspaceToasts`), so an update and an access request never overlap. */
+.workspace-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  pointer-events: none;
+}
+.workspace-toasts-top {
+  top: 72px;
+  bottom: auto;
+}
+.workspace-toasts > * {
+  pointer-events: auto;
+}
+.workspace-toasts > .update-toast {
+  position: static;
+}
+.access-toast-notice {
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.access-toast-actions {
+  display: flex;
+  gap: 8px;
+}

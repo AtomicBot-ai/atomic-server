@@ -11,6 +11,8 @@ add a new one that says which record it supersedes.
 
 ## Records
 
+- **2026-11-24** — [Turn Atomic Chat accounts on for everyone](2026-11-24-turn-accounts-on-for-everyone.md) — `account.enabled` defaults to on, config v8 drops the stored old default, the account and remote commands appear in help.
+
 - **2026-11-18** — [Filter the Strata catalog on the server](2026-11-18-filter-strata-catalog-on-server.md) — share host-aware quantization groups between the web and terminal catalogs.
 
 - **2026-11-18** — [Use the published core integrations API](2026-11-18-use-published-core-integrations.md) — pin core 0.24.2 and remove the dependency patch.
@@ -32,6 +34,14 @@ add a new one that says which record it supersedes.
 - **2026-11-17** — [Use the workspace UI for web onboarding](2026-11-17-share-workspace-ui-with-web-onboarding.md) — shared theme, directory rows and provider dialogs with one scroll area and stable navigation.
 
 - **2026-11-17** — [Give web onboarding one active engine or model step](2026-11-17-separate-web-onboarding-engine-and-model-actions.md) — full-page engine choice, dismissible FastFlowLM and GenieX review and refreshed model compatibility.
+
+- **2026-11-13** — [End every device's access when sharing stops, and say when a device disconnects](2026-11-13-end-every-device-when-sharing-stops.md) — supersedes "off pauses": off revokes every grant (host kept), asks first; `remote.ended` drives a disconnect notice.
+
+- **2026-11-13** — [Give the account its own section, as the desktop app does](2026-11-13-give-the-account-its-own-section.md) — Account on the rail above Help with Overview and Remote models, in the terminal and the web; out of Settings and Server → Remote access.
+
+- **2026-11-12** — [Share the server with the account's devices](2026-11-12-share-the-server-with-account-devices.md) — the server as a remote access host: one confirmation per device, its own sealed key in the keyring while sharing is on, sealed tunnel and LAN addresses; hpke-js and uqr.
+
+- **2026-11-12** — [Sign the server in to an Atomic Chat account](2026-11-12-sign-in-to-an-atomic-chat-account.md) — email code or device code, the session in the server process, no sign-in over a live one; behind `account.enabled`.
 
 - **2026-11-12** — [Preserve Foundry Local tool markers](2026-11-12-preserve-foundry-tool-markers.md) — save the resolver's pair in new installations and use core 0.23.4 for the Foundry host and existing models.
 

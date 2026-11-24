@@ -1,14 +1,24 @@
 import { setupFinished } from '../../../workspace-view/index.js'
 import type { WorkspaceSnapshot } from '../../../contract/index.js'
 import { sampleDownloads } from '../downloads/download-rates.js'
+import { announceEnded } from '../account/account-model.js'
+import { leaveAccountPage } from '../account/account-navigation.js'
 import type { WorkspaceState } from '../state.js'
 
-/** Shared status changes never replace local drafts or an explicitly reopened setup. */
+/**
+ * Shared status changes never replace local drafts or an explicitly reopened setup. Accounts turned off
+ * elsewhere take the Account page away: it falls back to the Server page. A device that disconnected is
+ * said once on the status line, once nothing hides it.
+ */
 export function applyWorkspaceSnapshot(
   state: WorkspaceState,
   workspace: WorkspaceSnapshot,
   now: number
 ): WorkspaceState {
+  return announceEnded(state, leaveAccountPage(withSnapshot(state, workspace, now)))
+}
+
+function withSnapshot(state: WorkspaceState, workspace: WorkspaceSnapshot, now: number): WorkspaceState {
   const completingHere = state.connection?.step === 'preparing' || state.connection?.step === 'done'
   const finished =
     setupFinished(workspace.setup) && !state.setupComplete && Boolean(state.firstRun) && !completingHere

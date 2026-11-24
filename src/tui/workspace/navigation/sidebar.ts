@@ -1,18 +1,16 @@
-import { PAGES } from '../workspace-pages.js'
-import { button } from '../draw/canvas.js'
+import { button, textWidth } from '../draw/canvas.js'
 import { workspaceHeaderRows } from '../draw/brand-header.js'
-import { railLayout } from './rail.js'
+import { compactRow, railLayout } from './rail.js'
 import { drawSidebarControl } from '../server/sidebar-control.js'
 export { serverRunning } from '../server/server-status.js'
 import {
+  ACCOUNT_SECTIONS,
   LIBRARY_SECTIONS,
-  SETTINGS_SECTIONS,
   PLAYGROUND_TASKS,
-  SETTINGS_WORKSPACE_SECTIONS,
   SERVER_NAVIGATION,
   CONNECTION_AGENTS,
 } from '../../../contract/index.js'
-import { workspacePage, serverSection, playgroundTask } from './navigation.js'
+import { SETTINGS_MENU, workspacePage, serverSection, playgroundTask } from './navigation.js'
 import { text, COLORS } from '../draw/canvas.js'
 import { navigationRow, scrollTrack } from '../draw/controls.js'
 import { fill } from '../draw/fortress.js'
@@ -23,24 +21,21 @@ import type { WorkspaceState } from '../state.js'
 export const SERVER_SIDEBAR = SERVER_NAVIGATION
 export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: string) {
   if (c.width < 90) {
-    let x = 2
-    PAGES.forEach((page, i) => {
-      x +=
-        button(
-          c,
-          `page:${page.id}`,
-          x,
-          workspaceHeaderRows(c),
-          `${i + 1} ${page.name}`,
-          page.hint,
-          focus,
-          workspacePage(s) === page.id
-        ) + 1
-    })
+    for (const item of compactRow(c, s))
+      button(
+        c,
+        item.id,
+        item.x,
+        workspaceHeaderRows(c),
+        item.label,
+        item.hint,
+        focus,
+        `page:${workspacePage(s)}` === item.id
+      )
     return
   }
   const width = 13,
-    { top, start, count, items } = railLayout(c, s, bottom)
+    { top, start, count, total, items } = railLayout(c, s, bottom)
   fill(c, 0, top, width + 1, bottom - top + 1, COLORS.header)
   const page = workspacePage(s)
   for (const { id, label, icon, y } of items) {
@@ -52,7 +47,7 @@ export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: st
         text(c, edge, row, '│', active ? COLORS.accent : COLORS.navEdge, 1, COLORS.header)
     text(
       c,
-      Math.floor((width - icon.length) / 2),
+      Math.floor((width - textWidth(icon)) / 2),
       y,
       icon,
       active ? COLORS.accent : COLORS.muted,
@@ -72,7 +67,7 @@ export function drawRail(c: Canvas, s: WorkspaceState, bottom: number, focus: st
     c.targets.push({ id, x: 0, y, width, height: 2, hint: label })
   }
   for (let row = top; row <= bottom; row++) text(c, width, row, '│', COLORS.line, 1)
-  scrollTrack(c, width, top + 1, bottom - top - 1, start, count, 6)
+  scrollTrack(c, width, top + 1, bottom - top - 1, start, count, total)
 }
 function row(
   c: Canvas,
@@ -108,7 +103,9 @@ export function drawSidebar(
         ? 'Models Hub'
         : page === 'chat'
           ? 'Playground'
-          : 'Settings',
+          : page === 'account'
+            ? 'Account'
+            : 'Settings',
     COLORS.text,
     20,
     undefined,
@@ -151,9 +148,25 @@ export function drawSidebar(
         ? [...LIBRARY_SECTIONS].sort((a, b) => Number(b.id === 'downloads') - Number(a.id === 'downloads'))
         : page === 'chat'
           ? PLAYGROUND_TASKS
-          : [...SETTINGS_SECTIONS, ...SETTINGS_WORKSPACE_SECTIONS]
-    const prefix = page === 'models' ? 'library' : page === 'chat' ? 'playground-task' : 'settings-section'
-    const selected = page === 'models' ? s.libraryView : page === 'chat' ? playgroundTask(s) : s.settingsGroup
+          : page === 'account'
+            ? ACCOUNT_SECTIONS
+            : SETTINGS_MENU
+    const prefix =
+      page === 'models'
+        ? 'library'
+        : page === 'chat'
+          ? 'playground-task'
+          : page === 'account'
+            ? 'account-section'
+            : 'settings-section'
+    const selected =
+      page === 'models'
+        ? s.libraryView
+        : page === 'chat'
+          ? playgroundTask(s)
+          : page === 'account'
+            ? s.accountView
+            : s.settingsGroup
     for (const item of items) {
       if (page === 'access' && item.id === 'assistants') {
         y++

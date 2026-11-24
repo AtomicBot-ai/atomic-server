@@ -1,9 +1,8 @@
 import { followFastFlowLmHost } from './fastflowlm-host.js'
 /**
- * The long-lived `atc` process: the core in-process (owner of the data folder), the admin server,
- * the host-step loop for managed runtimes, and
- * the run record that tells commands this owner is an `atc` daemon. Everything else is a command
- * that attaches to it.
+ * The long-lived `atc` process: the core in-process (owner of the data folder), the admin server, the
+ * host-step loop for managed runtimes, and the run record that tells commands this owner is an `atc`
+ * daemon. Everything else is a command that attaches to it.
  */
 
 import { restrictDataFolder } from './restrict-data.js'
@@ -29,6 +28,7 @@ import { CrashPolicy, watchSessions } from './session-watch.js'
 import { bootLoader, bootPlan, runBoot } from './boot.js'
 import { serverReleaseWatch } from './release-check.js'
 import { serverCloudflared } from './cloudflared.js'
+import { withDeviceKeys } from './device-keys.js'
 import type { ReleaseWatch } from '../update/index.js'
 
 export interface DaemonOptions {
@@ -74,6 +74,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   const coreLog = log.child('core')
   await restrictDataFolder(paths.atcDir, host, io.env, log)
   const keys = new ClientKeys(paths.atcDir)
+  // The workspace's account adds device keys once it exists; the core asks only when its server runs.
+  let deviceKeys: () => readonly string[] = () => []
   // Before the core: with no keyring the public server would check no key at all.
   await keys.initialize(io.env['ATC_API_KEY'] ?? '')
   const consent = telemetryConsent(options.telemetry, options.config)
@@ -81,7 +83,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   const core = await (options.createCore ?? AtomicCore.create.bind(AtomicCore))({
     // The keyring, read on every public request: one of its keys is required, a revoked one is refused
     // at once (`[]` refuses everyone). The core's own `server.api_key` does not apply.
-    publicApiKeys: () => keys.current(),
+    // Devices paired through the account add their own keys while sharing is on (ADR 2026-11-12).
+    publicApiKeys: () => withDeviceKeys(keys.current(), deviceKeys()),
     // A model check gives up reading a remote GGUF header after 20 s instead of hanging on a slow mirror.
     remoteGgufTimeoutMs: 20_000,
     ownerScope: 'cli',
@@ -153,9 +156,11 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       // Models are downloaded here, not by the core: `HF_TOKEN` reaches gated repositories.
       env: io.env,
       probePort: host.probePort,
+      log: log.child('account'),
       agentHost: { env: io.env, platform: host.facts.platform, find: host.findOnPath, exec: host.exec },
       ...(options.errors ? { errors: options.errors } : {}),
     })
+    deviceKeys = () => workspace.account.keys()
     // A failed move leaves media where it was: its records still name those paths, so it still loads.
     await workspace
       .start()
@@ -238,6 +243,8 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       log,
     }
     await runBoot({ ...plan, models: [] }, bootDeps)
+    // Sharing with the account's devices outlives a restart; its tunnel does not.
+    void workspace.account.resume()
     const record: DaemonRecord = {
       ...startingRecord,
       state: 'ready',

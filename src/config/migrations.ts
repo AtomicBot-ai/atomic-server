@@ -13,6 +13,19 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 /** Key N migrates a version-N document to N+1. */
 export const MIGRATIONS: Record<number, Migration> = {
+  /**
+   * 7 → 8: accounts ship to everyone and `account.enabled` now defaults to on. Every config written before
+   * carried the old default (`config set` saves the whole table), and the account commands were hidden, so a
+   * stored `false` is that default, not a choice: it is dropped and the new default applies. A `true` stays.
+   */
+  7: (raw) => {
+    if (!isObject(raw['account']) || raw['account']['enabled'] !== false) return { ...raw }
+    const { enabled: _dropped, ...account } = raw['account']
+    const { account: _old, ...rest } = raw
+    return Object.keys(account).length > 0 ? { ...rest, account } : rest
+  },
+  /** 6 → 7: `account.enabled` is new and defaults to off; nothing older needs a change. */
+  6: (raw) => ({ ...raw }),
   // An omitted port meant 1337. The old default chat URL meant "follow this server",
   // including when a config edit had written that URL alongside a custom API port.
   5: (raw) => {

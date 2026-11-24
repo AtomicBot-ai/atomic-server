@@ -1,4 +1,5 @@
 import { recoveryAction } from './chat/recovery.js'
+import { accountAction } from './account/account-actions.js'
 import { loadDraftAction } from './chat/draft-load.js'
 import { documentAction } from './chat/document-actions.js'
 import { selectEndpoint, selectEndpointModel } from './chat/model-selection.js'
@@ -35,6 +36,7 @@ export async function activate(id: string, ctx: ActionContext): Promise<void> {
   const { update, controller, get } = ctx,
     s = get()
   const patch = (part: Partial<WorkspaceState>) => update((v) => ({ ...v, ...part }))
+  if (await accountAction(id, ctx)) return
   if (await recoveryAction(id, ctx)) return
   if (await loadDraftAction(id, ctx)) return
   if (await documentAction(id, ctx)) return

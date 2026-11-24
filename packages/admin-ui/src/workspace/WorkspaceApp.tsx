@@ -6,7 +6,9 @@ import { EngineIntro } from './intro/EngineIntro'
 import { WorkspaceBrand } from './WorkspaceBrand'
 import { workspaceTheme } from './workspace-theme'
 import { useWorkspace } from './useWorkspace'
-import { UpdateToast } from './UpdateToast'
+import { WorkspaceToasts } from './WorkspaceToasts'
+import { accountPages } from './account/account-pages'
+import { Account } from './account/Account'
 import { Server } from './server/Server'
 import { Settings } from './server/settings/Settings'
 import { Catalog } from './library/catalog/Catalog'
@@ -61,10 +63,12 @@ function WorkspaceContent() {
     catalogSection,
     setCatalogSection,
     settingsSection,
-    setSettingsSection,
     task,
     setTask,
+    section,
+    selectSection,
   } = navigation
+  const { openRemoteModels } = accountPages(navigation)
   useAcquisition(setPage, setCatalogSection, setServerSection)
   const [agent, setAgent] = useState<string | undefined>(undefined)
   const [connectionGuide, setConnectionGuide] = useState(false)
@@ -101,9 +105,6 @@ function WorkspaceContent() {
     help,
     setHelp,
   })
-  const section = page === 'server' ? serverSection : page === 'catalog' ? catalogSection : settingsSection
-  const selectSection =
-    page === 'server' ? setServerSection : page === 'catalog' ? setCatalogSection : setSettingsSection
   const models = (section = 'catalog', engine?: string, category?: string) => {
     setCatalogSection(section)
     // A new key opens the catalog afresh, so it takes the engine's format and filter every time.
@@ -162,7 +163,7 @@ function WorkspaceContent() {
           <WorkspaceBrand />
           {!openWizard && !connectionGuide && <FloatingDownloads workspace={workspace} />}
         </header>
-        <UpdateToast workspace={workspace} top={page === 'playground' && task === 'chat'} />
+        <WorkspaceToasts workspace={workspace} navigation={navigation} />
         {workspace.error && (
           <div className="ew-error connection-error" role="alert">
             <span>{workspace.error}</span>
@@ -193,6 +194,7 @@ function WorkspaceContent() {
               prepared={prepared}
               onPrepared={(id) => setPrepared((items) => [...new Set([...items, id])])}
               openSettings={settings}
+              openRemoteModels={openRemoteModels}
               openModels={(engine) => models('catalog', engine)}
             />
           )}
@@ -215,6 +217,7 @@ function WorkspaceContent() {
               openEngines={() => models('engines')}
             />
           )}
+          {page === 'account' && <Account workspace={workspace} navigation={navigation} />}
           {page === 'playground' &&
             (task === 'chat' ? (
               <Chat

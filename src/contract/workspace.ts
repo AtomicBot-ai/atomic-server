@@ -1,4 +1,5 @@
 import type { WorkspaceFeatures } from './workspace-features.js'
+import type { WorkspaceAccount } from './account.js'
 /** Shared operation contract for the terminal, browser and unattended clients. */
 import type {
   EnvironmentOperation,
@@ -107,6 +108,8 @@ export interface WorkspaceSnapshot {
   chats?: WorkspaceChat[]
   /** The model-ready email (`setup.reminder`) both clients show; never the address. */
   reminder?: WorkspaceReminder | null
+  /** The Atomic Chat account and remote access sharing; absent off a server. */
+  account?: WorkspaceAccount
 }
 /** An email reminder for a downloading model. The server keeps no address, only what it waits for. */
 export interface WorkspaceReminder {

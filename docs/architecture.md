@@ -75,6 +75,8 @@ rest.
 <data>/<provider>/backends/<version>/<backend>/                          engine packs installed by the core
 <data>/atc/config.json            atc settings, 0644, tmp + rename; unknown keys preserved
 <data>/atc/secrets.json           0600: hfToken, adminPassword
+<data>/atc/account.json           0600: this install's id and its Atomic Chat account session (account.enabled)
+<data>/atc/remote-access.json     0600: the device key, sharing, the host record, the open pairing code and each device's key
 <data>/atc/run/daemon.json        {schema_version, pid, instance_id, state, atc_version, core_version, control_url, admin_url, started_at}
 <data>/atc/run/admin-token        0600: 32 random bytes, base64url
 <data>/atc/run/host-steps/        <step_id>.request.json, <step_id>.result.json, journal.json
@@ -93,6 +95,7 @@ The managed-runtime store is not here: it is the core's shared per-user root, an
 | --- | --- | --- | --- | --- |
 | Core control API `/atomic/v1` | random port | loopback | `control-token` (Bearer) | The core writes it (0600). The daemon reads it from the facade; commands read it through `attachToOwner`. **Never** leaves the machine's processes: not in the browser, not in the helper, not in a log. |
 | Public API `/v1` | 1339 | `api.host` (127.0.0.1) | A key from the keyring `atc/client-keys.json` (0600; owner-only ACL on Windows) | Clients of the model. The server creates the keyring when it starts (seeded from `ATC_API_KEY`), and the core checks it on every request on any address, so there is no keyless API. `atc api start --api-key` adds that key to the keyring. |
+| Account devices on `/v1` | (the public API) | as `api.host` | A device key in `atc/remote-access.json` (0600), accepted next to the keyring's only while sharing is on | Devices of the server's Atomic Chat account. The server issues one per device, sealed to the device's own key through `api.atomic.chat`, which never sees it; revoking a device refuses its key on the next request (ADR 2026-11-12). |
 | Admin `/`, `/api/*` | 1338 (`0` = random, published in `daemon.json`) | loopback only | `admin-token` → session cookie | The daemon writes the token (0600); `atc admin` puts it in a URL fragment once; the browser keeps only the cookie. |
 
 Profiles created before config version 6 keep their previous API port (1337 when omitted). The first server or terminal UI launch writes an empty `atc/profile-v6` marker for a fresh profile before creating its log or keyring. For an older profile without a config, the existing server keyring or server log identifies the previous default.

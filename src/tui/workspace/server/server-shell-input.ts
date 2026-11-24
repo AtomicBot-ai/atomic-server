@@ -10,12 +10,15 @@ import type { InputResult } from '../input.js'
 import { CONNECTION_AGENTS } from '../../../contract/index.js'
 import { serverAgents } from './server-overview.js'
 import { serverChoices } from './server-settings.js'
+import { accountInput } from '../account/account-input.js'
 export function serverShellInput(
   input: string,
   key: Key,
   s: WorkspaceState,
   frame: Canvas
 ): InputResult | null {
+  const account = accountInput(input, key, s)
+  if (account) return account
   const mouse = mouseReport(input),
     l = shellLayout(frame.width, frame.height)
   if (

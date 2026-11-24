@@ -142,6 +142,11 @@ export async function createWorkspaceClient(options: WorkspaceServiceOptions): P
         throw new AtcError('ATC_USAGE', 'Enable the web admin before downloading engines or models.', {
           hint: 'atc config set admin.autoStart true, then restart the server.',
         })
+      // The account and its device keys live in the server process; a copy here would drift from it.
+      if (operation.startsWith('account.'))
+        throw new AtcError('ATC_USAGE', 'Enable the web admin to use the Atomic Chat account.', {
+          hint: 'atc config set admin.autoStart true, then restart the server.',
+        })
       return service.execute(operation, input)
     },
   }

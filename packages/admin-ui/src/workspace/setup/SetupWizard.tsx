@@ -182,6 +182,7 @@ export function SetupWizard({
             )}
             {!waiting && step === 'connect' && (
               <Destinations
+                account={w.snapshot?.account}
                 choose={async (destination) => {
                   if (choosing.current) return
                   choosing.current = true

@@ -10,6 +10,7 @@ import { persistConversation } from './server/data-actions.js'
 import { startup } from './startup.js'
 import { isPicker } from './chat/picker.js'
 import { useWorkspaceData } from './runtime/data-effects.js'
+import { useAccountPoll } from './account/account-poll.js'
 import type { AgentLaunch } from '../../agent-launch/index.js'
 import { Box, Text, useApp, useInput, useWindowSize, type Key } from 'ink'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -154,6 +155,7 @@ function WorkspaceContent(props: ContentProps) {
   useMediaJobs(state.ready, latest, controller, update)
   useRuntimeData(state.ready, controller, update)
   useWaitingGame(state, update)
+  useAccountPoll(state.overlay, controller, update)
   const downloadHighlight = useDownloadAttention(state.downloadAttention ?? 0, state.motion)
   const frame = workspaceFrame(state, columns, rows, seconds, 'fangs', downloadHighlight)
   const { send, cancel } = turnActions(latest, controller, epoch, update, deps.base.errors)
