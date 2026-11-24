@@ -68,7 +68,10 @@ export async function endGrants(ctx: StopContext, grants: GrantsToEnd): Promise<
     if (!gone(error)) first ??= error
   }
   const revoke = (id: string) => ctx.session.authed((token) => ctx.api.revokeGrant(token, id)).catch(keep)
-  for (const id of grants.pending)
+  // A request allowed and keyed since the last sync is in both lists of what this server knew: it is live, and
+  // is ended once. Denying it too would revoke it twice, and a failed revoke would hide behind the second one.
+  const live = new Set(grants.live)
+  for (const id of grants.pending.filter((id) => !live.has(id)))
     await ctx.session
       .authed((token) => ctx.api.decide(token, id, false))
       // Approved meanwhile: revoking still ends it.

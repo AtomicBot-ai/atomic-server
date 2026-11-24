@@ -46,4 +46,21 @@ describe('ending every grant when sharing stops', () => {
     expect(revokeGrant.mock.calls.map(([, id]) => id)).toEqual(['p', 'gone', 'down', 'x'])
     expect(failure).toMatchObject({ status: 503 })
   })
+
+  it('ends a grant once when this server knew it as both a request and a live grant', async () => {
+    // Allowed and keyed since the last sync: the stale request list still names it.
+    const calls: string[] = []
+    const decide = vi.fn(async (_token: string, id: string) => {
+      calls.push(`decide ${id}`)
+      throw new AccountApiError(409, 'invalid_state')
+    })
+    const revokeGrant = vi.fn(async (_token: string, id: string) => {
+      calls.push(`revoke ${id}`)
+      throw new AccountApiError(503, 'http_503')
+    })
+    const failure = await endGrants(context({ decide, revokeGrant }), { pending: ['t', 'p'], live: ['t'] })
+    expect(calls).toEqual(['decide p', 'revoke p', 'revoke t'])
+    // The one revoke of `t` failed, and that is what comes back; no second try hides it.
+    expect(failure).toMatchObject({ status: 503 })
+  })
 })
