@@ -3,13 +3,7 @@ import type { CommandContext } from '../../cli/index.js'
 import { qrTerminal } from '../../account/index.js'
 import type { AccountSignInStep, WorkspaceAccount } from '../../contract/index.js'
 import { accountLine } from '../../workspace-view/index.js'
-import {
-  ACCOUNT_COMMANDS_HIDDEN,
-  accountStatus,
-  execute,
-  printAccount,
-  waitForAccount,
-} from './account-shared.js'
+import { accountStatus, execute, printAccount, waitForAccount } from './account-shared.js'
 
 const signedInLine = (account: WorkspaceAccount) => `${accountLine(account)}.`
 
@@ -67,7 +61,6 @@ export const loginCommand = defineCommand({
   name: 'login',
   summary: 'Sign this server in to an Atomic Chat account',
   group: 'access',
-  hidden: ACCOUNT_COMMANDS_HIDDEN,
   description:
     'Without options, shows a code and a link to approve this server from any browser (Google sign-in works there). With --email, sends a one-time code to that address and asks for it. A signed-in server can share its API with the account’s devices: atc remote share on.',
   options: {
@@ -94,7 +87,6 @@ export const logoutCommand = defineCommand({
   name: 'logout',
   summary: 'Sign this server out of its Atomic Chat account',
   group: 'access',
-  hidden: ACCOUNT_COMMANDS_HIDDEN,
   description:
     'Ends this server’s session. Every device that uses this server through the account loses access and must pair again.',
   run: async (_inv, ctx) => {
@@ -127,7 +119,6 @@ export const accountCommand = defineCommand({
   name: 'account',
   summary: 'Show the Atomic Chat account and the devices that use this server',
   group: 'access',
-  hidden: ACCOUNT_COMMANDS_HIDDEN,
   run: async (_inv, ctx) => {
     const account = (await execute(ctx, 'account.status')) as WorkspaceAccount
     ctx.out.result({ schema_version: 1, account }, () => printAccount(ctx, account))

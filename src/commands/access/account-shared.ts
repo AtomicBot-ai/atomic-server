@@ -11,12 +11,6 @@ import {
 } from '../../workspace-view/index.js'
 import { workspace } from '../server/control.js'
 
-/**
- * Account commands stay out of `atc --help` until accounts ship to everyone (`account.enabled` is off by
- * default); they work, and say how to turn accounts on, either way.
- */
-export const ACCOUNT_COMMANDS_HIDDEN = true
-
 export async function accountStatus(ctx: CommandContext): Promise<WorkspaceAccount> {
   return (await (await workspace(ctx)).execute('account.status', {})) as WorkspaceAccount
 }

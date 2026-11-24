@@ -71,6 +71,23 @@ describe('migrateConfig', () => {
     expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 4 })
   })
 
+  it.each([
+    [
+      'the stored old default (off) is dropped, so accounts come on',
+      { version: 7, api: { port: 9 }, account: { enabled: false } },
+      { api: { port: 9 } },
+    ],
+    [
+      'an explicit on stays',
+      { version: 7, api: { port: 9 }, account: { enabled: true } },
+      { api: { port: 9 }, account: { enabled: true } },
+    ],
+    ['a file without it is left as it was', { version: 7, api: { port: 9 } }, { api: { port: 9 } }],
+  ])('7 → 8: %s', (_name, from, to) => {
+    expect(migrateConfig(from)).toEqual({ raw: { version: CONFIG_VERSION, ...to }, migratedFrom: 7 })
+    expect(validateConfig(migrateConfig(from).raw).config.account.enabled).toBe(true)
+  })
+
   it.each([0, 1337, 8000])('keeps port %i and upgrades the saved follow-server endpoint', (port) => {
     expect(
       migrateConfig({ version: 5, api: { port }, tui: { endpoint: 'http://127.0.0.1:1337/v1' } }).raw

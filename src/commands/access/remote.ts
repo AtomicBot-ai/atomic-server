@@ -3,13 +3,7 @@ import type { CommandContext } from '../../cli/index.js'
 import { qrTerminal } from '../../account/index.js'
 import type { AccountPairingCode, WorkspaceAccount } from '../../contract/index.js'
 import { deviceLabel, formatCheckCode, sharingLine, STOP_SHARING_DETAIL } from '../../workspace-view/index.js'
-import {
-  ACCOUNT_COMMANDS_HIDDEN,
-  accountStatus,
-  execute,
-  printAccount,
-  waitForAccount,
-} from './account-shared.js'
+import { accountStatus, execute, printAccount, waitForAccount } from './account-shared.js'
 
 const digits = (text: string) => text.replace(/\D/g, '')
 
@@ -95,7 +89,6 @@ export const remoteCommand = defineCommand({
   name: 'remote',
   summary: 'Share this server with the devices of its Atomic Chat account',
   group: 'access',
-  hidden: ACCOUNT_COMMANDS_HIDDEN,
   description:
     'Devices signed in to the same account pair once — with a code, a link, or by asking and being allowed here — and get their own key for this server’s API, and its current address through the tunnel or the local network. Sign in first: atc login.',
   defaultSubcommand: 'devices',

@@ -24,7 +24,7 @@ export interface FieldSpec {
   max?: number
 }
 
-export const CONFIG_VERSION = 7
+export const CONFIG_VERSION = 8
 
 export interface AtcConfig {
   version: number
@@ -177,7 +177,7 @@ export const FIELDS: readonly FieldSpec[] = [
   {
     path: 'account.enabled',
     type: 'boolean',
-    default: false,
+    default: true,
     description:
       'Sign in to an Atomic Chat account and share this server with its devices (`atc login`); read when the server starts',
   },
