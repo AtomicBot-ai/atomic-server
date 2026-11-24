@@ -1,0 +1,28 @@
+.engine-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+.engine-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.engine-mark img.monochrome {
+  filter: brightness(0);
+}
+.dark .engine-mark img.monochrome {
+  filter: brightness(0) invert(1);
+}
+.engine-mark > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--atomic-focus);
+  color: var(--ew-text);
+  font-weight: 600;
+}

@@ -103,6 +103,7 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
   if (v.error) text(c, a.x, a.bottom - 1, v.error, COLORS.statusError, a.width)
   const litert = 'backend' in plan
   const genie = 'variant' in plan
+  const strata = v.path?.kind === 'strata'
   const flm = v.path?.kind === 'fastflowlm'
   const waits = genie
     ? ['engine-not-installed', 'environment-not-ready', 'requires-newer-engine'].includes(
@@ -110,7 +111,9 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
       )
       ? flm
         ? 'Set up FastFlowLM'
-        : 'Install GenieX'
+        : strata
+          ? 'Install Strata'
+          : 'Install GenieX'
       : undefined
     : 'variant_id' in plan
       ? (litert ? LITERT_STEP : FOUNDRY_STEP)[plan.verdict.verdict]
@@ -124,15 +127,25 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
         c,
         flm
           ? 'setup-path-fastflowlm'
-          : genie
-            ? 'setup-path-geniex'
-            : litert
-              ? 'setup-path-litert'
-              : 'setup-path-foundry',
+          : strata
+            ? 'setup-path-strata'
+            : genie
+              ? 'setup-path-geniex'
+              : litert
+                ? 'setup-path-litert'
+                : 'setup-path-foundry',
         bx,
         a.bottom,
         waits,
-        flm ? 'Open FastFlowLM' : genie ? 'Open GenieX' : litert ? 'Open LiteRT-LM' : 'Open Foundry Local',
+        flm
+          ? 'Open FastFlowLM'
+          : strata
+            ? 'Open Strata'
+            : genie
+              ? 'Open GenieX'
+              : litert
+                ? 'Open LiteRT-LM'
+                : 'Open Foundry Local',
         a.focus
       ) + 1
   button(c, 'setup-back', bx, a.bottom, 'Back', 'Return without downloading', a.focus)
@@ -141,7 +154,14 @@ export function drawPathReview(c: Canvas, v: SetupView, a: Area) {
 export function drawPathDownload(c: Canvas, s: WorkspaceState, v: SetupView, a: Area) {
   const job = v.path?.job
   const state = pathJob(v, s.workspace)
-  text(c, a.x, a.y + 3, 'Downloading', COLORS.accent, a.width)
+  text(
+    c,
+    a.x,
+    a.y + 3,
+    state?.stage === 'preparing' ? 'Preparing model' : 'Downloading',
+    COLORS.accent,
+    a.width
+  )
   text(c, a.x, a.y + 6, `${job?.model ?? ''} for ${job?.engine ?? ''}`, COLORS.text, a.width)
   const total = state?.total ?? 0,
     done = state?.done ?? 0

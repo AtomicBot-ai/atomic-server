@@ -11,6 +11,7 @@ import type {
   FoundryLocalAcceleratorsEvent,
   FoundryLocalPrepareResult,
   ModelCompatibility,
+  ModelYmlFoundryLocal,
   EngineUpdateOffer,
   EnvironmentOperation,
   ExecutorKind,
@@ -156,13 +157,16 @@ export interface FoundryModelPlan {
   download_bytes: number
   free_bytes: number | null
   /** What `model.yml` records besides the files: from conf's list, else the resolve answer's tags. */
-  record: {
-    context_length?: number
-    tools: boolean
-    reasoning: boolean
-    reasoning_start?: string
-    reasoning_end?: string
-  }
+  record: Pick<
+    ModelYmlFoundryLocal,
+    | 'context_length'
+    | 'tools'
+    | 'tool_call_start'
+    | 'tool_call_end'
+    | 'reasoning'
+    | 'reasoning_start'
+    | 'reasoning_end'
+  >
   blockers: string[]
 }
 

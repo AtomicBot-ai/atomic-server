@@ -15,6 +15,16 @@
 .server-settings-panel .form-grid {
   margin: 0;
 }
+.server-model-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.server-model-actions > [role='status'] {
+  display: flex;
+  max-width: 100%;
+}
 .server-settings .ew-field {
   min-width: 0;
 }

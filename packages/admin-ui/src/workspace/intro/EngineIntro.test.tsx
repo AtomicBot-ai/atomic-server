@@ -16,7 +16,6 @@ it.each([
   workspace = fixture.workspace
   const next = vi.fn()
   render(<EngineIntro onContinue={next} />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
   fireEvent.click(await screen.findByRole('button', { name, exact: true }))
   await waitFor(() => expect(next).toHaveBeenCalledOnce())
   expect(fixture.execute).toHaveBeenCalledWith('engines.enqueue', { engine, select: true })
@@ -28,7 +27,6 @@ it('does not offer FastFlowLM when the core has no compatible build', async () =
     { setup: null }
   ).workspace
   render(<EngineIntro onContinue={vi.fn()} />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
   await screen.findByText('No compatible engines available.')
   expect(screen.queryByRole('button', { name: 'FastFlowLM' })).not.toBeInTheDocument()
 })
@@ -48,10 +46,6 @@ it('queues the chosen engine and proceeds before the background installation com
   workspace = fixture.workspace
   const next = vi.fn()
   const view = render(<EngineIntro onContinue={next} />)
-  const choose = await screen.findByRole('button', { name: 'Choose engine' })
-  fireEvent.keyDown(window, { key: 'Enter', repeat: true })
-  expect(screen.queryByRole('heading', { name: 'Choose your engine' })).not.toBeInTheDocument()
-  fireEvent.click(choose)
   fireEvent.click(await screen.findByRole('button', { name: 'llama.cpp', exact: true }))
   expect(next).not.toHaveBeenCalled()
   await act(async () => accept())
@@ -78,10 +72,9 @@ it('keeps a rejected queue request in the chooser and permits retry', async () =
   workspace = fixture.workspace
   const next = vi.fn()
   render(<EngineIntro onContinue={next} />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
   fireEvent.click(await screen.findByRole('button', { name: 'llama.cpp', exact: true }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Download unavailable')
-  expect(screen.queryByRole('button', { name: 'Press any key' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Continue', exact: true })).not.toBeInTheDocument()
   failed = false
   fireEvent.click(screen.getByRole('button', { name: 'llama.cpp', exact: true }))
   await waitFor(() => expect(next).toHaveBeenCalledOnce())
@@ -91,19 +84,18 @@ it('opens a returning user directly without replaying the intro', async () => {
   const next = vi.fn()
   render(<EngineIntro onContinue={next} />)
   await waitFor(() => expect(next).toHaveBeenCalledOnce())
-  expect(screen.queryByRole('button', { name: 'Press any key' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Continue', exact: true })).not.toBeInTheDocument()
 })
-it('waits at the intro when an engine exists but onboarding has not started', async () => {
+it('goes straight to model setup when an engine is already active', async () => {
   workspace = workspaceFixture(
     { 'engines.list': enginesList(['llamacpp-upstream']) },
     { setup: null }
   ).workspace
   const next = vi.fn()
   render(<EngineIntro onContinue={next} />)
-  await screen.findByRole('button', { name: 'Press any key' })
-  expect(next).not.toHaveBeenCalled()
-  fireEvent.keyDown(window, { key: 'x' })
-  expect(next).toHaveBeenCalledOnce()
+  await waitFor(() => expect(next).toHaveBeenCalledOnce())
+  expect(screen.queryByRole('button', { name: 'Continue', exact: true })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Choose your engine' })).not.toBeInTheDocument()
 })
 it('resumes unfinished model setup directly', async () => {
   workspace = workspaceFixture({}, { setup: null, setups: [{ id: 'job', stage: 'paused' }] }).workspace
@@ -119,7 +111,6 @@ it('leaves an open engine chooser when another client completes onboarding', asy
   ).workspace
   const next = vi.fn()
   const view = render(<EngineIntro onContinue={next} />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
   await screen.findByRole('heading', { name: 'Choose your engine' })
   workspace.snapshot = { ...workspace.snapshot!, setup: { mode: 'manual', complete: true, updated_at: 2 } }
   view.rerender(<EngineIntro onContinue={next} />)
@@ -147,7 +138,7 @@ it('leaves checking immediately when setup completes during an engine-list reque
   expect(next).toHaveBeenCalledOnce()
 })
 
-it('returns from the engine picker to the focused intro without installing or skipping setup', async () => {
+it('starts at the chooser and lets the user defer setup explicitly', async () => {
   const fixture = workspaceFixture(
     { 'engines.list': enginesList(['llamacpp-upstream'], []) },
     { setup: null }
@@ -155,19 +146,12 @@ it('returns from the engine picker to the focused intro without installing or sk
   workspace = fixture.workspace
   const next = vi.fn()
   render(<EngineIntro onContinue={next} />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Choose engine' }))
   const engine = await screen.findByRole('button', { name: 'llama.cpp', exact: true })
-  engine.focus()
   fireEvent.keyDown(engine, { key: 'Escape' })
-  expect(screen.getByRole('heading', { name: 'Atomic Server' })).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Choose engine' })).toHaveFocus()
-  expect(screen.queryByRole('heading', { name: 'Choose your engine' })).not.toBeInTheDocument()
+  expect(screen.getByRole('dialog', { name: 'Choose your engine' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Back', exact: true })).not.toBeInTheDocument()
   expect(next).not.toHaveBeenCalled()
-  expect(fixture.execute.mock.calls.some(([name]) => name === 'engines.enqueue')).toBe(false)
-  fireEvent.keyDown(window, { key: 'Escape', repeat: true })
-  expect(screen.getByRole('button', { name: 'Choose engine' })).toHaveFocus()
-  fireEvent.click(screen.getByRole('button', { name: 'Choose engine' }))
-  await screen.findByRole('heading', { name: 'Choose your engine' })
   fireEvent.click(screen.getByRole('button', { name: 'Set up later' }))
-  expect(next).toHaveBeenCalledOnce()
+  await waitFor(() => expect(next).toHaveBeenCalledOnce())
+  expect(fixture.execute.mock.calls.some(([name]) => name === 'engines.enqueue')).toBe(false)
 })

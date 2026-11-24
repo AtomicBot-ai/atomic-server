@@ -7,15 +7,17 @@ import { workspaceFrame } from '../frame.js'
 import { workspaceInput } from '../input.js'
 import { hit, COLORS } from '../draw/canvas.js'
 import type { Key } from 'ink'
+import { connectionChoices } from './connection-picker.js'
 function fixture() {
   const models = Array.from({ length: 24 }, (_, i) => ({
     id: `model/${i}`,
     name: `Local model ${i}`,
     provider: 'llamacpp-upstream',
-    providers: ['llamacpp-upstream', 'mlx'],
+    providers: ['llamacpp-upstream', 'llamacpp', 'atomic-prism', 'mlx'],
   }))
   let state: WorkspaceState = { ...createWorkspace('welcome'), firstRun: 'connect' }
-  const execute = vi.fn()
+  const execute = vi.fn(async (name: string) => (name === 'keys.list' ? [{ id: 'test-key' }] : {}))
+  const installedEngines = vi.fn(async () => ['llamacpp-upstream', 'mlx', 'fastflowlm'])
   const ctx: ActionContext = {
     get: () => state,
     update: (fn) => {
@@ -24,20 +26,34 @@ function fixture() {
     send: vi.fn(),
     cancel: vi.fn(),
     copy: vi.fn(),
-    controller: { installed: async () => models, runtime: { execute } } as unknown as WorkspaceController,
+    controller: {
+      installed: async () => [
+        ...models,
+        { id: 'flm-model', name: 'FastFlowLM model', provider: 'fastflowlm' },
+        { id: 'unsupported', name: 'Unsupported', provider: 'fastflowlm', providers: [] },
+      ],
+      setup: { installed: installedEngines },
+      runtime: { execute },
+      localEndpoint: async () => 'http://127.0.0.1:1337/v1',
+    } as unknown as WorkspaceController,
   }
   const press = async (key: Partial<Key>, width = 54, input = '') => {
     const result = workspaceInput(input, key as Key, state, workspaceFrame(state, width, 24, 0))
     ctx.update((s) => ({ ...s, ...result.patch }))
     if (result.action) await activate(result.action, ctx)
   }
-  return { ctx, execute, press }
+  return { ctx, execute, installedEngines, press }
 }
 it('selects models and compatible engines in place without changing the agent or starting setup', async () => {
   const { ctx, execute, press } = fixture()
   await activate('guide-agent:codex', ctx)
   await activate('guide-engine', ctx)
   expect(ctx.get().focus).toBe('connection-option:llamacpp-upstream')
+  expect(connectionChoices(ctx.get()).map(({ value }) => value)).toEqual([
+    'llamacpp-upstream',
+    'mlx',
+    'fastflowlm',
+  ])
   await press({ downArrow: true })
   await press({ return: true })
   expect(ctx.get()).toMatchObject({
@@ -56,12 +72,36 @@ it('selects models and compatible engines in place without changing the agent or
     connection: { step: 'review', agent: 'codex', model: 'model/1', provider: 'mlx' },
   })
   expect(execute).not.toHaveBeenCalled()
-  ctx.update((s) => ({ ...s, installed: [...s.installed, { id: 'other', name: 'Other', provider: 'vllm' }] }))
   await activate('guide-model', ctx)
-  await press({ end: true })
+  expect(connectionChoices(ctx.get()).map(({ value }) => value)).not.toContain('flm-model')
+  await activate('close', ctx)
+  await activate('guide-engine', ctx)
+  await activate('connection-option:fastflowlm', ctx)
+  expect(ctx.get()).toMatchObject({ focus: 'guide-model', connection: { model: '', provider: 'fastflowlm' } })
+  await activate('guide-model', ctx)
+  expect(connectionChoices(ctx.get()).map(({ value }) => value)).toEqual(['flm-model'])
   await press({ return: true })
-  expect(ctx.get().connection).toMatchObject({ model: 'other', provider: 'vllm' })
+  expect(ctx.get().connection).toMatchObject({ model: 'flm-model', provider: 'fastflowlm', agent: 'codex' })
+  await activate('guide-configure', ctx)
+  expect(execute).toHaveBeenCalledWith('models.load', { provider: 'fastflowlm', model_id: 'flm-model' })
 })
+it('blocks configuration if the selected engine was removed after opening the guide', async () => {
+  const { ctx, execute, installedEngines } = fixture()
+  await activate('guide-agent:codex', ctx)
+  installedEngines.mockResolvedValueOnce(['mlx'])
+  await activate('guide-configure', ctx)
+  expect(ctx.get().connection).toMatchObject({
+    step: 'review',
+    model: 'model/0',
+    provider: 'llamacpp-upstream',
+    error: 'The selected engine is no longer installed.',
+  })
+  expect(execute).not.toHaveBeenCalled()
+  expect(workspaceFrame(ctx.get(), 80, 30, 0).targets.some((target) => target.id === 'guide-configure')).toBe(
+    false
+  )
+})
+
 it.each([54, 80, 120])(
   'scrolls long menus, supports mouse choice, and restores the draft on Escape at %s columns',
   async (width) => {

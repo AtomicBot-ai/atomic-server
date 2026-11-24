@@ -73,6 +73,20 @@ export const SERVER_OPERATIONS: readonly WorkspaceOperation[] = [
     'List the coding agents atc can configure to use this server.'
   ),
   operation(
+    'connection.configure',
+    'Configure agent on this host',
+    'execute',
+    'Use core to configure an installed agent for the loaded model and an existing API key on the server host. Returns connection status and a launch command.',
+    {
+      properties: {
+        agent: { type: 'string' },
+        model: { type: 'string' },
+        key_id: { type: 'string' },
+      },
+      required: ['agent', 'model'],
+    }
+  ),
+  operation(
     'connection.profile',
     'Prepare agent connection',
     'secret',

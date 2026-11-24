@@ -99,3 +99,17 @@ it.each([
     ).toEqual(current ? [current] : [])
   }
 )
+
+it('lets the server control whether a Strata model can be selected', () => {
+  const s = createWorkspace('chat')
+  s.overlay = 'model-picker'
+  s.installed = [
+    { id: 'prepared', name: 'Prepared Strata', provider: 'strata' },
+    { id: 'waiting', name: 'Waiting Strata', provider: 'strata', disabled_reason: 'Preparing model' },
+  ]
+  expect(
+    pickerRows(s)
+      .filter((row) => row.id.startsWith('installed:'))
+      .map((row) => row.title)
+  ).toEqual(['Prepared Strata'])
+})

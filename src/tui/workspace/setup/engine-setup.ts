@@ -33,12 +33,15 @@ export const pathKind = (engine: string): EngineSetupPath['kind'] | null =>
           ? 'fastflowlm'
           : engine === 'geniex'
             ? 'geniex'
-            : null
+            : engine === 'strata'
+              ? 'strata'
+              : null
 
 /** The operations of a path's own downloads: plan, install. */
 const OPS = {
   foundry: { plan: 'foundry.plan', install: 'foundry.install', job: 'foundry-model' },
   fastflowlm: { plan: 'fastflowlm.plan', install: 'fastflowlm.install', job: 'fastflowlm-model' },
+  strata: { plan: 'strata.plan', install: 'strata.install', job: 'strata-model' },
   geniex: { plan: 'geniex.plan', install: 'geniex.install', job: 'geniex-model' },
   litert: { plan: 'litert.plan', install: 'litert.install', job: 'litert-model' },
   managed: { plan: 'managed.plan', install: 'managed.install', job: 'managed-model' },
@@ -49,6 +52,7 @@ const JOB_INSTALL: Record<EngineSetupJob['kind'], string> = {
   'litert-model': 'litert.install',
   'fastflowlm-model': 'fastflowlm.install',
   'geniex-model': 'geniex.install',
+  'strata-model': 'strata.install',
 }
 
 /** The job's state as the snapshot shows it: its stage, and its bytes while it downloads. */
@@ -61,17 +65,25 @@ export function pathJob(setup: SetupView, snapshot: WorkspaceSnapshot | null) {
       stage?: string
       error?: string
       plan?: { download_bytes?: number; digest?: string }
+      preparation?: { completed_bytes?: number; total_bytes?: number }
+      task_ids?: Record<string, string>
     }>
   ).find((r) => r.id === job.id)
   const transfers = (
     snapshot.downloads as Array<{ taskId?: string; transferred?: number; total?: number }>
-  ).filter((d) => d.taskId === job.id)
+  ).filter((d) => d.taskId === job.id || Object.values(record?.task_ids ?? {}).includes(d.taskId ?? ''))
   return {
     digest: record?.plan?.digest ?? null,
     stage: record?.stage ?? 'queued',
     error: record?.error ?? null,
-    done: transfers.reduce((n, t) => n + (t.transferred ?? 0), 0),
-    total: record?.plan?.download_bytes ?? transfers.reduce((n, t) => n + (t.total ?? 0), 0),
+    done:
+      record?.stage === 'preparing'
+        ? (record.preparation?.completed_bytes ?? 0)
+        : transfers.reduce((n, t) => n + (t.transferred ?? 0), 0),
+    total:
+      record?.stage === 'preparing'
+        ? (record.preparation?.total_bytes ?? 0)
+        : (record?.plan?.download_bytes ?? transfers.reduce((n, t) => n + (t.total ?? 0), 0)),
   }
 }
 
@@ -142,6 +154,7 @@ export async function engineSetupAction(id: string, ctx: Context): Promise<boole
   // A variant that waits on Foundry Local or LiteRT-LM itself: its panel installs it or prepares the accelerator.
   if (id === 'setup-path-foundry') return openPanel('foundry-local')
   if (id === 'setup-path-fastflowlm') return openPanel('fastflowlm')
+  if (id === 'setup-path-strata') return openPanel('strata')
   if (id === 'setup-path-geniex') return openPanel('geniex')
   if (id === 'setup-path-litert') return openPanel('litert-lm')
   if (id === 'setup-search' && view.stage === 'models')

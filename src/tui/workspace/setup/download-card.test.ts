@@ -36,3 +36,23 @@ it('reserves a compact strip only on short terminals', () => {
   expect(downloadCardHeight(24)).toBe(4)
   expect(downloadCardHeight(36)).toBe(5)
 })
+
+it('shows Strata preparation without an invented percentage or ETA', () => {
+  const s = createWorkspace('models')
+  s.workspace = {
+    setups: [
+      {
+        id: 'strata-job',
+        kind: 'strata-model',
+        stage: 'preparing',
+        plan: { name: 'Qwen3.8-Flash-Next IQ3_XXS', download_bytes: 1024 },
+      },
+    ],
+    downloads: [],
+  } as never
+  const c = canvas(80, 24)
+  drawDownloadCard(c, s, 2, 3, 72)
+  const output = c.cells.map((row) => row.map((cell) => cell.char).join('')).join('\n')
+  expect(output).toContain('Preparing Strata model. This can take a few minutes.')
+  expect(output).not.toMatch(/0%|ETA|Estimating/)
+})

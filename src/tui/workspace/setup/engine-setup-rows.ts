@@ -12,7 +12,8 @@ export async function engineSetupRows(
     path.kind === 'foundry' ||
     path.kind === 'litert' ||
     path.kind === 'geniex' ||
-    path.kind === 'fastflowlm'
+    path.kind === 'fastflowlm' ||
+    path.kind === 'strata'
   ) {
     const found = (await c.runtime.execute('models.search', { engine: path.engine, query })) as {
       models: Array<{

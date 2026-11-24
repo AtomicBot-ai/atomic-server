@@ -3,9 +3,11 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { parseModelYml } from '@atomic-chat/core/models'
 import { afterAll, describe, expect, it } from 'vitest'
 import { fakeCoreLink } from '../../../test/helpers/fake-core-link.js'
 import { foundryModelPlan } from './foundry-model-plan.js'
+import { foundryModelYml } from './foundry-model-setups.js'
 import { nodeStoreFiles } from '../managed/managed-model-plan.js'
 
 const raw = (name: string) =>
@@ -89,8 +91,11 @@ describe('foundryModelPlan for a Microsoft catalog model', () => {
 
   it("records the asset's tools, reasoning and its markers for model.yml", async () => {
     const plan = await foundryModelPlan(deps(web()), VARIANT)
-    expect(plan.record).toMatchObject({
+    const yml = parseModelYml(foundryModelYml(plan))
+    expect(yml?.foundry_local).toMatchObject({
       tools: true,
+      tool_call_start: '<tool_call>',
+      tool_call_end: '</tool_call>',
       reasoning: true,
       reasoning_start: '<think>',
       reasoning_end: '</think>',

@@ -142,10 +142,9 @@ it('keeps the server on the network the person chose when an agent connection is
   }
   render(<Handoff />)
   await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   await userEvent.click(screen.getByRole('button', { name: /Connect an agent/ }))
   await userEvent.click(
     within(screen.getByRole('heading', { name: 'Codex CLI' }).closest('article')!).getByRole('button', {

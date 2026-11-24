@@ -170,8 +170,10 @@ export async function foundryModelPlan(
   const tags = resolved?.tags ?? {}
   const contextLength =
     variant.context_length ?? model.context_length ?? (Number(str(tags, 'contextLength')) || undefined)
-  const start = str(tags, 'reasoningStart')
-  const end = str(tags, 'reasoningEnd')
+  const toolCallStart = str(tags, 'toolCallStart')
+  const toolCallEnd = str(tags, 'toolCallEnd')
+  const reasoningStart = str(tags, 'reasoningStart')
+  const reasoningEnd = str(tags, 'reasoningEnd')
   return {
     digest: createHash('sha256')
       .update(JSON.stringify({ variant: variant.id, asset: variant.asset_id, files }))
@@ -196,8 +198,11 @@ export async function foundryModelPlan(
     record: {
       ...(contextLength ? { context_length: contextLength } : {}),
       tools: model.tools ?? str(tags, 'supportsToolCalling')?.toLowerCase() === 'true',
+      ...(toolCallStart && toolCallEnd ? { tool_call_start: toolCallStart, tool_call_end: toolCallEnd } : {}),
       reasoning: model.reasoning ?? str(tags, 'supportsReasoning')?.toLowerCase() === 'true',
-      ...(start && end ? { reasoning_start: start, reasoning_end: end } : {}),
+      ...(reasoningStart && reasoningEnd
+        ? { reasoning_start: reasoningStart, reasoning_end: reasoningEnd }
+        : {}),
     },
     blockers,
   }

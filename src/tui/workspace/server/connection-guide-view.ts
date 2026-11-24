@@ -1,4 +1,4 @@
-import { connectionApiOperation, connectionModelState, engineName } from '../../../workspace-view/index.js'
+import { connectionApiOperation, engineName } from '../../../workspace-view/index.js'
 import { PROFILE_AGENTS } from '../../../contract/index.js'
 import { serverRunning } from './server-status.js'
 import { fieldControl } from '../draw/controls.js'
@@ -10,6 +10,7 @@ import type { WorkspaceState } from '../state.js'
 import { workspaceDownloadRows } from '../downloads/download-layout.js'
 import { drawConnectionHeading } from './connection-heading.js'
 import { connectionDialog } from './connection-dialog.js'
+import { connectionSelection } from './connection-selection.js'
 import { connectionAgentName } from './connection-guide-actions.js'
 export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string, seconds = 0) {
   const d = s.connection
@@ -27,7 +28,7 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
   const name = connectionAgentName(d.agent)
   const launchable =
     d.path === 'agent' &&
-    PROFILE_AGENTS.includes(d.agent) &&
+    (d.agentConfigured ?? PROFILE_AGENTS.includes(d.agent)) &&
     serverRunning(s) &&
     (d.step === 'done' || (s.setupComplete && !s.firstRun))
   if (d.step === 'choose') {
@@ -48,13 +49,8 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
       focus
     )
   } else if (d.step === 'review') {
-    const selected = connectionModelState(
-      d.model,
-      s.installed,
-      s.workspace?.setups ?? [],
-      s.workspace?.downloads ?? [],
-      d.provider
-    )
+    const selected = connectionSelection(s)
+    const provider = d.provider || selected.provider
     const paired = width >= 64,
       fieldWidth = paired ? Math.floor((width - 3) / 2) : width
     const choice = (id: string, label: string, value: string, hint: string, second = false) => {
@@ -67,8 +63,8 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
     choice(
       'guide-engine',
       'Inference engine',
-      selected.provider ? engineName(selected.provider) : 'Choose engine',
-      'Choose a compatible inference engine'
+      provider ? engineName(provider) : 'Choose engine',
+      'Choose an installed engine with downloaded models'
     )
     choice('guide-model', 'Model', d.model || 'Choose model', 'Choose a downloaded model', true)
     if (paired) y += 3
@@ -142,7 +138,12 @@ export function drawConnectionGuide(c: Canvas, s: WorkspaceState, focus: string,
     put(`Model: ${d.model}`)
     put(d.endpoint, COLORS.muted)
     const detail =
-      d.command || (d.path === 'agent' ? `In ${name}, enter this endpoint, API key and model ID.` : '')
+      d.command ||
+      (d.path === 'agent'
+        ? [d.agentSetupNote, `In ${name}, enter this endpoint, API key and model ID.`]
+            .filter(Boolean)
+            .join(' ')
+        : '')
     const lines = wrap(detail, width),
       count = Math.max(0, bottom - y - (launchable ? 5 : 4))
     lines

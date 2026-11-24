@@ -1,4 +1,4 @@
-/* Desktop chat composition; colors are shared with the terminal composer. */
+/* Desktop chat composition. */
 .chat-enhanced .chat-toolbar {
   display: flex;
   align-items: center;
@@ -27,20 +27,24 @@
   letter-spacing: -0.025em;
 }
 .desktop-main .chat-enhanced .composer {
-  border: 1px solid var(--atomic-composer-frame, #b7d4cd);
-  background: var(--atomic-composer, #effaf7);
-  color: var(--atomic-composer-ink, #102d28);
   border-radius: 24px;
   padding: 18px 14px 12px;
 }
-.desktop-main .chat-enhanced .composer textarea {
-  color: var(--atomic-composer-ink, #102d28);
+.desktop-main .chat-enhanced .composer:has(> .composer-input > textarea:focus-visible) {
+  outline: 2px solid var(--atomic-focus-ring);
+  outline-offset: 2px;
+}
+.desktop-main .chat-enhanced .composer > .composer-input > textarea {
+  background: transparent;
   min-height: 68px;
   resize: none;
 }
+.desktop-main .chat-enhanced .composer textarea:focus-visible {
+  outline: none;
+}
 .desktop-main .chat-enhanced .composer textarea::placeholder {
-  color: var(--atomic-composer-ink, #102d28);
-  opacity: 0.55;
+  color: var(--ew-muted);
+  opacity: 1;
 }
 .chat-enhanced .composer-toolbar {
   gap: 6px;
@@ -55,19 +59,19 @@
   padding: 8px 10px;
   font-size: 12px;
   background: transparent;
-  color: var(--atomic-composer-ink, #102d28);
+  color: var(--ew-text);
   border-radius: 18px;
 }
 .chat-enhanced .chat-attach-button {
   border: 0;
   border-radius: 50%;
-  background: var(--atomic-model-button, #c0e6de);
-  color: var(--atomic-composer-ink, #102d28);
+  background: var(--ew-raised);
+  color: var(--ew-text);
 }
 .desktop-main .chat-enhanced .chat-model-trigger {
   border-radius: 18px;
-  background: var(--atomic-model-button, #c0e6de);
-  color: var(--atomic-composer-ink, #102d28);
+  background: var(--ew-raised);
+  color: var(--ew-text);
   padding: 8px 12px;
   width: 100%;
   min-width: 0;
@@ -89,16 +93,16 @@
 }
 .desktop-main .chat-enhanced .send-button,
 .desktop-main .chat-enhanced .composer-send .ew-button {
-  background: var(--atomic-send-button, #50d5bf);
-  color: var(--atomic-composer-ink, #102d28);
+  background: var(--atomic-accent);
+  color: var(--atomic-on-accent);
 }
 .chat-enhanced .composer-readiness {
-  color: var(--atomic-composer-ink, #102d28);
+  color: var(--ew-text);
   padding: 0 6px 12px;
 }
 .chat-enhanced .composer-readiness button {
-  background: var(--atomic-model-button, #c0e6de);
-  color: var(--atomic-composer-ink, #102d28);
+  background: var(--ew-raised);
+  color: var(--ew-text);
 }
 @media (max-width: 650px) {
   .chat-layout {

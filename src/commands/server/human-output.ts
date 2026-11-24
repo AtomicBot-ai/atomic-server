@@ -39,6 +39,10 @@ function catalog(result: unknown, width: number): string[] | undefined {
       ]),
     width
   )
+  for (const row of rows.map(record)) {
+    const check = record(record(row['source'])['check'])
+    if (check['reason']) lines.push(`${text(row['id'])}: ${text(check['reason'])}`)
+  }
   return [...lines, `${rows.length} ${rows.length === 1 ? 'model' : 'models'}`]
 }
 

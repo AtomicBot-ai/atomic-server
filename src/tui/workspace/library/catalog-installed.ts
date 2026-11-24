@@ -22,20 +22,19 @@ export function withInstalledRows(rows: LibraryRow[], state: WorkspaceState): Li
       source: {
         installed: true,
         engine: model.provider,
-        format:
-          model.provider === 'fastflowlm'
-            ? 'fastflowlm'
-            : model.provider === 'geniex'
-              ? 'geniex'
-              : model.provider === 'mlx'
-                ? 'mlx'
-                : model.store === 'managed'
-                  ? 'safetensors'
-                  : model.provider === 'litert-lm'
-                    ? 'litert'
-                    : model.provider === 'foundry-local'
-                      ? 'foundry'
-                      : 'gguf',
+        format: ['fastflowlm', 'strata'].includes(model.provider)
+          ? model.provider
+          : model.provider === 'geniex'
+            ? 'geniex'
+            : model.provider === 'mlx'
+              ? 'mlx'
+              : model.store === 'managed'
+                ? 'safetensors'
+                : model.provider === 'litert-lm'
+                  ? 'litert'
+                  : model.provider === 'foundry-local'
+                    ? 'foundry'
+                    : 'gguf',
       },
     })),
     ...rows,

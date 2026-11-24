@@ -1,3 +1,4 @@
+import { TerminalChatError } from '../errors/index.js'
 import { sentryAgentDiagnosticTags } from './sentry-agent-diagnostics.js'
 /** Fixed runtime messages become finite tags; arbitrary exception text stays private. */
 const SEGMENTER_FAILURES = new Map([
@@ -15,5 +16,8 @@ function sentryBaseNativeFailureTags(error: unknown): Record<string, string> {
 }
 
 export function nativeFailureTags(error: unknown): Record<string, string> {
-  return { ...sentryBaseNativeFailureTags(error), ...sentryAgentDiagnosticTags(error) }
+  const tags = { ...sentryBaseNativeFailureTags(error), ...sentryAgentDiagnosticTags(error) }
+  const chatCode = TerminalChatError.diagnosticCode(error)
+  if (chatCode) tags['diagnostic_code'] = chatCode
+  return tags
 }

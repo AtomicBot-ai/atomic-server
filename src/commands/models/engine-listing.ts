@@ -17,12 +17,14 @@ import { litertListing } from './litert-commands.js'
 import { foundryListing } from './foundry-commands.js'
 import { managedListing } from './managed-model-commands.js'
 
-export type ListingRoute = 'all' | 'fastflowlm' | 'geniex' | 'litert' | 'foundry' | 'managed' | 'local'
+export type ListingRoute =
+  'all' | 'fastflowlm' | 'geniex' | 'strata' | 'litert' | 'foundry' | 'managed' | 'local'
 
 export function listingRoute(engine: string | undefined): ListingRoute {
   if (engine === undefined) return 'all'
   if (engine === 'fastflowlm') return 'fastflowlm'
   if (engine === 'geniex') return 'geniex'
+  if (engine === 'strata') return 'strata'
   if (engine === 'litert-lm') return 'litert'
   if (engine === 'foundry-local') return 'foundry'
   const kind = ENGINE_KINDS[engine as EngineId]
@@ -77,6 +79,8 @@ export function engineListing(
   switch (listingRoute(named)) {
     case 'fastflowlm':
       return flmListing(ctx, op, query)
+    case 'strata':
+      return operation(ctx, op, { engine: 'strata', query })
     case 'geniex':
       return genieListing(ctx, op, query)
     case 'litert':

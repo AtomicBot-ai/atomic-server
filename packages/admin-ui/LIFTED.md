@@ -36,7 +36,7 @@ The following flow adaptations use the owner's local `atomic-chat-ui` redesign (
 | `src/workspace/WorkspaceNavigation.tsx` | `web-app/src/components/left-sidebar/NavigationRail.tsx`, `containers/ServerSidebar.tsx`, `SettingsMenu.tsx` | Server sections and a secondary Playground |
 | `../../src/contract/desktop-flows.ts` | `Atomic-Chat/web-app/src/constants/integrations.ts` @ `5043013` | Agent names/order shared with TUI; existing Claude wire ID retained |
 
-The intro logo `src/workspace/intro/atomic-logo.png` is copied from the selected desktop redesign's `web-app/public/images/transparent-logo.png` at `c9fa1e66` plus local preview changes. `IntroScreen.tsx` itself is local: its animation and layout are this package's CSS.
+The intro logo `src/workspace/intro/atomic-logo.png` is copied from the selected desktop redesign's `web-app/public/images/transparent-logo.png` at `c9fa1e66` plus local preview changes.
 
 Cloud connection cards and their editor in `src/workspace/library/cloud/CloudProviders.tsx` follow
 `web-app/src/preview/onboarding/Onboarding.tsx` at `1c01e2a`, with real server validation replacing the
@@ -98,7 +98,7 @@ at `5043013`. They are bundled locally and declared in `desktop-parity.css` so t
 Server control-panel tint, running-border animation, agent-card rhythm and settings/connection composition
 follow `containers/server-control-panel.css` and `containers/server-concept/{desktop,setup-details}.css` at the same revision.
 
-- `workspace/library/cloud/CloudProviderEditor.tsx`, `CloudProviderDialog.tsx`, `onboarding-providers.css`, `workspace/setup/OptionalMediaDownload.tsx`: desktop `preview/onboarding/Onboarding.tsx` and `onboarding.css` @ `5043013`; inline onboarding credentials, scrollable provider tiles, live validation and separate media pause/remove actions. `workspace/library/catalog/catalog-table.css` follows `containers/hub/LocalModelTable.tsx` at the same revision; native responsive table styling split from `catalog-desktop.css`.
+- `workspace/library/cloud/CloudProviderEditor.tsx`, `CloudProviderDialog.tsx`, `workspace/setup/OptionalMediaDownload.tsx`: desktop `preview/onboarding/Onboarding.tsx` and `onboarding.css` @ `5043013`; shared provider dialogs, live validation and separate media pause/remove actions. `workspace/library/catalog/catalog-table.css` follows `containers/hub/LocalModelTable.tsx` at the same revision; native responsive table styling split from `catalog-desktop.css`.
 
 `workspace/styles/desktop-controls.css` adapts the native control geometry in
 `web-app/src/containers/server-concept/desktop.css` @ `5043013`: pill actions,
@@ -135,6 +135,8 @@ The 2026-11-06 onboarding adaptation scopes `setup/FirstModel.tsx` to the select
 - `workspace/setup/MediaPreview.tsx`, its `first-media-{scene,art,kind,toggle}` rules in `media-preview.css`, and `public/images/onboarding/{robot-studio.webp,robot-wave.mp4}`: `web-app/src/containers/onboarding/steps/MediaPreview.tsx`, `media.css` (`.ob-media-scene`, `.ob-media-art`, `.ob-media-kind`, `.ob-animation-toggle`) and `web-app/public/images/onboarding/` @ `2d0323463`; English strings from `locales/en/onboarding-media.json` inlined, the line under the still takes the card's border colour, and a missing `matchMedia` reads as no reduced-motion preference. The two binaries are copied unchanged.
 
 The onboarding wizard now shares `intro/EngineChooser.tsx` with the intro: managed runtime consent and readiness precede model selection, Back/Escape retain wizard state, and returning from an engine panel rechecks the selected model's compatibility (`setup/SetupEngineDialog.tsx`).
+
+- `workspace/EngineMark.tsx` and `public/engine-brands/{vllm,sglang,foundry-local,litert-lm,geniex,fastflowlm}.svg` follow Atomic-Chat `web-app/src/{lib/utils.ts,containers/server/ServerPageParts.tsx}` and `web-app/public/images/model-provider/` @ `07e4b8737`. The picker and onboarding use the same engine logos and initial-letter fallback, including Strata's `S`.
 
 The 2026-11-07 adaptation replaces the Foundry native variant menu in `workspace/library/install/FoundryModelInstall.tsx` (original `LocalModelTable.tsx` @ `5043013`) with `VariantChoices.tsx`, shared with LiteRT-LM. Short device/readiness labels and a separate reason keep expanded catalog rows within the viewport. `use-variant-model.ts` refreshes core verdicts when setup returns from engine preparation. Engine dialogs now separate Overview from Settings while retaining staged edits.
 

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpDataFolder } from '../../test/helpers/tmp-data-folder.js'
 import { defaultConfig } from '../config/index.js'
 import { fakeCoreLink } from '../../test/helpers/fake-core-link.js'
-import { serverOperation } from './server-operations.js'
+import { serverOperation, type ServerParts } from './server-operations.js'
 import { NOT_CORE } from './not-core.js'
 
 function parts(over: Record<string, unknown> = {}) {
@@ -91,6 +94,51 @@ describe('server operations', () => {
       code: 'ATC_USAGE',
       message: 'Codex needs a context window of at least 32,768 tokens; m is served with 8,192.',
     })
+  })
+
+  it('uses core to configure the active Hermes profile and returns a launch command without the key', async () => {
+    const tmp = tmpDataFolder()
+    try {
+      const home = tmp.paths.dataFolder
+      const root = join(home, '.hermes')
+      const profile = join(root, 'profiles', 'work')
+      await mkdir(profile, { recursive: true })
+      await writeFile(join(root, 'active_profile'), 'work\n')
+      const config = join(profile, 'config.yaml')
+      await writeFile(config, '# Keep my comment\nmodel:\n  default: previous\n')
+      const fixture = parts({
+        request: async () => Response.json({ data: [{ id: 'm', context_length: 65536 }] }),
+      })
+      const p = fixture.parts as ServerParts
+      p.options.agentHost = {
+        env: { HOME: home, HERMES_HOME: root },
+        platform: 'linux',
+        find: (bin) => (bin === 'hermes' ? '/usr/bin/hermes' : undefined),
+        exec: vi.fn(),
+      }
+      fixture.link.snapshotValue.server.running = true
+      fixture.link.snapshotValue.sessions = [{ model_id: 'm' }] as never
+      const info = await serverOperation(p, 'connection.info', {})
+      expect(info).toMatchObject({
+        configurable_agents: expect.arrayContaining(['hermes', 'muse', 'claude']),
+      })
+      expect(info).not.toMatchObject({ configurable_agents: expect.arrayContaining(['jetbrains']) })
+      const result = await serverOperation(p, 'connection.configure', {
+        agent: 'hermes',
+        model: 'm',
+        key_id: 'k1',
+      })
+      expect(result).toMatchObject({ configured: true, launch_command: expect.stringContaining('connect') })
+      expect(JSON.stringify(result)).not.toContain('key-1')
+      const updated = await readFile(config, 'utf8')
+      expect(updated).toContain('# Keep my comment')
+      expect(updated).toContain('provider: custom')
+      expect(updated).toContain('key-1')
+      expect(updated).toContain('context_length: 65536')
+      expect(await readFile(config + '.atomic-chat-backup.json', 'utf8')).toContain('previous')
+    } finally {
+      tmp.cleanup()
+    }
   })
 
   it('refuses to finish guided setup without a running API and a loaded model', async () => {

@@ -16,8 +16,8 @@ import {
   engineModels,
 } from '../../terminal-setup/index.js'
 import type { HubRepository } from '../../terminal-setup/index.js'
-import { prepareAgent } from '../../agent-launch/index.js'
-import type { AgentHost, AgentId } from '../../agent-launch/index.js'
+import { prepareCoreAgent } from '../../agent-launch/index.js'
+import type { AgentHost } from '../../agent-launch/index.js'
 import type { TuiAction } from '../state.js'
 import type { TuiDeps } from '../controller.js'
 import { TuiController, oneLine } from '../controller.js'
@@ -110,9 +110,9 @@ export class WorkspaceController {
   cancel(): void {
     this.turn?.abort()
   }
-  async prepareAgent(id: AgentId, endpoint: string, model: string) {
+  async prepareAgent(id: string, endpoint: string, model: string) {
     if (!this.deps.agentHost) throw new Error('Agent handoff is unavailable in this terminal.')
-    return prepareAgent(id, endpoint, model, await this.localKey(), this.deps.agentHost)
+    return prepareCoreAgent(id, endpoint, model, await this.localKey(), this.deps.agentHost)
   }
   async models(endpoint: string, server = false): Promise<string[]> {
     return listChatModels(

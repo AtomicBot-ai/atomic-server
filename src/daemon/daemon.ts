@@ -1,9 +1,8 @@
 import { followFastFlowLmHost } from './fastflowlm-host.js'
 /**
- * The long-lived `atc` process: the core in-process (owner of the data folder), the admin server,
- * the host-step loop for managed runtimes, and
- * the run record that tells commands this owner is an `atc` daemon. Everything else is a command
- * that attaches to it.
+ * The long-lived `atc` process: the core in-process (owner of the data folder), the admin server, the
+ * host-step loop for managed runtimes, and the run record that tells commands this owner is an `atc`
+ * daemon. Everything else is a command that attaches to it.
  */
 
 import { restrictDataFolder } from './restrict-data.js'
@@ -158,6 +157,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       env: io.env,
       probePort: host.probePort,
       log: log.child('account'),
+      agentHost: { env: io.env, platform: host.facts.platform, find: host.findOnPath, exec: host.exec },
       ...(options.errors ? { errors: options.errors } : {}),
     })
     deviceKeys = () => workspace.account.keys()
@@ -285,6 +285,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       boot,
       shutdown: async () => {
         sessions.stop()
+        workspace.stop()
         await core.shutdown()
         await cleanup()
       },

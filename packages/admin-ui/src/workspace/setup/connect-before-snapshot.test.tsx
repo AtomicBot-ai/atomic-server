@@ -24,10 +24,9 @@ async function reachDestinations(
   )
   render(<SetupWizard workspace={workspace} onClose={vi.fn()} onOpenGoal={vi.fn()} />)
   await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Continue without permissions' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
-  await userEvent.click(screen.getByRole('button', { name: 'Skip', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Continue', exact: true }))
   workspace.snapshot = stale as never
   workspace.refresh = vi.fn(answer)
   return workspace

@@ -60,12 +60,14 @@ export function SetupReview({
         onFoundry={() => onEngine('foundry-local')}
       />
     )
-  if (kind === 'geniex' || kind === 'fastflowlm')
+  if (kind === 'geniex' || kind === 'fastflowlm' || kind === 'strata')
     return (
       <GenieModelInstall
         engine={kind}
         workspace={w}
         model={record(model[kind])}
+        revision={revision}
+        onClose={onClose}
         onEngine={() => onEngine(kind)}
         onStarted={onStarted}
       />

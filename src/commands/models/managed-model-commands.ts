@@ -9,7 +9,7 @@ import { AtcError, defineCommand } from '../../cli/index.js'
 import type { CommandContext } from '../../cli/index.js'
 import type { ManagedModelJob, ManagedModelPlan, ModelCheckResult } from '../../contract/index.js'
 import type { WorkspaceClient } from '../../workspace-service/index.js'
-import { formatSize, verdictLine } from '../../workspace-view/index.js'
+import { formatSize, strataPreparationNotice, verdictLine } from '../../workspace-view/index.js'
 import { workspace } from '../server/control.js'
 import { follow, followDisplay } from './follow.js'
 
@@ -50,14 +50,27 @@ const FINISHED = ['ready', 'failed', 'cancelled', 'interrupted']
 /** What one poll of a download job shows: the job, and its bytes from the server's downloader. */
 async function jobState(service: WorkspaceClient, kind: string, id: string) {
   const snapshot = await service.snapshot()
-  const job = (snapshot.setups as Array<{ kind?: string; id: string; stage: string; error?: string }>).find(
-    (j) => j?.kind === kind && j.id === id
-  )
+  const job = (
+    snapshot.setups as Array<{
+      kind?: string
+      id: string
+      stage: string
+      error?: string
+      task_ids?: Record<string, string>
+      preparation?: { completed_bytes?: number; total_bytes?: number }
+    }>
+  ).find((j) => j?.kind === kind && j.id === id)
   if (!job) throw new AtcError('ATC_USAGE', `No download ${id}.`)
   const bytes = (snapshot.downloads as Array<{ taskId?: string; transferred: number; total: number }>).find(
-    (d) => d.taskId === id
+    (d) => d.taskId === id || Object.values(job.task_ids ?? {}).includes(d.taskId ?? '')
   )
-  return { ...job, transferred: bytes?.transferred ?? null, total: bytes?.total ?? null }
+  return job.stage === 'preparing'
+    ? {
+        ...job,
+        transferred: job.preparation?.completed_bytes ?? null,
+        total: job.preparation?.total_bytes ?? null,
+      }
+    : { ...job, transferred: bytes?.transferred ?? null, total: bytes?.total ?? null }
 }
 
 /**
@@ -73,7 +86,12 @@ export async function followSetup(
   const off = ctx.io.onInterrupt?.(() => interrupt.abort()) ?? (() => {})
   const display = followDisplay<Awaited<ReturnType<typeof jobState>>>(
     { io: ctx.io, progress: ctx.progress, flags: ctx.flags },
-    (j) => ({ stage: j.stage, text: `${job.label}: ${j.stage}`, done: j.transferred, total: j.total })
+    (j) => ({
+      stage: j.stage,
+      text: `${job.label}: ${strataPreparationNotice(job, j.stage) ?? j.stage}`,
+      done: j.transferred,
+      total: j.total,
+    })
   )
   try {
     const result = await follow({

@@ -9,6 +9,7 @@ export function loadTarget(job: Record<string, unknown>): { provider: string; mo
   if (job.kind === 'managed-model')
     return { provider: String(plan.engine), model_id: String(plan.repository) }
   if (job.kind === 'foundry-model') return { provider: 'foundry-local', model_id: String(plan.variant_id) }
+  if (job.kind === 'strata-model') return { provider: 'strata', model_id: String(plan.model_id) }
   if (job.kind === 'litert-model') return { provider: 'litert-lm', model_id: String(plan.variant_id) }
   return {
     provider: String(job.provider ?? plan.provider ?? ''),
@@ -20,6 +21,7 @@ const OWNERS: Record<string, string> = {
   'managed-model': 'managed',
   'foundry-model': 'foundry',
   'litert-model': 'litert',
+  'strata-model': 'strata',
 }
 
 /** The operations that resume or cancel a job, by who owns it: a store, Foundry or LiteRT-LM job, media, a setup. */

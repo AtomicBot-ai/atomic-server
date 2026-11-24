@@ -25,7 +25,7 @@ export interface SetupPlan {
 }
 
 export type SetupStage =
-  'queued' | 'downloading' | 'verifying' | 'ready' | 'failed' | 'cancelled' | 'interrupted'
+  'queued' | 'downloading' | 'verifying' | 'preparing' | 'ready' | 'failed' | 'cancelled' | 'interrupted'
 
 export interface SetupJob<P extends SetupPlan> {
   id: string
@@ -57,7 +57,7 @@ export interface SetupJournalDeps<P extends SetupPlan, J extends SetupJob<P>> {
   run: (job: J, worker: Worker) => Promise<void>
 }
 
-const ACTIVE: readonly SetupStage[] = ['queued', 'downloading', 'verifying']
+const ACTIVE: readonly SetupStage[] = ['queued', 'downloading', 'verifying', 'preparing']
 
 /**
  * Plan by digest, job by request id, one lane per id. The provider keeps `run`: the bytes, the

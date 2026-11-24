@@ -49,21 +49,6 @@
   min-width: 0;
   flex: 1;
 }
-.server-picker-logo {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-}
-.server-picker-logo img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-.server-picker-logo.monochrome img {
-  filter: brightness(0) invert(1);
-}
 .server-picker-copy {
   display: grid;
   gap: 4px;

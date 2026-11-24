@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { downloadStateLabel, downloadStopped, downloadRows, formatEta, prioritizeDownloads } from '@view'
+import {
+  downloadStateLabel,
+  downloadStopped,
+  downloadRows,
+  formatEta,
+  prioritizeDownloads,
+  strataPreparationNotice,
+} from '@view'
 import type { Workspace } from '../../useWorkspace'
 import { Downloads } from './Downloads'
 import { useDialog } from '../../useDialog'
@@ -8,13 +15,7 @@ import { useDownloadEstimate } from './useDownloadEstimate'
 import { useDownloadAttention } from './download-attention'
 import './floating-downloads.css'
 
-export function FloatingDownloads({
-  workspace,
-  onboarding = false,
-}: {
-  workspace: Workspace
-  onboarding?: boolean
-}) {
+export function FloatingDownloads({ workspace }: { workspace: Workspace }) {
   const [open, setOpen] = useState(false)
   const attention = useDownloadAttention()
   const rows = prioritizeDownloads(
@@ -29,7 +30,7 @@ export function FloatingDownloads({
       {first && (
         <aside
           key={attention}
-          className={`floating-downloads ${onboarding ? 'during-setup' : ''} ${attention ? 'download-attention' : ''}`}
+          className={`floating-downloads ${attention ? 'download-attention' : ''}`}
           aria-label="Download status"
         >
           <button onClick={() => setOpen(true)} aria-label="View downloads">
@@ -49,13 +50,14 @@ function DownloadEta({ row }: { row: Record<string, unknown> }) {
   const { eta } = useDownloadEstimate(row)
   return (
     <small>
-      {downloadStopped(String(row.state))
-        ? row.kind === 'engine'
-          ? 'Open Downloads to retry'
-          : 'Open Downloads to resume'
-        : eta !== undefined && Number.isFinite(eta) && eta >= 0
-          ? `${formatEta(eta)} remaining`
-          : 'Estimating time…'}
+      {strataPreparationNotice(row, String(row.state)) ??
+        (downloadStopped(String(row.state))
+          ? row.kind === 'engine'
+            ? 'Open Downloads to retry'
+            : 'Open Downloads to resume'
+          : eta !== undefined && Number.isFinite(eta) && eta >= 0
+            ? `${formatEta(eta)} remaining`
+            : 'Estimating time…')}
     </small>
   )
 }

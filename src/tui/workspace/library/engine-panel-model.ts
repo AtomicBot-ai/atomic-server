@@ -186,7 +186,7 @@ function engineStateModel(
     }
     const note = engineTaskNote(p.engine)
     if (note) say(note, 'muted')
-    if (p.inSetup && p.buildInstalled && ['geniex', 'fastflowlm'].includes(p.engine))
+    if (p.inSetup && p.buildInstalled && ['geniex', 'fastflowlm', 'strata'].includes(p.engine))
       add('setup-path-continue', 'Choose models >', 'Select a GenieX model for this chip')
     if (p.buildInstalled === false)
       add('engine-install', 'Install engine', 'Install the core-recommended build')

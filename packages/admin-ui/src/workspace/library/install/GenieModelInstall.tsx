@@ -1,41 +1,66 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Action, Field } from '../../Controls'
 import type { Workspace } from '../../useWorkspace'
 import { record, rows, text, type RecordValue } from '../../types'
 import { formatSize } from '@view'
 import { describeError } from '@/services/admin-api'
 import { RuntimeModelFacts } from './RuntimeModelFacts'
+import { ModelInstallFrame } from './ModelInstallFrame'
+import { useVariantModel } from './use-variant-model'
+import { StrataQuantMenu } from './StrataQuantMenu'
 import './runtime-model.css'
 
 export function GenieModelInstall({
   workspace,
   engine = 'geniex',
-  model,
+  model: initialModel,
+  revision = 0,
+  onClose,
   onStarted,
   onEngine,
+  installedVariants = [],
 }: {
-  engine?: 'geniex' | 'fastflowlm'
+  engine?: 'geniex' | 'fastflowlm' | 'strata'
   workspace: Workspace
   model: RecordValue
+  revision?: number
+  onClose?: () => void
   onStarted?: (id: string, modelId: string) => void | Promise<void>
   onEngine: () => void
+  installedVariants?: string[] | undefined
 }) {
+  const initial = useMemo<RecordValue & { model_id: string }>(
+    () => ({ ...initialModel, model_id: text(initialModel.model_id, '') }),
+    [initialModel]
+  )
+  const [retry, setRetry] = useState(0)
+  const {
+    model,
+    checking,
+    error: readError,
+  } = useVariantModel(initial, engine, revision + retry, workspace.execute)
   const variants = rows(model.variants)
   const [selected, select] = useState(text(model.default_variant, text(variants[0]?.id, '')))
   const [error, setError] = useState(''),
     [pending, setPending] = useState(false)
   const request = useRef<{ digest: string; id: string } | null>(null)
   const choice = variants.find((v) => v.id === selected) ?? variants[0]
+  const installed = engine === 'strata' && installedVariants.includes(text(choice?.id, ''))
+  const changeVariant = (id: string) => {
+    select(id)
+    setError('')
+  }
   const verdict = record(choice?.verdict)
-  const metadata = engine === 'fastflowlm' ? { ...model, ...choice } : model
+  const estimates = record(verdict.estimates)
+  const metadata = engine === 'geniex' ? model : { ...model, ...choice }
   const download = async () => {
-    if (!choice || pending) return
+    if (!choice || pending || checking || readError) return
     setPending(true)
     setError('')
     try {
       const plan = await workspace.execute<{ digest: string; variant_id: string; blockers: string[] }>(
         `${engine}.plan`,
-        { model: model.model_id, variant: choice.id }
+        engine === 'strata' ? { model: choice.id } : { model: model.model_id, variant: choice.id }
       )
       if (plan.blockers.length) throw new Error(plan.blockers.join(' '))
       if (request.current?.digest !== plan.digest)
@@ -53,21 +78,25 @@ export function GenieModelInstall({
     typeof choice?.size_bytes === 'number' && choice.size_bytes > 0
       ? formatSize(choice.size_bytes)
       : 'Size unavailable'
-  return (
+  const content = (
     <section className="runtime-model" aria-label="Model download">
       <div className="runtime-model-download">
         <div className="runtime-model-variant">
           {model.recommended === true && <span className="runtime-model-badge">Recommended</span>}
-          {variants.length > 1 ? (
+          {engine === 'strata' && variants.length > 1 && choice ? (
+            <StrataQuantMenu
+              variants={variants}
+              selected={choice}
+              disabled={pending || checking}
+              onChange={changeVariant}
+            />
+          ) : variants.length > 1 ? (
             <Field label="Variant">
               <select
                 aria-label="Variant"
                 value={choice ? text(choice.id) : ''}
-                disabled={pending}
-                onChange={(e) => {
-                  select(e.target.value)
-                  setError('')
-                }}
+                disabled={pending || checking}
+                onChange={(e) => changeVariant(e.target.value)}
               >
                 {variants.map((v) => (
                   <option key={text(v.id)} value={text(v.id)}>
@@ -78,8 +107,8 @@ export function GenieModelInstall({
             </Field>
           ) : (
             <div>
-              <small className="ew-muted">Variant</small>
-              <strong>{text(choice?.id, 'No variant available')}</strong>
+              <small className="ew-muted">{engine === 'strata' ? 'Quantization' : 'Variant'}</small>
+              <strong>{text(choice?.label ?? choice?.id, 'No variant available')}</strong>
             </div>
           )}
         </div>
@@ -87,22 +116,62 @@ export function GenieModelInstall({
           <small>Download size</small>
           <strong>{size}</strong>
         </div>
-        {verdict.verdict === 'ok' ? (
+        {installed ? (
+          <span>Installed</span>
+        ) : checking || readError ? null : verdict.verdict === 'ok' ? (
           <Action primary disabled={pending} onClick={download}>
             {pending ? 'Preparing download…' : 'Download'}
           </Action>
         ) : ['engine-not-installed', 'environment-not-ready', 'requires-newer-engine'].includes(
             text(verdict.verdict)
           ) ? (
-          <Action onClick={onEngine}>
-            {engine === 'fastflowlm' ? 'Set up FastFlowLM' : 'Install GenieX'}
+          <Action primary={Boolean(onClose)} onClick={onEngine}>
+            {engine === 'fastflowlm'
+              ? 'Set up FastFlowLM'
+              : engine === 'strata'
+                ? 'Install Strata'
+                : 'Install GenieX'}
           </Action>
         ) : null}
       </div>
-      {verdict.verdict !== 'ok' && (
-        <p role="status">{text(verdict.reason, text(verdict.verdict, 'No compatible variant available.'))}</p>
+      {checking && (
+        <p className="runtime-model-feedback" role="status">
+          Checking device availability…
+        </p>
       )}
-      {engine === 'fastflowlm' && <RuntimeModelFacts metadata={metadata} />}
+      {readError && (
+        <div>
+          <p role="alert" className="inline-error">
+            {readError}
+          </p>
+          <Action onClick={() => setRetry((n) => n + 1)}>Retry compatibility check</Action>
+        </div>
+      )}
+      {!checking && !readError && verdict.verdict !== 'ok' && (
+        <p className="runtime-model-feedback" role="status">
+          {text(verdict.reason, text(verdict.verdict, 'No compatible variant available.'))}
+        </p>
+      )}
+      {engine === 'strata' && (
+        <dl className="runtime-model-facts">
+          {Object.entries({
+            'Required disk space': estimates.required_disk_bytes,
+            'RAM': estimates.ram_bytes,
+            'VRAM': estimates.vram_bytes,
+            'Unified memory': estimates.unified_memory_bytes,
+          }).flatMap(([label, value]) =>
+            typeof value === 'number' && value > 0
+              ? [
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{formatSize(value)}</dd>
+                  </div>,
+                ]
+              : []
+          )}
+        </dl>
+      )}
+      {engine !== 'geniex' && <RuntimeModelFacts metadata={metadata} />}
       {model.origin === 'qualcomm' && <p className="ew-muted">Qualcomm AI Hub</p>}
       {model.unverified === true && (
         <p className="runtime-model-source">Hugging Face · not verified by Atomic Chat</p>
@@ -116,5 +185,18 @@ export function GenieModelInstall({
         </p>
       )}
     </section>
+  )
+  return onClose ? (
+    <ModelInstallFrame
+      title={text(model.name ?? model.model_id)}
+      pending={pending}
+      onClose={() => {
+        if (!pending) onClose()
+      }}
+    >
+      {content}
+    </ModelInstallFrame>
+  ) : (
+    content
   )
 }

@@ -54,6 +54,7 @@ export function InstalledLoad({
           provider,
           id: text(m.id),
           name: text(m.name ?? m.id),
+          disabledReason: text(m.disabled_reason, ''),
           key: `${provider}|${text(m.id)}`,
         }))
     )
@@ -100,7 +101,7 @@ export function InstalledLoad({
               type="button"
               className="downloaded-model-row"
               aria-label={`Load ${m.name} with ${engineName(m.provider)}`}
-              disabled={disabled || Boolean(loading)}
+              disabled={disabled || Boolean(loading) || Boolean(m.disabledReason)}
               onClick={async () => {
                 if (pending.current) return
                 pending.current = true
@@ -120,7 +121,7 @@ export function InstalledLoad({
             >
               <span>
                 <strong>{m.name}</strong>
-                <small>{engineName(m.provider)}</small>
+                <small>{m.disabledReason || engineName(m.provider)}</small>
               </span>
               <span className="model-row-action">
                 {loading === m.key ? 'Loading…' : 'Load'}

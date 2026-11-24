@@ -5,6 +5,7 @@ import {
   downloadStopped,
   downloadRows,
   formatEta,
+  strataPreparationNotice,
 } from '../../../workspace-view/index.js'
 import type { WorkspaceState } from '../state.js'
 import { COLORS, text, button } from '../draw/canvas.js'
@@ -48,6 +49,7 @@ export function drawDownloadCard(
     first?.total ??
     selection?.plan.total_download_bytes ??
     (path?.plan && 'download_bytes' in path.plan ? path.plan.download_bytes : 0)
+  const strataPreparation = first && strataPreparationNotice(first, first.state)
   const ready = first?.['completed'] === true || (progress?.ready && !first)
   const percent = ready ? 100 : total ? Math.min(100, Math.floor((done / total) * 100)) : 0
   const state =
@@ -61,7 +63,7 @@ export function drawDownloadCard(
   const speed = first ? (s.transferSamples[first.id]?.speed ?? 0) : (progress?.speed ?? 0)
   const eta = speed > 0 ? Math.max(0, (total - done) / speed) : !first ? progress?.eta : null
   let remaining =
-    ready || downloadStopped(state.toLowerCase())
+    strataPreparation || ready || downloadStopped(state.toLowerCase())
       ? ''
       : eta && eta > 0
         ? `~${formatEta(eta)} left`
@@ -110,6 +112,10 @@ export function drawDownloadCard(
       ready ? 'Delete model' : 'Remove this download',
       focus
     )
+  }
+  if (strataPreparation && !total) {
+    text(c, x + 2, y + 2, strataPreparation, COLORS.muted, width - 4)
+    return true
   }
   const bar = Math.max(5, Math.min(height === 4 ? 8 : 24, width - 15)),
     filled = Math.round((percent / 100) * bar)

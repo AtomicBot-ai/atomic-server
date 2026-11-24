@@ -20,7 +20,6 @@ import type { LibraryRow, LibraryView } from './library/library-model.js'
 import type { WorkspaceSnapshot, WorkspaceOperation } from '../../contract/index.js'
 import type { Conversation, ConversationSummary, ClientKeyView } from '../../terminal-data/index.js'
 import type { SetupView, EngineChoice } from '../../terminal-setup/index.js'
-import type { AgentId } from '../../agent-launch/index.js'
 import type { ChatImage, ChatMessage, RequestRow } from '../../terminal-service/index.js'
 import type { CommandRow } from '../command-list.js'
 import { initialState, type TuiState } from '../state.js'
@@ -62,6 +61,8 @@ export interface WorkspaceState extends WorkspaceReturnState {
   /** Model intent belongs to the wizard, including while its setup view is replaced. */
   firstModelChoice: string
   connection: ConnectionDraft | null
+  /** Installed providers confirmed by the core while the connection guide is open. */
+  connectionEngines: string[] | null
   connectionLanguage: 'curl' | 'python'
   serverQuery: string
   sidebarOffset: number
@@ -93,7 +94,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
     returnOverlay?: WorkspaceState['overlay']
   } | null
   libraryRemove: string
-  removeModelStore?: 'geniex' | 'fastflowlm' | undefined
+  removeModelStore?: 'geniex' | 'fastflowlm' | 'strata' | undefined
   modelLoad?: { provider: string; model: string } | null
   modelVision: boolean | null
   loadError: { provider: string; model: string; message: string } | null
@@ -120,6 +121,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
   secret: string
   /** `providers`: every provider the core says lists the model; `provider` the first. */
   installed: {
+    disabled_reason?: string | null
     id: string
     provider: string
     name: string
@@ -133,7 +135,7 @@ export interface WorkspaceState extends WorkspaceReturnState {
   engines: EngineChoice[]
   pickerBusy: boolean
   pickerError: string
-  agent: AgentId
+  agent: string
   agentModel: string
   commands: CommandRow[]
   base: TuiState
@@ -184,6 +186,7 @@ export function createWorkspace(page: Page = 'welcome'): WorkspaceState {
     firstRun: page === 'welcome' || page === 'setup' ? 'model' : null,
     firstModelChoice: '',
     connection: null,
+    connectionEngines: null,
     connectionLanguage: 'curl',
     serverQuery: '',
     sidebarOffset: 0,

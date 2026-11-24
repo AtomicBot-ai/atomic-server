@@ -1,4 +1,6 @@
 /** Public OpenAI-compatible calls shared by the terminal and plain chat command. */
+import { TerminalChatError } from '../errors/index.js'
+
 export type ChatContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } }
@@ -17,7 +19,7 @@ export interface ChatMessage {
 export function endpointUrl(value: string): string {
   const url = new URL(value)
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash)
-    throw new Error('Use an HTTP endpoint without credentials, a query, or a fragment.')
+    throw new TerminalChatError('CLI_CHAT_ENDPOINT_INVALID')
   return url.toString().replace(/\/$/, '')
 }
 /** Loopback aliases share a listener, but a different port or API path is a different server. */
@@ -80,7 +82,7 @@ export async function streamChat(options: {
         : `Request returned HTTP ${response.status}. Check the model, endpoint, and access settings.`
     )
   }
-  if (!response.body) throw new Error('The server returned an empty response.')
+  if (!response.body) throw new TerminalChatError('CLI_CHAT_EMPTY_RESPONSE')
   const reader = response.body.getReader(),
     decoder = new TextDecoder()
   let buffer = '',
@@ -107,13 +109,13 @@ export async function streamChat(options: {
           error?: { message?: string }
           choices?: { delta?: { content?: string }; finish_reason?: string | null }[]
         }
-        if (chunk.error) throw new Error('The server reported a generation error. Inspect the server log.')
+        if (chunk.error) throw new TerminalChatError('CLI_CHAT_GENERATION_ERROR')
         const text = chunk.choices?.[0]?.delta?.content
         if (text) options.onText(text)
         if (chunk.choices?.[0]?.finish_reason) done = true
       }
       if (next.done) {
-        if (!done) throw new Error('The response ended before completion. The partial reply is kept.')
+        if (!done) throw new TerminalChatError('CLI_CHAT_STREAM_TRUNCATED')
         break
       }
     }

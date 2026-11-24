@@ -1,5 +1,6 @@
 /** Verify every catalog file against its own immutable HF repository tree. No transfer happens here. */
 import { createHash } from 'node:crypto'
+import { AtcError } from '../../errors/index.js'
 import type { ArtifactPlan } from './artifact-plan.js'
 
 interface Tree {
@@ -7,12 +8,35 @@ interface Tree {
   siblings: { rfilename: string; size?: number; lfs?: { size: number; sha256: string } }[]
 }
 
+const HUB = 'https://huggingface.co'
+
+/** A configured mirror is part of the destination for the Hub token. */
+function hubBase(hub: string | undefined): string {
+  if (hub === undefined) return HUB
+  const url = URL.canParse(hub) ? new URL(hub) : undefined
+  if (
+    !url ||
+    !/^https?:\/\/[^/\\]/i.test(hub) ||
+    url.username ||
+    url.password ||
+    url.href.includes('?') ||
+    url.href.includes('#')
+  ) {
+    throw new AtcError(
+      'ATC_USAGE',
+      'Set HF_ENDPOINT to an absolute HTTP(S) URL without credentials, a query, or a fragment.'
+    )
+  }
+  return url.href.replace(/\/+$/, '')
+}
+
 export async function artifactMetadata(
   plan: ArtifactPlan,
   request: typeof fetch,
   token?: string,
-  hub = 'https://huggingface.co'
+  hub?: string
 ): Promise<ArtifactPlan> {
+  const base = hubBase(hub)
   const trees = new Map<string, Promise<Tree>>()
   const files = await Promise.all(
     plan.files.map(async (item) => {
@@ -28,7 +52,7 @@ export async function artifactMetadata(
       if (!reading) {
         reading = (async () => {
           const response = await request(
-            `${hub.replace(/\/+$/, '')}/api/models/${repo}/revision/${revision}?blobs=true&files_metadata=true`,
+            `${base}/api/models/${repo}/revision/${revision}?blobs=true&files_metadata=true`,
             {
               signal: AbortSignal.timeout(15000),
               redirect: 'error',

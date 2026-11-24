@@ -5,11 +5,13 @@ import { createPortal } from 'react-dom'
 import { Laptop, Check } from 'lucide-react'
 import { ModelMark } from '../library/catalog/ModelMark'
 import { Action } from '../Controls'
+import { DirectoryRow } from '../DirectoryRow'
 import { bytes, record, rows, text } from '../types'
 import type { RecordValue } from '../types'
 import type { Workspace } from '../useWorkspace'
 import { describeError } from '@/services/admin-api'
 import { engineDialog, engineModels, setupModels } from './setup-data'
+import './onboarding-model.css'
 
 export function FirstModel({
   workspace: w,
@@ -86,7 +88,9 @@ export function FirstModel({
           const id = text(local.id ?? local.model_id, '')
           const repo = text(catalog.id ?? catalog.model_id, '')
           const variants = rows(
-            record(catalog.fastflowlm ?? catalog.geniex ?? catalog.litert ?? catalog.foundry).variants
+            record(
+              catalog.strata ?? catalog.fastflowlm ?? catalog.geniex ?? catalog.litert ?? catalog.foundry
+            ).variants
           ).map((v) => text(catalog.geniex || catalog.fastflowlm ? record(v.record).variant_id : v.id, ''))
           return (
             catalogModelMatches(id, repo, undefined, text(local.repository, '') || undefined) ||
@@ -132,30 +136,33 @@ export function FirstModel({
     entries.map((m) => {
       const id = `${local ? 'local' : 'catalog'}:${text(m.id ?? m.model_id)}`
       const source = record(m.source)
-      const size = m.size ?? m.total_bytes ?? source.size
+      const size = m.size ?? m.total_bytes ?? m.size_bytes ?? source.size
+      const description = text(m.description ?? m.summary, '')
+      const detail = [
+        description,
+        !local && typeof size === 'number' && size > 0 ? `${bytes(size)} download` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
       return (
-        <button
-          key={id}
-          className={`first-model-card ${selected === id ? 'selected' : ''}`}
-          aria-pressed={selected === id}
-          onClick={() => {
-            setSelected(id)
-            onChoice?.(id)
-          }}
-        >
-          <ModelMark model={m} />
-          <span className="first-model-text">
-            <strong>{text(m.name ?? m.title ?? m.id ?? m.model_id)}</strong>
-            {Boolean(m.description ?? m.summary) && <small>{text(m.description ?? m.summary)}</small>}
-            {typeof size === 'number' && size > 0 && <small>{bytes(size)} download</small>}
-          </span>
-          {local && (
-            <small className="first-model-downloaded">
-              <Check size={13} aria-hidden="true" /> Downloaded
-            </small>
-          )}
-          <i className="first-model-radio" aria-hidden="true" />
-        </button>
+        <li key={id}>
+          <DirectoryRow
+            title={text(m.name ?? m.title ?? m.id ?? m.model_id)}
+            detail={detail}
+            leading={<ModelMark model={m} />}
+            trailing={
+              <>
+                {local && <small className="first-model-downloaded">Downloaded</small>}
+                {selected === id && <Check size={16} aria-hidden="true" />}
+              </>
+            }
+            aria-pressed={selected === id}
+            onClick={() => {
+              setSelected(id)
+              onChoice?.(id)
+            }}
+          />
+        </li>
       )
     })
   const local = selected.startsWith('local:')
@@ -176,7 +183,7 @@ export function FirstModel({
   return (
     <div className="first-model-selection">
       {Boolean(hardware.os_name || record(hardware.cpu).name || hardware.total_memory) && (
-        <div className="first-device">
+        <div className="first-device settings-card">
           <Laptop size={20} aria-hidden="true" />
           <div>
             <strong>{text(record(hardware.cpu).name ?? hardware.os_name, 'This device')}</strong>
@@ -196,19 +203,19 @@ export function FirstModel({
         {!!installed.length && (
           <>
             <h2>Downloaded</h2>
-            <div className="first-model-grid">{cards(installed, true)}</div>
+            <ul className="directory-list">{cards(installed, true)}</ul>
           </>
         )}
         {!!recommended.length && (
           <>
             <h2>Recommended</h2>
-            <div className="first-model-grid">{cards(recommended, false)}</div>
+            <ul className="directory-list">{cards(recommended, false)}</ul>
           </>
         )}
         {!!more.length && (
           <>
             <h2>{engineDialog(engine) ? 'More models' : 'Hugging Face'}</h2>
-            <div className="first-model-grid">{cards(more, false)}</div>
+            <ul className="directory-list">{cards(more, false)}</ul>
           </>
         )}
         {!loading && !models.length && !installed.length && (

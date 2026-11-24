@@ -7,24 +7,21 @@ export function installedModelRows(s: WorkspaceState) {
   return [
     ...s.installed.map((model, index) => ({
       id: `installed:${index}`,
-      remove:
-        model.store === 'fastflowlm'
-          ? `fastflowlm-delete:${encodeURIComponent(model.id)}`
-          : model.store === 'geniex'
-            ? `geniex-delete:${encodeURIComponent(model.id)}`
-            : `installed-delete:${encodeURIComponent(model.id)}`,
+      remove: `${['fastflowlm', 'geniex', 'strata'].includes(model.store ?? '') ? model.store : 'installed'}-delete:${encodeURIComponent(model.id)}`,
       name: `${model.name || model.id}${model.providers?.length ? '  ' + model.providers.join(', ') : ''}`,
-      status: localModelStatus(
-        s.workspace,
-        [
-          {
-            model: model.id,
-            providers: model.providers?.length ? model.providers : [model.provider],
-            kind: 'chat',
-          },
-        ],
-        true
-      ),
+      status:
+        model.disabled_reason ||
+        localModelStatus(
+          s.workspace,
+          [
+            {
+              model: model.id,
+              providers: model.providers?.length ? model.providers : [model.provider],
+              kind: 'chat',
+            },
+          ],
+          true
+        ),
     })),
     ...(s.workspace?.setups ?? []).flatMap((value) => {
       const job = record(value),

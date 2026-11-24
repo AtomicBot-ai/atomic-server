@@ -34,7 +34,9 @@ async function storeEngine(
 ): Promise<string | undefined> {
   const rows = (await service.execute('models.installed')) as StoreRow[]
   const own = rows.find(
-    (m) => m.id === model && (m.store === 'foundry-local' || m.store === 'litert-lm' || m.store === 'geniex')
+    (m) =>
+      m.id === model &&
+      (m.store === 'foundry-local' || m.store === 'litert-lm' || m.store === 'geniex' || m.store === 'strata')
   )
   if (own) return own.store
   const row = rows.find((m) => m.id === model && m.store === 'managed')

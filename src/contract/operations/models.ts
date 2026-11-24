@@ -97,9 +97,12 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'models.remove',
     'Remove managed model',
     'configure',
-    'Remove an installed model from the data folder. Select the GenieX store explicitly for a GenieX row.',
+    'Remove an installed model from the data folder. For an engine-specific row, pass its store.',
     {
-      properties: { model_id: { type: 'string' }, store: { type: 'string', enum: ['geniex', 'fastflowlm'] } },
+      properties: {
+        model_id: { type: 'string' },
+        store: { type: 'string', enum: ['geniex', 'fastflowlm', 'strata'] },
+      },
       required: ['model_id'],
     }
   ),
@@ -123,7 +126,16 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
     'setup.manual',
     'Set up manually',
     'configure',
-    'Finish onboarding without an inference check. If a saved local model is already installed, load it and start the API; pending downloads continue through their setup flow.'
+    'Finish onboarding without an inference check. By default, load an installed saved model and start the API. Pending downloads continue through their setup flow.',
+    {
+      properties: {
+        restore_selected: {
+          type: 'boolean',
+          description:
+            'Set to false to record setup completion without loading the selected model or starting the API.',
+        },
+      },
+    }
   ),
   operation(
     'setup.complete',
@@ -175,7 +187,7 @@ export const MODEL_OPERATIONS: readonly WorkspaceOperation[] = [
         id: { type: 'string' },
         owner: {
           type: 'string',
-          enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert', 'geniex', 'fastflowlm'],
+          enum: ['setup', 'artifacts', 'managed', 'foundry', 'litert', 'geniex', 'fastflowlm', 'strata'],
         },
         installed: { type: 'boolean' },
       },

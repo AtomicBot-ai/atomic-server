@@ -4,7 +4,7 @@
 }
 .waiting-setup-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: start;
   gap: 24px;
 }
@@ -35,19 +35,6 @@
 .desktop-workspace .waiting-email .settings-field-stacked {
   margin: 0;
 }
-.waiting-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  grid-column: 1 / -1;
-  justify-content: flex-end;
-}
-.waiting-actions .primary {
-  min-width: 0;
-  white-space: normal;
-  text-align: center;
-}
 .waiting-email-status {
   font-size: 12px;
   line-height: 18px;
@@ -56,16 +43,13 @@
 .waiting-email-status:empty {
   display: none;
 }
-@media (max-width: 700px) {
+@media (max-width: 920px) {
   .waiting-setup-grid {
     grid-template-columns: 1fr;
   }
-  .waiting-side {
-    grid-row: 1;
-  }
 }
 
-@media (min-width: 701px) and (max-height: 850px) {
+@media (min-width: 921px) and (max-height: 850px) {
   .inline-download-game .download-game-dialog {
     max-width: clamp(230px, calc(100dvh - 490px), 354px);
   }

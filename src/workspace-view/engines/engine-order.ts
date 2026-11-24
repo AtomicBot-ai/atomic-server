@@ -19,6 +19,7 @@ const ORDER = [
   'litert-lm',
   'geniex',
   'fastflowlm',
+  'strata',
 ] as const
 
 const NAMES: Readonly<Record<string, string>> = {
@@ -33,6 +34,7 @@ const NAMES: Readonly<Record<string, string>> = {
   'litert-lm': 'LiteRT-LM',
   'geniex': 'GenieX',
   'fastflowlm': 'FastFlowLM',
+  'strata': 'Strata',
   'sd-cpp': 'stable-diffusion.cpp',
   'audio-cpp': 'audio.cpp',
 }
@@ -65,8 +67,9 @@ export function orderEngines<T extends string>(ids: readonly T[]): T[] {
  */
 export function engineFamily(
   id: string
-): 'llamacpp' | 'managed' | 'foundry' | 'litert' | 'geniex' | 'fastflowlm' | 'build' {
+): 'llamacpp' | 'managed' | 'foundry' | 'litert' | 'geniex' | 'fastflowlm' | 'strata' | 'build' {
   if (id === 'foundry-local') return 'foundry'
+  if (id === 'strata') return 'strata'
   if (id === 'fastflowlm') return 'fastflowlm'
   if (id === 'geniex') return 'geniex'
   if (id === 'litert-lm') return 'litert'
