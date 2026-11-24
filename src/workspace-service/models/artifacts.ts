@@ -96,10 +96,11 @@ export class ArtifactService {
       if (e.code === 'ENOENT') return []
       throw e
     })
+    // One unreadable record must not hide every other installation or fail the workspace snapshot that lists them.
     const docs = await Promise.all(
       names
         .filter((n) => /^[\w-]+\.json$/.test(n))
-        .map((n) => readDocument<ArtifactJob | null>(join(this.directory, n), null))
+        .map((n) => readDocument<ArtifactJob | null>(join(this.directory, n), null).catch(() => null))
     )
     return docs
       .filter((d): d is ArtifactJob => !!d?.plan)
