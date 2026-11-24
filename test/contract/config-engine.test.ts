@@ -1,5 +1,6 @@
 /** `atc config get|set|list` for `engine.<provider>.<key>` (spec server-engine-settings). */
 import { afterEach, describe, expect, it } from 'vitest'
+import { settingsSchema } from '@atomic-chat/core/settings'
 import { testRun } from '../helpers/test-context.js'
 import type { TestRun } from '../helpers/test-context.js'
 
@@ -44,8 +45,10 @@ describe('atc config … engine.<provider>.<key>', () => {
 
   it('prints the schema default for a key the core has no value for', async () => {
     server()
+    // The pinned core's own default (0, automatic, since core 0.24.8): read from its schema, not copied here.
+    const field = settingsSchema('tensorrt-llm').find((f) => f.key === 'context_length')
     expect(await t.run(['config', 'get', 'engine.tensorrt-llm.context_length'])).toBe(0)
-    expect(out().trim()).toBe('8192')
+    expect(out().trim()).toBe(String(field?.controllerProps.value))
   })
 
   it('refuses a value outside the schema with its range, changing nothing', async () => {

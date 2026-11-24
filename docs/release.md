@@ -265,7 +265,7 @@ pwsh scripts/sign-windows-binary.ps1 dist\bin\atc-x86_64-pc-windows-msvc.exe dis
 
 `atc` embeds the core as the npm package `@atomic-chat/core` (repo `atomic-chat-core`, published by its
 release workflow) at an **exact** version, never a caret: the protocol and version checks make a silently
-newer core unsafe. 0.24.4 is the pin. The Foundry Local and LiteRT-LM host entries (`./foundry-host`
+newer core unsafe. 0.24.8 is the pin. The Foundry Local and LiteRT-LM host entries (`./foundry-host`
 and `./litert-host`) run before command parsing in `src/bin.ts`, including in the compiled binary.
 Core 0.24.2 exports `./integrations`, including the Muse launch arguments for an embedding server.
 The core also exports the provider setting schemas
@@ -278,7 +278,7 @@ limit on remote GGUF reads (`remoteGgufTimeoutMs`); `startDaemon` passes both op
 
 ```jsonc
 // package.json
-"dependencies": { "@atomic-chat/core": "0.24.4" }
+"dependencies": { "@atomic-chat/core": "0.24.8" }
 ```
 
 To bump the core: `bun add --exact @atomic-chat/core@<version>`, run `npm run verify`, and commit the bump

@@ -5,7 +5,7 @@
     "": {
       "name": "@atomicbot-ai/atc",
       "dependencies": {
-        "@atomic-chat/core": "0.24.4",
+        "@atomic-chat/core": "0.24.8",
         "@hpke/chacha20poly1305": "1.8.0",
         "@hpke/core": "1.9.0",
         "@hpke/dhkem-x25519": "1.8.0",
@@ -87,7 +87,7 @@
 
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@3.2.0", "", { "dependencies": { "@csstools/css-calc": "^2.1.3", "@csstools/css-color-parser": "^3.0.9", "@csstools/css-parser-algorithms": "^3.0.4", "@csstools/css-tokenizer": "^3.0.3", "lru-cache": "^10.4.3" } }, "sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw=="],
 
-    "@atomic-chat/core": ["@atomic-chat/core@0.24.4", "", { "dependencies": { "@ai-sdk/openai-compatible": "^1.0.28", "ai": "^5.0.121", "smol-toml": "^1.9.1", "tar": "^7.4.3", "yaml": "^2.8.1", "yauzl": "^3.2.0" }, "bin": { "atomic-chat-core": "dist/cli/bin.js" } }, "sha512-NJ5H2Oqqewof1gq2RS/jfDWECLQQgWGr21RIOkvaQT1VJJNrpNOz5fpJ/goNbwy29di87H81ikyvVjuKUwd+jA=="],
+    "@atomic-chat/core": ["@atomic-chat/core@0.24.8", "", { "dependencies": { "@ai-sdk/openai-compatible": "^1.0.28", "ai": "^5.0.121", "smol-toml": "^1.9.1", "tar": "^7.4.3", "yaml": "^2.8.1", "yauzl": "^3.2.0" }, "bin": { "atomic-chat-core": "dist/cli/bin.js" } }, "sha512-uyF/EQQWOJMD8IT5quDdxJUicBgZhEEkB8HBtpZQ6i5kDhE/lPCoOUWJJ1OtCpn92s8qkSv3BC2dhPmJPMqEQg=="],
 
     "@atomicbot-ai/atc-admin-ui": ["@atomicbot-ai/atc-admin-ui@workspace:packages/admin-ui"],
 
