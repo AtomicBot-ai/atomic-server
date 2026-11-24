@@ -41,6 +41,23 @@ export async function grantsToEnd(ctx: StopContext, known: GrantsToEnd): Promise
   }
 }
 
+/** How long a stop waits for a round already under way; an aborted long-poll ends at once. */
+export const ROUND_SETTLE_MS = 10_000
+
+/**
+ * Waits, at most `ms`, for the stopped loop's last round. A round past its sync answer finishes the one call it
+ * has in flight and then acts no more (`applySync` checks the stop); waiting for it means the stop's own calls
+ * to the account service come last, so a late revoke or key upload from that round never overtakes them.
+ */
+export async function roundSettled(ended: Promise<void>, ms = ROUND_SETTLE_MS): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms)
+    timer.unref?.()
+  })
+  await Promise.race([ended, timeout]).finally(() => clearTimeout(timer))
+}
+
 /** "This grant ended meanwhile": nothing left to end. */
 const gone = (error: unknown) => error instanceof AccountApiError && error.is(REMOTE_CODES.GRANT_NOT_FOUND)
 

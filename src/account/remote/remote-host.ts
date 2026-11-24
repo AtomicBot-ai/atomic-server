@@ -17,7 +17,7 @@ import { startLoop, type Loop } from './host-loop.js'
 import { b64u, formatCode, newQrSecret, normalizeCode, pairLink } from './protocol.js'
 import { REMOTE_CODES, MAX_WAIT_SECONDS, type RemoteApi } from './remote-api.js'
 import { endAccess, forUser, parseRemoteDocument, stopSharing, type RemoteDocument } from './remote-store.js'
-import { endGrants, grantsToEnd, type GrantsToEnd } from './host-stop.js'
+import { endGrants, grantsToEnd, roundSettled, type GrantsToEnd } from './host-stop.js'
 import { recentEnded, withEnded } from './host-ended.js'
 import { reachability, type Reachability, type ReachabilityInput } from './reachability.js'
 
@@ -177,6 +177,7 @@ export class RemoteHost {
     })
     if (!user) return
     const ctx = { session: this.options.session, api: this.options.api, log: this.options.log }
+    await roundSettled(this.stopping)
     const failure = await endGrants(ctx, await grantsToEnd(ctx, known))
     if (pairing) await this.authed((token) => this.options.api.closePairingCode(token)).catch(() => undefined)
     if (forget)
@@ -252,7 +253,7 @@ export class RemoteHost {
           )
           if (sync.host.id !== host.host_id)
             await this.update((d) => ({ ...d, host: { host_id: sync.host.id, name: sync.host.name } }))
-          uploaded = await applySync(ctx, sync, reach, uploaded).catch((error: unknown) => {
+          uploaded = await applySync(ctx, sync, reach, uploaded, signal).catch((error: unknown) => {
             uploaded = null
             throw error
           })

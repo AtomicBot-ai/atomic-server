@@ -83,10 +83,12 @@ async function issue(
   ctx: RoundContext,
   plan: HostPlan,
   failures: Failures,
-  hostName: string
+  hostName: string,
+  signal?: AbortSignal
 ): Promise<Set<string>> {
   const activated = new Set<string>()
   for (const order of plan.issue) {
+    signal?.throwIfAborted()
     const key: IssuedKey = {
       grant_id: order.grant_id,
       client_device_id: order.client_device_id,
@@ -113,6 +115,8 @@ async function issue(
     // next round drops.
     await ctx.update((d) => ({ ...d, issued: [...d.issued.filter((k) => k.grant_id !== key.grant_id), key] }))
     try {
+      // Stopped while the key was written: the stop has dropped it (or is about to); send nothing.
+      signal?.throwIfAborted()
       await ctx.session.authed((token) =>
         ctx.api.uploadCredential(token, order.grant_id, {
           envelope,
@@ -130,29 +134,37 @@ async function issue(
   return activated
 }
 
-/** Act on one sync answer; returns the new upload mark. Throws the first failure after doing what it could. */
+/**
+ * Act on one sync answer; returns the new upload mark. Throws the first failure after doing what it could.
+ * Once `signal` aborts (sharing stopped, the server signs out), it starts no further call or write: a stop
+ * that has dropped the keys must not see this round revoke, issue or upload after it.
+ */
 export async function applySync(
   ctx: RoundContext,
   sync: HostSync,
   reach: Reachability,
-  uploaded: UploadMark | null
+  uploaded: UploadMark | null,
+  signal?: AbortSignal
 ): Promise<UploadMark | null> {
+  signal?.throwIfAborted()
   const before = await ctx.update((d) => d)
   const plan = planHost(sync, before, ctx.now())
   const failures = new Failures()
   for (const id of plan.deny) {
+    signal?.throwIfAborted()
     ctx.log.info(`remote: denying grant ${id}: its pairing proof does not check out`)
     await ctx.session
       .authed((token) => ctx.api.decide(token, id, false))
       .catch((e: unknown) => failures.keep(e))
   }
   for (const id of plan.revoke_unknown) {
+    signal?.throwIfAborted()
     ctx.log.info(`remote: revoking grant ${id}: this server holds no key for it`)
     await ctx.session
       .authed((token) => ctx.api.revokeGrant(token, id))
       .catch((e: unknown) => failures.keep(e))
   }
-  const activated = await issue(ctx, plan, failures, before.host?.name ?? ctx.hostName())
+  const activated = await issue(ctx, plan, failures, before.host?.name ?? ctx.hostName(), signal)
   // A used code is done once its device holds the key; a failed upload keeps it for the next round.
   const codeUsed = plan.issue.some((o) => o.mac_secret !== null && activated.has(o.grant_id))
   // Allowed requests wait only while their grant does, and until their key is out.
@@ -162,6 +174,7 @@ export async function applySync(
   // Keep shown names current; drop keys of grants that ended.
   const names = new Map(sync.grants.map((g) => [g.id, g.client] as const))
   let dropped: IssuedKey[] = []
+  signal?.throwIfAborted()
   const after = await ctx.update((d) => {
     dropped = d.issued.filter((k) => plan.dropped.includes(k.grant_id))
     const next = {
@@ -189,6 +202,7 @@ export async function applySync(
     sameEndpoints(uploaded.endpoints, mark.endpoints) &&
     uploaded.grants.join() === mark.grants.join()
   if (targets.length > 0 && !unchanged) {
+    signal?.throwIfAborted()
     const { endpoints_seq: seq } = await ctx.update((d) => ({ ...d, endpoints_seq: d.endpoints_seq + 1 }))
     const items: Array<{ grant_id: string; blob: string }> = []
     for (const key of targets)
