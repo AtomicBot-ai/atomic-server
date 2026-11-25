@@ -20,6 +20,24 @@ export interface SpawnDaemonOptions {
   env?: NodeJS.ProcessEnv
 }
 
+/**
+ * Creates the log folder and opens `daemon.out.log`. Both paths live in the data folder, so a
+ * permission, ACL or read-only failure there is a start failure with an actionable message, not a
+ * raw fs error; the details keep the failing paths and the OS text.
+ */
+function prepareDaemonLog(paths: AtcPaths): number {
+  try {
+    mkdirSync(paths.logsDir, { recursive: true })
+    return openSync(paths.daemonOutLog, 'w')
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new AtcError('ATC_DAEMON_START_FAILED', 'Could not prepare the server log.', {
+      details: `log folder ${paths.logsDir}, log file ${paths.daemonOutLog}: ${reason}`,
+      hint: 'check that the data folder is writable, or pass another --data-folder',
+    })
+  }
+}
+
 export function daemonArgs(paths: AtcPaths, extra: readonly string[] = []): string[] {
   return ['daemon', '--data-folder', paths.dataFolder, '--control-port', '0', ...extra]
 }
@@ -27,8 +45,7 @@ export function daemonArgs(paths: AtcPaths, extra: readonly string[] = []): stri
 export async function spawnDaemon(options: SpawnDaemonOptions): Promise<{ pid: number | undefined }> {
   const [exe, ...prefix] = options.selfCommand
   if (!exe) throw new AtcError('ATC_INTERNAL', 'no program to start the daemon with')
-  mkdirSync(options.paths.logsDir, { recursive: true })
-  const logFd = openSync(options.paths.daemonOutLog, 'w')
+  const logFd = prepareDaemonLog(options.paths)
   const args = [...prefix, ...daemonArgs(options.paths, options.args)]
   options.log.debug(`spawning: ${[exe, ...args].join(' ')}`)
   const child = spawn(exe, args, {
