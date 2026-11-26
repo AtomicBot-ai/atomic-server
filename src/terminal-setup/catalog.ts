@@ -3,6 +3,29 @@ import { AtomicCoreError } from '@atomic-chat/core'
 import { fetchHfGgufFiles, parseGgufShard, ModelRegistry } from '@atomic-chat/core/models'
 import type { DataLayout } from '@atomic-chat/core/host'
 import type { HubRepository } from './types.js'
+/** Transport codes that mean nothing answered the connection; the runtime's fetch keeps them on its cause. */
+const UNREACHABLE = new Set([
+  'ECONNREFUSED',
+  'ConnectionRefused',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ENETUNREACH',
+  'EHOSTUNREACH',
+  'ETIMEDOUT',
+  'UND_ERR_SOCKET',
+  'UND_ERR_CONNECT_TIMEOUT',
+])
+/** The transport code of a failed request: on the rejection itself or on one of its causes, up to five deep. */
+function unreachableCode(error: unknown): string | undefined {
+  let current: unknown = error
+  for (let depth = 0; depth < 5 && current !== null && typeof current === 'object'; depth++) {
+    const code = (current as { code?: unknown }).code
+    if (typeof code === 'string' && UNREACHABLE.has(code)) return code
+    current = (current as { cause?: unknown }).cause
+  }
+  return undefined
+}
 export async function searchHub(
   query: string,
   request: typeof fetch,
@@ -61,6 +84,12 @@ export async function modelFiles(
       if (error instanceof AtomicCoreError && /HTTP (401|403)/.test(error.message))
         throw new AtcError('ATC_USAGE', error.message, {
           details: error.details ?? 'Set HF_TOKEN for a gated repository.',
+        })
+      const code = unreachableCode(error)
+      if (code)
+        throw new AtcError('ATC_USAGE', 'Could not reach Hugging Face for this repository.', {
+          details: `Network error: ${code}`,
+          hint: 'Check this machine’s network or proxy, then retry.',
         })
       throw error
     })
