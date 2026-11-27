@@ -33,6 +33,27 @@ interface Running {
   lastRead: number
 }
 
+/** The job's own ten-minute bound expiring: an expected end of this request, worded for the person. */
+const CHAT_DEADLINE =
+  'The answer did not finish within ten minutes. Check the loaded model and its engine log.'
+
+/**
+ * A bare abort, possibly inside `fetch failed`: a DOMException, not an `Error`, so the failure boundary
+ * cannot classify it (see `snapshot/public-api.ts`). With this job's own controller intact, the request's
+ * `AbortSignal.timeout` is the only source of one.
+ */
+function deadlineExpired(error: unknown): boolean {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+  while (current !== null && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current)
+    const name = (current as { name?: unknown }).name
+    if (name === 'AbortError' || name === 'TimeoutError') return true
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
+
 export type EnrichChat = (body: Record<string, unknown>) => Promise<Record<string, unknown>>
 
 /** Owned by the server, accessible through the same authenticated operations as the CLI. */
@@ -201,10 +222,15 @@ export class ChatJobs {
     } catch (error) {
       state = job.controller.signal.aborted ? 'stopped' : 'failed'
       if (state === 'failed') {
-        captureFailure(this.options.errors, error, { component: 'chat', operation: 'chat.stream' })
-        const message = error instanceof Error ? error.message : String(error)
-        const context = contextExceeded(view.provider, message)
-        view.error = context ? `${context.message} ${context.hint ?? ''}`.trim() : message
+        if (deadlineExpired(error)) {
+          // Our own bound, not a defect of the engine or the transport: answer it as the API does.
+          view.error = CHAT_DEADLINE
+        } else {
+          captureFailure(this.options.errors, error, { component: 'chat', operation: 'chat.stream' })
+          const message = error instanceof Error ? error.message : String(error)
+          const context = contextExceeded(view.provider, message)
+          view.error = context ? `${context.message} ${context.hint ?? ''}`.trim() : message
+        }
       }
     } finally {
       clearInterval(lease)
