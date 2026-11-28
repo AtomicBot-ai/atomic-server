@@ -1,4 +1,5 @@
 import type { WorkspaceField, WorkspaceOperation } from '../../../contract/index.js'
+import { AtcError } from '../../../errors/index.js'
 import type { WorkspaceState } from '../state.js'
 export interface OperationField {
   path: string
@@ -22,10 +23,17 @@ export function operationFields(operation: WorkspaceOperation): OperationField[]
   add(operation.inputSchema.properties, operation.inputSchema.required)
   return fields
 }
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    throw new AtcError('ATC_USAGE', 'Enter valid JSON.')
+  }
+}
 export function inputObject(raw: string): Record<string, unknown> {
-  const value: unknown = JSON.parse(raw)
+  const value: unknown = parseJson(raw)
   if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Input must be a JSON object.')
+    throw new AtcError('ATC_USAGE', 'Input must be a JSON object.')
   return value as Record<string, unknown>
 }
 export function fieldValue(raw: string, path: string): unknown {
@@ -50,17 +58,19 @@ export function setField(raw: string, path: string, value: unknown): string {
 export function parseField(field: WorkspaceField, raw: string): unknown {
   if (!raw.trim()) return undefined
   if (field.type === 'object' || field.type === 'array') {
-    const value: unknown = JSON.parse(raw)
+    const value: unknown = parseJson(raw)
     if (!value || typeof value !== 'object' || (field.type === 'array') !== Array.isArray(value))
-      throw new Error(`Expected ${field.type}.`)
+      throw new AtcError('ATC_USAGE', `Expected ${field.type}.`)
     return value
   }
   if (field.type === 'number' || field.type === 'integer') {
     const value = Number(raw)
     if (!Number.isFinite(value) || (field.type === 'integer' && !Number.isInteger(value)))
-      throw new Error(`Enter a valid ${field.type}.`)
-    if (field.minimum != null && value < field.minimum) throw new Error(`Minimum: ${field.minimum}`)
-    if (field.maximum != null && value > field.maximum) throw new Error(`Maximum: ${field.maximum}`)
+      throw new AtcError('ATC_USAGE', `Enter a valid ${field.type}.`)
+    if (field.minimum != null && value < field.minimum)
+      throw new AtcError('ATC_USAGE', `Minimum: ${field.minimum}`)
+    if (field.maximum != null && value > field.maximum)
+      throw new AtcError('ATC_USAGE', `Maximum: ${field.maximum}`)
     return value
   }
   return raw
